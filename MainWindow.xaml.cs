@@ -1,28 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
-using System.Windows.Shapes;
 
-namespace ReversiGameSystem
+namespace ReversiGameSystem;
+
+/// <summary>
+/// Hosts application pages and prevents backward or forward navigation.
+/// </summary>
+public partial class MainWindow : NavigationWindow
 {
     /// <summary>
-    /// Interaction logic for MainWindow.xaml
+    /// Initializes the main navigation window.
     /// </summary>
-    public partial class MainWindow : Window
+    public MainWindow()
     {
-        public MainWindow()
+        InitializeComponent();
+    }
+
+    private void OnNavigating(object sender, NavigatingCancelEventArgs e)
+    {
+        if (e.NavigationMode == NavigationMode.Back
+            || e.NavigationMode == NavigationMode.Forward)
         {
-            InitializeComponent();
+            e.Cancel = true;
         }
     }
 }

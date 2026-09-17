@@ -1,0 +1,79 @@
+using System.ComponentModel;
+using System.Globalization;
+using System.Threading;
+using System.Windows.Data;
+using ReversiGameSystem.Properties;
+
+namespace ReversiGameSystem.Localization;
+
+/// <summary>
+/// Provides localized text and updates WPF bindings when the language changes.
+/// </summary>
+public sealed class LocalizationManager : INotifyPropertyChanged
+{
+    private const string EnglishCultureName = "en-US";
+    private const string SpanishCultureName = "es-MX";
+
+    private CultureInfo _culture = CultureInfo.GetCultureInfo(EnglishCultureName);
+
+    private LocalizationManager()
+    {
+        string cultureName = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "es"
+            ? SpanishCultureName
+            : EnglishCultureName;
+
+        SetCulture(cultureName);
+    }
+
+    /// <summary>
+    /// Gets the shared language selection for the application.
+    /// </summary>
+    public static LocalizationManager Instance { get; } = new LocalizationManager();
+
+    /// <summary>
+    /// Occurs when the selected culture or a localized value changes.
+    /// </summary>
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    /// <summary>
+    /// Gets or sets the supported UI culture name.
+    /// </summary>
+    public string CultureName
+    {
+        get { return _culture.Name; }
+        set
+        {
+            if (value == CultureName || !IsSupportedCulture(value))
+            {
+                return;
+            }
+
+            SetCulture(value);
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CultureName)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(Binding.IndexerName));
+        }
+    }
+
+    /// <summary>
+    /// Gets a localized string from the application resources.
+    /// </summary>
+    /// <param name="key">The resource key to look up.</param>
+    public string this[string key]
+    {
+        get { return Resources.ResourceManager.GetString(key, _culture) ?? string.Empty; }
+    }
+
+    private static bool IsSupportedCulture(string cultureName)
+    {
+        return cultureName == EnglishCultureName || cultureName == SpanishCultureName;
+    }
+
+    private void SetCulture(string cultureName)
+    {
+        _culture = CultureInfo.GetCultureInfo(cultureName);
+        Thread.CurrentThread.CurrentCulture = _culture;
+        Thread.CurrentThread.CurrentUICulture = _culture;
+        CultureInfo.DefaultThreadCurrentCulture = _culture;
+        CultureInfo.DefaultThreadCurrentUICulture = _culture;
+    }
+}
