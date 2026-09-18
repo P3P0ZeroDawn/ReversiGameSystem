@@ -1,5 +1,6 @@
 using System.Windows;
 using ReversiGameSystem.Localization;
+using ReversiGameSystem.Views;
 
 namespace ReversiGameSystem.Services;
 
@@ -28,6 +29,40 @@ internal sealed class DialogService
     internal void ShowError(DependencyObject source, string titleKey, string messageKey)
     {
         Show(source, new LocalizedAlert(titleKey, messageKey), MessageBoxImage.Error);
+    }
+
+    internal bool Confirm(DependencyObject source, string titleKey, string messageKey)
+    {
+        string title = _localization[titleKey];
+        string message = _localization[messageKey];
+        Window? owner = Window.GetWindow(source);
+        MessageBoxResult result = owner == null
+            ? MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Question)
+            : MessageBox.Show(
+                owner, message, title, MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+        return result == MessageBoxResult.Yes;
+    }
+
+    internal bool TryGetText(
+        DependencyObject source,
+        TextInputDialogOptions options,
+        out string text)
+    {
+        TextInputDialogWindow dialog = new TextInputDialogWindow(options, _localization);
+        Window? owner = Window.GetWindow(source);
+        if (owner != null)
+        {
+            dialog.Owner = owner;
+        }
+        else
+        {
+            dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
+
+        bool accepted = dialog.ShowDialog() == true;
+        text = accepted ? dialog.EnteredText : string.Empty;
+        return accepted;
     }
 
     private void Show(DependencyObject source, LocalizedAlert alert, MessageBoxImage icon)

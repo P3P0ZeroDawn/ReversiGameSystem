@@ -465,6 +465,123 @@ namespace ReversiGameSystem.Properties {
         }
 
         /// <summary>
+        ///     Looks up a localized string similar to Back to menu.
+        /// </summary>
+        public static string AvailableMatches_BackButton {
+            get {
+                return ResourceManager.GetString("AvailableMatches_BackButton", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Match code.
+        /// </summary>
+        public static string AvailableMatches_CodeDialogLabel {
+            get {
+                return ResourceManager.GetString("AvailableMatches_CodeDialogLabel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Enter the code for the match you want to join..
+        /// </summary>
+        public static string AvailableMatches_CodeDialogMessage {
+            get {
+                return ResourceManager.GetString("AvailableMatches_CodeDialogMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Join with code.
+        /// </summary>
+        public static string AvailableMatches_CodeDialogTitle {
+            get {
+                return ResourceManager.GetString("AvailableMatches_CodeDialogTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to There are no available matches right now..
+        /// </summary>
+        public static string AvailableMatches_EmptyMessage {
+            get {
+                return ResourceManager.GetString("AvailableMatches_EmptyMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Choose an available match or enter a code..
+        /// </summary>
+        public static string AvailableMatches_Intro {
+            get {
+                return ResourceManager.GetString("AvailableMatches_Intro", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Join.
+        /// </summary>
+        public static string AvailableMatches_JoinButton {
+            get {
+                return ResourceManager.GetString("AvailableMatches_JoinButton", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Join with code.
+        /// </summary>
+        public static string AvailableMatches_JoinWithCodeButton {
+            get {
+                return ResourceManager.GetString("AvailableMatches_JoinWithCodeButton", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Available matches.
+        /// </summary>
+        public static string AvailableMatches_Title {
+            get {
+                return ResourceManager.GetString("AvailableMatches_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Cancel.
+        /// </summary>
+        public static string Common_CancelButton {
+            get {
+                return ResourceManager.GetString("Common_CancelButton", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Change the application language? The text on this screen will update..
+        /// </summary>
+        public static string Common_ChangeLanguageMessage {
+            get {
+                return ResourceManager.GetString("Common_ChangeLanguageMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Change language.
+        /// </summary>
+        public static string Common_ChangeLanguageTitle {
+            get {
+                return ResourceManager.GetString("Common_ChangeLanguageTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Confirm.
+        /// </summary>
+        public static string Common_ConfirmButton {
+            get {
+                return ResourceManager.GetString("Common_ConfirmButton", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///     Looks up a localized string similar to Email.
         /// </summary>
         public static string Common_EmailLabel {
@@ -537,6 +654,78 @@ namespace ReversiGameSystem.Properties {
         }
 
         /// <summary>
+        ///     Looks up a localized string similar to Enter as guest.
+        /// </summary>
+        public static string LoginScreen_GuestDialogEnterButton {
+            get {
+                return ResourceManager.GetString("LoginScreen_GuestDialogEnterButton", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Your progress will not be saved. You cannot add friends or participate in chat. Enter the name you want to use in the game..
+        /// </summary>
+        public static string LoginScreen_GuestDialogMessage {
+            get {
+                return ResourceManager.GetString("LoginScreen_GuestDialogMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Name.
+        /// </summary>
+        public static string LoginScreen_GuestDialogNameLabel {
+            get {
+                return ResourceManager.GetString("LoginScreen_GuestDialogNameLabel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Enter as guest.
+        /// </summary>
+        public static string LoginScreen_GuestDialogTitle {
+            get {
+                return ResourceManager.GetString("LoginScreen_GuestDialogTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Enter a valid email address to continue..
+        /// </summary>
+        public static string LoginScreen_InvalidEmailMessage {
+            get {
+                return ResourceManager.GetString("LoginScreen_InvalidEmailMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Invalid email address.
+        /// </summary>
+        public static string LoginScreen_InvalidEmailTitle {
+            get {
+                return ResourceManager.GetString("LoginScreen_InvalidEmailTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Enter your email address and password to continue..
+        /// </summary>
+        public static string LoginScreen_MissingCredentialsMessage {
+            get {
+                return ResourceManager.GetString("LoginScreen_MissingCredentialsMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Information missing.
+        /// </summary>
+        public static string LoginScreen_MissingCredentialsTitle {
+            get {
+                return ResourceManager.GetString("LoginScreen_MissingCredentialsTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///     Looks up a localized string similar to New here?.
         /// </summary>
         public static string LoginScreen_NoAccountText {
@@ -560,6 +749,159 @@ namespace ReversiGameSystem.Properties {
         public static string LoginScreen_Title {
             get {
                 return ResourceManager.GetString("LoginScreen_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Verification code.
+        /// </summary>
+        public static string LoginScreen_VerificationCodeDialogLabel {
+            get {
+                return ResourceManager.GetString("LoginScreen_VerificationCodeDialogLabel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Enter the six-digit verification code sent to {0}..
+        /// </summary>
+        public static string LoginScreen_VerificationCodeDialogMessage {
+            get {
+                return ResourceManager.GetString("LoginScreen_VerificationCodeDialogMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Verify sign-in.
+        /// </summary>
+        public static string LoginScreen_VerificationCodeDialogTitle {
+            get {
+                return ResourceManager.GetString("LoginScreen_VerificationCodeDialogTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Add friend.
+        /// </summary>
+        public static string MainMenu_AddFriendButton {
+            get {
+                return ResourceManager.GetString("MainMenu_AddFriendButton", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Create game.
+        /// </summary>
+        public static string MainMenu_CreateGameButton {
+            get {
+                return ResourceManager.GetString("MainMenu_CreateGameButton", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to No pending requests..
+        /// </summary>
+        public static string MainMenu_FriendRequestsEmptyMessage {
+            get {
+                return ResourceManager.GetString("MainMenu_FriendRequestsEmptyMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Friend requests.
+        /// </summary>
+        public static string MainMenu_FriendRequestsTitle {
+            get {
+                return ResourceManager.GetString("MainMenu_FriendRequestsTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Your friends will appear here..
+        /// </summary>
+        public static string MainMenu_FriendsEmptyMessage {
+            get {
+                return ResourceManager.GetString("MainMenu_FriendsEmptyMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Friends.
+        /// </summary>
+        public static string MainMenu_FriendsTitle {
+            get {
+                return ResourceManager.GetString("MainMenu_FriendsTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Guest.
+        /// </summary>
+        public static string MainMenu_GuestLabel {
+            get {
+                return ResourceManager.GetString("MainMenu_GuestLabel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Join game.
+        /// </summary>
+        public static string MainMenu_JoinGameButton {
+            get {
+                return ResourceManager.GetString("MainMenu_JoinGameButton", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Sign out.
+        /// </summary>
+        public static string MainMenu_LogoutButton {
+            get {
+                return ResourceManager.GetString("MainMenu_LogoutButton", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Match history.
+        /// </summary>
+        public static string MainMenu_MatchHistoryButton {
+            get {
+                return ResourceManager.GetString("MainMenu_MatchHistoryButton", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to My profile.
+        /// </summary>
+        public static string MainMenu_ProfileButton {
+            get {
+                return ResourceManager.GetString("MainMenu_ProfileButton", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Main menu.
+        /// </summary>
+        public static string MainMenu_Title {
+            get {
+                return ResourceManager.GetString("MainMenu_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to No players to show yet..
+        /// </summary>
+        public static string MainMenu_TopWinnersEmptyMessage {
+            get {
+                return ResourceManager.GetString("MainMenu_TopWinnersEmptyMessage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///     Looks up a localized string similar to Top winners.
+        /// </summary>
+        public static string MainMenu_TopWinnersTitle {
+            get {
+                return ResourceManager.GetString("MainMenu_TopWinnersTitle", resourceCulture);
             }
         }
     }

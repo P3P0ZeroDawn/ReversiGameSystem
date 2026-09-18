@@ -5,7 +5,7 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:localization="clr-namespace:ReversiGameSystem.Localization"
       mc:Ignorable="d"
-      d:DesignHeight="720" d:DesignWidth="1280"
+      d:DesignHeight="800" d:DesignWidth="1280"
       Title="{Binding [AccountCreation_Title]}"
       Style="{StaticResource AuthenticationPageStyle}"
       DataContext="{x:Static localization:LocalizationManager.Instance}">
@@ -15,25 +15,33 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Style="{StaticResource LanguagePanelStyle}">
-            <Label x:Name="languageLabel" Content="{Binding [Common_LanguageLabel]}"
-                   Style="{StaticResource LanguageLabelStyle}" />
-            <ComboBox x:Name="languageComboBox"
-                      Style="{StaticResource LanguageComboBoxStyle}"
-                      SelectedValuePath="Tag"
-                      SelectedValue="{Binding CultureName, Mode=TwoWay}">
-                <ComboBoxItem Tag="en-US" Content="{Binding [Language_English]}" />
-                <ComboBoxItem Tag="es-MX" Content="{Binding [Language_Spanish]}" />
-            </ComboBox>
-        </StackPanel>
+        <Grid Grid.Row="0" Style="{StaticResource ApplicationHeaderStyle}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="220" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="applicationNameTextBlock" Grid.Column="1"
+                       Text="{Binding [Application_Name]}"
+                       Style="{StaticResource AuthenticationBrandStyle}" />
+            <StackPanel Grid.Column="2" Style="{StaticResource LanguagePanelStyle}">
+                <Label x:Name="languageLabel" Content="{Binding [Common_LanguageLabel]}"
+                       Style="{StaticResource LanguageLabelStyle}" />
+                <ComboBox x:Name="languageComboBox"
+                          Style="{StaticResource LanguageComboBoxStyle}"
+                          SelectedValuePath="Tag"
+                          SelectionChanged="OnLanguageSelectionChanged"
+                          SelectedValue="{Binding CultureName, Mode=TwoWay, UpdateSourceTrigger=Explicit}">
+                    <ComboBoxItem Tag="en-US" Content="{Binding [Language_English]}" />
+                    <ComboBoxItem Tag="es-MX" Content="{Binding [Language_Spanish]}" />
+                </ComboBox>
+            </StackPanel>
+        </Grid>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
             <Border Style="{StaticResource AuthenticationCardStyle}">
                 <StackPanel>
-                    <TextBlock x:Name="applicationNameTextBlock"
-                               Text="{Binding [Application_Name]}"
-                               Style="{StaticResource AuthenticationBrandStyle}" />
                     <TextBlock x:Name="accountCreationTitleTextBlock"
                                Text="{Binding [AccountCreation_Title]}"
                                Style="{StaticResource AuthenticationTitleStyle}" />

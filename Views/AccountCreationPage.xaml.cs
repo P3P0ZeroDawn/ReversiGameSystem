@@ -82,6 +82,8 @@ public partial class AccountCreationPage : Page
             ShowPasswordValidationWarning(passwordError);
             return;
         }
+
+        // TODO: Submit the validated registration to the server and handle its response.
     }
 
     private bool HasMissingRequiredInformation()
@@ -134,5 +136,10 @@ public partial class AccountCreationPage : Page
     private void OnCancelClick(object sender, RoutedEventArgs e)
     {
         NavigationService?.Navigate(new LoginScreenPage());
+    }
+
+    private void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        LanguageChangeService.ConfirmSelection((ComboBox)sender);
     }
 }

@@ -162,8 +162,41 @@
   <data name="LoginScreen_SignInButton" xml:space="preserve">
     <value>Iniciar sesión</value>
   </data>
+  <data name="LoginScreen_MissingCredentialsTitle" xml:space="preserve">
+    <value>Faltan datos</value>
+  </data>
+  <data name="LoginScreen_MissingCredentialsMessage" xml:space="preserve">
+    <value>Ingresa tu correo electrónico y contraseña para continuar.</value>
+  </data>
+  <data name="LoginScreen_InvalidEmailTitle" xml:space="preserve">
+    <value>Correo electrónico no válido</value>
+  </data>
+  <data name="LoginScreen_InvalidEmailMessage" xml:space="preserve">
+    <value>Ingresa una dirección de correo válida para continuar.</value>
+  </data>
+  <data name="LoginScreen_VerificationCodeDialogTitle" xml:space="preserve">
+    <value>Verificar inicio de sesión</value>
+  </data>
+  <data name="LoginScreen_VerificationCodeDialogMessage" xml:space="preserve">
+    <value>Ingresa el código de verificación de seis dígitos enviado a {0}.</value>
+  </data>
+  <data name="LoginScreen_VerificationCodeDialogLabel" xml:space="preserve">
+    <value>Código de verificación</value>
+  </data>
   <data name="LoginScreen_GuestButton" xml:space="preserve">
     <value>Continuar como invitado</value>
+  </data>
+  <data name="LoginScreen_GuestDialogTitle" xml:space="preserve">
+    <value>Entrar como invitado</value>
+  </data>
+  <data name="LoginScreen_GuestDialogMessage" xml:space="preserve">
+    <value>Tu progreso no se guardará. No podrás agregar amigos ni participar en el chat. Escribe el nombre con el que quieres identificarte en el juego.</value>
+  </data>
+  <data name="LoginScreen_GuestDialogNameLabel" xml:space="preserve">
+    <value>Nombre</value>
+  </data>
+  <data name="LoginScreen_GuestDialogEnterButton" xml:space="preserve">
+    <value>Entrar como invitado</value>
   </data>
   <data name="LoginScreen_NoAccountText" xml:space="preserve">
     <value>¿Eres nuevo?</value>
@@ -284,5 +317,86 @@
   </data>
   <data name="AccountCreation_PasswordBlockedMessage" xml:space="preserve">
     <value>Esta contraseña es muy común o apareció en una filtración de datos. Elige otra.</value>
+  </data>
+  <data name="Common_ConfirmButton" xml:space="preserve">
+    <value>Confirmar</value>
+  </data>
+  <data name="Common_CancelButton" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="Common_ChangeLanguageTitle" xml:space="preserve">
+    <value>Cambiar idioma</value>
+  </data>
+  <data name="Common_ChangeLanguageMessage" xml:space="preserve">
+    <value>¿Cambiar el idioma de la aplicación? El texto de esta pantalla se actualizará.</value>
+  </data>
+  <data name="MainMenu_Title" xml:space="preserve">
+    <value>Menú principal</value>
+  </data>
+  <data name="MainMenu_GuestLabel" xml:space="preserve">
+    <value>Invitado</value>
+  </data>
+  <data name="MainMenu_TopWinnersTitle" xml:space="preserve">
+    <value>Jugadores con más victorias</value>
+  </data>
+  <data name="MainMenu_TopWinnersEmptyMessage" xml:space="preserve">
+    <value>Aún no hay jugadores para mostrar.</value>
+  </data>
+  <data name="MainMenu_CreateGameButton" xml:space="preserve">
+    <value>Crear partida</value>
+  </data>
+  <data name="MainMenu_JoinGameButton" xml:space="preserve">
+    <value>Unirse a una partida</value>
+  </data>
+  <data name="MainMenu_MatchHistoryButton" xml:space="preserve">
+    <value>Historial de partidas</value>
+  </data>
+  <data name="MainMenu_ProfileButton" xml:space="preserve">
+    <value>Mi perfil</value>
+  </data>
+  <data name="MainMenu_LogoutButton" xml:space="preserve">
+    <value>Cerrar sesión</value>
+  </data>
+  <data name="MainMenu_FriendsTitle" xml:space="preserve">
+    <value>Amigos</value>
+  </data>
+  <data name="MainMenu_AddFriendButton" xml:space="preserve">
+    <value>Agregar amigo</value>
+  </data>
+  <data name="MainMenu_FriendsEmptyMessage" xml:space="preserve">
+    <value>Tus amigos aparecerán aquí.</value>
+  </data>
+  <data name="MainMenu_FriendRequestsTitle" xml:space="preserve">
+    <value>Solicitudes de amistad</value>
+  </data>
+  <data name="MainMenu_FriendRequestsEmptyMessage" xml:space="preserve">
+    <value>No tienes solicitudes pendientes.</value>
+  </data>
+  <data name="AvailableMatches_Title" xml:space="preserve">
+    <value>Partidas disponibles</value>
+  </data>
+  <data name="AvailableMatches_Intro" xml:space="preserve">
+    <value>Selecciona una partida disponible o ingresa un código.</value>
+  </data>
+  <data name="AvailableMatches_EmptyMessage" xml:space="preserve">
+    <value>No hay partidas disponibles por ahora.</value>
+  </data>
+  <data name="AvailableMatches_JoinButton" xml:space="preserve">
+    <value>Unirse</value>
+  </data>
+  <data name="AvailableMatches_BackButton" xml:space="preserve">
+    <value>Volver al menú</value>
+  </data>
+  <data name="AvailableMatches_JoinWithCodeButton" xml:space="preserve">
+    <value>Unirse con código</value>
+  </data>
+  <data name="AvailableMatches_CodeDialogTitle" xml:space="preserve">
+    <value>Unirse con código</value>
+  </data>
+  <data name="AvailableMatches_CodeDialogMessage" xml:space="preserve">
+    <value>Ingresa el código de la partida a la que quieres unirte.</value>
+  </data>
+  <data name="AvailableMatches_CodeDialogLabel" xml:space="preserve">
+    <value>Código de partida</value>
   </data>
 </root>

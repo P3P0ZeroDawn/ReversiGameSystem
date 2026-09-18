@@ -57,7 +57,15 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Page Include="Views\AvailableMatchesPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Views\MainMenuPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\TextInputDialogWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -73,6 +81,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Styles\MainMenuStyles.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -81,8 +93,14 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Views\AvailableMatchesPage.xaml.cs">
+      <DependentUpon>AvailableMatchesPage.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\MainMenuPage.xaml.cs">
       <DependentUpon>MainMenuPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\TextInputDialogWindow.xaml.cs">
+      <DependentUpon>TextInputDialogWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\LoginScreenPage.xaml.cs">
       <DependentUpon>LoginScreenPage.xaml</DependentUpon>
@@ -92,6 +110,8 @@
     </Compile>
     <Compile Include="Localization\LocalizationManager.cs" />
     <Compile Include="Services\DialogService.cs" />
+    <Compile Include="Services\LanguageChangeService.cs" />
+    <Compile Include="Services\TextInputDialogOptions.cs" />
     <Compile Include="Validation\EmailPolicy.cs" />
     <Compile Include="Validation\PasswordPolicy.cs" />
     <Compile Include="Validation\ProfilePicturePolicy.cs" />

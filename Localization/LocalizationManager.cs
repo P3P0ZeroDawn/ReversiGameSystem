@@ -49,10 +49,20 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             }
 
             SetCulture(value);
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CultureName)));
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(Binding.IndexerName));
+            IsChangingCulture = true;
+            try
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CultureName)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(Binding.IndexerName));
+            }
+            finally
+            {
+                IsChangingCulture = false;
+            }
         }
     }
+
+    internal bool IsChangingCulture { get; private set; }
 
     /// <summary>
     /// Gets a localized string from the application resources.
