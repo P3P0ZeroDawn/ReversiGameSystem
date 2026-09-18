@@ -57,11 +57,19 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Page Include="Views\MainMenuPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\LoginScreenPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Views\AccountCreationPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Styles\AccountCreationStyles.xaml">
+    <Page Include="Styles\AuthenticationStyles.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -73,10 +81,20 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Views\MainMenuPage.xaml.cs">
+      <DependentUpon>MainMenuPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\LoginScreenPage.xaml.cs">
+      <DependentUpon>LoginScreenPage.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\AccountCreationPage.xaml.cs">
       <DependentUpon>AccountCreationPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Localization\LocalizationManager.cs" />
+    <Compile Include="Services\DialogService.cs" />
+    <Compile Include="Validation\EmailPolicy.cs" />
+    <Compile Include="Validation\PasswordPolicy.cs" />
+    <Compile Include="Validation\ProfilePicturePolicy.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -110,7 +128,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Assets\Images\imgDefaultProfilePicture.png" />
+    <Resource Include="Assets\Images\DefaultProfilePicture.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

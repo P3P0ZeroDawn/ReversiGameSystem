@@ -117,34 +117,172 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Account_Creation" xml:space="preserve">
-    <value>Creación de cuenta</value>
+  <data name="AccountCreation_Title" xml:space="preserve">
+    <value>Crear una cuenta</value>
   </data>
-  <data name="Cancel_Button" xml:space="preserve">
+  <data name="AccountCreation_CancelButton" xml:space="preserve">
     <value>Cancelar</value>
   </data>
-  <data name="Create_Account_Button" xml:space="preserve">
-    <value>Crear Cuenta</value>
+  <data name="AccountCreation_CreateButton" xml:space="preserve">
+    <value>Crear cuenta</value>
   </data>
-  <data name="Language" xml:space="preserve">
+  <data name="Common_LanguageLabel" xml:space="preserve">
     <value>Idioma</value>
   </data>
-  <data name="Name" xml:space="preserve">
-    <value>Nombre</value>
+  <data name="AccountCreation_UsernameLabel" xml:space="preserve">
+    <value>Nombre de usuario</value>
   </data>
-  <data name="Password" xml:space="preserve">
+  <data name="Common_PasswordLabel" xml:space="preserve">
     <value>Contraseña</value>
   </data>
-  <data name="Password_Confirmation" xml:space="preserve">
-    <value>Confirmación de Contraseña</value>
+  <data name="AccountCreation_ConfirmPasswordLabel" xml:space="preserve">
+    <value>Confirmar contraseña</value>
   </data>
-  <data name="es_MX" xml:space="preserve">
+  <data name="Language_Spanish" xml:space="preserve">
     <value>Español</value>
   </data>
-  <data name="en_US" xml:space="preserve">
+  <data name="Language_English" xml:space="preserve">
     <value>Inglés</value>
   </data>
-  <data name="Email" xml:space="preserve">
+  <data name="Common_EmailLabel" xml:space="preserve">
     <value>Correo electrónico</value>
+  </data>
+  <data name="AccountCreation_ProfilePictureButton" xml:space="preserve">
+    <value>Elegir una foto de perfil</value>
+  </data>
+  <data name="Application_Name" xml:space="preserve">
+    <value>Reversi</value>
+  </data>
+  <data name="LoginScreen_Title" xml:space="preserve">
+    <value>Iniciar sesión</value>
+  </data>
+  <data name="LoginScreen_ForgotPasswordText" xml:space="preserve">
+    <value>¿Olvidaste tu contraseña?</value>
+  </data>
+  <data name="LoginScreen_SignInButton" xml:space="preserve">
+    <value>Iniciar sesión</value>
+  </data>
+  <data name="LoginScreen_GuestButton" xml:space="preserve">
+    <value>Continuar como invitado</value>
+  </data>
+  <data name="LoginScreen_NoAccountText" xml:space="preserve">
+    <value>¿Eres nuevo?</value>
+  </data>
+  <data name="LoginScreen_CreateAccountButton" xml:space="preserve">
+    <value>Crear una cuenta</value>
+  </data>
+  <data name="AccountCreation_PasswordHint" xml:space="preserve">
+    <value>Usa de 8 a 128 caracteres con al menos una mayúscula, una minúscula, un número y un símbolo (! o *).</value>
+  </data>
+  <data name="AccountCreation_SelectProfileImageTitle" xml:space="preserve">
+    <value>Elegir una foto de perfil</value>
+  </data>
+  <data name="AccountCreation_ProfileImageFilterLabel" xml:space="preserve">
+    <value>Imágenes PNG o JPEG</value>
+  </data>
+  <data name="AccountCreation_PasswordMismatchTitle" xml:space="preserve">
+    <value>Las contraseñas no coinciden</value>
+  </data>
+  <data name="AccountCreation_PasswordMismatchMessage" xml:space="preserve">
+    <value>Las contraseñas que escribiste no coinciden. Inténtalo de nuevo.</value>
+  </data>
+  <data name="AccountCreation_InvalidPasswordFormatTitle" xml:space="preserve">
+    <value>La contraseña no cumple los requisitos</value>
+  </data>
+  <data name="AccountCreation_PasswordTooShortMessage" xml:space="preserve">
+    <value>Usa al menos 8 caracteres para tu contraseña.</value>
+  </data>
+  <data name="AccountCreation_PasswordTooLongMessage" xml:space="preserve">
+    <value>Usa como máximo 128 caracteres para tu contraseña.</value>
+  </data>
+  <data name="AccountCreation_PasswordMissingUppercaseMessage" xml:space="preserve">
+    <value>Agrega al menos una letra mayúscula, como A.</value>
+  </data>
+  <data name="AccountCreation_PasswordMissingLowercaseMessage" xml:space="preserve">
+    <value>Agrega al menos una letra minúscula, como a.</value>
+  </data>
+  <data name="AccountCreation_PasswordMissingDigitMessage" xml:space="preserve">
+    <value>Agrega al menos un número, como 1.</value>
+  </data>
+  <data name="AccountCreation_PasswordMissingSymbolMessage" xml:space="preserve">
+    <value>Agrega al menos un símbolo, como ! o *.</value>
+  </data>
+  <data name="AccountCreation_PasswordUnsupportedCharactersMessage" xml:space="preserve">
+    <value>Quita los caracteres invisibles o de control de tu contraseña. Se permiten letras, números, espacios y símbolos.</value>
+  </data>
+  <data name="AccountCreation_InvalidConfirmationCodeTitle" xml:space="preserve">
+    <value>Código de verificación incorrecto</value>
+  </data>
+  <data name="AccountCreation_InvalidConfirmationCodeMessage" xml:space="preserve">
+    <value>El código es incorrecto. Revísalo e inténtalo de nuevo.</value>
+  </data>
+  <data name="AccountCreation_ExpiredConfirmationCodeTitle" xml:space="preserve">
+    <value>El código de verificación expiró</value>
+  </data>
+  <data name="AccountCreation_ExpiredConfirmationCodeMessage" xml:space="preserve">
+    <value>El código perdió vigencia. Solicita uno nuevo para continuar.</value>
+  </data>
+  <data name="AccountCreation_UsernameAlreadyTakenTitle" xml:space="preserve">
+    <value>Nombre de usuario ocupado</value>
+  </data>
+  <data name="AccountCreation_UsernameAlreadyTakenMessage" xml:space="preserve">
+    <value>Ese nombre de usuario ya está en uso. Elige otro.</value>
+  </data>
+  <data name="AccountCreation_EmailAlreadyTakenTitle" xml:space="preserve">
+    <value>Correo electrónico ya registrado</value>
+  </data>
+  <data name="AccountCreation_EmailAlreadyTakenMessage" xml:space="preserve">
+    <value>Ese correo electrónico ya está asociado a una cuenta. Usa otro.</value>
+  </data>
+  <data name="AccountCreation_ImageNotSupportedTitle" xml:space="preserve">
+    <value>Foto de perfil no compatible</value>
+  </data>
+  <data name="AccountCreation_ImageNotSupportedMessage" xml:space="preserve">
+    <value>Elige una imagen PNG o JPEG de máximo 5 MiB y 4096 × 4096 píxeles.</value>
+  </data>
+  <data name="AccountCreation_InvalidEmailFormatTitle" xml:space="preserve">
+    <value>Correo electrónico no válido</value>
+  </data>
+  <data name="AccountCreation_InvalidEmailFormatMessage" xml:space="preserve">
+    <value>Incluye una sola @ entre el nombre y el dominio, por ejemplo, jugador@ejemplo.com.</value>
+  </data>
+  <data name="AccountCreation_InvalidEmailNameMessage" xml:space="preserve">
+    <value>Antes de @, usa hasta 64 letras sin acentos, números o símbolos comunes. No pongas puntos al inicio o al final ni dos seguidos.</value>
+  </data>
+  <data name="AccountCreation_InvalidEmailDomainMessage" xml:space="preserve">
+    <value>Después de @, escribe un dominio completo, como ejemplo.com, sin espacios ni guiones mal colocados.</value>
+  </data>
+  <data name="AccountCreation_EmailTooLongMessage" xml:space="preserve">
+    <value>Usa una dirección de correo de 254 caracteres como máximo.</value>
+  </data>
+  <data name="AccountCreation_MissingRequiredInformationTitle" xml:space="preserve">
+    <value>Faltan datos obligatorios</value>
+  </data>
+  <data name="AccountCreation_MissingRequiredInformationMessage" xml:space="preserve">
+    <value>Completa todos los campos obligatorios antes de continuar.</value>
+  </data>
+  <data name="AccountCreation_ServerConnectionFailedTitle" xml:space="preserve">
+    <value>Conexión no disponible</value>
+  </data>
+  <data name="AccountCreation_ServerConnectionFailedMessage" xml:space="preserve">
+    <value>No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.</value>
+  </data>
+  <data name="AccountCreation_CannotSendEmailTitle" xml:space="preserve">
+    <value>No se envió el correo de verificación</value>
+  </data>
+  <data name="AccountCreation_CannotSendEmailMessage" xml:space="preserve">
+    <value>No pudimos enviar el correo de verificación. Inténtalo de nuevo más tarde.</value>
+  </data>
+  <data name="AccountCreation_PersistenceErrorTitle" xml:space="preserve">
+    <value>No se guardó la cuenta</value>
+  </data>
+  <data name="AccountCreation_PersistenceErrorMessage" xml:space="preserve">
+    <value>No pudimos crear tu cuenta. Inténtalo de nuevo más tarde.</value>
+  </data>
+  <data name="AccountCreation_PasswordBlockedTitle" xml:space="preserve">
+    <value>Elige otra contraseña</value>
+  </data>
+  <data name="AccountCreation_PasswordBlockedMessage" xml:space="preserve">
+    <value>Esta contraseña es muy común o apareció en una filtración de datos. Elige otra.</value>
   </data>
 </root>

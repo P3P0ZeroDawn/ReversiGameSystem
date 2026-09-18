@@ -117,34 +117,172 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Account_Creation" xml:space="preserve">
-    <value>Account Creation</value>
+  <data name="AccountCreation_Title" xml:space="preserve">
+    <value>Create an account</value>
   </data>
-  <data name="Cancel_Button" xml:space="preserve">
+  <data name="AccountCreation_CancelButton" xml:space="preserve">
     <value>Cancel</value>
   </data>
-  <data name="Create_Account_Button" xml:space="preserve">
-    <value>Create Account</value>
+  <data name="AccountCreation_CreateButton" xml:space="preserve">
+    <value>Create account</value>
   </data>
-  <data name="Language" xml:space="preserve">
+  <data name="Common_LanguageLabel" xml:space="preserve">
     <value>Language</value>
   </data>
-  <data name="Name" xml:space="preserve">
-    <value>Name</value>
+  <data name="AccountCreation_UsernameLabel" xml:space="preserve">
+    <value>Username</value>
   </data>
-  <data name="Password" xml:space="preserve">
+  <data name="Common_PasswordLabel" xml:space="preserve">
     <value>Password</value>
   </data>
-  <data name="Password_Confirmation" xml:space="preserve">
-    <value>Password Confirmation</value>
+  <data name="AccountCreation_ConfirmPasswordLabel" xml:space="preserve">
+    <value>Confirm password</value>
   </data>
-  <data name="es_MX" xml:space="preserve">
+  <data name="Language_Spanish" xml:space="preserve">
     <value>Spanish</value>
   </data>
-  <data name="en_US" xml:space="preserve">
+  <data name="Language_English" xml:space="preserve">
     <value>English</value>
   </data>
-  <data name="Email" xml:space="preserve">
+  <data name="Common_EmailLabel" xml:space="preserve">
     <value>Email</value>
+  </data>
+  <data name="AccountCreation_ProfilePictureButton" xml:space="preserve">
+    <value>Choose a profile picture</value>
+  </data>
+  <data name="Application_Name" xml:space="preserve">
+    <value>Reversi</value>
+  </data>
+  <data name="LoginScreen_Title" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="LoginScreen_ForgotPasswordText" xml:space="preserve">
+    <value>Forgot your password?</value>
+  </data>
+  <data name="LoginScreen_SignInButton" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="LoginScreen_GuestButton" xml:space="preserve">
+    <value>Continue as guest</value>
+  </data>
+  <data name="LoginScreen_NoAccountText" xml:space="preserve">
+    <value>New here?</value>
+  </data>
+  <data name="LoginScreen_CreateAccountButton" xml:space="preserve">
+    <value>Create an account</value>
+  </data>
+  <data name="AccountCreation_PasswordHint" xml:space="preserve">
+    <value>Use 8 to 128 characters with at least one uppercase letter, lowercase letter, number, and symbol (! or *).</value>
+  </data>
+  <data name="AccountCreation_SelectProfileImageTitle" xml:space="preserve">
+    <value>Choose a profile picture</value>
+  </data>
+  <data name="AccountCreation_ProfileImageFilterLabel" xml:space="preserve">
+    <value>PNG or JPEG images</value>
+  </data>
+  <data name="AccountCreation_PasswordMismatchTitle" xml:space="preserve">
+    <value>Passwords do not match</value>
+  </data>
+  <data name="AccountCreation_PasswordMismatchMessage" xml:space="preserve">
+    <value>The passwords you entered do not match. Try again.</value>
+  </data>
+  <data name="AccountCreation_InvalidPasswordFormatTitle" xml:space="preserve">
+    <value>Password requirements not met</value>
+  </data>
+  <data name="AccountCreation_PasswordTooShortMessage" xml:space="preserve">
+    <value>Use at least 8 characters for your password.</value>
+  </data>
+  <data name="AccountCreation_PasswordTooLongMessage" xml:space="preserve">
+    <value>Use no more than 128 characters for your password.</value>
+  </data>
+  <data name="AccountCreation_PasswordMissingUppercaseMessage" xml:space="preserve">
+    <value>Add at least one uppercase letter, such as A.</value>
+  </data>
+  <data name="AccountCreation_PasswordMissingLowercaseMessage" xml:space="preserve">
+    <value>Add at least one lowercase letter, such as a.</value>
+  </data>
+  <data name="AccountCreation_PasswordMissingDigitMessage" xml:space="preserve">
+    <value>Add at least one number, such as 1.</value>
+  </data>
+  <data name="AccountCreation_PasswordMissingSymbolMessage" xml:space="preserve">
+    <value>Add at least one symbol, such as ! or *.</value>
+  </data>
+  <data name="AccountCreation_PasswordUnsupportedCharactersMessage" xml:space="preserve">
+    <value>Remove invisible or control characters from your password. Letters, numbers, spaces, and symbols are allowed.</value>
+  </data>
+  <data name="AccountCreation_InvalidConfirmationCodeTitle" xml:space="preserve">
+    <value>Incorrect verification code</value>
+  </data>
+  <data name="AccountCreation_InvalidConfirmationCodeMessage" xml:space="preserve">
+    <value>The code is incorrect. Check it and try again.</value>
+  </data>
+  <data name="AccountCreation_ExpiredConfirmationCodeTitle" xml:space="preserve">
+    <value>Verification code expired</value>
+  </data>
+  <data name="AccountCreation_ExpiredConfirmationCodeMessage" xml:space="preserve">
+    <value>The code has expired. Request a new one to continue.</value>
+  </data>
+  <data name="AccountCreation_UsernameAlreadyTakenTitle" xml:space="preserve">
+    <value>Username already taken</value>
+  </data>
+  <data name="AccountCreation_UsernameAlreadyTakenMessage" xml:space="preserve">
+    <value>That username is already in use. Choose another one.</value>
+  </data>
+  <data name="AccountCreation_EmailAlreadyTakenTitle" xml:space="preserve">
+    <value>Email already registered</value>
+  </data>
+  <data name="AccountCreation_EmailAlreadyTakenMessage" xml:space="preserve">
+    <value>That email address is already linked to an account. Use another one.</value>
+  </data>
+  <data name="AccountCreation_ImageNotSupportedTitle" xml:space="preserve">
+    <value>Unsupported profile picture</value>
+  </data>
+  <data name="AccountCreation_ImageNotSupportedMessage" xml:space="preserve">
+    <value>Choose a PNG or JPEG image no larger than 5 MiB and 4096 × 4096 pixels.</value>
+  </data>
+  <data name="AccountCreation_InvalidEmailFormatTitle" xml:space="preserve">
+    <value>Invalid email address</value>
+  </data>
+  <data name="AccountCreation_InvalidEmailFormatMessage" xml:space="preserve">
+    <value>Include one @ between the name and domain, like player@example.com.</value>
+  </data>
+  <data name="AccountCreation_InvalidEmailNameMessage" xml:space="preserve">
+    <value>Before @, use up to 64 unaccented letters, numbers, or common symbols. Do not start, end, or repeat a dot.</value>
+  </data>
+  <data name="AccountCreation_InvalidEmailDomainMessage" xml:space="preserve">
+    <value>After @, enter a complete domain, like example.com, without spaces or misplaced hyphens.</value>
+  </data>
+  <data name="AccountCreation_EmailTooLongMessage" xml:space="preserve">
+    <value>Use an email address no longer than 254 characters.</value>
+  </data>
+  <data name="AccountCreation_MissingRequiredInformationTitle" xml:space="preserve">
+    <value>Required information missing</value>
+  </data>
+  <data name="AccountCreation_MissingRequiredInformationMessage" xml:space="preserve">
+    <value>Complete all required fields before continuing.</value>
+  </data>
+  <data name="AccountCreation_ServerConnectionFailedTitle" xml:space="preserve">
+    <value>Connection unavailable</value>
+  </data>
+  <data name="AccountCreation_ServerConnectionFailedMessage" xml:space="preserve">
+    <value>Could not connect to the server. Check your connection and try again.</value>
+  </data>
+  <data name="AccountCreation_CannotSendEmailTitle" xml:space="preserve">
+    <value>Verification email not sent</value>
+  </data>
+  <data name="AccountCreation_CannotSendEmailMessage" xml:space="preserve">
+    <value>We could not send the verification email. Please try again later.</value>
+  </data>
+  <data name="AccountCreation_PersistenceErrorTitle" xml:space="preserve">
+    <value>Account not saved</value>
+  </data>
+  <data name="AccountCreation_PersistenceErrorMessage" xml:space="preserve">
+    <value>We could not create your account. Please try again later.</value>
+  </data>
+  <data name="AccountCreation_PasswordBlockedTitle" xml:space="preserve">
+    <value>Choose another password</value>
+  </data>
+  <data name="AccountCreation_PasswordBlockedMessage" xml:space="preserve">
+    <value>This password is too common or has appeared in a data breach. Choose a different one.</value>
   </data>
 </root>

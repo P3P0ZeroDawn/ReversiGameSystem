@@ -5,64 +5,92 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:localization="clr-namespace:ReversiGameSystem.Localization"
       mc:Ignorable="d"
-      d:DesignHeight="600" d:DesignWidth="800"
-      Title="{Binding [Account_Creation]}"
-      Style="{StaticResource AccountCreationPageStyle}"
+      d:DesignHeight="720" d:DesignWidth="1280"
+      Title="{Binding [AccountCreation_Title]}"
+      Style="{StaticResource AuthenticationPageStyle}"
       DataContext="{x:Static localization:LocalizationManager.Instance}">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
+    <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition />
+            <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Column="2" Style="{StaticResource LanguagePanelStyle}">
-            <Label Content="{Binding [Language]}" Style="{StaticResource LanguageLabelStyle}" />
-            <ComboBox x:Name="languageSelector"
-                      Style="{StaticResource LanguageSelectorStyle}"
+        <StackPanel Grid.Row="0" Style="{StaticResource LanguagePanelStyle}">
+            <Label x:Name="languageLabel" Content="{Binding [Common_LanguageLabel]}"
+                   Style="{StaticResource LanguageLabelStyle}" />
+            <ComboBox x:Name="languageComboBox"
+                      Style="{StaticResource LanguageComboBoxStyle}"
                       SelectedValuePath="Tag"
                       SelectedValue="{Binding CultureName, Mode=TwoWay}">
-                <ComboBoxItem Tag="en-US" Content="English" />
-                <ComboBoxItem Tag="es-MX" Content="Español" />
+                <ComboBoxItem Tag="en-US" Content="{Binding [Language_English]}" />
+                <ComboBoxItem Tag="es-MX" Content="{Binding [Language_Spanish]}" />
             </ComboBox>
         </StackPanel>
 
-        <StackPanel Grid.Column="1" Grid.Row="1"
-                    Style="{StaticResource AccountFormPanelStyle}">
-            <TextBlock x:Name="pageTitleTextBlock" Text="{Binding [Account_Creation]}"
-                       Style="{StaticResource AccountCreationTitleStyle}" />
-            <StackPanel Style="{StaticResource ProfileRowStyle}">
-                <Button Style="{StaticResource ProfilePictureButtonStyle}">
-                    <Image Source="/Assets/Images/imgDefaultProfilePicture.png" />
-                </Button>
-                <StackPanel Style="{StaticResource NameFieldPanelStyle}">
-                    <TextBlock Text="{Binding [Name]}"
-                               Style="{StaticResource NameCaptionStyle}" />
-                    <TextBox x:Name="usernameTextBox" Style="{StaticResource NameInputStyle}" />
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <Border Style="{StaticResource AuthenticationCardStyle}">
+                <StackPanel>
+                    <TextBlock x:Name="applicationNameTextBlock"
+                               Text="{Binding [Application_Name]}"
+                               Style="{StaticResource AuthenticationBrandStyle}" />
+                    <TextBlock x:Name="accountCreationTitleTextBlock"
+                               Text="{Binding [AccountCreation_Title]}"
+                               Style="{StaticResource AuthenticationTitleStyle}" />
+
+                    <Grid Style="{StaticResource ProfileRowStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="52" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button x:Name="profilePictureButton"
+                                Grid.Column="0"
+                                ToolTip="{Binding [AccountCreation_ProfilePictureButton]}"
+                                AutomationProperties.Name="{Binding [AccountCreation_ProfilePictureButton]}"
+                                Click="OnProfilePictureClick"
+                                Style="{StaticResource ProfilePictureButtonStyle}">
+                            <Image x:Name="profilePictureImage"
+                                   Source="/Assets/Images/DefaultProfilePicture.png"
+                                   Stretch="Uniform" />
+                        </Button>
+                        <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                            <TextBlock x:Name="usernameTextBlock"
+                                       Text="{Binding [AccountCreation_UsernameLabel]}"
+                                       Style="{StaticResource AuthenticationFieldCaptionStyle}" />
+                            <TextBox x:Name="usernameTextBox"
+                                     Style="{StaticResource AuthenticationTextBoxStyle}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Label x:Name="emailLabel" Content="{Binding [Common_EmailLabel]}"
+                           Style="{StaticResource AuthenticationFieldLabelStyle}" />
+                    <TextBox x:Name="emailTextBox"
+                             Style="{StaticResource AuthenticationTextBoxStyle}" />
+                    <Label x:Name="passwordLabel" Content="{Binding [Common_PasswordLabel]}"
+                           Style="{StaticResource AuthenticationFieldLabelStyle}" />
+                    <PasswordBox x:Name="passwordBox"
+                                 Style="{StaticResource AuthenticationPasswordBoxStyle}" />
+                    <TextBlock x:Name="passwordHintTextBlock"
+                               Text="{Binding [AccountCreation_PasswordHint]}"
+                               Margin="0,-8,0,12"
+                               TextWrapping="Wrap"
+                               Style="{StaticResource AuthenticationSupportingTextStyle}" />
+                    <Label x:Name="confirmPasswordLabel"
+                           Content="{Binding [AccountCreation_ConfirmPasswordLabel]}"
+                           Style="{StaticResource AuthenticationFieldLabelStyle}" />
+                    <PasswordBox x:Name="confirmPasswordBox"
+                                 Style="{StaticResource AuthenticationPasswordBoxStyle}" />
+
+                    <Button x:Name="createAccountButton"
+                            Content="{Binding [AccountCreation_CreateButton]}"
+                            Click="OnCreateAccountClick"
+                            Style="{StaticResource AuthenticationPrimaryButtonStyle}" />
+                    <Button x:Name="cancelButton"
+                            Content="{Binding [AccountCreation_CancelButton]}"
+                            Click="OnCancelClick"
+                            Style="{StaticResource AuthenticationSecondaryButtonStyle}" />
                 </StackPanel>
-            </StackPanel>
-            <Label Content="{Binding [Email]}"
-                   Style="{StaticResource AccountFieldLabelStyle}" />
-            <TextBox x:Name="emailTextBox"
-                     Style="{StaticResource AccountTextInputStyle}" />
-            <Label Content="{Binding [Password]}"
-                   Style="{StaticResource AccountFieldLabelStyle}" />
-            <PasswordBox x:Name="passwordBox"
-                         Style="{StaticResource AccountPasswordInputStyle}" />
-            <Label Content="{Binding [Password_Confirmation]}"
-                   Style="{StaticResource AccountFieldLabelStyle}" />
-            <PasswordBox x:Name="confirmPasswordBox"
-                         Style="{StaticResource ConfirmationPasswordInputStyle}" />
-            <StackPanel Style="{StaticResource AccountActionsPanelStyle}">
-                <Button Content="{Binding [Create_Account_Button]}"
-                        Style="{StaticResource CreateAccountButtonStyle}" />
-                <Button Content="{Binding [Cancel_Button]}"
-                        Style="{StaticResource CancelAccountButtonStyle}" />
-            </StackPanel>
-        </StackPanel>
+            </Border>
+        </ScrollViewer>
     </Grid>
 </Page>
