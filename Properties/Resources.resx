@@ -190,13 +190,40 @@
     <value>Enter as guest</value>
   </data>
   <data name="LoginScreen_GuestDialogMessage" xml:space="preserve">
-    <value>Your progress will not be saved. You cannot add friends or participate in chat. Enter the name you want to use in the game.</value>
+    <value>Guest sessions are temporary. Your statistics will not be saved, and you cannot use chat or view, send, respond to, or remove friendships. Enter a name; a guest prefix will be added automatically when it is displayed.</value>
   </data>
   <data name="LoginScreen_GuestDialogNameLabel" xml:space="preserve">
     <value>Name</value>
   </data>
   <data name="LoginScreen_GuestDialogEnterButton" xml:space="preserve">
     <value>Enter as guest</value>
+  </data>
+  <data name="GuestAccess_MissingNameTitle" xml:space="preserve">
+    <value>Name required</value>
+  </data>
+  <data name="GuestAccess_DisplayNameFormat" xml:space="preserve">
+    <value>Guest-{0}</value>
+  </data>
+  <data name="GuestAccess_MissingNameMessage" xml:space="preserve">
+    <value>Enter the name you want to use during this guest session.</value>
+  </data>
+  <data name="GuestAccess_InvalidNameTitle" xml:space="preserve">
+    <value>Invalid guest name</value>
+  </data>
+  <data name="GuestAccess_InvalidNameMessage" xml:space="preserve">
+    <value>Use 3 to 32 letters, numbers, or underscores. The first character must be a letter or number.</value>
+  </data>
+  <data name="GuestAccess_NameAlreadyInUseTitle" xml:space="preserve">
+    <value>Name unavailable</value>
+  </data>
+  <data name="GuestAccess_NameAlreadyInUseMessage" xml:space="preserve">
+    <value>That guest name is being used by another active session. Choose a different name.</value>
+  </data>
+  <data name="GuestAccess_SessionCreationErrorTitle" xml:space="preserve">
+    <value>Guest session unavailable</value>
+  </data>
+  <data name="GuestAccess_SessionCreationErrorMessage" xml:space="preserve">
+    <value>The temporary guest session could not be started. Please try again.</value>
   </data>
   <data name="LoginScreen_NoAccountText" xml:space="preserve">
     <value>New here?</value>
@@ -364,7 +391,7 @@
     <value>Add friend</value>
   </data>
   <data name="MainMenu_FriendsEmptyMessage" xml:space="preserve">
-    <value>Your friends will appear here.</value>
+    <value>You don't have any friends yet.</value>
   </data>
   <data name="MainMenu_FriendRequestsTitle" xml:space="preserve">
     <value>Friend requests</value>
@@ -394,9 +421,841 @@
     <value>Join with code</value>
   </data>
   <data name="AvailableMatches_CodeDialogMessage" xml:space="preserve">
-    <value>Enter the code for the match you want to join.</value>
+    <value>Enter the six-character code for the match you want to join.</value>
   </data>
   <data name="AvailableMatches_CodeDialogLabel" xml:space="preserve">
     <value>Match code</value>
   </data>
+  <data name="AccountCreation_VerificationCodeDialogTitle" xml:space="preserve">
+    <value>Verify your email</value>
+  </data>
+  <data name="AccountCreation_VerificationCodeDialogMessage" xml:space="preserve">
+    <value>Enter the six-digit verification code sent to {0}.</value>
+  </data>
+  <data name="AccountCreation_VerificationCodeDialogLabel" xml:space="preserve">
+    <value>Verification code</value>
+  </data>
+  <data name="AccountCreation_SuccessTitle" xml:space="preserve">
+    <value>Account created</value>
+  </data>
+  <data name="AccountCreation_SuccessMessage" xml:space="preserve">
+    <value>Your account was created successfully. Welcome to Reversi.</value>
+  </data>
+  <data name="PasswordReset_EmailDialogTitle" xml:space="preserve">
+    <value>Reset password</value>
+  </data>
+  <data name="PasswordReset_EmailDialogMessage" xml:space="preserve">
+    <value>Enter the email address associated with your account.</value>
+  </data>
+  <data name="PasswordReset_ContinueButton" xml:space="preserve">
+    <value>Continue</value>
+  </data>
+  <data name="PasswordReset_InvalidEmailTitle" xml:space="preserve">
+    <value>Invalid email address</value>
+  </data>
+  <data name="PasswordReset_InvalidEmailMessage" xml:space="preserve">
+    <value>Enter a valid email address to continue.</value>
+  </data>
+  <data name="PasswordReset_CodeSentTitle" xml:space="preserve">
+    <value>Check your email</value>
+  </data>
+  <data name="PasswordReset_CodeSentMessage" xml:space="preserve">
+    <value>If an active account is associated with this email, a verification code has been sent.</value>
+  </data>
+  <data name="PasswordReset_CodeDialogTitle" xml:space="preserve">
+    <value>Enter verification code</value>
+  </data>
+  <data name="PasswordReset_CodeDialogMessage" xml:space="preserve">
+    <value>Enter the six-digit code for {0}.</value>
+  </data>
+  <data name="PasswordReset_CodeDialogLabel" xml:space="preserve">
+    <value>Verification code</value>
+  </data>
+  <data name="PasswordReset_NewPasswordDialogTitle" xml:space="preserve">
+    <value>Choose a new password</value>
+  </data>
+  <data name="PasswordReset_NewPasswordDialogMessage" xml:space="preserve">
+    <value>Enter and confirm the new password for your account.</value>
+  </data>
+  <data name="PasswordReset_NewPasswordLabel" xml:space="preserve">
+    <value>New password</value>
+  </data>
+  <data name="PasswordReset_ConfirmationLabel" xml:space="preserve">
+    <value>Confirm new password</value>
+  </data>
+  <data name="PasswordReset_PasswordHint" xml:space="preserve">
+    <value>Use 8 to 128 characters with at least one uppercase letter, one lowercase letter, one number, and one symbol such as ! or *.</value>
+  </data>
+  <data name="PasswordReset_MissingPasswordTitle" xml:space="preserve">
+    <value>Missing password</value>
+  </data>
+  <data name="PasswordReset_MissingPasswordMessage" xml:space="preserve">
+    <value>Enter the new password in both fields to continue.</value>
+  </data>
+  <data name="PasswordReset_PasswordMismatchTitle" xml:space="preserve">
+    <value>Passwords do not match</value>
+  </data>
+  <data name="PasswordReset_PasswordMismatchMessage" xml:space="preserve">
+    <value>The passwords you entered do not match. Try again.</value>
+  </data>
+  <data name="PasswordReset_InvalidPasswordTitle" xml:space="preserve">
+    <value>Password does not meet the requirements</value>
+  </data>
+  <data name="PasswordReset_PasswordTooShortMessage" xml:space="preserve">
+    <value>Use at least 8 characters for your password.</value>
+  </data>
+  <data name="PasswordReset_PasswordTooLongMessage" xml:space="preserve">
+    <value>Use no more than 128 characters for your password.</value>
+  </data>
+  <data name="PasswordReset_PasswordMissingUppercaseMessage" xml:space="preserve">
+    <value>Add at least one uppercase letter, such as A.</value>
+  </data>
+  <data name="PasswordReset_PasswordMissingLowercaseMessage" xml:space="preserve">
+    <value>Add at least one lowercase letter, such as a.</value>
+  </data>
+  <data name="PasswordReset_PasswordMissingDigitMessage" xml:space="preserve">
+    <value>Add at least one number, such as 1.</value>
+  </data>
+  <data name="PasswordReset_PasswordMissingSymbolMessage" xml:space="preserve">
+    <value>Add at least one symbol, such as ! or *.</value>
+  </data>
+  <data name="PasswordReset_PasswordUnsupportedCharactersMessage" xml:space="preserve">
+    <value>Remove invisible or control characters from your password. Letters, numbers, spaces, and symbols are allowed.</value>
+  </data>
+  <data name="PasswordReset_SuccessTitle" xml:space="preserve">
+    <value>Password updated</value>
+  </data>
+  <data name="PasswordReset_SuccessMessage" xml:space="preserve">
+    <value>Your password was updated successfully. Sign in with your new password.</value>
+  </data>
+  <data name="AccountInformation_Title" xml:space="preserve">
+    <value>My profile</value>
+  </data>
+  <data name="AccountInformation_ChangePictureButton" xml:space="preserve">
+    <value>Change profile picture</value>
+  </data>
+  <data name="AccountInformation_UsernameLabel" xml:space="preserve">
+    <value>Username</value>
+  </data>
+  <data name="AccountInformation_ChangeUsernameButton" xml:space="preserve">
+    <value>Change username</value>
+  </data>
+  <data name="AccountInformation_EmailLabel" xml:space="preserve">
+    <value>Email address</value>
+  </data>
+  <data name="AccountInformation_ChangePasswordButton" xml:space="preserve">
+    <value>Change password</value>
+  </data>
+  <data name="AccountInformation_StatisticsTitle" xml:space="preserve">
+    <value>Statistics</value>
+  </data>
+  <data name="AccountInformation_WinsLabel" xml:space="preserve">
+    <value>Wins:</value>
+  </data>
+  <data name="AccountInformation_MatchesPlayedLabel" xml:space="preserve">
+    <value>Matches played:</value>
+  </data>
+  <data name="AccountInformation_MatchesLostLabel" xml:space="preserve">
+    <value>Matches lost:</value>
+  </data>
+  <data name="AccountInformation_UnavailableValue" xml:space="preserve">
+    <value>Not available</value>
+  </data>
+  <data name="AccountInformation_BackButton" xml:space="preserve">
+    <value>Back to menu</value>
+  </data>
+  <data name="AccountInformation_DeactivateButton" xml:space="preserve">
+    <value>Deactivate account</value>
+  </data>
+  <data name="AccountInformation_SelectProfileImageTitle" xml:space="preserve">
+    <value>Choose a profile picture</value>
+  </data>
+  <data name="AccountInformation_ProfileImageFilterLabel" xml:space="preserve">
+    <value>PNG or JPEG images</value>
+  </data>
+  <data name="AccountInformation_ImageNotSupportedTitle" xml:space="preserve">
+    <value>Unsupported profile picture</value>
+  </data>
+  <data name="AccountInformation_ImageNotSupportedMessage" xml:space="preserve">
+    <value>Choose a PNG or JPEG image up to 5 MiB and 4096 × 4096 pixels.</value>
+  </data>
+  <data name="AccountInformation_PublicProfileTitle" xml:space="preserve">
+    <value>Player profile</value>
+  </data>
+  <data name="AccountInformation_CloseButton" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="AccountInformation_AccountNotAvailableTitle" xml:space="preserve">
+    <value>Account unavailable</value>
+  </data>
+  <data name="AccountInformation_AccountNotAvailableMessage" xml:space="preserve">
+    <value>The requested account is not available.</value>
+  </data>
+  <data name="AccountInformation_ServerConnectionFailedTitle" xml:space="preserve">
+    <value>Connection unavailable</value>
+  </data>
+  <data name="AccountInformation_ServerConnectionFailedMessage" xml:space="preserve">
+    <value>We couldn't connect to the server. Check your connection and try again.</value>
+  </data>
+  <data name="AccountInformation_RetrievalErrorTitle" xml:space="preserve">
+    <value>Account information unavailable</value>
+  </data>
+  <data name="AccountInformation_RetrievalErrorMessage" xml:space="preserve">
+    <value>We couldn't load this account's information. Try again later.</value>
+  </data>
+  <data name="AccountCreation_InvalidUsernameFormatTitle" xml:space="preserve">
+    <value>Invalid username</value>
+  </data>
+  <data name="AccountCreation_InvalidUsernameFormatMessage" xml:space="preserve">
+    <value>Use 3 to 32 characters. Start with a letter or number, then use only letters, numbers, or underscores.</value>
+  </data>
+  <data name="UsernameModification_DialogTitle" xml:space="preserve">
+    <value>Change username</value>
+  </data>
+  <data name="UsernameModification_DialogMessage" xml:space="preserve">
+    <value>Current username: {0}. Enter your new username.</value>
+  </data>
+  <data name="UsernameModification_DialogLabel" xml:space="preserve">
+    <value>New username</value>
+  </data>
+  <data name="UsernameModification_ConfirmButton" xml:space="preserve">
+    <value>Change username</value>
+  </data>
+  <data name="UsernameModification_MissingTitle" xml:space="preserve">
+    <value>Username required</value>
+  </data>
+  <data name="UsernameModification_MissingMessage" xml:space="preserve">
+    <value>Enter a new username to continue.</value>
+  </data>
+  <data name="UsernameModification_InvalidFormatTitle" xml:space="preserve">
+    <value>Invalid username</value>
+  </data>
+  <data name="UsernameModification_InvalidFormatMessage" xml:space="preserve">
+    <value>Use 3 to 32 characters. Start with a letter or number, then use only letters, numbers, or underscores.</value>
+  </data>
+  <data name="UsernameModification_AlreadyTakenTitle" xml:space="preserve">
+    <value>Username already taken</value>
+  </data>
+  <data name="UsernameModification_AlreadyTakenMessage" xml:space="preserve">
+    <value>That username is already in use. Choose another one.</value>
+  </data>
+  <data name="UsernameModification_SuccessTitle" xml:space="preserve">
+    <value>Username updated</value>
+  </data>
+  <data name="UsernameModification_SuccessMessage" xml:space="preserve">
+    <value>Your username was updated successfully.</value>
+  </data>
+  <data name="UsernameModification_ServerConnectionFailedTitle" xml:space="preserve">
+    <value>Connection unavailable</value>
+  </data>
+  <data name="UsernameModification_ServerConnectionFailedMessage" xml:space="preserve">
+    <value>We couldn't connect to the server. Check your connection and try again.</value>
+  </data>
+  <data name="UsernameModification_PersistenceErrorTitle" xml:space="preserve">
+    <value>Username not saved</value>
+  </data>
+  <data name="UsernameModification_PersistenceErrorMessage" xml:space="preserve">
+    <value>We couldn't save your new username. Your previous username remains unchanged.</value>
+  </data>
+  <data name="PasswordModification_DialogTitle" xml:space="preserve">
+    <value>Change password</value>
+  </data>
+  <data name="PasswordModification_DialogMessage" xml:space="preserve">
+    <value>Enter your current password and choose a new one.</value>
+  </data>
+  <data name="PasswordModification_CurrentPasswordLabel" xml:space="preserve">
+    <value>Current password</value>
+  </data>
+  <data name="PasswordModification_NewPasswordLabel" xml:space="preserve">
+    <value>New password</value>
+  </data>
+  <data name="PasswordModification_ConfirmationLabel" xml:space="preserve">
+    <value>Confirm new password</value>
+  </data>
+  <data name="PasswordModification_PasswordHint" xml:space="preserve">
+    <value>Use 8 to 128 characters, including an uppercase letter, a lowercase letter, a number, and a symbol.</value>
+  </data>
+  <data name="PasswordModification_ConfirmButton" xml:space="preserve">
+    <value>Change password</value>
+  </data>
+  <data name="PasswordModification_MissingRequiredInformationTitle" xml:space="preserve">
+    <value>Required information missing</value>
+  </data>
+  <data name="PasswordModification_MissingRequiredInformationMessage" xml:space="preserve">
+    <value>Enter your current password, new password, and confirmation.</value>
+  </data>
+  <data name="PasswordModification_CurrentPasswordIncorrectTitle" xml:space="preserve">
+    <value>Incorrect current password</value>
+  </data>
+  <data name="PasswordModification_CurrentPasswordIncorrectMessage" xml:space="preserve">
+    <value>The current password is incorrect. Check it and try again.</value>
+  </data>
+  <data name="PasswordModification_PasswordMismatchTitle" xml:space="preserve">
+    <value>Passwords do not match</value>
+  </data>
+  <data name="PasswordModification_PasswordMismatchMessage" xml:space="preserve">
+    <value>The new password and its confirmation must match.</value>
+  </data>
+  <data name="PasswordModification_InvalidPasswordTitle" xml:space="preserve">
+    <value>New password does not meet the requirements</value>
+  </data>
+  <data name="PasswordModification_PasswordTooShortMessage" xml:space="preserve">
+    <value>Use at least 8 characters in your new password.</value>
+  </data>
+  <data name="PasswordModification_PasswordTooLongMessage" xml:space="preserve">
+    <value>Use no more than 128 characters in your new password.</value>
+  </data>
+  <data name="PasswordModification_PasswordMissingUppercaseMessage" xml:space="preserve">
+    <value>Add at least one uppercase letter, such as A.</value>
+  </data>
+  <data name="PasswordModification_PasswordMissingLowercaseMessage" xml:space="preserve">
+    <value>Add at least one lowercase letter, such as a.</value>
+  </data>
+  <data name="PasswordModification_PasswordMissingDigitMessage" xml:space="preserve">
+    <value>Add at least one number, such as 1.</value>
+  </data>
+  <data name="PasswordModification_PasswordMissingSymbolMessage" xml:space="preserve">
+    <value>Add at least one symbol, such as ! or *.</value>
+  </data>
+  <data name="PasswordModification_PasswordUnsupportedCharactersMessage" xml:space="preserve">
+    <value>Remove invisible or control characters from your new password. Letters, numbers, spaces, and symbols are allowed.</value>
+  </data>
+  <data name="PasswordModification_BlockedPasswordTitle" xml:space="preserve">
+    <value>Choose a different password</value>
+  </data>
+  <data name="PasswordModification_BlockedPasswordMessage" xml:space="preserve">
+    <value>This password cannot be used. Choose a less common password.</value>
+  </data>
+  <data name="PasswordModification_SuccessTitle" xml:space="preserve">
+    <value>Password updated</value>
+  </data>
+  <data name="PasswordModification_SuccessMessage" xml:space="preserve">
+    <value>Your password was updated successfully.</value>
+  </data>
+  <data name="PasswordModification_ServerConnectionFailedTitle" xml:space="preserve">
+    <value>Account service unavailable</value>
+  </data>
+  <data name="PasswordModification_ServerConnectionFailedMessage" xml:space="preserve">
+    <value>We couldn't reach the account service. Your password remains unchanged.</value>
+  </data>
+  <data name="PasswordModification_PersistenceErrorTitle" xml:space="preserve">
+    <value>Password not updated</value>
+  </data>
+  <data name="PasswordModification_PersistenceErrorMessage" xml:space="preserve">
+    <value>We couldn't save the new password. Your current password remains valid.</value>
+  </data>
+  <data name="ProfileImageModification_ConfirmationTitle" xml:space="preserve">
+    <value>Use this profile picture?</value>
+  </data>
+  <data name="ProfileImageModification_ConfirmationMessage" xml:space="preserve">
+    <value>Do you want to use the selected image as your profile picture?</value>
+  </data>
+  <data name="ProfileImageModification_SuccessTitle" xml:space="preserve">
+    <value>Profile picture updated</value>
+  </data>
+  <data name="ProfileImageModification_SuccessMessage" xml:space="preserve">
+    <value>Your profile picture was updated successfully.</value>
+  </data>
+  <data name="ProfileImageModification_ServerConnectionFailedTitle" xml:space="preserve">
+    <value>Account service unavailable</value>
+  </data>
+  <data name="ProfileImageModification_ServerConnectionFailedMessage" xml:space="preserve">
+    <value>We couldn't reach the account service. Your previous profile picture remains unchanged.</value>
+  </data>
+  <data name="ProfileImageModification_PersistenceErrorTitle" xml:space="preserve">
+    <value>Profile picture not saved</value>
+  </data>
+  <data name="ProfileImageModification_PersistenceErrorMessage" xml:space="preserve">
+    <value>We couldn't save the new profile picture. Your previous picture remains unchanged.</value>
+  </data>
+  <data name="PlayerStatistics_Title" xml:space="preserve">
+    <value>Statistics</value>
+  </data>
+  <data name="PlayerStatistics_ShowButton" xml:space="preserve">
+    <value>View statistics</value>
+  </data>
+  <data name="PlayerStatistics_WinsLabel" xml:space="preserve">
+    <value>Wins:</value>
+  </data>
+  <data name="PlayerStatistics_MatchesPlayedLabel" xml:space="preserve">
+    <value>Matches played:</value>
+  </data>
+  <data name="PlayerStatistics_LossesLabel" xml:space="preserve">
+    <value>Losses:</value>
+  </data>
+  <data name="PlayerStatistics_DrawsLabel" xml:space="preserve">
+    <value>Draws:</value>
+  </data>
+  <data name="PlayerStatistics_WinRateLabel" xml:space="preserve">
+    <value>Win rate:</value>
+  </data>
+  <data name="PlayerStatistics_ServerConnectionFailedTitle" xml:space="preserve">
+    <value>Connection unavailable</value>
+  </data>
+  <data name="PlayerStatistics_ServerConnectionFailedMessage" xml:space="preserve">
+    <value>We couldn't connect to the server to load this player's statistics.</value>
+  </data>
+  <data name="PlayerStatistics_RetrievalErrorTitle" xml:space="preserve">
+    <value>Statistics unavailable</value>
+  </data>
+  <data name="PlayerStatistics_RetrievalErrorMessage" xml:space="preserve">
+    <value>We couldn't retrieve this player's finished matches. Try again later.</value>
+  </data>
+  <data name="MainMenu_SettingsButton" xml:space="preserve">
+    <value>Options</value>
+  </data>
+  <data name="Settings_Title" xml:space="preserve">
+    <value>Options</value>
+  </data>
+  <data name="Settings_Description" xml:space="preserve">
+    <value>Choose how matches look on your screen.</value>
+  </data>
+  <data name="Settings_ProfilePicturesOnPiecesLabel" xml:space="preserve">
+    <value>Use profile pictures on game pieces</value>
+  </data>
+  <data name="Settings_ProfilePicturesOnPiecesDescription" xml:space="preserve">
+    <value>Show player profile pictures on pieces in your view of a match.</value>
+  </data>
+  <data name="Settings_CustomBackgroundLabel" xml:space="preserve">
+    <value>Use a custom board background</value>
+  </data>
+  <data name="Settings_CustomBackgroundDescription" xml:space="preserve">
+    <value>Use your selected image on your board only. Your opponent's view is unchanged.</value>
+  </data>
+  <data name="Settings_NoBackgroundMessage" xml:space="preserve">
+    <value>No custom background has been saved.</value>
+  </data>
+  <data name="Settings_ChangeBackgroundButton" xml:space="preserve">
+    <value>Change board background</value>
+  </data>
+  <data name="Settings_BackButton" xml:space="preserve">
+    <value>Back to menu</value>
+  </data>
+  <data name="BoardBackground_SelectImageTitle" xml:space="preserve">
+    <value>Choose a board background</value>
+  </data>
+  <data name="BoardBackground_ImageFilterLabel" xml:space="preserve">
+    <value>PNG or JPEG images</value>
+  </data>
+  <data name="BoardBackground_ImageNotSupportedTitle" xml:space="preserve">
+    <value>Unsupported board image</value>
+  </data>
+  <data name="BoardBackground_ImageNotSupportedMessage" xml:space="preserve">
+    <value>Choose a PNG or JPEG image up to 5 MiB and 4096 × 4096 pixels.</value>
+  </data>
+  <data name="BoardBackground_ConfirmationTitle" xml:space="preserve">
+    <value>Use this board background?</value>
+  </data>
+  <data name="BoardBackground_ConfirmationMessage" xml:space="preserve">
+    <value>Do you want to use the selected image as your board background?</value>
+  </data>
+  <data name="BoardBackground_SuccessTitle" xml:space="preserve">
+    <value>Board background updated</value>
+  </data>
+  <data name="BoardBackground_SuccessMessage" xml:space="preserve">
+    <value>Your board background was saved for your account.</value>
+  </data>
+  <data name="BoardBackground_ServerConnectionFailedTitle" xml:space="preserve">
+    <value>Account service unavailable</value>
+  </data>
+  <data name="BoardBackground_ServerConnectionFailedMessage" xml:space="preserve">
+    <value>We couldn't reach the account service. Your previous board background remains unchanged.</value>
+  </data>
+  <data name="BoardBackground_PersistenceErrorTitle" xml:space="preserve">
+    <value>Board background not saved</value>
+  </data>
+  <data name="BoardBackground_PersistenceErrorMessage" xml:space="preserve">
+    <value>We couldn't save the new board background. Your previous configuration remains unchanged.</value>
+  </data>
+  <data name="LanguageSettings_NotAvailableTitle" xml:space="preserve">
+    <value>Language unavailable</value>
+  </data>
+  <data name="LanguageSettings_NotAvailableMessage" xml:space="preserve">
+    <value>The selected language is not supported. The previous language remains active.</value>
+  </data>
+  <data name="LanguageSettings_PersistenceErrorTitle" xml:space="preserve">
+    <value>Language preference not saved</value>
+  </data>
+  <data name="LanguageSettings_PersistenceErrorMessage" xml:space="preserve">
+    <value>We couldn't save your language preference. The previous language remains active.</value>
+  </data>
+  <data name="LanguageSettings_ResourcesErrorTitle" xml:space="preserve">
+    <value>Language resources unavailable</value>
+  </data>
+  <data name="LanguageSettings_ResourcesErrorMessage" xml:space="preserve">
+    <value>We couldn't load all text for the selected language. The previous language remains active.</value>
+  </data>
+  <data name="AccountDeactivation_ConfirmationTitle" xml:space="preserve">
+    <value>Deactivate account?</value>
+  </data>
+  <data name="AccountDeactivation_ConfirmationMessage" xml:space="preserve">
+    <value>Do you want to deactivate your account? You will be signed out and will no longer be able to use it. Match and message history will be retained.</value>
+  </data>
+  <data name="AccountDeactivation_ActiveMatchTitle" xml:space="preserve">
+    <value>Finish your current match first</value>
+  </data>
+  <data name="AccountDeactivation_ActiveMatchMessage" xml:space="preserve">
+    <value>Your account cannot be deactivated while you are in an active match.</value>
+  </data>
+  <data name="AccountDeactivation_SuccessTitle" xml:space="preserve">
+    <value>Account deactivated</value>
+  </data>
+  <data name="AccountDeactivation_SuccessMessage" xml:space="preserve">
+    <value>Your account was deactivated. You have been signed out.</value>
+  </data>
+  <data name="AccountDeactivation_ServerConnectionFailedTitle" xml:space="preserve">
+    <value>Account service unavailable</value>
+  </data>
+  <data name="AccountDeactivation_ServerConnectionFailedMessage" xml:space="preserve">
+    <value>We couldn't reach the account service. Your account remains active.</value>
+  </data>
+  <data name="AccountDeactivation_PersistenceErrorTitle" xml:space="preserve">
+    <value>Account not deactivated</value>
+  </data>
+  <data name="AccountDeactivation_PersistenceErrorMessage" xml:space="preserve">
+    <value>We couldn't save the account change. Your account remains active.</value>
+  </data>
+  <data name="MatchCreation_Title" xml:space="preserve">
+    <value>Create match</value>
+  </data>
+  <data name="MatchCreation_Description" xml:space="preserve">
+    <value>Choose how much time each player has for a turn. If you keep the default, each turn lasts 40 seconds.</value>
+  </data>
+  <data name="MatchCreation_TurnTimeLabel" xml:space="preserve">
+    <value>Time per turn</value>
+  </data>
+  <data name="MatchCreation_SecondsSuffix" xml:space="preserve">
+    <value>seconds</value>
+  </data>
+  <data name="MatchCreation_TurnTimeHint" xml:space="preserve">
+    <value>Enter a whole number from 10 to 120 seconds.</value>
+  </data>
+  <data name="MatchCreation_CreateButton" xml:space="preserve">
+    <value>Create match</value>
+  </data>
+  <data name="MatchCreation_InvalidTurnTimeTitle" xml:space="preserve">
+    <value>Invalid turn time</value>
+  </data>
+  <data name="MatchCreation_InvalidTurnTimeMessage" xml:space="preserve">
+    <value>Enter a whole number from 10 to 120 seconds.</value>
+  </data>
+  <data name="MatchCreation_ServerConnectionFailedTitle" xml:space="preserve">
+    <value>Match service unavailable</value>
+  </data>
+  <data name="MatchCreation_ServerConnectionFailedMessage" xml:space="preserve">
+    <value>We couldn't reach the match service. No match was created.</value>
+  </data>
+  <data name="MatchCreation_PersistenceErrorTitle" xml:space="preserve">
+    <value>Match not created</value>
+  </data>
+  <data name="MatchCreation_PersistenceErrorMessage" xml:space="preserve">
+    <value>We couldn't create the match. No partial match was kept.</value>
+  </data>
+  <data name="WaitingForOpponent_Title" xml:space="preserve">
+    <value>Waiting for an opponent</value>
+  </data>
+  <data name="WaitingForOpponent_Description" xml:space="preserve">
+    <value>Share this code with another player so they can find the match.</value>
+  </data>
+  <data name="WaitingForOpponent_CodeLabel" xml:space="preserve">
+    <value>Match code</value>
+  </data>
+  <data name="WaitingForOpponent_SystemPrompt" xml:space="preserve">
+    <value>You can start immediately against an opponent controlled by the system.</value>
+  </data>
+  <data name="WaitingForOpponent_PlayAgainstSystemButton" xml:space="preserve">
+    <value>Play against the system</value>
+  </data>
+  <data name="Game_Title" xml:space="preserve">
+    <value>Game</value>
+  </data>
+  <data name="Game_DefaultPlayerName" xml:space="preserve">
+    <value>Player</value>
+  </data>
+  <data name="Game_SystemPlayerName" xml:space="preserve">
+    <value>System</value>
+  </data>
+  <data name="Game_ScoreFormat" xml:space="preserve">
+    <value>Score: {0}</value>
+  </data>
+  <data name="Game_CurrentTurnFormat" xml:space="preserve">
+    <value>{0}'s turn</value>
+  </data>
+  <data name="Game_RemainingTimeFormat" xml:space="preserve">
+    <value>Time remaining: {0} s</value>
+  </data>
+  <data name="Game_ChatTitle" xml:space="preserve">
+    <value>Chat</value>
+  </data>
+  <data name="Game_ChatStartedMessage" xml:space="preserve">
+    <value>The match has started.</value>
+  </data>
+  <data name="Game_InformationButtonToolTip" xml:space="preserve">
+    <value>How to play</value>
+  </data>
+  <data name="Game_SendMessageButtonToolTip" xml:space="preserve">
+    <value>Send message</value>
+  </data>
+  <data name="Game_LeaveMatchButton" xml:space="preserve">
+    <value>Leave match</value>
+  </data>
+  <data name="Game_InformationTitle" xml:space="preserve">
+    <value>How to play</value>
+  </data>
+  <data name="Game_InformationMessage" xml:space="preserve">
+    <value>You play with the {0} pieces.&#xA;&#xA;Objective and controls: Place pieces to trap and convert your opponent's pieces in a straight line (horizontal, vertical, or diagonal). The player with the most pieces at the end wins (a 32–32 score is a draw).&#xA;&#xA;Start: Dark pieces move first. The board begins with four pieces in the center (D4 and E5 light / D5 and E4 dark).&#xA;&#xA;Time and turns: You have {1} seconds per turn. If you have no valid moves, your turn is skipped; accumulating three turns that expire because of inactivity causes an automatic loss.&#xA;&#xA;End of game: The match ends when the board is full, neither player has a valid move, or a player loses by leaving or inactivity.&#xA;&#xA;Conduct: Be respectful in chat; insults or offensive language may result in penalties or being muted.</value>
+  </data>
+  <data name="Game_LeaveConfirmationTitle" xml:space="preserve">
+    <value>Leave this match?</value>
+  </data>
+  <data name="Game_LeaveConfirmationMessage" xml:space="preserve">
+    <value>Do you want to leave the current match? Victory will be awarded to {0}.</value>
+  </data>
+  <data name="Game_ContinueMatchButton" xml:space="preserve">
+    <value>Continue playing</value>
+  </data>
+  <data name="Game_VictoryTitle" xml:space="preserve">
+    <value>Match finished</value>
+  </data>
+  <data name="Game_VictoryMessage" xml:space="preserve">
+    <value>Victory for “{0}”.</value>
+  </data>
+  <data name="AvailableMatches_SpectateButton" xml:space="preserve"><value>Spectate</value></data>
+  <data name="AvailableMatches_PrototypeCreatedAgo" xml:space="preserve"><value>Started a few moments ago</value></data>
+  <data name="MatchHistory_Title" xml:space="preserve"><value>Previous matches</value></data>
+  <data name="MatchHistory_Description" xml:space="preserve"><value>Review your registered matches and select one to inspect its information.</value></data>
+  <data name="MatchHistory_ViewButton" xml:space="preserve"><value>View</value></data>
+  <data name="MatchHistory_BackButton" xml:space="preserve"><value>Back to menu</value></data>
+  <data name="MatchHistory_VictoryResult" xml:space="preserve"><value>Victory</value></data>
+  <data name="MatchHistory_DefeatResult" xml:space="preserve"><value>Defeat</value></data>
+  <data name="MatchHistory_DrawResult" xml:space="preserve"><value>Draw</value></data>
+  <data name="MatchHistory_OpponentFormat" xml:space="preserve"><value>Opponent: {0}</value></data>
+  <data name="MatchHistory_ScoreFormat" xml:space="preserve"><value>Result: {0}–{1}</value></data>
+  <data name="MatchHistory_EmptyMessage" xml:space="preserve"><value>You do not have any registered matches yet.</value></data>
+  <data name="MatchHistory_DateFormat" xml:space="preserve"><value>Date: {0}</value></data>
+  <data name="MatchHistory_StateFormat" xml:space="preserve"><value>Status: {0}</value></data>
+  <data name="MatchHistory_FinishedState" xml:space="preserve"><value>Finished</value></data>
+  <data name="MatchHistory_InProgressState" xml:space="preserve"><value>In progress</value></data>
+  <data name="MatchHistory_FinalScoreFormat" xml:space="preserve"><value>Final score: {0}–{1}</value></data>
+  <data name="MatchHistory_CurrentScoreFormat" xml:space="preserve"><value>Current score: {0}–{1}</value></data>
+  <data name="MatchHistory_InProgressResult" xml:space="preserve"><value>In progress</value></data>
+  <data name="MatchHistory_EndReasonFormat" xml:space="preserve"><value>End reason: {0}</value></data>
+  <data name="MatchHistory_BoardCompletedReason" xml:space="preserve"><value>Board completed</value></data>
+  <data name="MatchHistory_InactivityReason" xml:space="preserve"><value>Inactivity</value></data>
+  <data name="MatchHistory_AbandonmentReason" xml:space="preserve"><value>Abandonment</value></data>
+  <data name="MatchHistory_ServerConnectionFailedTitle" xml:space="preserve"><value>Match history unavailable</value></data>
+  <data name="MatchHistory_ServerConnectionFailedMessage" xml:space="preserve"><value>We couldn't connect to the server to retrieve your match history.</value></data>
+  <data name="MatchHistory_RetrievalErrorTitle" xml:space="preserve"><value>Could not retrieve match history</value></data>
+  <data name="MatchHistory_RetrievalErrorMessage" xml:space="preserve"><value>Your match history could not be retrieved. No matches will be displayed.</value></data>
+  <data name="MatchInformation_Title" xml:space="preserve"><value>Match information</value></data>
+  <data name="MatchInformation_ReplayMode" xml:space="preserve"><value>Recorded match replay</value></data>
+  <data name="MatchInformation_SpectatorMode" xml:space="preserve"><value>Spectator view</value></data>
+  <data name="MatchInformation_BlackPlayerFormat" xml:space="preserve"><value>Dark pieces: {0}</value></data>
+  <data name="MatchInformation_WhitePlayerFormat" xml:space="preserve"><value>Light pieces: {0}</value></data>
+  <data name="MatchInformation_StateFormat" xml:space="preserve"><value>Status: {0}</value></data>
+  <data name="MatchInformation_FinishedState" xml:space="preserve"><value>Finished</value></data>
+  <data name="MatchInformation_InProgressState" xml:space="preserve"><value>In progress</value></data>
+  <data name="MatchInformation_TurnTimeFormat" xml:space="preserve"><value>Time per turn: {0} s</value></data>
+  <data name="MatchInformation_ResultLabel" xml:space="preserve"><value>Final result</value></data>
+  <data name="MatchInformation_NoFinalResult" xml:space="preserve"><value>This match does not have a final result yet.</value></data>
+  <data name="MatchInformation_DrawResult" xml:space="preserve"><value>The match ended in a draw.</value></data>
+  <data name="MatchInformation_WinnerFormat" xml:space="preserve"><value>Winner: {0}</value></data>
+  <data name="MatchInformation_ReplayBoardTitle" xml:space="preserve"><value>Match replay</value></data>
+  <data name="MatchInformation_CurrentBoardTitle" xml:space="preserve"><value>Current board</value></data>
+  <data name="MatchInformation_ScoreFormat" xml:space="preserve"><value>Dark: {0} · Light: {1}</value></data>
+  <data name="MatchInformation_FrameFormat" xml:space="preserve"><value>State {0} of {1}</value></data>
+  <data name="MatchInformation_MoveFormat" xml:space="preserve"><value>{0}. {1}: {2}</value></data>
+  <data name="MatchInformation_PreviousButton" xml:space="preserve"><value>Previous</value></data>
+  <data name="MatchInformation_NextButton" xml:space="preserve"><value>Next</value></data>
+  <data name="MatchInformation_PlayButton" xml:space="preserve"><value>Play</value></data>
+  <data name="MatchInformation_PauseButton" xml:space="preserve"><value>Pause</value></data>
+  <data name="MatchInformation_CloseButton" xml:space="preserve"><value>Close</value></data>
+  <data name="MatchInformation_MovesTitle" xml:space="preserve"><value>Recorded moves</value></data>
+  <data name="MatchInformation_NotFoundTitle" xml:space="preserve"><value>Match not found</value></data>
+  <data name="MatchInformation_NotFoundMessage" xml:space="preserve"><value>The selected match no longer exists or is unavailable.</value></data>
+  <data name="MatchInformation_ServerConnectionFailedTitle" xml:space="preserve"><value>Match service unavailable</value></data>
+  <data name="MatchInformation_ServerConnectionFailedMessage" xml:space="preserve"><value>We couldn't reach the match service. No match information was displayed.</value></data>
+  <data name="MatchInformation_RetrievalErrorTitle" xml:space="preserve"><value>Match information unavailable</value></data>
+  <data name="MatchInformation_RetrievalErrorMessage" xml:space="preserve"><value>We couldn't retrieve the selected match data. Try again later.</value></data>
+  <data name="AvailableMatches_RefreshButton" xml:space="preserve"><value>Refresh</value></data>
+  <data name="AvailableMatches_SpectatableTitle" xml:space="preserve"><value>Matches in progress</value></data>
+  <data name="AvailableMatches_NoSpectatableMessage" xml:space="preserve"><value>There are no matches available to spectate right now.</value></data>
+  <data name="AvailableMatches_TurnTimeFormat" xml:space="preserve"><value>{0} seconds per turn</value></data>
+  <data name="AvailableMatches_WaitingState" xml:space="preserve"><value>Waiting for a second player</value></data>
+  <data name="AvailableMatches_ServerConnectionFailedTitle" xml:space="preserve"><value>Match service unavailable</value></data>
+  <data name="AvailableMatches_ServerConnectionFailedMessage" xml:space="preserve"><value>We couldn't reach the match service. No available-match list was displayed.</value></data>
+  <data name="AvailableMatches_RetrievalErrorTitle" xml:space="preserve"><value>Available matches unavailable</value></data>
+  <data name="AvailableMatches_RetrievalErrorMessage" xml:space="preserve"><value>We couldn't retrieve the available matches. Try refreshing the list later.</value></data>
+  <data name="WaitingForOpponent_TurnTimeFormat" xml:space="preserve"><value>Time per turn: {0} s</value></data>
+  <data name="WaitingForOpponent_ModifySettingsButton" xml:space="preserve"><value>Modify match settings</value></data>
+  <data name="MatchSettings_Title" xml:space="preserve"><value>Match settings</value></data>
+  <data name="MatchSettings_Description" xml:space="preserve"><value>Change the time available for each turn while the match is waiting for an opponent.</value></data>
+  <data name="MatchSettings_TurnTimeLabel" xml:space="preserve"><value>Time per turn</value></data>
+  <data name="MatchSettings_TurnTimeHint" xml:space="preserve"><value>Enter a whole number from 10 to 120 seconds.</value></data>
+  <data name="MatchSettings_SaveButton" xml:space="preserve"><value>Save changes</value></data>
+  <data name="MatchSettings_SuccessTitle" xml:space="preserve"><value>Match settings updated</value></data>
+  <data name="MatchSettings_SuccessMessage" xml:space="preserve"><value>The time per turn was updated successfully.</value></data>
+  <data name="MatchSettings_AlreadyStartedTitle" xml:space="preserve"><value>Match already started</value></data>
+  <data name="MatchSettings_AlreadyStartedMessage" xml:space="preserve"><value>This match has already started, so its settings can no longer be changed.</value></data>
+  <data name="MatchSettings_UnauthorizedTitle" xml:space="preserve"><value>Modification not authorized</value></data>
+  <data name="MatchSettings_UnauthorizedMessage" xml:space="preserve"><value>Only the player who created this match can modify its settings.</value></data>
+  <data name="MatchSettings_InvalidTurnTimeTitle" xml:space="preserve"><value>Invalid time per turn</value></data>
+  <data name="MatchSettings_InvalidTurnTimeMessage" xml:space="preserve"><value>Enter a whole number from 10 to 120 seconds.</value></data>
+  <data name="MatchSettings_ServerConnectionFailedTitle" xml:space="preserve"><value>Match service unavailable</value></data>
+  <data name="MatchSettings_ServerConnectionFailedMessage" xml:space="preserve"><value>We couldn't reach the match service. The previous settings were kept.</value></data>
+  <data name="MatchSettings_PersistenceErrorTitle" xml:space="preserve"><value>Settings not updated</value></data>
+  <data name="MatchSettings_PersistenceErrorMessage" xml:space="preserve"><value>We couldn't save the new match settings. The previous settings were kept.</value></data>
+  <data name="Game_DarkPiecesName" xml:space="preserve"><value>dark</value></data>
+  <data name="Game_LightPiecesName" xml:space="preserve"><value>light</value></data>
+  <data name="JoinMatch_ConfirmationTitle" xml:space="preserve"><value>Join this match?</value></data>
+  <data name="JoinMatch_ConfirmationMessage" xml:space="preserve"><value>Do you want to join {0}'s match? It will begin immediately if it is still available.</value></data>
+  <data name="JoinMatch_NoLongerAvailableTitle" xml:space="preserve"><value>Match no longer available</value></data>
+  <data name="JoinMatch_NoLongerAvailableMessage" xml:space="preserve"><value>This match is no longer waiting for a second participant. The available-match list will be updated.</value></data>
+  <data name="JoinMatch_CannotJoinOwnMatchTitle" xml:space="preserve"><value>Cannot join your own match</value></data>
+  <data name="JoinMatch_CannotJoinOwnMatchMessage" xml:space="preserve"><value>You cannot join a match that you created.</value></data>
+  <data name="JoinMatch_InvalidMatchCodeTitle" xml:space="preserve"><value>Invalid match code</value></data>
+  <data name="JoinMatch_InvalidMatchCodeMessage" xml:space="preserve"><value>Enter a six-character code using the supported letters and digits. I, O, 0, and 1 are not used.</value></data>
+  <data name="JoinMatch_MatchCodeNotAvailableTitle" xml:space="preserve"><value>Match code not available</value></data>
+  <data name="JoinMatch_MatchCodeNotAvailableMessage" xml:space="preserve"><value>This code does not belong to a match that is currently available.</value></data>
+  <data name="JoinMatch_ServerConnectionFailedTitle" xml:space="preserve"><value>Match service unavailable</value></data>
+  <data name="JoinMatch_ServerConnectionFailedMessage" xml:space="preserve"><value>We couldn't reach the match service. You were not registered in the match.</value></data>
+  <data name="JoinMatch_PersistenceErrorTitle" xml:space="preserve"><value>Could not join match</value></data>
+  <data name="JoinMatch_PersistenceErrorMessage" xml:space="preserve"><value>We couldn't register you as the second participant. The match was left unchanged.</value></data>
+  <data name="Game_MatchFinishedStatus" xml:space="preserve"><value>Match finished</value></data>
+  <data name="Game_TurnSkippedMessage" xml:space="preserve"><value>{0} has no valid moves, so their turn was skipped.</value></data>
+  <data name="Game_InvalidPositionMessage" xml:space="preserve"><value>Select one of the highlighted valid positions.</value></data>
+  <data name="Game_AutomaticMoveMessage" xml:space="preserve"><value>{0} ran out of time. The system played {1} automatically.</value></data>
+  <data name="Game_MatchResultTitle" xml:space="preserve"><value>Match result</value></data>
+  <data name="Game_DrawResultMessage" xml:space="preserve"><value>The match ended in a draw.</value></data>
+  <data name="Game_InactivityResultMessage" xml:space="preserve"><value>Victory for “{0}”. The opponent exhausted three consecutive turns.</value></data>
+  <data name="Game_ServerConnectionFailedTitle" xml:space="preserve"><value>Game connection lost</value></data>
+  <data name="Game_ServerConnectionFailedMessage" xml:space="preserve"><value>The move could not be confirmed because communication with the server was lost. The last confirmed board was kept.</value></data>
+  <data name="Game_MovementPersistenceErrorTitle" xml:space="preserve"><value>Move not registered</value></data>
+  <data name="Game_MovementPersistenceErrorMessage" xml:space="preserve"><value>The move and its board update could not be saved. The last valid board was kept.</value></data>
+  <data name="Game_MatchResultPersistenceErrorTitle" xml:space="preserve"><value>Match result not saved</value></data>
+  <data name="Game_MatchResultPersistenceErrorMessage" xml:space="preserve"><value>The final result could not be saved. New moves are disabled until the match state is resolved.</value></data>
+  <data name="Game_SystemMoveMessage" xml:space="preserve"><value>{0} played {1}.</value></data>
+  <data name="Game_SystemMoveAndTurnSkippedMessage" xml:space="preserve"><value>{0} played {1}. {2} has no valid moves, so their turn was skipped.</value></data>
+  <data name="Game_AutomaticMoveAndTurnSkippedMessage" xml:space="preserve"><value>{0} ran out of time, so the system played {1}. {2} has no valid moves, so their turn was skipped.</value></data>
+  <data name="AbandonMatch_ServerConnectionFailedTitle" xml:space="preserve"><value>Could not leave match</value></data>
+  <data name="AbandonMatch_ServerConnectionFailedMessage" xml:space="preserve"><value>We couldn't reach the match service. The abandonment was not confirmed and the match was left unchanged.</value></data>
+  <data name="AbandonMatch_PersistenceErrorTitle" xml:space="preserve"><value>Abandonment not registered</value></data>
+  <data name="AbandonMatch_PersistenceErrorMessage" xml:space="preserve"><value>The match finalization could not be saved. No partial abandonment result was recorded.</value></data>
+  <data name="MovementHistory_Title" xml:space="preserve"><value>Movement history</value></data>
+  <data name="MovementHistory_Description" xml:space="preserve"><value>Review the movements registered for this match in their sequence order.</value></data>
+  <data name="MovementHistory_ViewDetailsButton" xml:space="preserve"><value>View movement details</value></data>
+  <data name="MovementHistory_EmptyMessage" xml:space="preserve"><value>No movements have been registered for this match.</value></data>
+  <data name="MovementHistory_CloseButton" xml:space="preserve"><value>Close</value></data>
+  <data name="MovementHistory_SequenceFormat" xml:space="preserve"><value>Movement {0}</value></data>
+  <data name="MovementHistory_DateFormat" xml:space="preserve"><value>Date: {0}</value></data>
+  <data name="MovementHistory_PlayerFormat" xml:space="preserve"><value>Player: {0}</value></data>
+  <data name="MovementHistory_PositionFormat" xml:space="preserve"><value>Position: {0}</value></data>
+  <data name="MovementHistory_AffectedPiecesFormat" xml:space="preserve"><value>Pieces affected: {0}</value></data>
+  <data name="MovementHistory_OriginFormat" xml:space="preserve"><value>Origin: {0}</value></data>
+  <data name="MovementHistory_ManualOrigin" xml:space="preserve"><value>Manual</value></data>
+  <data name="MovementHistory_AutomaticOrigin" xml:space="preserve"><value>Automatic</value></data>
+  <data name="MovementHistory_ServerConnectionFailedTitle" xml:space="preserve"><value>Movement history unavailable</value></data>
+  <data name="MovementHistory_ServerConnectionFailedMessage" xml:space="preserve"><value>We couldn't connect to the server to retrieve the match movements.</value></data>
+  <data name="MovementHistory_RetrievalErrorTitle" xml:space="preserve"><value>Could not retrieve movements</value></data>
+  <data name="MovementHistory_RetrievalErrorMessage" xml:space="preserve"><value>The movement history for this match could not be retrieved. No movements will be displayed.</value></data>
+  <data name="MainMenu_InstructionsButton" xml:space="preserve"><value>Instructions</value></data>
+  <data name="Instructions_Title" xml:space="preserve"><value>How to play</value></data>
+  <data name="Instructions_RulesMessage" xml:space="preserve"><value>Objective and controls: Place pieces to trap and convert your opponent's pieces in a straight line: horizontal, vertical, or diagonal. The player with the most pieces at the end wins; a 32–32 score is a draw.&#xA;&#xA;Start: Dark pieces move first. The board begins with four pieces in the center: D4 and E5 light, D5 and E4 dark.&#xA;&#xA;Time and turns: Each match uses its configured time per turn. If you have no valid moves, your turn is skipped. Accumulating three turns that expire because of inactivity causes an automatic loss.&#xA;&#xA;End of game: The match ends when the board is full, neither player has a valid move, or a player loses by leaving or inactivity.&#xA;&#xA;Conduct: Be respectful in chat. Insults or offensive language may result in penalties or being muted.</value></data>
+  <data name="Instructions_MatchContextFormat" xml:space="preserve"><value>You play with the {0} pieces. This match allows {1} seconds per turn.&#xA;&#xA;{2}</value></data>
+  <data name="Instructions_LoadingErrorTitle" xml:space="preserve"><value>Instructions unavailable</value></data>
+  <data name="Instructions_LoadingErrorMessage" xml:space="preserve"><value>The instructions for the currently selected language could not be loaded.</value></data>
+  <data name="AddFriends_Title" xml:space="preserve"><value>Add friends</value></data>
+  <data name="AddFriends_Description" xml:space="preserve"><value>Search for an active player account and send a friendship request.</value></data>
+  <data name="AddFriends_SearchLabel" xml:space="preserve"><value>Search by username</value></data>
+  <data name="AddFriends_NoResultsMessage" xml:space="preserve"><value>No active players match your search.</value></data>
+  <data name="AddFriends_SendRequestButton" xml:space="preserve"><value>Send request</value></data>
+  <data name="AddFriends_BackButton" xml:space="preserve"><value>Back to menu</value></data>
+  <data name="AddFriends_RetrievalErrorTitle" xml:space="preserve"><value>Could not search for players</value></data>
+  <data name="AddFriends_RetrievalErrorMessage" xml:space="preserve"><value>Player accounts could not be retrieved. No search results will be displayed.</value></data>
+  <data name="AccountInformation_AddFriendButton" xml:space="preserve"><value>Send friendship request</value></data>
+  <data name="AccountInformation_BackToFriendsButton" xml:space="preserve"><value>Back to player search</value></data>
+  <data name="FriendRequest_SentTitle" xml:space="preserve"><value>Friendship request sent</value></data>
+  <data name="FriendRequest_SentMessage" xml:space="preserve"><value>Your friendship request was sent to {0}.</value></data>
+  <data name="FriendRequest_CannotAddYourselfTitle" xml:space="preserve"><value>You cannot add yourself</value></data>
+  <data name="FriendRequest_CannotAddYourselfMessage" xml:space="preserve"><value>You cannot send a friendship request to your own account.</value></data>
+  <data name="FriendRequest_FriendshipAlreadyExistsTitle" xml:space="preserve"><value>Already friends</value></data>
+  <data name="FriendRequest_FriendshipAlreadyExistsMessage" xml:space="preserve"><value>You and this player are already friends.</value></data>
+  <data name="FriendRequest_AlreadyPendingTitle" xml:space="preserve"><value>Request already pending</value></data>
+  <data name="FriendRequest_AlreadyPendingMessage" xml:space="preserve"><value>A friendship request between these accounts is already pending.</value></data>
+  <data name="FriendRequest_AccountNotAvailableTitle" xml:space="preserve"><value>Account not available</value></data>
+  <data name="FriendRequest_AccountNotAvailableMessage" xml:space="preserve"><value>The selected account is no longer active or available.</value></data>
+  <data name="FriendRequest_ServerConnectionFailedTitle" xml:space="preserve"><value>Friend service unavailable</value></data>
+  <data name="FriendRequest_ServerConnectionFailedMessage" xml:space="preserve"><value>We couldn't connect to the server. No friendship request was created.</value></data>
+  <data name="FriendRequest_PersistenceErrorTitle" xml:space="preserve"><value>Could not send request</value></data>
+  <data name="FriendRequest_PersistenceErrorMessage" xml:space="preserve"><value>The friendship request could not be saved. No partial or duplicate request was created.</value></data>
+  <data name="MainMenu_FriendRequestsSummary" xml:space="preserve"><value>Review the pending friendship requests you have received.</value></data>
+  <data name="MainMenu_ViewFriendRequestsButton" xml:space="preserve"><value>View requests</value></data>
+  <data name="FriendRequests_Title" xml:space="preserve"><value>Friend requests</value></data>
+  <data name="FriendRequests_Description" xml:space="preserve"><value>Review the pending friendship requests sent to your account.</value></data>
+  <data name="FriendRequests_EmptyMessage" xml:space="preserve"><value>You have no pending friendship requests.</value></data>
+  <data name="FriendRequests_DateFormat" xml:space="preserve"><value>Received: {0}</value></data>
+  <data name="FriendRequests_BackButton" xml:space="preserve"><value>Back to menu</value></data>
+  <data name="FriendRequests_ServerConnectionFailedTitle" xml:space="preserve"><value>Friend requests unavailable</value></data>
+  <data name="FriendRequests_ServerConnectionFailedMessage" xml:space="preserve"><value>We couldn't connect to the server to retrieve your friendship requests.</value></data>
+  <data name="FriendRequests_RetrievalErrorTitle" xml:space="preserve"><value>Could not retrieve requests</value></data>
+  <data name="FriendRequests_RetrievalErrorMessage" xml:space="preserve"><value>Your friendship requests could not be retrieved. No requests will be displayed.</value></data>
+  <data name="FriendRequestResponse_Title" xml:space="preserve"><value>Friendship request</value></data>
+  <data name="FriendRequestResponse_Message" xml:space="preserve"><value>{0} sent you a friendship request on {1}. Would you like to accept or reject it?</value></data>
+  <data name="FriendRequestResponse_AcceptButton" xml:space="preserve"><value>Accept</value></data>
+  <data name="FriendRequestResponse_RejectButton" xml:space="preserve"><value>Reject</value></data>
+  <data name="FriendRequestResponse_AcceptedTitle" xml:space="preserve"><value>Friendship request accepted</value></data>
+  <data name="FriendRequestResponse_AcceptedMessage" xml:space="preserve"><value>You and {0} are now friends.</value></data>
+  <data name="FriendRequestResponse_RejectedTitle" xml:space="preserve"><value>Friendship request rejected</value></data>
+  <data name="FriendRequestResponse_RejectedMessage" xml:space="preserve"><value>The friendship request from {0} was rejected.</value></data>
+  <data name="FriendRequestResponse_AlreadyProcessedTitle" xml:space="preserve"><value>Request already processed</value></data>
+  <data name="FriendRequestResponse_AlreadyProcessedMessage" xml:space="preserve"><value>This friendship request was already accepted or rejected. The pending list will be updated.</value></data>
+  <data name="FriendRequestResponse_UnauthorizedTitle" xml:space="preserve"><value>Request not associated with your account</value></data>
+  <data name="FriendRequestResponse_UnauthorizedMessage" xml:space="preserve"><value>You cannot modify a friendship request addressed to another player.</value></data>
+  <data name="FriendRequestResponse_ServerConnectionFailedTitle" xml:space="preserve"><value>Friend service unavailable</value></data>
+  <data name="FriendRequestResponse_ServerConnectionFailedMessage" xml:space="preserve"><value>We couldn't connect to the server. The friendship request was not changed.</value></data>
+  <data name="FriendRequestResponse_PersistenceErrorTitle" xml:space="preserve"><value>Could not update request</value></data>
+  <data name="FriendRequestResponse_PersistenceErrorMessage" xml:space="preserve"><value>The friendship request could not be updated and retains its previous state.</value></data>
+  <data name="MainMenu_ViewFriendProfileButton" xml:space="preserve"><value>View</value></data>
+  <data name="Friends_ServerConnectionFailedTitle" xml:space="preserve"><value>Friends unavailable</value></data>
+  <data name="Friends_ServerConnectionFailedMessage" xml:space="preserve"><value>We couldn't connect to the server to retrieve your friends.</value></data>
+  <data name="Friends_RetrievalErrorTitle" xml:space="preserve"><value>Could not retrieve friends</value></data>
+  <data name="Friends_RetrievalErrorMessage" xml:space="preserve"><value>Your friendships could not be retrieved. No friends will be displayed.</value></data>
+  <data name="MainMenu_RemoveFriendButton" xml:space="preserve"><value>Remove</value></data>
+  <data name="FriendRemoval_ConfirmationTitle" xml:space="preserve"><value>Remove friend</value></data>
+  <data name="FriendRemoval_ConfirmationMessage" xml:space="preserve"><value>Are you sure you want to remove {0} from your friends?</value></data>
+  <data name="FriendRemoval_ConfirmButton" xml:space="preserve"><value>Remove friend</value></data>
+  <data name="FriendRemoval_SuccessTitle" xml:space="preserve"><value>Friend removed</value></data>
+  <data name="FriendRemoval_SuccessMessage" xml:space="preserve"><value>You and {0} are no longer friends. Existing match and message history was preserved.</value></data>
+  <data name="FriendRemoval_NotFoundTitle" xml:space="preserve"><value>Friendship not found</value></data>
+  <data name="FriendRemoval_NotFoundMessage" xml:space="preserve"><value>The friendship no longer exists. The friends list will be updated.</value></data>
+  <data name="FriendRemoval_ServerConnectionFailedTitle" xml:space="preserve"><value>Friend service unavailable</value></data>
+  <data name="FriendRemoval_ServerConnectionFailedMessage" xml:space="preserve"><value>We couldn't connect to the server. The friendship was not changed.</value></data>
+  <data name="FriendRemoval_PersistenceErrorTitle" xml:space="preserve"><value>Could not remove friend</value></data>
+  <data name="FriendRemoval_PersistenceErrorMessage" xml:space="preserve"><value>The friendship could not be removed and remains active.</value></data>
+  <data name="Chat_MessageFormat" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="Chat_EmptyMessageTitle" xml:space="preserve"><value>Message required</value></data>
+  <data name="Chat_EmptyMessageMessage" xml:space="preserve"><value>Write a message before sending it.</value></data>
+  <data name="Chat_MessageTooLongTitle" xml:space="preserve"><value>Message too long</value></data>
+  <data name="Chat_MessageTooLongMessage" xml:space="preserve"><value>Chat messages can contain at most 200 characters.</value></data>
+  <data name="Chat_UnauthorizedTitle" xml:space="preserve"><value>Chat access denied</value></data>
+  <data name="Chat_UnauthorizedMessage" xml:space="preserve"><value>You are no longer authorized to participate in this conversation.</value></data>
+  <data name="Chat_PlayerMutedTitle" xml:space="preserve"><value>Chat temporarily unavailable</value></data>
+  <data name="Chat_PlayerMutedMessage" xml:space="preserve"><value>You cannot send messages because a chat mute is active until {0}.</value></data>
+  <data name="Chat_MessageBlockedTitle" xml:space="preserve"><value>Message blocked</value></data>
+  <data name="Chat_MessageBlockedMessage" xml:space="preserve"><value>The message contains prohibited content and was not sent. The moderation incident was recorded.</value></data>
+  <data name="Chat_ServerConnectionFailedTitle" xml:space="preserve"><value>Chat unavailable</value></data>
+  <data name="Chat_ServerConnectionFailedMessage" xml:space="preserve"><value>We couldn't connect to the chat service. The message was not sent.</value></data>
+  <data name="Chat_MessagePersistenceErrorTitle" xml:space="preserve"><value>Could not send message</value></data>
+  <data name="Chat_MessagePersistenceErrorMessage" xml:space="preserve"><value>The message could not be stored and will not be displayed as sent.</value></data>
+  <data name="Chat_ModerationPersistenceErrorTitle" xml:space="preserve"><value>Could not record moderation incident</value></data>
+  <data name="Chat_ModerationPersistenceErrorMessage" xml:space="preserve"><value>The prohibited message was blocked, but the moderation incident could not be stored.</value></data>
+  <data name="Chat_MutePersistenceErrorTitle" xml:space="preserve"><value>Could not apply chat mute</value></data>
+  <data name="Chat_MutePersistenceErrorMessage" xml:space="preserve"><value>The prohibited message was blocked, but the chat mute could not be stored and was not considered active.</value></data>
+  <data name="Chat_NoMessagesMessage" xml:space="preserve"><value>No messages have been sent in this conversation yet.</value></data>
+  <data name="ChatRead_UnauthorizedTitle" xml:space="preserve"><value>Chat access denied</value></data>
+  <data name="ChatRead_UnauthorizedMessage" xml:space="preserve"><value>You are not authorized to read the messages in this conversation.</value></data>
+  <data name="ChatRead_ServerConnectionFailedTitle" xml:space="preserve"><value>Chat unavailable</value></data>
+  <data name="ChatRead_ServerConnectionFailedMessage" xml:space="preserve"><value>We couldn't connect to the chat service to retrieve the conversation messages.</value></data>
+  <data name="ChatRead_RetrievalErrorTitle" xml:space="preserve"><value>Could not retrieve messages</value></data>
+  <data name="ChatRead_RetrievalErrorMessage" xml:space="preserve"><value>The conversation messages could not be retrieved. No partial history will be displayed.</value></data>
 </root>

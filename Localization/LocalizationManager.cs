@@ -1,5 +1,9 @@
+using System;
+using System.Collections;
 using System.ComponentModel;
 using System.Globalization;
+using System.IO;
+using System.Resources;
 using System.Threading;
 using System.Windows.Data;
 using ReversiGameSystem.Properties;
@@ -43,22 +47,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
         get { return _culture.Name; }
         set
         {
-            if (value == CultureName || !IsSupportedCulture(value))
-            {
-                return;
-            }
-
-            SetCulture(value);
-            IsChangingCulture = true;
-            try
-            {
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CultureName)));
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(Binding.IndexerName));
-            }
-            finally
-            {
-                IsChangingCulture = false;
-            }
+            TrySetCulture(value);
         }
     }
 
@@ -73,9 +62,77 @@ public sealed class LocalizationManager : INotifyPropertyChanged
         get { return Resources.ResourceManager.GetString(key, _culture) ?? string.Empty; }
     }
 
+    internal LanguageChangeResult TrySetCulture(string cultureName)
+    {
+        if (!IsSupportedCulture(cultureName))
+        {
+            return LanguageChangeResult.NotAvailable;
+        }
+
+        if (cultureName == CultureName)
+        {
+            return LanguageChangeResult.Success;
+        }
+
+        if (!HasCompleteResources(cultureName))
+        {
+            return LanguageChangeResult.ResourcesError;
+        }
+
+        SetCulture(cultureName);
+        IsChangingCulture = true;
+        try
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CultureName)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(Binding.IndexerName));
+        }
+        finally
+        {
+            IsChangingCulture = false;
+        }
+
+        return LanguageChangeResult.Success;
+    }
+
     private static bool IsSupportedCulture(string cultureName)
     {
         return cultureName == EnglishCultureName || cultureName == SpanishCultureName;
+    }
+
+    private static bool HasCompleteResources(string cultureName)
+    {
+        try
+        {
+            ResourceManager manager = Resources.ResourceManager;
+            ResourceSet? source = manager.GetResourceSet(
+                CultureInfo.InvariantCulture, true, false);
+            CultureInfo requestedCulture = cultureName == EnglishCultureName
+                ? CultureInfo.InvariantCulture
+                : CultureInfo.GetCultureInfo(cultureName);
+            ResourceSet? target = manager.GetResourceSet(requestedCulture, true, false);
+            if (source == null || target == null)
+            {
+                return false;
+            }
+
+            foreach (DictionaryEntry entry in source)
+            {
+                if (entry.Key is string key && target.GetString(key) == null)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        catch (Exception exception) when (
+            exception is MissingManifestResourceException
+            || exception is MissingSatelliteAssemblyException
+            || exception is IOException
+            || exception is BadImageFormatException)
+        {
+            return false;
+        }
     }
 
     private void SetCulture(string cultureName)
@@ -86,4 +143,11 @@ public sealed class LocalizationManager : INotifyPropertyChanged
         CultureInfo.DefaultThreadCurrentCulture = _culture;
         CultureInfo.DefaultThreadCurrentUICulture = _culture;
     }
+}
+
+internal enum LanguageChangeResult
+{
+    Success,
+    NotAvailable,
+    ResourcesError
 }

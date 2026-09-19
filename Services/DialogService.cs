@@ -16,19 +16,64 @@ internal sealed class DialogService
         _localization = localization;
     }
 
-    internal void ShowInformation(DependencyObject source, string titleKey, string messageKey)
+    internal void ShowInformation(
+        DependencyObject source,
+        string titleKey,
+        string messageKey,
+        params object[] messageArguments)
     {
-        Show(source, new LocalizedAlert(titleKey, messageKey), MessageBoxImage.Information);
+        Show(
+            source,
+            new LocalizedAlert(titleKey, messageKey, messageArguments),
+            MessageBoxImage.Information);
     }
 
-    internal void ShowWarning(DependencyObject source, string titleKey, string messageKey)
+    internal void ShowInformationText(
+        DependencyObject source,
+        string title,
+        string message)
     {
-        Show(source, new LocalizedAlert(titleKey, messageKey), MessageBoxImage.Warning);
+        Window? owner = Window.GetWindow(source);
+        if (owner == null)
+        {
+            MessageBox.Show(
+                message,
+                title,
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
+        MessageBox.Show(
+            owner,
+            message,
+            title,
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
     }
 
-    internal void ShowError(DependencyObject source, string titleKey, string messageKey)
+    internal void ShowWarning(
+        DependencyObject source,
+        string titleKey,
+        string messageKey,
+        params object[] messageArguments)
     {
-        Show(source, new LocalizedAlert(titleKey, messageKey), MessageBoxImage.Error);
+        Show(
+            source,
+            new LocalizedAlert(titleKey, messageKey, messageArguments),
+            MessageBoxImage.Warning);
+    }
+
+    internal void ShowError(
+        DependencyObject source,
+        string titleKey,
+        string messageKey,
+        params object[] messageArguments)
+    {
+        Show(
+            source,
+            new LocalizedAlert(titleKey, messageKey, messageArguments),
+            MessageBoxImage.Error);
     }
 
     internal bool Confirm(DependencyObject source, string titleKey, string messageKey)
@@ -42,6 +87,43 @@ internal sealed class DialogService
                 owner, message, title, MessageBoxButton.YesNo, MessageBoxImage.Question);
 
         return result == MessageBoxResult.Yes;
+    }
+
+    internal bool Confirm(DependencyObject source, ConfirmationDialogOptions options)
+    {
+        ConfirmationDialogWindow dialog = new ConfirmationDialogWindow(options, _localization);
+        Window? owner = Window.GetWindow(source);
+        if (owner != null)
+        {
+            dialog.Owner = owner;
+        }
+        else
+        {
+            dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
+
+        return dialog.ShowDialog() == true;
+    }
+
+    internal ActionChoiceDialogResult Choose(
+        DependencyObject source,
+        ActionChoiceDialogOptions options)
+    {
+        ActionChoiceDialogWindow dialog = new ActionChoiceDialogWindow(
+            options,
+            _localization);
+        Window? owner = Window.GetWindow(source);
+        if (owner != null)
+        {
+            dialog.Owner = owner;
+        }
+        else
+        {
+            dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
+
+        dialog.ShowDialog();
+        return dialog.SelectedAction;
     }
 
     internal bool TryGetText(
@@ -65,6 +147,67 @@ internal sealed class DialogService
         return accepted;
     }
 
+    internal bool TryGetNewPassword(DependencyObject source, out string password)
+    {
+        NewPasswordDialogWindow dialog = new NewPasswordDialogWindow(_localization, this);
+        Window? owner = Window.GetWindow(source);
+        if (owner != null)
+        {
+            dialog.Owner = owner;
+        }
+        else
+        {
+            dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
+
+        bool accepted = dialog.ShowDialog() == true;
+        password = accepted ? dialog.NewPassword : string.Empty;
+        return accepted;
+    }
+
+    internal bool TryChangePassword(DependencyObject source)
+    {
+        PasswordModificationDialogWindow dialog = new PasswordModificationDialogWindow(
+            _localization,
+            this,
+            new PasswordModificationService());
+        Window? owner = Window.GetWindow(source);
+        if (owner != null)
+        {
+            dialog.Owner = owner;
+        }
+        else
+        {
+            dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
+
+        return dialog.ShowDialog() == true;
+    }
+
+    internal bool TryModifyMatchSettings(
+        DependencyObject source,
+        MatchSession session,
+        string requestingPlayerName)
+    {
+        MatchSettingsDialogWindow dialog = new MatchSettingsDialogWindow(
+            _localization,
+            this,
+            session,
+            requestingPlayerName,
+            new MatchSettingsService());
+        Window? owner = Window.GetWindow(source);
+        if (owner != null)
+        {
+            dialog.Owner = owner;
+        }
+        else
+        {
+            dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
+
+        return dialog.ShowDialog() == true;
+    }
+
     private void Show(DependencyObject source, LocalizedAlert alert, MessageBoxImage icon)
     {
         Window? owner = Window.GetWindow(source);
@@ -72,7 +215,7 @@ internal sealed class DialogService
         {
             MessageBox.Show(
                 owner,
-                _localization[alert.MessageKey],
+                alert.GetMessage(_localization),
                 _localization[alert.TitleKey],
                 MessageBoxButton.OK,
                 icon);
@@ -80,7 +223,7 @@ internal sealed class DialogService
         }
 
         MessageBox.Show(
-            _localization[alert.MessageKey],
+            alert.GetMessage(_localization),
             _localization[alert.TitleKey],
             MessageBoxButton.OK,
             icon);
@@ -88,14 +231,28 @@ internal sealed class DialogService
 
     private readonly struct LocalizedAlert
     {
-        internal LocalizedAlert(string titleKey, string messageKey)
+        internal LocalizedAlert(
+            string titleKey,
+            string messageKey,
+            object[]? messageArguments = null)
         {
             TitleKey = titleKey;
             MessageKey = messageKey;
+            MessageArguments = messageArguments ?? System.Array.Empty<object>();
         }
 
         internal string TitleKey { get; }
 
         internal string MessageKey { get; }
+
+        internal object[] MessageArguments { get; }
+
+        internal string GetMessage(LocalizationManager localization)
+        {
+            string message = localization[MessageKey];
+            return MessageArguments.Length == 0
+                ? message
+                : string.Format(message, MessageArguments);
+        }
     }
 }

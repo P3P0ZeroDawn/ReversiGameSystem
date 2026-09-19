@@ -8,6 +8,7 @@
       d:DesignHeight="800" d:DesignWidth="1280"
       Title="{Binding [MainMenu_Title]}"
       Style="{StaticResource AuthenticationPageStyle}"
+      Loaded="OnLoaded"
       DataContext="{x:Static localization:LocalizationManager.Instance}">
     <Grid Margin="24">
         <Grid.RowDefinitions>
@@ -50,11 +51,11 @@
                       HorizontalScrollBarVisibility="Auto">
             <Grid MinWidth="1000">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="280" />
+                    <ColumnDefinition Width="260" />
                     <ColumnDefinition Width="20" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="20" />
-                    <ColumnDefinition Width="280" />
+                    <ColumnDefinition Width="360" />
                 </Grid.ColumnDefinitions>
 
                 <Border Grid.Column="0" Style="{StaticResource MainMenuCardStyle}">
@@ -78,6 +79,7 @@
                                    Style="{StaticResource AuthenticationTitleStyle}" />
                         <Button x:Name="createGameButton"
                                 Content="{Binding [MainMenu_CreateGameButton]}"
+                                Click="OnCreateGameClick"
                                 Style="{StaticResource AuthenticationPrimaryButtonStyle}" />
                         <Button x:Name="joinGameButton"
                                 Content="{Binding [MainMenu_JoinGameButton]}"
@@ -85,9 +87,19 @@
                                 Style="{StaticResource AuthenticationPrimaryButtonStyle}" />
                         <Button x:Name="matchHistoryButton"
                                 Content="{Binding [MainMenu_MatchHistoryButton]}"
+                                Click="OnMatchHistoryClick"
                                 Style="{StaticResource AuthenticationSecondaryButtonStyle}" />
                         <Button x:Name="myProfileButton"
                                 Content="{Binding [MainMenu_ProfileButton]}"
+                                Click="OnMyProfileClick"
+                                Style="{StaticResource AuthenticationSecondaryButtonStyle}" />
+                        <Button x:Name="settingsButton"
+                                Content="{Binding [MainMenu_SettingsButton]}"
+                                Click="OnSettingsClick"
+                                Style="{StaticResource AuthenticationSecondaryButtonStyle}" />
+                        <Button x:Name="instructionsButton"
+                                Content="{Binding [MainMenu_InstructionsButton]}"
+                                Click="OnInstructionsClick"
                                 Style="{StaticResource AuthenticationSecondaryButtonStyle}" />
                         <Separator Margin="0,16,0,20" />
                         <Button x:Name="logoutButton"
@@ -106,18 +118,82 @@
                                    Style="{StaticResource MainMenuSectionTitleStyle}" />
                         <Button x:Name="addFriendButton"
                                 Content="{Binding [MainMenu_AddFriendButton]}"
+                                Click="OnAddFriendClick"
                                 Style="{StaticResource AuthenticationPrimaryButtonStyle}" />
                         <StackPanel x:Name="friendsListPanel" Margin="0,4,0,0">
-                            <TextBlock Text="{Binding [MainMenu_FriendsEmptyMessage]}"
-                                       Style="{StaticResource MainMenuEmptyTextStyle}" />
+                            <TextBlock x:Name="friendsEmptyTextBlock"
+                                       Text="{Binding [MainMenu_FriendsEmptyMessage]}"
+                                       Style="{StaticResource MainMenuEmptyTextStyle}"
+                                       Visibility="Collapsed" />
+                            <ItemsControl x:Name="friendsItemsControl">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#F7FAF8"
+                                                BorderBrush="#D8E5DC"
+                                                BorderThickness="1"
+                                                CornerRadius="8"
+                                                Padding="8" Margin="0,0,0,8">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="42" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Button Width="34" Height="34"
+                                                        IsHitTestVisible="False"
+                                                        Style="{StaticResource ProfilePictureButtonStyle}">
+                                                    <Button.Background>
+                                                        <ImageBrush ImageSource="/Assets/Images/DefaultProfilePicture.png"
+                                                                    Stretch="UniformToFill" />
+                                                    </Button.Background>
+                                                </Button>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Username}"
+                                                           VerticalAlignment="Center"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding Username}"
+                                                           Margin="8,0,0,0" />
+                                                <Grid Grid.Row="1" Grid.ColumnSpan="2"
+                                                      Margin="0,8,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="8" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Button Grid.Column="0"
+                                                            Content="{Binding DataContext[MainMenu_ViewFriendProfileButton], RelativeSource={RelativeSource AncestorType=Page}}"
+                                                            Tag="{Binding Username}"
+                                                            Click="OnFriendProfileClick"
+                                                            Style="{StaticResource AuthenticationSecondaryButtonStyle}"
+                                                            Padding="8,4" Margin="0" />
+                                                    <Button Grid.Column="2"
+                                                            Content="{Binding DataContext[MainMenu_RemoveFriendButton], RelativeSource={RelativeSource AncestorType=Page}}"
+                                                            Tag="{Binding Username}"
+                                                            Click="OnRemoveFriendClick"
+                                                            Style="{StaticResource MainMenuLogoutButtonStyle}"
+                                                            Padding="8,4" Margin="0" />
+                                                </Grid>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                         <Separator Margin="0,18,0,18" />
                         <TextBlock x:Name="friendRequestsTitleTextBlock"
                                    Text="{Binding [MainMenu_FriendRequestsTitle]}"
                                    Style="{StaticResource MainMenuSectionTitleStyle}" />
                         <StackPanel x:Name="friendRequestsPanel">
-                            <TextBlock Text="{Binding [MainMenu_FriendRequestsEmptyMessage]}"
+                            <TextBlock Text="{Binding [MainMenu_FriendRequestsSummary]}"
                                        Style="{StaticResource MainMenuEmptyTextStyle}" />
+                            <Button Content="{Binding [MainMenu_ViewFriendRequestsButton]}"
+                                    Click="OnViewFriendRequestsClick"
+                                    Style="{StaticResource AuthenticationSecondaryButtonStyle}"
+                                    Margin="0,12,0,0" />
                         </StackPanel>
                     </StackPanel>
                 </Border>

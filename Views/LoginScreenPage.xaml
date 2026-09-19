@@ -54,11 +54,12 @@
                            Style="{StaticResource AuthenticationFieldLabelStyle}" />
                     <PasswordBox x:Name="passwordBox"
                                  Style="{StaticResource AuthenticationPasswordBoxStyle}" />
-                    <TextBlock x:Name="forgotPasswordTextBlock"
-                               Text="{Binding [LoginScreen_ForgotPasswordText]}"
-                               HorizontalAlignment="Right"
-                               Margin="0,0,0,18"
-                               Style="{StaticResource AuthenticationSupportingTextStyle}" />
+                    <Button x:Name="forgotPasswordButton"
+                            Content="{Binding [LoginScreen_ForgotPasswordText]}"
+                            Click="OnForgotPasswordClick"
+                            HorizontalAlignment="Right"
+                            Margin="0,0,0,18"
+                            Style="{StaticResource AuthenticationLinkButtonStyle}" />
 
                     <Button x:Name="loginButton"
                             Content="{Binding [LoginScreen_SignInButton]}"

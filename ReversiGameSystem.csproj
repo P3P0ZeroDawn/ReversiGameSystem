@@ -61,11 +61,79 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Views\AddFriendsPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\FriendRequestsPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\AccountInformationPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\PlayerStatisticsControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Views\MainMenuPage.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Views\SettingsPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\MatchCreationPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\WaitingForOpponentPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\GamePage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\ReversiBoardControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\MatchHistoryPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\MatchInformationPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Views\TextInputDialogWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\ConfirmationDialogWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\ActionChoiceDialogWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\NewPasswordDialogWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\PasswordModificationDialogWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\MatchSettingsDialogWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\MovementHistoryDialogWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -96,11 +164,62 @@
     <Compile Include="Views\AvailableMatchesPage.xaml.cs">
       <DependentUpon>AvailableMatchesPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\AddFriendsPage.xaml.cs">
+      <DependentUpon>AddFriendsPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\FriendRequestsPage.xaml.cs">
+      <DependentUpon>FriendRequestsPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\AccountInformationPage.xaml.cs">
+      <DependentUpon>AccountInformationPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\PlayerStatisticsControl.xaml.cs">
+      <DependentUpon>PlayerStatisticsControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\MainMenuPage.xaml.cs">
       <DependentUpon>MainMenuPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\SettingsPage.xaml.cs">
+      <DependentUpon>SettingsPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\MatchCreationPage.xaml.cs">
+      <DependentUpon>MatchCreationPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\WaitingForOpponentPage.xaml.cs">
+      <DependentUpon>WaitingForOpponentPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\GamePage.xaml.cs">
+      <DependentUpon>GamePage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ReversiBoardControl.xaml.cs">
+      <DependentUpon>ReversiBoardControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\MatchHistoryPage.xaml.cs">
+      <DependentUpon>MatchHistoryPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\MatchInformationPage.xaml.cs">
+      <DependentUpon>MatchInformationPage.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\TextInputDialogWindow.xaml.cs">
       <DependentUpon>TextInputDialogWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ConfirmationDialogWindow.xaml.cs">
+      <DependentUpon>ConfirmationDialogWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ActionChoiceDialogWindow.xaml.cs">
+      <DependentUpon>ActionChoiceDialogWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\NewPasswordDialogWindow.xaml.cs">
+      <DependentUpon>NewPasswordDialogWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\PasswordModificationDialogWindow.xaml.cs">
+      <DependentUpon>PasswordModificationDialogWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\MatchSettingsDialogWindow.xaml.cs">
+      <DependentUpon>MatchSettingsDialogWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\MovementHistoryDialogWindow.xaml.cs">
+      <DependentUpon>MovementHistoryDialogWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\LoginScreenPage.xaml.cs">
       <DependentUpon>LoginScreenPage.xaml</DependentUpon>
@@ -109,12 +228,53 @@
       <DependentUpon>AccountCreationPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Localization\LocalizationManager.cs" />
+    <Compile Include="Localization\GuestNameFormatter.cs" />
     <Compile Include="Services\DialogService.cs" />
+    <Compile Include="Services\AccountPreviewState.cs" />
+    <Compile Include="Services\GuestSessionService.cs" />
+    <Compile Include="Services\AccountDeactivationService.cs" />
+    <Compile Include="Services\PasswordModificationService.cs" />
+    <Compile Include="Services\ProfileImageModificationService.cs" />
+    <Compile Include="Services\ProfileImageSelectionService.cs" />
+    <Compile Include="Services\PlayerStatisticsService.cs" />
+    <Compile Include="Services\BoardBackgroundService.cs" />
+    <Compile Include="Services\BoardBackgroundSelectionService.cs" />
+    <Compile Include="Services\UserPreferencesState.cs" />
     <Compile Include="Services\LanguageChangeService.cs" />
+    <Compile Include="Services\MatchCreationService.cs" />
+    <Compile Include="Services\MatchSettingsService.cs" />
+    <Compile Include="Services\PrototypeMatchStore.cs" />
+    <Compile Include="Services\JoinMatchService.cs" />
+    <Compile Include="Services\GameMoveService.cs" />
+    <Compile Include="Services\AbandonMatchService.cs" />
+    <Compile Include="Services\MatchInformationService.cs" />
+    <Compile Include="Services\MovementHistoryService.cs" />
+    <Compile Include="Services\InstructionsService.cs" />
+    <Compile Include="Services\FriendRequestService.cs" />
+    <Compile Include="Services\FriendRequestsService.cs" />
+    <Compile Include="Services\FriendRequestResponseService.cs" />
+    <Compile Include="Services\FriendsService.cs" />
+    <Compile Include="Services\FriendRemovalService.cs" />
+    <Compile Include="Services\ChatService.cs" />
+    <Compile Include="Services\ActionChoiceDialogOptions.cs" />
+    <Compile Include="Services\AvailableMatchesService.cs" />
+    <Compile Include="Services\ConfirmationDialogOptions.cs" />
     <Compile Include="Services\TextInputDialogOptions.cs" />
     <Compile Include="Validation\EmailPolicy.cs" />
     <Compile Include="Validation\PasswordPolicy.cs" />
     <Compile Include="Validation\ProfilePicturePolicy.cs" />
+    <Compile Include="Validation\BoardBackgroundPolicy.cs" />
+    <Compile Include="Validation\UsernamePolicy.cs" />
+    <Compile Include="Validation\GuestUsernamePolicy.cs" />
+    <Compile Include="Statistics\PlayerStatistics.cs" />
+    <Compile Include="Game\TurnTimePolicy.cs" />
+    <Compile Include="Game\ReversiBoard.cs" />
+    <Compile Include="Game\MatchInformation.cs" />
+    <Compile Include="Game\AvailableMatch.cs" />
+    <Compile Include="Game\MatchCodePolicy.cs" />
+    <Compile Include="Game\BoardPosition.cs" />
+    <Compile Include="Game\MatchMove.cs" />
+    <Compile Include="Game\MatchEndReason.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -148,7 +308,13 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="Assets\Images\BoardMask.png" />
+    <Resource Include="Assets\Images\DefaultBlackPiece.png" />
+    <Resource Include="Assets\Images\DefaultBoardBackground.png" />
     <Resource Include="Assets\Images\DefaultProfilePicture.png" />
+    <Resource Include="Assets\Images\DefaultWhitePiece.png" />
+    <Resource Include="Assets\Images\PieceMask.png" />
+    <Resource Include="Assets\Images\WinIcon.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

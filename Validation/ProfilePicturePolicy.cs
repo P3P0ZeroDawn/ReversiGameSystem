@@ -13,7 +13,10 @@ internal static class ProfilePicturePolicy
     internal const long MaximumFileBytes = 5 * 1024 * 1024;
     internal const int MaximumDimension = 4096;
 
-    internal static bool TryCreatePreview(string path, out BitmapSource? preview)
+    internal static bool TryCreatePreview(
+        string path,
+        out BitmapSource? preview,
+        int previewWidth = 128)
     {
         preview = null;
 
@@ -59,7 +62,7 @@ internal static class ProfilePicturePolicy
             image.BeginInit();
             image.UriSource = new Uri(file.FullName);
             image.CacheOption = BitmapCacheOption.OnLoad;
-            image.DecodePixelWidth = 128;
+            image.DecodePixelWidth = previewWidth;
             image.EndInit();
             image.Freeze();
             preview = image;

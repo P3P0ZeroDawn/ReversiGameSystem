@@ -93,11 +93,28 @@
     <Style x:Key="ProfilePictureButtonStyle" TargetType="Button">
         <Setter Property="Width" Value="52" />
         <Setter Property="Height" Value="52" />
-        <Setter Property="Padding" Value="4" />
         <Setter Property="Background" Value="#EDF4EF" />
         <Setter Property="BorderBrush" Value="#C8DACF" />
-        <Setter Property="BorderThickness" Value="1" />
         <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Ellipse x:Name="pictureEllipse"
+                             Fill="{TemplateBinding Background}"
+                             Stroke="{TemplateBinding BorderBrush}"
+                             StrokeThickness="1" />
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="pictureEllipse" Property="Opacity" Value="0.9" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="pictureEllipse" Property="StrokeThickness" Value="2" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style x:Key="AuthenticationActionButtonStyle" TargetType="Button">
@@ -185,6 +202,53 @@
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="linkBorder" Property="BorderThickness" Value="0,0,0,2" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="SettingsOptionCheckBoxStyle" TargetType="CheckBox">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="#20342A" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="Margin" Value="0,0,0,8" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border x:Name="track" Width="48" Height="26"
+                                Background="#CAD9CE" BorderBrush="#9DB5A4"
+                                BorderThickness="1" CornerRadius="13"
+                                VerticalAlignment="Center">
+                            <Ellipse x:Name="thumb" Width="20" Height="20"
+                                     Fill="White" HorizontalAlignment="Left"
+                                     Margin="3,0,0,0" VerticalAlignment="Center" />
+                        </Border>
+                        <ContentPresenter Grid.Column="1" Margin="12,0,0,0"
+                                          VerticalAlignment="Center"
+                                          RecognizesAccessKey="True" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="track" Property="Background" Value="#176A49" />
+                            <Setter TargetName="track" Property="BorderBrush" Value="#176A49" />
+                            <Setter TargetName="thumb" Property="HorizontalAlignment" Value="Right" />
+                            <Setter TargetName="thumb" Property="Margin" Value="0,0,3,0" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="track" Property="BorderBrush" Value="#0F4E35" />
+                            <Setter TargetName="track" Property="BorderThickness" Value="2" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

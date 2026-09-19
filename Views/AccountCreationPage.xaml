@@ -57,9 +57,10 @@
                                 AutomationProperties.Name="{Binding [AccountCreation_ProfilePictureButton]}"
                                 Click="OnProfilePictureClick"
                                 Style="{StaticResource ProfilePictureButtonStyle}">
-                            <Image x:Name="profilePictureImage"
-                                   Source="/Assets/Images/DefaultProfilePicture.png"
-                                   Stretch="Uniform" />
+                            <Button.Background>
+                                <ImageBrush ImageSource="/Assets/Images/DefaultProfilePicture.png"
+                                            Stretch="UniformToFill" />
+                            </Button.Background>
                         </Button>
                         <StackPanel Grid.Column="1" Margin="12,0,0,0">
                             <TextBlock x:Name="usernameTextBlock"

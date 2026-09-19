@@ -1,0 +1,57 @@
+<Window x:Class="ReversiGameSystem.Views.MatchSettingsDialogWindow"
+        x:ClassModifier="internal"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Width="520" SizeToContent="Height"
+        MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}"
+        MaxWidth="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Width}"
+        WindowStyle="None" AllowsTransparency="True"
+        Background="Transparent" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Auto">
+        <Border Margin="12" Padding="28"
+                Background="White" BorderBrush="#D8E5DC"
+                BorderThickness="1" CornerRadius="12">
+            <Border.Effect>
+                <DropShadowEffect Color="#20342A" Opacity="0.2"
+                                  BlurRadius="18" ShadowDepth="4" />
+            </Border.Effect>
+            <StackPanel>
+                <TextBlock x:Name="dialogTitleTextBlock"
+                           Style="{StaticResource AuthenticationTitleStyle}"
+                           Margin="0,0,0,10"
+                           MouseLeftButtonDown="OnTitleMouseLeftButtonDown" />
+                <TextBlock x:Name="dialogMessageTextBlock"
+                           Style="{StaticResource AuthenticationSupportingTextStyle}"
+                           TextWrapping="Wrap" Margin="0,0,0,20" />
+                <Label x:Name="turnTimeLabel"
+                       Target="{Binding ElementName=turnTimeTextBox}"
+                       Style="{StaticResource AuthenticationFieldLabelStyle}" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="turnTimeTextBox"
+                             Style="{StaticResource AuthenticationTextBoxStyle}"
+                             PreviewTextInput="OnTurnTimePreviewTextInput"
+                             MaxLength="3" />
+                    <TextBlock x:Name="secondsSuffixTextBlock" Grid.Column="1"
+                               VerticalAlignment="Center" Margin="10,0,0,14" />
+                </Grid>
+                <TextBlock x:Name="turnTimeHintTextBlock"
+                           Style="{StaticResource AuthenticationSupportingTextStyle}"
+                           TextWrapping="Wrap" Margin="0,0,0,22" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="cancelButton" MinWidth="120" IsCancel="True"
+                            Style="{StaticResource AuthenticationSecondaryButtonStyle}"
+                            Margin="0,0,10,0" Click="OnCancelClick" />
+                    <Button x:Name="saveButton" MinWidth="120" IsDefault="True"
+                            Style="{StaticResource AuthenticationPrimaryButtonStyle}"
+                            Margin="0" Click="OnSaveClick" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </ScrollViewer>
+</Window>

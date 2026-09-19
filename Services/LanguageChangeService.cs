@@ -1,6 +1,4 @@
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
-using System.Windows.Data;
 using ReversiGameSystem.Localization;
 
 namespace ReversiGameSystem.Services;
@@ -25,17 +23,37 @@ internal static class LanguageChangeService
         }
 
         DialogService dialogs = new DialogService(LocalizationManager.Instance);
-        if (dialogs.Confirm(
+        if (!dialogs.Confirm(
             languageComboBox,
             "Common_ChangeLanguageTitle",
             "Common_ChangeLanguageMessage"))
         {
-            BindingExpression? binding = languageComboBox.GetBindingExpression(
-                Selector.SelectedValueProperty);
-            binding?.UpdateSource();
+            languageComboBox.SelectedValue = currentCulture;
+            return;
+        }
+
+        LanguageChangeResult result = LocalizationManager.Instance.TrySetCulture(selectedCulture);
+        if (result == LanguageChangeResult.Success)
+        {
             return;
         }
 
         languageComboBox.SelectedValue = currentCulture;
+        string resourcePrefix = result == LanguageChangeResult.NotAvailable
+            ? "LanguageSettings_NotAvailable"
+            : "LanguageSettings_ResourcesError";
+        if (result == LanguageChangeResult.NotAvailable)
+        {
+            dialogs.ShowWarning(
+                languageComboBox,
+                resourcePrefix + "Title",
+                resourcePrefix + "Message");
+            return;
+        }
+
+        dialogs.ShowError(
+            languageComboBox,
+            resourcePrefix + "Title",
+            resourcePrefix + "Message");
     }
 }
