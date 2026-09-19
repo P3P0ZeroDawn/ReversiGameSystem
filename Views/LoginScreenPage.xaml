@@ -9,38 +9,38 @@
       Title="{Binding [LoginScreen_Title]}"
       Style="{StaticResource AuthenticationPageStyle}"
       DataContext="{x:Static localization:LocalizationManager.Instance}">
-    <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+    <Viewbox Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid Width="1280" Height="800" Margin="32,24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Style="{StaticResource ApplicationHeaderStyle}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="220" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="220" />
-            </Grid.ColumnDefinitions>
-            <TextBlock x:Name="applicationNameTextBlock" Grid.Column="1"
-                       Text="{Binding [Application_Name]}"
-                       Style="{StaticResource AuthenticationBrandStyle}" />
-            <StackPanel Grid.Column="2" Style="{StaticResource LanguagePanelStyle}">
-                <Label x:Name="languageLabel" Content="{Binding [Common_LanguageLabel]}"
-                       Style="{StaticResource LanguageLabelStyle}" />
-                <ComboBox x:Name="languageComboBox"
-                          Style="{StaticResource LanguageComboBoxStyle}"
-                          SelectedValuePath="Tag"
-                          SelectionChanged="OnLanguageSelectionChanged"
-                          SelectedValue="{Binding CultureName, Mode=TwoWay, UpdateSourceTrigger=Explicit}">
-                    <ComboBoxItem Tag="en-US" Content="{Binding [Language_English]}" />
-                    <ComboBoxItem Tag="es-MX" Content="{Binding [Language_Spanish]}" />
-                </ComboBox>
-            </StackPanel>
-        </Grid>
+            <Grid Grid.Row="0" Style="{StaticResource ApplicationHeaderStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="220" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="220" />
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="applicationNameTextBlock" Grid.Column="1"
+                           Text="{Binding [Application_Name]}"
+                           Style="{StaticResource AuthenticationBrandStyle}" />
+                <StackPanel Grid.Column="2" Style="{StaticResource LanguagePanelStyle}">
+                    <Label x:Name="languageLabel" Content="{Binding [Common_LanguageLabel]}"
+                           Style="{StaticResource LanguageLabelStyle}" />
+                    <ComboBox x:Name="languageComboBox"
+                              Style="{StaticResource LanguageComboBoxStyle}"
+                              SelectedValuePath="Tag"
+                              SelectionChanged="OnLanguageSelectionChanged"
+                              SelectedValue="{Binding CultureName, Mode=TwoWay, UpdateSourceTrigger=Explicit}">
+                        <ComboBoxItem Tag="en-US" Content="{Binding [Language_English]}" />
+                        <ComboBoxItem Tag="es-MX" Content="{Binding [Language_Spanish]}" />
+                    </ComboBox>
+                </StackPanel>
+            </Grid>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-            <Border Style="{StaticResource AuthenticationCardStyle}">
+            <Border Grid.Row="1" Style="{StaticResource AuthenticationCardStyle}"
+                    VerticalAlignment="Center">
                 <StackPanel>
                     <TextBlock x:Name="loginScreenTitleTextBlock"
                                Text="{Binding [LoginScreen_Title]}"
@@ -83,6 +83,6 @@
                     </StackPanel>
                 </StackPanel>
             </Border>
-        </ScrollViewer>
-    </Grid>
+        </Grid>
+    </Viewbox>
 </Page>

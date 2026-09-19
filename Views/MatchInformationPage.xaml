@@ -10,11 +10,13 @@
       Title="{Binding [MatchInformation_Title]}"
       Style="{StaticResource AuthenticationPageStyle}"
       DataContext="{x:Static localization:LocalizationManager.Instance}">
-    <Grid Margin="24">
+    <Grid Margin="24,14">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
+
+        <!-- Cabecera de la aplicación -->
         <Grid Grid.Row="0" Style="{StaticResource ApplicationHeaderStyle}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="220" />
@@ -36,94 +38,126 @@
                 </ComboBox>
             </StackPanel>
         </Grid>
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Auto"
-                      HorizontalContentAlignment="Center"
-                      VerticalContentAlignment="Center">
-            <Grid Width="1164" Margin="0,12,0,20">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="294" />
-                    <ColumnDefinition Width="28" />
-                    <ColumnDefinition Width="520" />
-                    <ColumnDefinition Width="28" />
-                    <ColumnDefinition Width="294" />
-                </Grid.ColumnDefinitions>
-                <Border Grid.Column="0" Style="{StaticResource MainMenuCardStyle}"
-                        Padding="20" VerticalAlignment="Center">
-                    <StackPanel>
-                        <TextBlock Text="{Binding [MatchInformation_Title]}"
-                                   Style="{StaticResource MainMenuSectionTitleStyle}" />
-                        <TextBlock x:Name="modeTextBlock" FontSize="13"
-                                   FontWeight="SemiBold" Foreground="#176A49"
-                                   Margin="0,0,0,18" />
-                        <TextBlock x:Name="blackPlayerTextBlock" TextWrapping="Wrap"
-                                   Margin="0,0,0,8" />
-                        <TextBlock x:Name="whitePlayerTextBlock" TextWrapping="Wrap"
-                                   Margin="0,0,0,8" />
-                        <TextBlock x:Name="stateTextBlock" TextWrapping="Wrap"
-                                   Margin="0,0,0,8" />
-                        <TextBlock x:Name="turnTimeTextBlock" TextWrapping="Wrap"
-                                   Margin="0,0,0,8" />
-                        <TextBlock x:Name="scoreTextBlock" FontWeight="SemiBold"
-                                   TextWrapping="Wrap" Margin="0,0,0,8" />
-                        <Separator Margin="0,8,0,14" />
-                        <TextBlock Text="{Binding [MatchInformation_ResultLabel]}"
-                                   FontWeight="SemiBold" Margin="0,0,0,4" />
-                        <TextBlock x:Name="resultTextBlock" TextWrapping="Wrap"
-                                   Foreground="#52685B" />
-                    </StackPanel>
-                </Border>
 
-                <StackPanel Grid.Column="2" HorizontalAlignment="Center">
-                    <TextBlock x:Name="boardCaptionTextBlock" FontSize="20"
-                               FontWeight="SemiBold" Foreground="#20342A"
-                               TextAlignment="Center" Margin="0,0,0,12" />
+        <!-- Bloque principal de información de partida responsivo (sin ScrollViewer global) -->
+        <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+              Margin="0,6,0,10" MaxWidth="1180">
+            <Grid.ColumnDefinitions>
+                <!-- Columna 0: Tarjeta de datos de la partida -->
+                <ColumnDefinition Width="280" />
+                <!-- Columna 1: Separador -->
+                <ColumnDefinition Width="24" />
+                <!-- Columna 2: Tablero y controles de reproducción -->
+                <ColumnDefinition Width="*" MinWidth="380" MaxWidth="520" />
+                <!-- Columna 3: Separador -->
+                <ColumnDefinition Width="24" />
+                <!-- Columna 4: Lista de movimientos -->
+                <ColumnDefinition Width="280" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Columna 0: Tarjeta con detalles de la partida -->
+            <Border Grid.Column="0" Style="{StaticResource MainMenuCardStyle}"
+                    Padding="20,18" VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="{Binding [MatchInformation_Title]}"
+                               Style="{StaticResource MainMenuSectionTitleStyle}" />
+                    <TextBlock x:Name="modeTextBlock" FontSize="13"
+                               FontWeight="SemiBold" Foreground="#176A49"
+                               Margin="0,0,0,14" />
+                    <TextBlock x:Name="blackPlayerTextBlock" TextWrapping="Wrap"
+                               Margin="0,0,0,6" />
+                    <TextBlock x:Name="whitePlayerTextBlock" TextWrapping="Wrap"
+                               Margin="0,0,0,6" />
+                    <TextBlock x:Name="stateTextBlock" TextWrapping="Wrap"
+                               Margin="0,0,0,6" />
+                    <TextBlock x:Name="turnTimeTextBlock" TextWrapping="Wrap"
+                               Margin="0,0,0,6" />
+                    <TextBlock x:Name="scoreTextBlock" FontWeight="SemiBold"
+                               TextWrapping="Wrap" Margin="0,0,0,6" />
+                    <Separator Margin="0,6,0,12" />
+                    <TextBlock Text="{Binding [MatchInformation_ResultLabel]}"
+                               FontWeight="SemiBold" Margin="0,0,0,4" />
+                    <TextBlock x:Name="resultTextBlock" TextWrapping="Wrap"
+                               Foreground="#52685B" />
+                </StackPanel>
+            </Border>
+
+            <!-- Columna 2: Tablero en Viewbox responsivo, controles de replay y botón cerrar -->
+            <Grid Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Stretch">
+                <Grid.RowDefinitions>
+                    <!-- Fila 0: Título del estado del tablero -->
+                    <RowDefinition Height="Auto" />
+                    <!-- Fila 1: Tablero escalable uniformemente -->
+                    <RowDefinition Height="*" MinHeight="260" />
+                    <!-- Fila 2: Controles de reproducción y cierre -->
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock x:Name="boardCaptionTextBlock" Grid.Row="0"
+                           FontSize="20" FontWeight="SemiBold" Foreground="#20342A"
+                           TextAlignment="Center" Margin="0,0,0,8" />
+
+                <!-- Tablero de 8x8 envuelto en Viewbox Stretch="Uniform" -->
+                <Viewbox Grid.Row="1" Stretch="Uniform"
+                         HorizontalAlignment="Center" VerticalAlignment="Center">
                     <views:ReversiBoardControl x:Name="matchBoardControl" />
+                </Viewbox>
+
+                <!-- Panel inferior con controles de reproducción y botón de cierre -->
+                <StackPanel Grid.Row="2" HorizontalAlignment="Center" Margin="0,8,0,0">
                     <StackPanel x:Name="replayControlsPanel" Orientation="Horizontal"
-                                HorizontalAlignment="Center" Margin="0,16,0,0">
+                                HorizontalAlignment="Center" Margin="0,0,0,4">
                         <Button Content="{Binding [MatchInformation_PreviousButton]}"
                                 Click="OnPreviousClick"
                                 Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                                MinWidth="110" Margin="0,0,8,0" />
+                                MinWidth="100" Padding="12,6" Margin="0,0,8,0" />
                         <Button x:Name="playPauseButton" Click="OnPlayPauseClick"
                                 Style="{StaticResource AuthenticationPrimaryButtonStyle}"
-                                MinWidth="110" Margin="0,0,8,0" />
+                                MinWidth="100" Padding="12,6" Margin="0,0,8,0" />
                         <Button Content="{Binding [MatchInformation_NextButton]}"
                                 Click="OnNextClick"
                                 Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                                MinWidth="110" Margin="0" />
+                                MinWidth="100" Padding="12,6" Margin="0" />
                     </StackPanel>
+
                     <TextBlock x:Name="framePositionTextBlock"
                                Style="{StaticResource AuthenticationSupportingTextStyle}"
-                               TextAlignment="Center" Margin="0,8,0,0" />
+                               TextAlignment="Center" Margin="0,2,0,6" />
+
                     <Button Content="{Binding [MatchInformation_CloseButton]}"
                             Click="OnCloseClick"
                             Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                            Width="190" Margin="0,16,0,0" />
+                            MinWidth="180" HorizontalAlignment="Center"
+                            Padding="14,8" Margin="0" />
                 </StackPanel>
-
-                <Border Grid.Column="4" Style="{StaticResource MainMenuCardStyle}"
-                        Padding="18" VerticalAlignment="Center">
-                    <Grid Height="430">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <TextBlock Text="{Binding [MatchInformation_MovesTitle]}"
-                                   Style="{StaticResource MainMenuSectionTitleStyle}" />
-                        <ListBox x:Name="movesListBox" Grid.Row="1"
-                                 BorderThickness="0" Background="#F7FAF8"
-                                 Padding="8"
-                                 ScrollViewer.VerticalScrollBarVisibility="Auto" />
-                        <Button Grid.Row="2"
-                                Content="{Binding [MovementHistory_ViewDetailsButton]}"
-                                Click="OnViewMovementHistoryClick"
-                                Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                                Margin="0,12,0,0" />
-                    </Grid>
-                </Border>
             </Grid>
-        </ScrollViewer>
+
+            <!-- Columna 4: Lista de movimientos con scroll interno independiente -->
+            <Border Grid.Column="4" Style="{StaticResource MainMenuCardStyle}"
+                    Padding="18" VerticalAlignment="Stretch"
+                    MaxHeight="540">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding [MatchInformation_MovesTitle]}"
+                               Style="{StaticResource MainMenuSectionTitleStyle}"
+                               Margin="0,0,0,8" />
+                    <ListBox x:Name="movesListBox" Grid.Row="1"
+                             BorderThickness="0" Background="#F7FAF8"
+                             Padding="8" Margin="0,0,0,10"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                    <Button Grid.Row="2"
+                            Content="{Binding [MovementHistory_ViewDetailsButton]}"
+                            Click="OnViewMovementHistoryClick"
+                            Style="{StaticResource AuthenticationSecondaryButtonStyle}"
+                            Padding="12,6" MinWidth="180" HorizontalAlignment="Stretch"
+                            Margin="0" />
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </Page>
+

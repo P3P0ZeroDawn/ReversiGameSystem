@@ -10,73 +10,79 @@
       Style="{StaticResource AuthenticationPageStyle}"
       Loaded="OnLoaded"
       DataContext="{x:Static localization:LocalizationManager.Instance}">
-    <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+    <Viewbox Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid Width="1280" Height="800" Margin="32,24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Style="{StaticResource ApplicationHeaderStyle}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="220" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="220" />
-            </Grid.ColumnDefinitions>
-            <StackPanel x:Name="guestIdentityPanel" Grid.Column="0"
-                        VerticalAlignment="Center" Visibility="Collapsed">
-                <TextBlock Text="{Binding [MainMenu_GuestLabel]}"
-                           Style="{StaticResource MainMenuEmptyTextStyle}" />
-                <TextBlock x:Name="guestNameTextBlock" MaxWidth="200"
-                           HorizontalAlignment="Left" FontSize="16"
-                           FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-            <TextBlock x:Name="applicationNameTextBlock" Grid.Column="1"
-                       Text="{Binding [Application_Name]}"
-                       Style="{StaticResource AuthenticationBrandStyle}" />
-            <StackPanel Grid.Column="2" Style="{StaticResource LanguagePanelStyle}">
-                <Label x:Name="languageLabel" Content="{Binding [Common_LanguageLabel]}"
-                       Style="{StaticResource LanguageLabelStyle}" />
-                <ComboBox x:Name="languageComboBox"
-                          Style="{StaticResource LanguageComboBoxStyle}"
-                          SelectedValuePath="Tag"
-                          SelectionChanged="OnLanguageSelectionChanged"
-                          SelectedValue="{Binding CultureName, Mode=TwoWay, UpdateSourceTrigger=Explicit}">
-                    <ComboBoxItem Tag="en-US" Content="{Binding [Language_English]}" />
-                    <ComboBoxItem Tag="es-MX" Content="{Binding [Language_Spanish]}" />
-                </ComboBox>
-            </StackPanel>
-        </Grid>
-
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Auto">
-            <Grid MinWidth="1000">
+            <Grid Grid.Row="0" Style="{StaticResource ApplicationHeaderStyle}">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="260" />
-                    <ColumnDefinition Width="20" />
+                    <ColumnDefinition Width="220" />
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="20" />
-                    <ColumnDefinition Width="360" />
+                    <ColumnDefinition Width="220" />
+                </Grid.ColumnDefinitions>
+                <StackPanel x:Name="guestIdentityPanel" Grid.Column="0"
+                            VerticalAlignment="Center" Visibility="Collapsed">
+                    <TextBlock Text="{Binding [MainMenu_GuestLabel]}"
+                               Style="{StaticResource MainMenuEmptyTextStyle}" />
+                    <TextBlock x:Name="guestNameTextBlock" MaxWidth="200"
+                               HorizontalAlignment="Left" FontSize="16"
+                               FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <TextBlock x:Name="applicationNameTextBlock" Grid.Column="1"
+                           Text="{Binding [Application_Name]}"
+                           Style="{StaticResource AuthenticationBrandStyle}" />
+                <StackPanel Grid.Column="2" Style="{StaticResource LanguagePanelStyle}">
+                    <Label x:Name="languageLabel" Content="{Binding [Common_LanguageLabel]}"
+                           Style="{StaticResource LanguageLabelStyle}" />
+                    <ComboBox x:Name="languageComboBox"
+                              Style="{StaticResource LanguageComboBoxStyle}"
+                              SelectedValuePath="Tag"
+                              SelectionChanged="OnLanguageSelectionChanged"
+                              SelectedValue="{Binding CultureName, Mode=TwoWay, UpdateSourceTrigger=Explicit}">
+                        <ComboBoxItem Tag="en-US" Content="{Binding [Language_English]}" />
+                        <ComboBoxItem Tag="es-MX" Content="{Binding [Language_Spanish]}" />
+                    </ComboBox>
+                </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="1" VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="340" />
+                    <ColumnDefinition Width="24" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="24" />
+                    <ColumnDefinition Width="340" />
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" Style="{StaticResource MainMenuCardStyle}">
+                <Border Grid.Column="0" Style="{StaticResource MainMenuCardStyle}"
+                        VerticalAlignment="Top">
                     <StackPanel>
                         <TextBlock x:Name="topWinnersTitleTextBlock"
                                    Text="{Binding [MainMenu_TopWinnersTitle]}"
                                    Style="{StaticResource MainMenuSectionTitleStyle}" />
                         <Separator Margin="0,0,0,14" />
-                        <StackPanel x:Name="topWinnersPanel">
-                            <TextBlock Text="{Binding [MainMenu_TopWinnersEmptyMessage]}"
-                                       Style="{StaticResource MainMenuEmptyTextStyle}" />
-                        </StackPanel>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      MaxHeight="500"
+                                      CanContentScroll="False">
+                            <StackPanel x:Name="topWinnersPanel">
+                                <TextBlock Text="{Binding [MainMenu_TopWinnersEmptyMessage]}"
+                                           Style="{StaticResource MainMenuEmptyTextStyle}" />
+                            </StackPanel>
+                        </ScrollViewer>
                     </StackPanel>
                 </Border>
 
                 <Border Grid.Column="2" Style="{StaticResource MainMenuCardStyle}"
-                        MaxWidth="480">
+                        MaxWidth="460" VerticalAlignment="Top" HorizontalAlignment="Stretch">
                     <StackPanel>
                         <TextBlock x:Name="mainMenuTitleTextBlock"
                                    Text="{Binding [MainMenu_Title]}"
-                                   Style="{StaticResource AuthenticationTitleStyle}" />
+                                   Style="{StaticResource AuthenticationTitleStyle}"
+                                   HorizontalAlignment="Center" />
                         <Button x:Name="createGameButton"
                                 Content="{Binding [MainMenu_CreateGameButton]}"
                                 Click="OnCreateGameClick"
@@ -111,7 +117,8 @@
                 </Border>
 
                 <Border x:Name="friendsCardBorder" Grid.Column="4"
-                        Style="{StaticResource MainMenuCardStyle}">
+                        Style="{StaticResource MainMenuCardStyle}"
+                        VerticalAlignment="Top">
                     <StackPanel>
                         <TextBlock x:Name="friendsTitleTextBlock"
                                    Text="{Binding [MainMenu_FriendsTitle]}"
@@ -125,65 +132,70 @@
                                        Text="{Binding [MainMenu_FriendsEmptyMessage]}"
                                        Style="{StaticResource MainMenuEmptyTextStyle}"
                                        Visibility="Collapsed" />
-                            <ItemsControl x:Name="friendsItemsControl">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="#F7FAF8"
-                                                BorderBrush="#D8E5DC"
-                                                BorderThickness="1"
-                                                CornerRadius="8"
-                                                Padding="8" Margin="0,0,0,8">
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="42" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <Button Width="34" Height="34"
-                                                        IsHitTestVisible="False"
-                                                        Style="{StaticResource ProfilePictureButtonStyle}">
-                                                    <Button.Background>
-                                                        <ImageBrush ImageSource="/Assets/Images/DefaultProfilePicture.png"
-                                                                    Stretch="UniformToFill" />
-                                                    </Button.Background>
-                                                </Button>
-                                                <TextBlock Grid.Column="1"
-                                                           Text="{Binding Username}"
-                                                           VerticalAlignment="Center"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           ToolTip="{Binding Username}"
-                                                           Margin="8,0,0,0" />
-                                                <Grid Grid.Row="1" Grid.ColumnSpan="2"
-                                                      Margin="0,8,0,0">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          MaxHeight="220"
+                                          CanContentScroll="False">
+                                <ItemsControl x:Name="friendsItemsControl">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#F7FAF8"
+                                                    BorderBrush="#D8E5DC"
+                                                    BorderThickness="1"
+                                                    CornerRadius="8"
+                                                    Padding="8" Margin="0,0,0,8">
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="8" />
+                                                        <ColumnDefinition Width="42" />
                                                         <ColumnDefinition Width="*" />
                                                     </Grid.ColumnDefinitions>
-                                                    <Button Grid.Column="0"
-                                                            Content="{Binding DataContext[MainMenu_ViewFriendProfileButton], RelativeSource={RelativeSource AncestorType=Page}}"
-                                                            Tag="{Binding Username}"
-                                                            Click="OnFriendProfileClick"
-                                                            Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                                                            Padding="8,4" Margin="0" />
-                                                    <Button Grid.Column="2"
-                                                            Content="{Binding DataContext[MainMenu_RemoveFriendButton], RelativeSource={RelativeSource AncestorType=Page}}"
-                                                            Tag="{Binding Username}"
-                                                            Click="OnRemoveFriendClick"
-                                                            Style="{StaticResource MainMenuLogoutButtonStyle}"
-                                                            Padding="8,4" Margin="0" />
+                                                    <Button Width="34" Height="34"
+                                                            IsHitTestVisible="False"
+                                                            Style="{StaticResource ProfilePictureButtonStyle}">
+                                                        <Button.Background>
+                                                            <ImageBrush ImageSource="/Assets/Images/DefaultProfilePicture.png"
+                                                                        Stretch="UniformToFill" />
+                                                        </Button.Background>
+                                                    </Button>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding Username}"
+                                                               VerticalAlignment="Center"
+                                                               FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding Username}"
+                                                               Margin="8,0,0,0" />
+                                                    <Grid Grid.Row="1" Grid.ColumnSpan="2"
+                                                          Margin="0,8,0,0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="8" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <Button Grid.Column="0"
+                                                                Content="{Binding DataContext[MainMenu_ViewFriendProfileButton], RelativeSource={RelativeSource AncestorType=Page}}"
+                                                                Tag="{Binding Username}"
+                                                                Click="OnFriendProfileClick"
+                                                                Style="{StaticResource AuthenticationSecondaryButtonStyle}"
+                                                                Padding="8,4" Margin="0" />
+                                                        <Button Grid.Column="2"
+                                                                Content="{Binding DataContext[MainMenu_RemoveFriendButton], RelativeSource={RelativeSource AncestorType=Page}}"
+                                                                Tag="{Binding Username}"
+                                                                Click="OnRemoveFriendClick"
+                                                                Style="{StaticResource MainMenuLogoutButtonStyle}"
+                                                                Padding="8,4" Margin="0" />
+                                                    </Grid>
                                                 </Grid>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
                         </StackPanel>
-                        <Separator Margin="0,18,0,18" />
+                        <Separator Margin="0,14,0,14" />
                         <TextBlock x:Name="friendRequestsTitleTextBlock"
                                    Text="{Binding [MainMenu_FriendRequestsTitle]}"
                                    Style="{StaticResource MainMenuSectionTitleStyle}" />
@@ -193,11 +205,12 @@
                             <Button Content="{Binding [MainMenu_ViewFriendRequestsButton]}"
                                     Click="OnViewFriendRequestsClick"
                                     Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                                    Margin="0,12,0,0" />
+                                    Margin="0,10,0,0" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
             </Grid>
-        </ScrollViewer>
-    </Grid>
+        </Grid>
+    </Viewbox>
 </Page>
+

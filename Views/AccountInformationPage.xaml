@@ -10,7 +10,7 @@
       Title="{Binding [AccountInformation_Title]}"
       Style="{StaticResource AuthenticationPageStyle}"
       DataContext="{x:Static localization:LocalizationManager.Instance}">
-    <Grid Margin="24">
+    <Grid Margin="48,20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -39,99 +39,133 @@
             </StackPanel>
         </Grid>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Auto">
-            <Grid MinWidth="900" MaxWidth="1080" HorizontalAlignment="Center">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <Grid Grid.Row="0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2*" />
-                        <ColumnDefinition Width="24" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
+        <!-- Bloque principal con ancho extendido (MaxWidth 1480) y tarjetas simétricas -->
+        <Grid Grid.Row="1" MaxWidth="1480" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-                    <Border Grid.Column="0" Style="{StaticResource MainMenuCardStyle}">
-                        <StackPanel>
-                            <TextBlock x:Name="profileTitleTextBlock"
-                                       Text="{Binding [AccountInformation_Title]}"
-                                       Style="{StaticResource AuthenticationTitleStyle}" />
-                            <Grid>
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="32" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Tarjeta Mi Perfil -->
+                <Border Grid.Column="0" Style="{StaticResource MainMenuCardStyle}"
+                        Padding="36,28" VerticalAlignment="Stretch">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Título de sección -->
+                        <TextBlock x:Name="profileTitleTextBlock"
+                                   Text="{Binding [AccountInformation_Title]}"
+                                   Style="{StaticResource MainMenuSectionTitleStyle}"
+                                   Margin="0,0,0,12" />
+
+                        <Separator Grid.Row="1" Margin="0,0,0,16" />
+
+                        <!-- Contenido del perfil -->
+                        <Grid Grid.Row="2" VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="24" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Foto de perfil a la izquierda -->
+                            <Button x:Name="profilePictureButton" Grid.Column="0"
+                                    Width="120" Height="120"
+                                    ToolTip="{Binding [AccountInformation_ChangePictureButton]}"
+                                    AutomationProperties.Name="{Binding [AccountInformation_ChangePictureButton]}"
+                                    Click="OnProfilePictureClick"
+                                    Style="{StaticResource ProfilePictureButtonStyle}"
+                                    VerticalAlignment="Center">
+                                <Button.Background>
+                                    <ImageBrush ImageSource="/Assets/Images/DefaultProfilePicture.png"
+                                                Stretch="UniformToFill" />
+                                </Button.Background>
+                            </Button>
+
+                            <!-- Información a la derecha de la foto en 2 columnas equilibradas -->
+                            <Grid Grid.Column="2" VerticalAlignment="Center">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="112" />
+                                    <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="20" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <Button x:Name="profilePictureButton" Grid.Column="0"
-                                        Width="112" Height="112"
-                                        ToolTip="{Binding [AccountInformation_ChangePictureButton]}"
-                                        AutomationProperties.Name="{Binding [AccountInformation_ChangePictureButton]}"
-                                        Click="OnProfilePictureClick"
-                                        Style="{StaticResource ProfilePictureButtonStyle}">
-                                    <Button.Background>
-                                        <ImageBrush ImageSource="/Assets/Images/DefaultProfilePicture.png"
-                                                    Stretch="UniformToFill" />
-                                    </Button.Background>
-                                </Button>
-                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+
+                                <!-- Columna de Nombre de Usuario -->
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding [AccountInformation_UsernameLabel]}"
                                                Style="{StaticResource AuthenticationFieldCaptionStyle}" />
                                     <TextBlock x:Name="usernameTextBlock"
                                                Text="{Binding [AccountInformation_UnavailableValue]}"
-                                               FontSize="16" TextTrimming="CharacterEllipsis" />
+                                               FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                               Margin="0,4,0,0" />
                                     <Button x:Name="modifyUsernameButton"
                                             Content="{Binding [AccountInformation_ChangeUsernameButton]}"
                                             Click="OnModifyUsernameClick"
                                             Style="{StaticResource AuthenticationLinkButtonStyle}"
-                                            HorizontalAlignment="Left" Margin="0,8,0,0" />
+                                            HorizontalAlignment="Left" Margin="0,12,0,0" />
+                                </StackPanel>
+
+                                <!-- Columna de Correo y Contraseña (se oculta en perfiles de terceros) -->
+                                <StackPanel x:Name="privateAccountPanel" Grid.Column="2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding [AccountInformation_EmailLabel]}"
+                                               Style="{StaticResource AuthenticationFieldCaptionStyle}" />
+                                    <TextBlock x:Name="emailTextBlock"
+                                               Text="{Binding [AccountInformation_UnavailableValue]}"
+                                               FontSize="15" TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                               Margin="0,4,0,0" />
+                                    <Button x:Name="changePasswordButton"
+                                            Content="{Binding [AccountInformation_ChangePasswordButton]}"
+                                            Click="OnChangePasswordClick"
+                                            Style="{StaticResource AuthenticationLinkButtonStyle}"
+                                            HorizontalAlignment="Left" Margin="0,12,0,0" />
                                 </StackPanel>
                             </Grid>
+                        </Grid>
+                    </Grid>
+                </Border>
 
-                            <StackPanel x:Name="privateAccountPanel">
-                                <Separator Margin="0,22,0,18" />
-                                <TextBlock Text="{Binding [AccountInformation_EmailLabel]}"
-                                           Style="{StaticResource AuthenticationFieldCaptionStyle}" />
-                                <TextBlock x:Name="emailTextBlock"
-                                           Text="{Binding [AccountInformation_UnavailableValue]}"
-                                           FontSize="15" TextTrimming="CharacterEllipsis" />
-                                <Button x:Name="changePasswordButton"
-                                        Content="{Binding [AccountInformation_ChangePasswordButton]}"
-                                        Click="OnChangePasswordClick"
-                                        Style="{StaticResource AuthenticationLinkButtonStyle}"
-                                        HorizontalAlignment="Left" Margin="0,20,0,0" />
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-
-                    <views:PlayerStatisticsControl x:Name="playerStatisticsControl"
-                                                   Grid.Column="2" />
-                </Grid>
-
-                <Grid Grid.Row="1" Margin="0,22,0,20">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Button x:Name="backToMenuButton"
-                            Content="{Binding [AccountInformation_BackButton]}"
-                            Click="OnBackToMenuClick"
-                            Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                            HorizontalAlignment="Left" MinWidth="180" Margin="0" />
-                    <Button x:Name="deactivateAccountButton" Grid.Column="1"
-                            Content="{Binding [AccountInformation_DeactivateButton]}"
-                            Style="{StaticResource MainMenuLogoutButtonStyle}"
-                            HorizontalAlignment="Right" MinWidth="180"
-                            Click="OnDeactivateAccountClick" Margin="0" />
-                    <Button x:Name="sendFriendRequestButton" Grid.Column="1"
-                            Content="{Binding [AccountInformation_AddFriendButton]}"
-                            Style="{StaticResource AuthenticationPrimaryButtonStyle}"
-                            HorizontalAlignment="Right" MinWidth="180"
-                            Visibility="Collapsed"
-                            Click="OnSendFriendRequestClick" Margin="0" />
-                </Grid>
+                <!-- Tarjeta Estadísticas -->
+                <views:PlayerStatisticsControl x:Name="playerStatisticsControl"
+                                               Grid.Column="2" VerticalAlignment="Stretch" />
             </Grid>
-        </ScrollViewer>
+
+            <!-- Fila inferior: Botones alineados a los extremos del contenedor -->
+            <Grid Grid.Row="1" Margin="0,20,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Button x:Name="backToMenuButton"
+                        Content="{Binding [AccountInformation_BackButton]}"
+                        Click="OnBackToMenuClick"
+                        Style="{StaticResource AuthenticationSecondaryButtonStyle}"
+                        HorizontalAlignment="Left" MinWidth="180" Margin="0" />
+                <Button x:Name="deactivateAccountButton" Grid.Column="1"
+                        Content="{Binding [AccountInformation_DeactivateButton]}"
+                        Style="{StaticResource MainMenuLogoutButtonStyle}"
+                        HorizontalAlignment="Right" MinWidth="180"
+                        Click="OnDeactivateAccountClick" Margin="0" />
+                <Button x:Name="sendFriendRequestButton" Grid.Column="1"
+                        Content="{Binding [AccountInformation_AddFriendButton]}"
+                        Style="{StaticResource AuthenticationPrimaryButtonStyle}"
+                        HorizontalAlignment="Right" MinWidth="180"
+                        Visibility="Collapsed"
+                        Click="OnSendFriendRequestClick" Margin="0" />
+            </Grid>
+        </Grid>
     </Grid>
 </Page>
+

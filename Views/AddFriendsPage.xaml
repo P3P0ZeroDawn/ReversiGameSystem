@@ -9,11 +9,13 @@
       Title="{Binding [AddFriends_Title]}"
       Style="{StaticResource AuthenticationPageStyle}"
       DataContext="{x:Static localization:LocalizationManager.Instance}">
-    <Grid Margin="24">
+    <Grid Margin="32,16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
+
+        <!-- Cabecera de la aplicación -->
         <Grid Grid.Row="0" Style="{StaticResource ApplicationHeaderStyle}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="220" />
@@ -25,7 +27,8 @@
             <StackPanel Grid.Column="2" Style="{StaticResource LanguagePanelStyle}">
                 <Label Content="{Binding [Common_LanguageLabel]}"
                        Style="{StaticResource LanguageLabelStyle}" />
-                <ComboBox Style="{StaticResource LanguageComboBoxStyle}"
+                <ComboBox x:Name="languageComboBox"
+                          Style="{StaticResource LanguageComboBoxStyle}"
                           SelectedValuePath="Tag"
                           SelectionChanged="OnLanguageSelectionChanged"
                           SelectedValue="{Binding CultureName, Mode=TwoWay, UpdateSourceTrigger=Explicit}">
@@ -34,20 +37,44 @@
                 </ComboBox>
             </StackPanel>
         </Grid>
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-            <StackPanel MaxWidth="680" HorizontalAlignment="Center" Margin="0,18,0,20">
-                <Border Style="{StaticResource MainMenuCardStyle}">
-                    <StackPanel>
-                        <TextBlock Text="{Binding [AddFriends_Title]}"
-                                   Style="{StaticResource AuthenticationTitleStyle}" />
-                        <TextBlock Text="{Binding [AddFriends_Description]}"
-                                   Style="{StaticResource AuthenticationSupportingTextStyle}"
-                                   TextWrapping="Wrap" Margin="0,0,0,18" />
+
+        <!-- Bloque principal responsivo sin scroll global -->
+        <Grid Grid.Row="1" MaxWidth="800" HorizontalAlignment="Stretch" Margin="0,8,0,8">
+            <Grid.RowDefinitions>
+                <!-- Fila 0: Tarjeta principal elástica -->
+                <RowDefinition Height="*" />
+                <!-- Fila 1: Botón de retorno (siempre medido y garantizado visible) -->
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Tarjeta de búsqueda y lista de jugadores -->
+            <Border Grid.Row="0" Style="{StaticResource MainMenuCardStyle}"
+                    Padding="28,20" VerticalAlignment="Stretch">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <!-- Fila 0: Título -->
+                        <RowDefinition Height="Auto" />
+                        <!-- Fila 1: Descripción -->
+                        <RowDefinition Height="Auto" />
+                        <!-- Fila 2: Campo de búsqueda -->
+                        <RowDefinition Height="Auto" />
+                        <!-- Fila 3: Lista de candidatos con scroll independiente -->
+                        <RowDefinition Height="*" MinHeight="140" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="{Binding [AddFriends_Title]}"
+                               Style="{StaticResource AuthenticationTitleStyle}"
+                               Margin="0,0,0,6" />
+                    <TextBlock Grid.Row="1" Text="{Binding [AddFriends_Description]}"
+                               Style="{StaticResource AuthenticationSupportingTextStyle}"
+                               TextWrapping="Wrap" Margin="0,0,0,14" />
+
+                    <!-- Sección de búsqueda -->
+                    <StackPanel Grid.Row="2" Margin="0,0,0,14">
                         <Label Content="{Binding [AddFriends_SearchLabel]}"
                                Target="{Binding ElementName=searchTextBox}"
                                Style="{StaticResource AuthenticationFieldLabelStyle}" />
-                        <Grid Margin="0,0,0,18">
+                        <Grid>
                             <TextBox x:Name="searchTextBox"
                                      Style="{StaticResource AuthenticationTextBoxStyle}"
                                      MaxLength="20" Padding="10,6,38,6"
@@ -58,56 +85,71 @@
                                        VerticalAlignment="Center" Margin="0,0,12,0"
                                        IsHitTestVisible="False" />
                         </Grid>
+                    </StackPanel>
+
+                    <!-- Contenedor con scroll independiente para la lista de candidatos -->
+                    <Grid Grid.Row="3">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      CanContentScroll="False">
+                            <ItemsControl x:Name="resultsItemsControl">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#F7FAF8" BorderBrush="#D8E5DC"
+                                                BorderThickness="1" CornerRadius="8"
+                                                Padding="12,10" Margin="0,0,0,10">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="48" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Button Width="42" Height="42"
+                                                        IsHitTestVisible="False"
+                                                        Style="{StaticResource ProfilePictureButtonStyle}">
+                                                    <Button.Background>
+                                                        <ImageBrush ImageSource="/Assets/Images/DefaultProfilePicture.png"
+                                                                    Stretch="UniformToFill" />
+                                                    </Button.Background>
+                                                </Button>
+                                                <Button Grid.Column="1" Content="{Binding Username}"
+                                                        Tag="{Binding Username}"
+                                                        Click="OnProfileClick"
+                                                        Style="{StaticResource AuthenticationLinkButtonStyle}"
+                                                        HorizontalAlignment="Left"
+                                                        VerticalAlignment="Center" Margin="10,0,12,0" />
+                                                <Button Grid.Column="2"
+                                                        Content="{Binding [AddFriends_SendRequestButton], Source={x:Static localization:LocalizationManager.Instance}}"
+                                                        Tag="{Binding Username}"
+                                                        Click="OnSendRequestClick"
+                                                        Style="{StaticResource AuthenticationPrimaryButtonStyle}"
+                                                        MinWidth="150" Padding="12,6" Margin="0"
+                                                        VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+
+                        <!-- Mensaje cuando no se encuentran jugadores -->
                         <TextBlock x:Name="noResultsTextBlock"
                                    Text="{Binding [AddFriends_NoResultsMessage]}"
                                    Style="{StaticResource MainMenuEmptyTextStyle}"
                                    TextAlignment="Center" TextWrapping="Wrap"
-                                   Visibility="Collapsed" Margin="8,12,8,18" />
-                        <ItemsControl x:Name="resultsItemsControl">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="#F7FAF8" BorderBrush="#D8E5DC"
-                                            BorderThickness="1" CornerRadius="8"
-                                            Padding="12" Margin="0,0,0,10">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="52" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <Button Width="44" Height="44"
-                                                    IsHitTestVisible="False"
-                                                    Style="{StaticResource ProfilePictureButtonStyle}">
-                                                <Button.Background>
-                                                    <ImageBrush ImageSource="/Assets/Images/DefaultProfilePicture.png"
-                                                                Stretch="UniformToFill" />
-                                                </Button.Background>
-                                            </Button>
-                                            <Button Grid.Column="1" Content="{Binding Username}"
-                                                    Tag="{Binding Username}"
-                                                    Click="OnProfileClick"
-                                                    Style="{StaticResource AuthenticationLinkButtonStyle}"
-                                                    HorizontalAlignment="Left"
-                                                    VerticalAlignment="Center" Margin="8,0,12,0" />
-                                            <Button Grid.Column="2"
-                                                    Content="{Binding [AddFriends_SendRequestButton], Source={x:Static localization:LocalizationManager.Instance}}"
-                                                    Tag="{Binding Username}"
-                                                    Click="OnSendRequestClick"
-                                                    Style="{StaticResource AuthenticationPrimaryButtonStyle}"
-                                                    MinWidth="150" Margin="0"
-                                                    VerticalAlignment="Center" />
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </Border>
-                <Button Content="{Binding [AddFriends_BackButton]}"
-                        Click="OnBackClick"
-                        Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                        Width="190" HorizontalAlignment="Left" Margin="0,8,0,0" />
-            </StackPanel>
-        </ScrollViewer>
+                                   VerticalAlignment="Center" HorizontalAlignment="Center"
+                                   Visibility="Collapsed" Margin="16" />
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- Botón Volver al menú (prioridad absoluta de visibilidad, nunca recortado) -->
+            <Button Grid.Row="1" Content="{Binding [AddFriends_BackButton]}"
+                    Click="OnBackClick"
+                    Style="{StaticResource AuthenticationSecondaryButtonStyle}"
+                    MinWidth="180" HorizontalAlignment="Left"
+                    Padding="14,8" Margin="0,10,0,0" />
+        </Grid>
     </Grid>
 </Page>
+

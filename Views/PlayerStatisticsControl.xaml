@@ -3,49 +3,92 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:localization="clr-namespace:ReversiGameSystem.Localization"
              DataContext="{x:Static localization:LocalizationManager.Instance}">
-    <Border Style="{StaticResource MainMenuCardStyle}">
-        <StackPanel>
+    <Border Style="{StaticResource MainMenuCardStyle}" Padding="36,28">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Título -->
             <TextBlock Text="{Binding [PlayerStatistics_Title]}"
-                       Style="{StaticResource MainMenuSectionTitleStyle}" />
-            <Separator Margin="0,0,0,16" />
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                <Image Source="/Assets/Images/WinIcon.png"
-                       Width="24" Height="24" Margin="0,0,10,0" />
-                <TextBlock Text="{Binding [PlayerStatistics_WinsLabel]}"
-                           VerticalAlignment="Center" />
-                <TextBlock x:Name="winsValueTextBlock"
-                           Text="{Binding [AccountInformation_UnavailableValue]}"
-                           FontWeight="SemiBold" Margin="8,0,0,0"
-                           VerticalAlignment="Center" />
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                <TextBlock Text="{Binding [PlayerStatistics_MatchesPlayedLabel]}" />
-                <TextBlock x:Name="matchesPlayedValueTextBlock"
-                           Text="{Binding [AccountInformation_UnavailableValue]}"
-                           FontWeight="SemiBold" Margin="8,0,0,0" />
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                <TextBlock Text="{Binding [PlayerStatistics_LossesLabel]}" />
-                <TextBlock x:Name="lossesValueTextBlock"
-                           Text="{Binding [AccountInformation_UnavailableValue]}"
-                           FontWeight="SemiBold" Margin="8,0,0,0" />
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                <TextBlock Text="{Binding [PlayerStatistics_DrawsLabel]}" />
-                <TextBlock x:Name="drawsValueTextBlock"
-                           Text="{Binding [AccountInformation_UnavailableValue]}"
-                           FontWeight="SemiBold" Margin="8,0,0,0" />
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                <TextBlock Text="{Binding [PlayerStatistics_WinRateLabel]}" />
-                <TextBlock x:Name="winRateValueTextBlock"
-                           Text="{Binding [AccountInformation_UnavailableValue]}"
-                           FontWeight="SemiBold" Margin="8,0,0,0" />
-            </StackPanel>
+                       Style="{StaticResource MainMenuSectionTitleStyle}"
+                       Margin="0,0,0,12" />
+
+            <Separator Grid.Row="1" Margin="0,0,0,16" />
+
+            <!-- Estadísticas en 2 columnas para aprovechar el ancho horizontal -->
+            <Grid Grid.Row="2" VerticalAlignment="Center" Margin="0,0,0,18">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="24" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Columna izquierda: Victorias, Derrotas, Empates -->
+                <StackPanel Grid.Column="0">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                        <Image Source="/Assets/Images/WinIcon.png"
+                               Width="24" Height="24" Margin="0,0,10,0"
+                               VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding [PlayerStatistics_WinsLabel]}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="winsValueTextBlock"
+                                   Text="{Binding [AccountInformation_UnavailableValue]}"
+                                   FontWeight="SemiBold" Margin="8,0,0,0"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                        <TextBlock Text="{Binding [PlayerStatistics_LossesLabel]}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="lossesValueTextBlock"
+                                   Text="{Binding [AccountInformation_UnavailableValue]}"
+                                   FontWeight="SemiBold" Margin="8,0,0,0"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding [PlayerStatistics_DrawsLabel]}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="drawsValueTextBlock"
+                                   Text="{Binding [AccountInformation_UnavailableValue]}"
+                                   FontWeight="SemiBold" Margin="8,0,0,0"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Columna derecha: Partidas jugadas, Porcentaje de victorias -->
+                <StackPanel Grid.Column="2">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                        <TextBlock Text="{Binding [PlayerStatistics_MatchesPlayedLabel]}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="matchesPlayedValueTextBlock"
+                                   Text="{Binding [AccountInformation_UnavailableValue]}"
+                                   FontWeight="SemiBold" Margin="8,0,0,0"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                        <TextBlock Text="{Binding [PlayerStatistics_WinRateLabel]}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="winRateValueTextBlock"
+                                   Text="{Binding [AccountInformation_UnavailableValue]}"
+                                   FontWeight="SemiBold" Margin="8,0,0,0"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+
+            <!-- Botón Ver estadísticas -->
             <Button x:Name="showStatisticsButton"
+                    Grid.Row="3"
                     Content="{Binding [PlayerStatistics_ShowButton]}"
                     Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                    Click="OnShowStatisticsClick" Margin="0,8,0,0" />
-        </StackPanel>
+                    Click="OnShowStatisticsClick"
+                    MinWidth="180" HorizontalAlignment="Left" Margin="0" />
+        </Grid>
     </Border>
 </UserControl>

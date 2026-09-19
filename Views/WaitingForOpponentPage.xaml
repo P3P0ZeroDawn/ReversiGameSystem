@@ -9,79 +9,92 @@
       Title="{Binding [WaitingForOpponent_Title]}"
       Style="{StaticResource AuthenticationPageStyle}"
       DataContext="{x:Static localization:LocalizationManager.Instance}">
-    <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+    <Viewbox Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid Width="1280" Height="800" Margin="32,24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Style="{StaticResource ApplicationHeaderStyle}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="220" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="220" />
-            </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="1" Text="{Binding [Application_Name]}"
-                       Style="{StaticResource AuthenticationBrandStyle}" />
-            <StackPanel Grid.Column="2" Style="{StaticResource LanguagePanelStyle}">
-                <Label Content="{Binding [Common_LanguageLabel]}"
-                       Style="{StaticResource LanguageLabelStyle}" />
-                <ComboBox x:Name="languageComboBox"
-                          Style="{StaticResource LanguageComboBoxStyle}"
-                          SelectedValuePath="Tag"
-                          SelectionChanged="OnLanguageSelectionChanged"
-                          SelectedValue="{Binding CultureName, Mode=TwoWay, UpdateSourceTrigger=Explicit}">
-                    <ComboBoxItem Tag="en-US" Content="{Binding [Language_English]}" />
-                    <ComboBoxItem Tag="es-MX" Content="{Binding [Language_Spanish]}" />
-                </ComboBox>
-            </StackPanel>
-        </Grid>
+            <Grid Grid.Row="0" Style="{StaticResource ApplicationHeaderStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="220" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="220" />
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="applicationNameTextBlock" Grid.Column="1"
+                           Text="{Binding [Application_Name]}"
+                           Style="{StaticResource AuthenticationBrandStyle}" />
+                <StackPanel Grid.Column="2" Style="{StaticResource LanguagePanelStyle}">
+                    <Label x:Name="languageLabel" Content="{Binding [Common_LanguageLabel]}"
+                           Style="{StaticResource LanguageLabelStyle}" />
+                    <ComboBox x:Name="languageComboBox"
+                              Style="{StaticResource LanguageComboBoxStyle}"
+                              SelectedValuePath="Tag"
+                              SelectionChanged="OnLanguageSelectionChanged"
+                              SelectedValue="{Binding CultureName, Mode=TwoWay, UpdateSourceTrigger=Explicit}">
+                        <ComboBoxItem Tag="en-US" Content="{Binding [Language_English]}" />
+                        <ComboBoxItem Tag="es-MX" Content="{Binding [Language_Spanish]}" />
+                    </ComboBox>
+                </StackPanel>
+            </Grid>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-            <Border Style="{StaticResource AuthenticationCardStyle}"
-                    VerticalAlignment="Center" Margin="0,24">
+            <!-- Tarjeta central responsiva sin scroll general -->
+            <Border Grid.Row="1" Style="{StaticResource AuthenticationCardStyle}"
+                    Width="520" Padding="36,28" Margin="0"
+                    VerticalAlignment="Center">
                 <StackPanel>
                     <TextBlock Text="{Binding [WaitingForOpponent_Title]}"
                                Style="{StaticResource AuthenticationTitleStyle}"
-                               TextAlignment="Center" />
+                               TextAlignment="Center" Margin="0,0,0,8" />
                     <TextBlock Text="{Binding [WaitingForOpponent_Description]}"
                                Style="{StaticResource AuthenticationSupportingTextStyle}"
                                TextWrapping="Wrap" TextAlignment="Center"
-                               Margin="0,0,0,18" />
+                               Margin="0,0,0,16" />
+
+                    <!-- Contenedor del código de partida y tiempo de turno -->
                     <Border Background="#EDF4EF" BorderBrush="#BFD3C5"
-                            BorderThickness="1" CornerRadius="10" Padding="18"
-                            Margin="0,0,0,22">
+                            BorderThickness="1" CornerRadius="10" Padding="18,14"
+                            Margin="0,0,0,16">
                         <StackPanel>
                             <TextBlock Text="{Binding [WaitingForOpponent_CodeLabel]}"
                                        FontSize="13" Foreground="#52685B"
                                        TextAlignment="Center" />
-                            <TextBlock x:Name="matchCodeTextBlock" FontSize="32"
+                            <TextBlock x:Name="matchCodeTextBlock" FontSize="34"
                                        FontWeight="Bold" Foreground="#176A49"
                                        TextAlignment="Center" Margin="0,4,0,0" />
                             <TextBlock x:Name="turnTimeTextBlock" FontSize="14"
                                        Foreground="#52685B" TextAlignment="Center"
-                                       Margin="0,10,0,0" />
+                                       Margin="0,8,0,0" />
                         </StackPanel>
                     </Border>
+
+                    <!-- Botón para modificar los ajustes de la partida -->
                     <Button x:Name="modifySettingsButton"
                             Content="{Binding [WaitingForOpponent_ModifySettingsButton]}"
                             Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                            Click="OnModifySettingsClick" />
+                            Click="OnModifySettingsClick" Margin="0,0,0,14" />
+
+                    <!-- Mensaje para jugar contra el sistema -->
                     <TextBlock Text="{Binding [WaitingForOpponent_SystemPrompt]}"
                                Style="{StaticResource AuthenticationSupportingTextStyle}"
                                TextWrapping="Wrap" TextAlignment="Center"
-                               Margin="0,0,0,16" />
+                               Margin="0,0,0,12" />
+
+                    <!-- Botón para jugar contra el sistema -->
                     <Button x:Name="playAgainstSystemButton"
                             Content="{Binding [WaitingForOpponent_PlayAgainstSystemButton]}"
                             Style="{StaticResource AuthenticationPrimaryButtonStyle}"
-                            Click="OnPlayAgainstSystemClick" />
+                            Click="OnPlayAgainstSystemClick" Margin="0,0,0,10" />
+
+                    <!-- Botón para cancelar y regresar -->
                     <Button x:Name="cancelButton"
                             Content="{Binding [Common_CancelButton]}"
                             Style="{StaticResource AuthenticationSecondaryButtonStyle}"
                             Click="OnCancelClick" Margin="0" />
                 </StackPanel>
             </Border>
-        </ScrollViewer>
-    </Grid>
+        </Grid>
+    </Viewbox>
 </Page>
+

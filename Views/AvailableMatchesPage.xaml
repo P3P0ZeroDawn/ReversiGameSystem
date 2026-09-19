@@ -9,7 +9,7 @@
       Title="{Binding [AvailableMatches_Title]}"
       Style="{StaticResource AuthenticationPageStyle}"
       DataContext="{x:Static localization:LocalizationManager.Instance}">
-    <Grid Margin="24">
+    <Grid Margin="32,10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -46,56 +46,75 @@
             </StackPanel>
         </Grid>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-            <Border Style="{StaticResource MainMenuCardStyle}"
-                    MaxWidth="760" HorizontalAlignment="Stretch"
-                    Margin="0,0,0,20">
-                <StackPanel>
-                    <TextBlock x:Name="availableMatchesTitleTextBlock"
-                               Text="{Binding [AvailableMatches_Title]}"
-                               Style="{StaticResource AuthenticationTitleStyle}"
-                               Margin="0,0,0,8" />
-                    <Grid Margin="0,0,0,22">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding [AvailableMatches_Intro]}"
-                                   Style="{StaticResource AuthenticationSupportingTextStyle}"
-                                   TextWrapping="Wrap" VerticalAlignment="Center"
-                                   Margin="0,0,16,0" />
-                        <Button x:Name="refreshMatchesButton" Grid.Column="1"
-                                Content="{Binding [AvailableMatches_RefreshButton]}"
-                                Click="OnRefreshMatchesClick"
-                                Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                                MinWidth="120" Margin="0,0,10,0" />
-                        <Button x:Name="joinWithCodeButton" Grid.Column="2"
-                                Content="{Binding [AvailableMatches_JoinWithCodeButton]}"
-                                Click="OnJoinWithCodeClick"
-                                Style="{StaticResource AuthenticationPrimaryButtonStyle}"
-                                MinWidth="180" Margin="0" />
-                    </Grid>
+        <Border Grid.Row="1" Style="{StaticResource MainMenuCardStyle}"
+                MaxWidth="860" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                Padding="24,14" Margin="0,4,0,6">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <!-- 0: Título -->
+                    <RowDefinition Height="Auto" />
+                    <!-- 1: Barra de acciones (Intro + Botones) -->
+                    <RowDefinition Height="Auto" />
+                    <!-- 2: Partidas disponibles (Flexible 3*, minHeight bajo para priorizar botón de retorno) -->
+                    <RowDefinition Height="3*" MinHeight="100" />
+                    <!-- 3: Título de partidas en curso -->
+                    <RowDefinition Height="Auto" />
+                    <!-- 4: Partidas en curso (Flexible 2*, minHeight bajo para priorizar botón de retorno) -->
+                    <RowDefinition Height="2*" MinHeight="60" />
+                    <!-- 5: Botón de retorno (Medido y garantizado siempre visible) -->
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-                    <Border MinHeight="260" Padding="16"
-                            Background="#F7FAF8" BorderBrush="#D8E5DC"
-                            BorderThickness="1" CornerRadius="8">
-                        <Grid>
+                <TextBlock x:Name="availableMatchesTitleTextBlock"
+                           Grid.Row="0"
+                           Text="{Binding [AvailableMatches_Title]}"
+                           Style="{StaticResource AuthenticationTitleStyle}"
+                           Margin="0,0,0,4" />
+
+                <Grid Grid.Row="1" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding [AvailableMatches_Intro]}"
+                               Style="{StaticResource AuthenticationSupportingTextStyle}"
+                               TextWrapping="Wrap" VerticalAlignment="Center"
+                               Margin="0,0,16,0" />
+                    <Button x:Name="refreshMatchesButton" Grid.Column="1"
+                            Content="{Binding [AvailableMatches_RefreshButton]}"
+                            Click="OnRefreshMatchesClick"
+                            Style="{StaticResource AuthenticationSecondaryButtonStyle}"
+                            MinWidth="120" Margin="0,0,10,0" />
+                    <Button x:Name="joinWithCodeButton" Grid.Column="2"
+                            Content="{Binding [AvailableMatches_JoinWithCodeButton]}"
+                            Click="OnJoinWithCodeClick"
+                            Style="{StaticResource AuthenticationPrimaryButtonStyle}"
+                            MinWidth="180" Margin="0" />
+                </Grid>
+
+                <!-- Partidas disponibles con scroll individual: se comprime si la pantalla es baja para asegurar visibilidad del botón -->
+                <Border Grid.Row="2" Padding="8,6"
+                        Background="#F7FAF8" BorderBrush="#D8E5DC"
+                        BorderThickness="1" CornerRadius="8">
+                    <Grid>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      CanContentScroll="False">
                             <ItemsControl x:Name="availableMatchesItemsControl">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Style="{StaticResource MainMenuCardStyle}"
-                                                Padding="14" Margin="0,0,0,12">
+                                        <Border Background="White" BorderBrush="#D8E5DC" BorderThickness="1"
+                                                CornerRadius="8" Padding="12,8" Margin="0,0,0,8">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="40" />
+                                                    <ColumnDefinition Width="38" />
                                                     <ColumnDefinition Width="12" />
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="12" />
                                                     <ColumnDefinition Width="112" />
                                                 </Grid.ColumnDefinitions>
-                                                <Ellipse Grid.Column="0" Width="40" Height="40"
+                                                <Ellipse Grid.Column="0" Width="38" Height="38"
                                                          Stroke="#C8DACF" StrokeThickness="1">
                                                     <Ellipse.Fill>
                                                         <ImageBrush
@@ -105,13 +124,13 @@
                                                 </Ellipse>
                                                 <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding HostName}"
-                                                               FontSize="16" FontWeight="SemiBold"
+                                                               FontSize="15" FontWeight="SemiBold"
                                                                TextTrimming="CharacterEllipsis" />
                                                     <TextBlock Text="{Binding CreatedAgoText}"
                                                                Style="{StaticResource MainMenuEmptyTextStyle}" />
                                                     <TextBlock Text="{Binding StateText}"
-                                                               Foreground="#176A49" FontSize="12"
-                                                               FontWeight="SemiBold" Margin="0,2,0,0" />
+                                                               Foreground="#176A49" FontSize="11"
+                                                               FontWeight="SemiBold" Margin="0,1,0,0" />
                                                 </StackPanel>
                                                 <Button Grid.Column="4" x:Name="joinMatchButton"
                                                         Content="{Binding [AvailableMatches_JoinButton], Source={x:Static localization:LocalizationManager.Instance}}"
@@ -119,43 +138,52 @@
                                                         Click="OnJoinMatchClick"
                                                         Style="{StaticResource AuthenticationPrimaryButtonStyle}"
                                                         MinWidth="106" Margin="0"
+                                                        Padding="8,6"
                                                         VerticalAlignment="Center" />
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                            <TextBlock x:Name="emptyMatchesTextBlock"
-                                       Text="{Binding [AvailableMatches_EmptyMessage]}"
-                                       TextAlignment="Center" TextWrapping="Wrap"
-                                       VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock"
-                                           BasedOn="{StaticResource MainMenuEmptyTextStyle}">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasItems, ElementName=availableMatchesItemsControl}"
-                                                         Value="True">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </Grid>
-                    </Border>
+                        </ScrollViewer>
+                        <TextBlock x:Name="emptyMatchesTextBlock"
+                                   Text="{Binding [AvailableMatches_EmptyMessage]}"
+                                   TextAlignment="Center" TextWrapping="Wrap"
+                                   VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock"
+                                       BasedOn="{StaticResource MainMenuEmptyTextStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasItems, ElementName=availableMatchesItemsControl}"
+                                                     Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </Border>
 
-                    <TextBlock Text="{Binding [AvailableMatches_SpectatableTitle]}"
-                               Style="{StaticResource MainMenuSectionTitleStyle}"
-                               Margin="0,22,0,10" />
-                    <Border MinHeight="150" Padding="16"
-                            Background="#F7FAF8" BorderBrush="#D8E5DC"
-                            BorderThickness="1" CornerRadius="8">
-                        <Grid>
+                <!-- Título partidas en curso -->
+                <TextBlock Grid.Row="3"
+                           Text="{Binding [AvailableMatches_SpectatableTitle]}"
+                           Style="{StaticResource MainMenuSectionTitleStyle}"
+                           Margin="0,8,0,4" />
+
+                <!-- Partidas en curso con scroll individual: se comprime si la pantalla es baja para asegurar visibilidad del botón -->
+                <Border Grid.Row="4" Padding="8,6"
+                        Background="#F7FAF8" BorderBrush="#D8E5DC"
+                        BorderThickness="1" CornerRadius="8">
+                    <Grid>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      CanContentScroll="False">
                             <ItemsControl x:Name="spectatableMatchesItemsControl">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Style="{StaticResource MainMenuCardStyle}"
-                                                Padding="14" Margin="0,0,0,12">
+                                        <Border Background="White" BorderBrush="#D8E5DC" BorderThickness="1"
+                                                CornerRadius="8" Padding="12,8" Margin="0,0,0,8">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
@@ -163,10 +191,11 @@
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding HostName}"
-                                                               FontSize="16" FontWeight="SemiBold" />
+                                                               FontSize="15" FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis" />
                                                     <TextBlock Text="{Binding StateText}"
-                                                               Foreground="#176A49" FontSize="12"
-                                                               FontWeight="SemiBold" Margin="0,2,0,0" />
+                                                               Foreground="#176A49" FontSize="11"
+                                                               FontWeight="SemiBold" Margin="0,1,0,0" />
                                                 </StackPanel>
                                                 <Button Grid.Column="1"
                                                         Content="{Binding [AvailableMatches_SpectateButton], Source={x:Static localization:LocalizationManager.Instance}}"
@@ -175,38 +204,42 @@
                                                         Click="OnSpectateMatchClick"
                                                         Style="{StaticResource AuthenticationSecondaryButtonStyle}"
                                                         MinWidth="106" Margin="0"
+                                                        Padding="8,6"
                                                         VerticalAlignment="Center" />
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                            <TextBlock Text="{Binding [AvailableMatches_NoSpectatableMessage]}"
-                                       TextAlignment="Center" TextWrapping="Wrap"
-                                       VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock"
-                                           BasedOn="{StaticResource MainMenuEmptyTextStyle}">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasItems, ElementName=spectatableMatchesItemsControl}"
-                                                         Value="True">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </Grid>
-                    </Border>
+                        </ScrollViewer>
+                        <TextBlock Text="{Binding [AvailableMatches_NoSpectatableMessage]}"
+                                   TextAlignment="Center" TextWrapping="Wrap"
+                                   VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock"
+                                       BasedOn="{StaticResource MainMenuEmptyTextStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasItems, ElementName=spectatableMatchesItemsControl}"
+                                                     Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </Border>
 
-                    <Button x:Name="backToMenuButton"
-                            Content="{Binding [AvailableMatches_BackButton]}"
-                            Click="OnBackToMenuClick"
-                            Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                            HorizontalAlignment="Left" MinWidth="180"
-                            Margin="0,22,0,0" />
-                </StackPanel>
-            </Border>
-        </ScrollViewer>
+                <!-- Botón de regreso: Prioridad de visibilidad absoluta, nunca recortado ni empujado fuera de pantalla -->
+                <Button x:Name="backToMenuButton"
+                        Grid.Row="5"
+                        Content="{Binding [AvailableMatches_BackButton]}"
+                        Click="OnBackToMenuClick"
+                        Style="{StaticResource AuthenticationSecondaryButtonStyle}"
+                        HorizontalAlignment="Left" MinWidth="180"
+                        Margin="0,8,0,0" />
+            </Grid>
+        </Border>
     </Grid>
 </Page>
+

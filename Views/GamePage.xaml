@@ -13,23 +13,24 @@
     <Page.Resources>
         <Style x:Key="GamePlayerCardStyle" TargetType="Border"
                BasedOn="{StaticResource MainMenuCardStyle}">
-            <Setter Property="Padding" Value="20" />
+            <Setter Property="Padding" Value="20,16" />
             <Setter Property="Margin" Value="0,0,0,16" />
         </Style>
         <Style x:Key="GamePlayerNameStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="22" />
+            <Setter Property="FontSize" Value="20" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="#20342A" />
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
         </Style>
     </Page.Resources>
 
-    <Grid Margin="24">
+    <Grid Margin="24,14">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
+        <!-- Barra superior con botón de ayuda, marca e idioma -->
         <Grid Grid.Row="0" Style="{StaticResource ApplicationHeaderStyle}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="220" />
@@ -59,111 +60,141 @@
             </StackPanel>
         </Grid>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Auto"
-                      HorizontalContentAlignment="Center"
-                      VerticalContentAlignment="Center">
-            <Grid HorizontalAlignment="Center" Margin="0,12,0,20">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="294" />
-                    <ColumnDefinition Width="28" />
-                    <ColumnDefinition Width="520" />
-                    <ColumnDefinition x:Name="chatSpacingColumn" Width="28" />
-                    <ColumnDefinition x:Name="chatColumn" Width="294" />
-                </Grid.ColumnDefinitions>
+        <!-- Área principal de juego responsiva (sin ScrollViewer global) -->
+        <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+              Margin="0,6,0,10" MaxWidth="1180">
+            <Grid.ColumnDefinitions>
+                <!-- Columna 0: Tarjetas de jugadores -->
+                <ColumnDefinition Width="280" />
+                <!-- Columna 1: Espaciador central izquierdo -->
+                <ColumnDefinition Width="24" />
+                <!-- Columna 2: Tablero y turno -->
+                <ColumnDefinition Width="*" MinWidth="380" MaxWidth="520" />
+                <!-- Columna 3: Espaciador central derecho (se colapsa en modo invitado) -->
+                <ColumnDefinition x:Name="chatSpacingColumn" Width="24" />
+                <!-- Columna 4: Panel de chat (se colapsa en modo invitado) -->
+                <ColumnDefinition x:Name="chatColumn" Width="280" />
+            </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <Border Style="{StaticResource GamePlayerCardStyle}">
-                        <StackPanel>
-                            <Grid Margin="0,0,0,10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Ellipse Width="18" Height="18" Fill="#2E2E2E"
-                                         Stroke="#161616" StrokeThickness="1"
-                                         VerticalAlignment="Center" Margin="0,0,10,0" />
-                                <TextBlock x:Name="creatorNameTextBlock" Grid.Column="1"
-                                           Style="{StaticResource GamePlayerNameStyle}" />
-                            </Grid>
-                            <TextBlock x:Name="creatorScoreTextBlock" FontSize="15"
-                                       Foreground="#52685B" />
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource GamePlayerCardStyle}" Margin="0">
-                        <StackPanel>
-                            <Grid Margin="0,0,0,10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Ellipse Width="18" Height="18" Fill="White"
-                                         Stroke="#8CA095" StrokeThickness="1"
-                                         VerticalAlignment="Center" Margin="0,0,10,0" />
-                                <TextBlock x:Name="opponentNameTextBlock" Grid.Column="1"
-                                           Style="{StaticResource GamePlayerNameStyle}" />
-                            </Grid>
-                            <TextBlock x:Name="opponentScoreTextBlock" FontSize="15"
-                                       Foreground="#52685B" />
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+            <!-- Columna 0: Tarjetas de información de los jugadores -->
+            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                <!-- Jugador Creador (Negras) -->
+                <Border Style="{StaticResource GamePlayerCardStyle}">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Ellipse Width="18" Height="18" Fill="#2E2E2E"
+                                     Stroke="#161616" StrokeThickness="1"
+                                     VerticalAlignment="Center" Margin="0,0,10,0" />
+                            <TextBlock x:Name="creatorNameTextBlock" Grid.Column="1"
+                                       Style="{StaticResource GamePlayerNameStyle}" />
+                        </Grid>
+                        <TextBlock x:Name="creatorScoreTextBlock" FontSize="15"
+                                   Foreground="#52685B" />
+                    </StackPanel>
+                </Border>
 
-                <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                <!-- Jugador Oponente (Blancas) -->
+                <Border Style="{StaticResource GamePlayerCardStyle}" Margin="0">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Ellipse Width="18" Height="18" Fill="White"
+                                     Stroke="#8CA095" StrokeThickness="1"
+                                     VerticalAlignment="Center" Margin="0,0,10,0" />
+                            <TextBlock x:Name="opponentNameTextBlock" Grid.Column="1"
+                                       Style="{StaticResource GamePlayerNameStyle}" />
+                        </Grid>
+                        <TextBlock x:Name="opponentScoreTextBlock" FontSize="15"
+                                   Foreground="#52685B" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Columna 2: Turno, Tablero en Viewbox y botón de salida -->
+            <Grid Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Stretch">
+                <Grid.RowDefinitions>
+                    <!-- Fila 0: Indicadores de turno y tiempo -->
+                    <RowDefinition Height="Auto" />
+                    <!-- Fila 1: Tablero con escalado dinámico uniforme -->
+                    <RowDefinition Height="*" MinHeight="260" />
+                    <!-- Fila 2: Botón de abandonar partida -->
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Margin="0,0,0,6">
                     <TextBlock x:Name="turnTextBlock" FontSize="20"
                                FontWeight="SemiBold" Foreground="#20342A"
-                               TextAlignment="Center" Margin="0,0,0,4" />
+                               TextAlignment="Center" Margin="0,0,0,2" />
                     <TextBlock x:Name="turnTimeTextBlock" FontSize="14"
                                Foreground="#52685B" TextAlignment="Center"
-                               Margin="0,0,0,4" />
+                               Margin="0,0,0,2" />
                     <TextBlock x:Name="turnStatusTextBlock" FontSize="13"
                                Foreground="#6B5940" TextAlignment="Center"
-                               TextWrapping="Wrap" MinHeight="20"
-                               Margin="0,0,0,8" />
-                    <views:ReversiBoardControl x:Name="gameBoardControl" />
-                    <Button x:Name="leaveMatchButton"
-                            Content="{Binding [Game_LeaveMatchButton]}"
-                            Style="{StaticResource MainMenuLogoutButtonStyle}"
-                            Click="OnLeaveMatchClick"
-                            Width="220" Margin="0,18,0,0" />
+                               TextWrapping="Wrap" MinHeight="18" />
                 </StackPanel>
 
-                <Border x:Name="chatPanel" Grid.Column="4"
-                        Style="{StaticResource MainMenuCardStyle}"
-                        Padding="18" VerticalAlignment="Center">
-                    <Grid Height="390">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <TextBlock Text="{Binding [Game_ChatTitle]}"
-                                   Style="{StaticResource MainMenuSectionTitleStyle}" />
-                        <ListBox x:Name="chatMessagesListBox" Grid.Row="1"
-                                 BorderThickness="0" Background="#F7FAF8"
-                                 Padding="8" Margin="0,0,0,12"
-                                 ScrollViewer.VerticalScrollBarVisibility="Auto" />
-                        <Grid x:Name="chatComposerGrid" Grid.Row="2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBox x:Name="chatMessageTextBox" Height="36"
-                                     MaxLength="200" Padding="10,6"
-                                     Style="{StaticResource AuthenticationTextBoxStyle}"
-                                     Margin="0"
-                                     VerticalContentAlignment="Center"
-                                     KeyDown="OnChatMessageKeyDown" />
-                            <Button x:Name="sendMessageButton" Grid.Column="1"
-                                    Content="➜" Width="40" Height="36"
-                                    Margin="8,0,0,0" Padding="0"
-                                    Style="{StaticResource AuthenticationPrimaryButtonStyle}"
-                                    Click="OnSendMessageClick"
-                                    ToolTip="{Binding [Game_SendMessageButtonToolTip]}" />
-                        </Grid>
-                    </Grid>
-                </Border>
+                <!-- Tablero de 8x8 envuelto en Viewbox Stretch="Uniform" para escalar dinámicamente -->
+                <Viewbox Grid.Row="1" Stretch="Uniform"
+                         HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <views:ReversiBoardControl x:Name="gameBoardControl" />
+                </Viewbox>
+
+                <!-- Botón de abandonar partida siempre visible al pie -->
+                <Button x:Name="leaveMatchButton"
+                        Grid.Row="2"
+                        Content="{Binding [Game_LeaveMatchButton]}"
+                        Style="{StaticResource MainMenuLogoutButtonStyle}"
+                        Click="OnLeaveMatchClick"
+                        MinWidth="180" HorizontalAlignment="Center"
+                        Padding="14,8" Margin="0,10,0,0" />
             </Grid>
-        </ScrollViewer>
+
+            <!-- Columna 4: Panel de chat con scroll interno independiente -->
+            <Border x:Name="chatPanel" Grid.Column="4"
+                    Style="{StaticResource MainMenuCardStyle}"
+                    Padding="18" VerticalAlignment="Stretch"
+                    MaxHeight="540">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding [Game_ChatTitle]}"
+                               Style="{StaticResource MainMenuSectionTitleStyle}"
+                               Margin="0,0,0,8" />
+                    <ListBox x:Name="chatMessagesListBox" Grid.Row="1"
+                             BorderThickness="0" Background="#F7FAF8"
+                             Padding="8" Margin="0,0,0,12"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                    <Grid x:Name="chatComposerGrid" Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="chatMessageTextBox" Height="36"
+                                 MaxLength="200" Padding="10,6"
+                                 Style="{StaticResource AuthenticationTextBoxStyle}"
+                                 Margin="0"
+                                 VerticalContentAlignment="Center"
+                                 KeyDown="OnChatMessageKeyDown" />
+                        <Button x:Name="sendMessageButton" Grid.Column="1"
+                                Content="➜" Width="40" Height="36"
+                                Margin="8,0,0,0" Padding="0"
+                                Style="{StaticResource AuthenticationPrimaryButtonStyle}"
+                                Click="OnSendMessageClick"
+                                ToolTip="{Binding [Game_SendMessageButtonToolTip]}" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </Page>
+
