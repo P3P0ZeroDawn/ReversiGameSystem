@@ -12,14 +12,12 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- Título -->
             <TextBlock Text="{Binding [PlayerStatistics_Title]}"
                        Style="{StaticResource MainMenuSectionTitleStyle}"
                        Margin="0,0,0,12" />
 
             <Separator Grid.Row="1" Margin="0,0,0,16" />
 
-            <!-- Estadísticas en 2 columnas para aprovechar el ancho horizontal -->
             <Grid Grid.Row="2" VerticalAlignment="Center" Margin="0,0,0,18">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -27,7 +25,6 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Columna izquierda: Victorias, Derrotas, Empates -->
                 <StackPanel Grid.Column="0">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
                         <Image Source="/Assets/Images/WinIcon.png"
@@ -60,7 +57,6 @@
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Columna derecha: Partidas jugadas, Porcentaje de victorias -->
                 <StackPanel Grid.Column="2">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
                         <TextBlock Text="{Binding [PlayerStatistics_MatchesPlayedLabel]}"
@@ -82,7 +78,6 @@
                 </StackPanel>
             </Grid>
 
-            <!-- Botón Ver estadísticas -->
             <Button x:Name="showStatisticsButton"
                     Grid.Row="3"
                     Content="{Binding [PlayerStatistics_ShowButton]}"
@@ -92,3 +87,4 @@
         </Grid>
     </Border>
 </UserControl>
+

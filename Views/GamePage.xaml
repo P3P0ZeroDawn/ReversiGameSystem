@@ -30,7 +30,6 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Barra superior con botón de ayuda, marca e idioma -->
         <Grid Grid.Row="0" Style="{StaticResource ApplicationHeaderStyle}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="220" />
@@ -60,25 +59,17 @@
             </StackPanel>
         </Grid>
 
-        <!-- Área principal de juego responsiva (sin ScrollViewer global) -->
         <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Stretch"
               Margin="0,6,0,10" MaxWidth="1180">
             <Grid.ColumnDefinitions>
-                <!-- Columna 0: Tarjetas de jugadores -->
                 <ColumnDefinition Width="280" />
-                <!-- Columna 1: Espaciador central izquierdo -->
                 <ColumnDefinition Width="24" />
-                <!-- Columna 2: Tablero y turno -->
                 <ColumnDefinition Width="*" MinWidth="380" MaxWidth="520" />
-                <!-- Columna 3: Espaciador central derecho (se colapsa en modo invitado) -->
                 <ColumnDefinition x:Name="chatSpacingColumn" Width="24" />
-                <!-- Columna 4: Panel de chat (se colapsa en modo invitado) -->
                 <ColumnDefinition x:Name="chatColumn" Width="280" />
             </Grid.ColumnDefinitions>
 
-            <!-- Columna 0: Tarjetas de información de los jugadores -->
             <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                <!-- Jugador Creador (Negras) -->
                 <Border Style="{StaticResource GamePlayerCardStyle}">
                     <StackPanel>
                         <Grid Margin="0,0,0,10">
@@ -97,7 +88,6 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Jugador Oponente (Blancas) -->
                 <Border Style="{StaticResource GamePlayerCardStyle}" Margin="0">
                     <StackPanel>
                         <Grid Margin="0,0,0,10">
@@ -117,14 +107,10 @@
                 </Border>
             </StackPanel>
 
-            <!-- Columna 2: Turno, Tablero en Viewbox y botón de salida -->
             <Grid Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Stretch">
                 <Grid.RowDefinitions>
-                    <!-- Fila 0: Indicadores de turno y tiempo -->
                     <RowDefinition Height="Auto" />
-                    <!-- Fila 1: Tablero con escalado dinámico uniforme -->
                     <RowDefinition Height="*" MinHeight="260" />
-                    <!-- Fila 2: Botón de abandonar partida -->
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
@@ -140,13 +126,11 @@
                                TextWrapping="Wrap" MinHeight="18" />
                 </StackPanel>
 
-                <!-- Tablero de 8x8 envuelto en Viewbox Stretch="Uniform" para escalar dinámicamente -->
                 <Viewbox Grid.Row="1" Stretch="Uniform"
                          HorizontalAlignment="Center" VerticalAlignment="Center">
                     <views:ReversiBoardControl x:Name="gameBoardControl" />
                 </Viewbox>
 
-                <!-- Botón de abandonar partida siempre visible al pie -->
                 <Button x:Name="leaveMatchButton"
                         Grid.Row="2"
                         Content="{Binding [Game_LeaveMatchButton]}"
@@ -156,7 +140,6 @@
                         Padding="14,8" Margin="0,10,0,0" />
             </Grid>
 
-            <!-- Columna 4: Panel de chat con scroll interno independiente -->
             <Border x:Name="chatPanel" Grid.Column="4"
                     Style="{StaticResource MainMenuCardStyle}"
                     Padding="18" VerticalAlignment="Stretch"

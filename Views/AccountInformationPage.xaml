@@ -39,7 +39,6 @@
             </StackPanel>
         </Grid>
 
-        <!-- Bloque principal con ancho extendido (MaxWidth 1480) y tarjetas simétricas -->
         <Grid Grid.Row="1" MaxWidth="1480" HorizontalAlignment="Stretch" VerticalAlignment="Center">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -53,7 +52,6 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Tarjeta Mi Perfil -->
                 <Border Grid.Column="0" Style="{StaticResource MainMenuCardStyle}"
                         Padding="36,28" VerticalAlignment="Stretch">
                     <Grid>
@@ -63,7 +61,6 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
-                        <!-- Título de sección -->
                         <TextBlock x:Name="profileTitleTextBlock"
                                    Text="{Binding [AccountInformation_Title]}"
                                    Style="{StaticResource MainMenuSectionTitleStyle}"
@@ -71,7 +68,6 @@
 
                         <Separator Grid.Row="1" Margin="0,0,0,16" />
 
-                        <!-- Contenido del perfil -->
                         <Grid Grid.Row="2" VerticalAlignment="Center">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
@@ -79,7 +75,6 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
 
-                            <!-- Foto de perfil a la izquierda -->
                             <Button x:Name="profilePictureButton" Grid.Column="0"
                                     Width="120" Height="120"
                                     ToolTip="{Binding [AccountInformation_ChangePictureButton]}"
@@ -93,7 +88,6 @@
                                 </Button.Background>
                             </Button>
 
-                            <!-- Información a la derecha de la foto en 2 columnas equilibradas -->
                             <Grid Grid.Column="2" VerticalAlignment="Center">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -101,7 +95,6 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
-                                <!-- Columna de Nombre de Usuario -->
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding [AccountInformation_UsernameLabel]}"
                                                Style="{StaticResource AuthenticationFieldCaptionStyle}" />
@@ -117,7 +110,6 @@
                                             HorizontalAlignment="Left" Margin="0,12,0,0" />
                                 </StackPanel>
 
-                                <!-- Columna de Correo y Contraseña (se oculta en perfiles de terceros) -->
                                 <StackPanel x:Name="privateAccountPanel" Grid.Column="2" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding [AccountInformation_EmailLabel]}"
                                                Style="{StaticResource AuthenticationFieldCaptionStyle}" />
@@ -137,12 +129,10 @@
                     </Grid>
                 </Border>
 
-                <!-- Tarjeta Estadísticas -->
                 <views:PlayerStatisticsControl x:Name="playerStatisticsControl"
                                                Grid.Column="2" VerticalAlignment="Stretch" />
             </Grid>
 
-            <!-- Fila inferior: Botones alineados a los extremos del contenedor -->
             <Grid Grid.Row="1" Margin="0,20,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />

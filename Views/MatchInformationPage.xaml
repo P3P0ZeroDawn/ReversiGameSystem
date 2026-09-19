@@ -16,7 +16,6 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Cabecera de la aplicación -->
         <Grid Grid.Row="0" Style="{StaticResource ApplicationHeaderStyle}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="220" />
@@ -39,23 +38,16 @@
             </StackPanel>
         </Grid>
 
-        <!-- Bloque principal de información de partida responsivo (sin ScrollViewer global) -->
         <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Stretch"
               Margin="0,6,0,10" MaxWidth="1180">
             <Grid.ColumnDefinitions>
-                <!-- Columna 0: Tarjeta de datos de la partida -->
                 <ColumnDefinition Width="280" />
-                <!-- Columna 1: Separador -->
                 <ColumnDefinition Width="24" />
-                <!-- Columna 2: Tablero y controles de reproducción -->
                 <ColumnDefinition Width="*" MinWidth="380" MaxWidth="520" />
-                <!-- Columna 3: Separador -->
                 <ColumnDefinition Width="24" />
-                <!-- Columna 4: Lista de movimientos -->
                 <ColumnDefinition Width="280" />
             </Grid.ColumnDefinitions>
 
-            <!-- Columna 0: Tarjeta con detalles de la partida -->
             <Border Grid.Column="0" Style="{StaticResource MainMenuCardStyle}"
                     Padding="20,18" VerticalAlignment="Center">
                 <StackPanel>
@@ -82,14 +74,10 @@
                 </StackPanel>
             </Border>
 
-            <!-- Columna 2: Tablero en Viewbox responsivo, controles de replay y botón cerrar -->
             <Grid Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Stretch">
                 <Grid.RowDefinitions>
-                    <!-- Fila 0: Título del estado del tablero -->
                     <RowDefinition Height="Auto" />
-                    <!-- Fila 1: Tablero escalable uniformemente -->
                     <RowDefinition Height="*" MinHeight="260" />
-                    <!-- Fila 2: Controles de reproducción y cierre -->
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
@@ -97,13 +85,11 @@
                            FontSize="20" FontWeight="SemiBold" Foreground="#20342A"
                            TextAlignment="Center" Margin="0,0,0,8" />
 
-                <!-- Tablero de 8x8 envuelto en Viewbox Stretch="Uniform" -->
                 <Viewbox Grid.Row="1" Stretch="Uniform"
                          HorizontalAlignment="Center" VerticalAlignment="Center">
                     <views:ReversiBoardControl x:Name="matchBoardControl" />
                 </Viewbox>
 
-                <!-- Panel inferior con controles de reproducción y botón de cierre -->
                 <StackPanel Grid.Row="2" HorizontalAlignment="Center" Margin="0,8,0,0">
                     <StackPanel x:Name="replayControlsPanel" Orientation="Horizontal"
                                 HorizontalAlignment="Center" Margin="0,0,0,4">
@@ -132,7 +118,6 @@
                 </StackPanel>
             </Grid>
 
-            <!-- Columna 4: Lista de movimientos con scroll interno independiente -->
             <Border Grid.Column="4" Style="{StaticResource MainMenuCardStyle}"
                     Padding="18" VerticalAlignment="Stretch"
                     MaxHeight="540">

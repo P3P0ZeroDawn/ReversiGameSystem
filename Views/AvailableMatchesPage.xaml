@@ -51,17 +51,11 @@
                 Padding="24,14" Margin="0,4,0,6">
             <Grid>
                 <Grid.RowDefinitions>
-                    <!-- 0: Título -->
                     <RowDefinition Height="Auto" />
-                    <!-- 1: Barra de acciones (Intro + Botones) -->
                     <RowDefinition Height="Auto" />
-                    <!-- 2: Partidas disponibles (Flexible 3*, minHeight bajo para priorizar botón de retorno) -->
                     <RowDefinition Height="3*" MinHeight="100" />
-                    <!-- 3: Título de partidas en curso -->
                     <RowDefinition Height="Auto" />
-                    <!-- 4: Partidas en curso (Flexible 2*, minHeight bajo para priorizar botón de retorno) -->
                     <RowDefinition Height="2*" MinHeight="60" />
-                    <!-- 5: Botón de retorno (Medido y garantizado siempre visible) -->
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
@@ -93,7 +87,6 @@
                             MinWidth="180" Margin="0" />
                 </Grid>
 
-                <!-- Partidas disponibles con scroll individual: se comprime si la pantalla es baja para asegurar visibilidad del botón -->
                 <Border Grid.Row="2" Padding="8,6"
                         Background="#F7FAF8" BorderBrush="#D8E5DC"
                         BorderThickness="1" CornerRadius="8">
@@ -165,13 +158,11 @@
                     </Grid>
                 </Border>
 
-                <!-- Título partidas en curso -->
                 <TextBlock Grid.Row="3"
                            Text="{Binding [AvailableMatches_SpectatableTitle]}"
                            Style="{StaticResource MainMenuSectionTitleStyle}"
                            Margin="0,8,0,4" />
 
-                <!-- Partidas en curso con scroll individual: se comprime si la pantalla es baja para asegurar visibilidad del botón -->
                 <Border Grid.Row="4" Padding="8,6"
                         Background="#F7FAF8" BorderBrush="#D8E5DC"
                         BorderThickness="1" CornerRadius="8">
@@ -230,7 +221,6 @@
                     </Grid>
                 </Border>
 
-                <!-- Botón de regreso: Prioridad de visibilidad absoluta, nunca recortado ni empujado fuera de pantalla -->
                 <Button x:Name="backToMenuButton"
                         Grid.Row="5"
                         Content="{Binding [AvailableMatches_BackButton]}"
