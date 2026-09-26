@@ -3,11 +3,11 @@ using System.Runtime.Serialization;
 namespace ReversiGameSystem.Contracts.Players;
 
 [DataContract(Namespace = ContractNamespaces.Data)]
-public sealed class PlayerSummaryResponse
+public sealed class PlayerProfileResponse
 {
     [DataMember(Order = 1, IsRequired = true)]
-    public PlayerSummaryResultCode ResultCode { get; set; }
+    public PlayerProfileResultCode ResultCode { get; set; }
 
     [DataMember(Order = 2, EmitDefaultValue = false)]
-    public PlayerSummaryDto? Summary { get; set; }
+    public PlayerProfileDto? Profile { get; set; }
 }

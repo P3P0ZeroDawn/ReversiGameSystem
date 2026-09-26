@@ -170,7 +170,8 @@ internal static class ValidationPolicyTestRunner
             chatReadTests.MessageReceived_OpenAuthorizedChat_AddsOnlyConversationMessage,
             contractTests.CreateAccountRequest_RoundTrip_PreservesFields,
             contractTests.LoginResponse_RoundTrip_PreservesSession,
-            contractTests.PlayerSummaryResponse_RoundTrip_PreservesStatistics,
+            contractTests.PlayerProfileResponse_RoundTrip_PreservesStatistics,
+            contractTests.LeaderboardResponse_RoundTrip_PreservesEntries,
             contractTests.ServiceContracts_DeclareExpectedOperations
         };
 

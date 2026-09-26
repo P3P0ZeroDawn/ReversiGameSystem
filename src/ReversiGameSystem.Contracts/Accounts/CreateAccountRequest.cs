@@ -1,4 +1,5 @@
 using System.Runtime.Serialization;
+using ReversiGameSystem.Contracts.Media;
 
 namespace ReversiGameSystem.Contracts.Accounts;
 
@@ -16,4 +17,7 @@ public sealed class CreateAccountRequest
 
     [DataMember(Order = 4, IsRequired = true)]
     public string PreferredLocaleCode { get; set; } = string.Empty;
+
+    [DataMember(Order = 5, EmitDefaultValue = false)]
+    public ProfileImageUploadDto? ProfileImage { get; set; }
 }

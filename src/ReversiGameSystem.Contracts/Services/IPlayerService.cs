@@ -1,5 +1,6 @@
 using System.ServiceModel;
 using System.Threading.Tasks;
+using ReversiGameSystem.Contracts.Leaderboards;
 using ReversiGameSystem.Contracts.Players;
 
 namespace ReversiGameSystem.Contracts.Services;
@@ -8,6 +9,8 @@ namespace ReversiGameSystem.Contracts.Services;
 public interface IPlayerService
 {
     [OperationContract]
-    Task<PlayerSummaryResponse> GetCurrentPlayerSummaryAsync(
-        PlayerSummaryRequest request);
+    Task<PlayerProfileResponse> GetPlayerProfileAsync(PlayerProfileRequest request);
+
+    [OperationContract]
+    Task<LeaderboardResponse> GetLeaderboardAsync(LeaderboardRequest request);
 }

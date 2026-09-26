@@ -3,7 +3,7 @@ using System.Runtime.Serialization;
 namespace ReversiGameSystem.Contracts.Players;
 
 [DataContract(Namespace = ContractNamespaces.Data)]
-public enum PlayerSummaryResultCode
+public enum PlayerProfileResultCode
 {
     [EnumMember]
     Success,
