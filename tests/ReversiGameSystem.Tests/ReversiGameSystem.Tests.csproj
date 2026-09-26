@@ -15,6 +15,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Xml" />
     <Compile Include="$(ClientProjectDirectory)\Validation\EmailPolicy.cs">
       <Link>EmailPolicy.cs</Link>
     </Compile>
@@ -105,7 +108,14 @@
     <Compile Include="$(ClientProjectDirectory)\Services\ChatService.cs">
       <Link>ChatService.cs</Link>
     </Compile>
+    <Compile Include="ContractSerializationTests.cs" />
     <Compile Include="ValidationPolicyTests.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ReversiGameSystem.Contracts\ReversiGameSystem.Contracts.csproj">
+      <Project>{D9DC968B-C867-41A1-ABD1-1853A481AF4E}</Project>
+      <Name>ReversiGameSystem.Contracts</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

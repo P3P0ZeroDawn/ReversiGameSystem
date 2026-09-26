@@ -38,6 +38,7 @@ internal static class ValidationPolicyTestRunner
         FriendRemovalServiceTests removalTests = new FriendRemovalServiceTests();
         ChatServiceTests chatTests = new ChatServiceTests();
         ChatReadServiceTests chatReadTests = new ChatReadServiceTests();
+        ContractSerializationTests contractTests = new ContractSerializationTests();
         Action[] tests =
         {
             emailTests.Validate_OrdinaryAddress_ReturnsNone,
@@ -166,7 +167,11 @@ internal static class ValidationPolicyTestRunner
             chatTests.Send_AfterMuteExpires_StoresSafeMessage,
             chatReadTests.TryGetMessages_AuthorizedPlayer_SortsChronologically,
             chatReadTests.TryGetMessages_EmptyConversation_ReturnsEmpty,
-            chatReadTests.MessageReceived_OpenAuthorizedChat_AddsOnlyConversationMessage
+            chatReadTests.MessageReceived_OpenAuthorizedChat_AddsOnlyConversationMessage,
+            contractTests.CreateAccountRequest_RoundTrip_PreservesFields,
+            contractTests.LoginResponse_RoundTrip_PreservesSession,
+            contractTests.PlayerSummaryResponse_RoundTrip_PreservesStatistics,
+            contractTests.ServiceContracts_DeclareExpectedOperations
         };
 
         try
@@ -176,7 +181,7 @@ internal static class ValidationPolicyTestRunner
                 test();
             }
 
-            Console.WriteLine($"Passed {tests.Length} validation policy tests.");
+            Console.WriteLine($"Passed {tests.Length} tests.");
             return 0;
         }
         catch (Exception exception)
