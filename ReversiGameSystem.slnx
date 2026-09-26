@@ -1,3 +1,10 @@
 <Solution>
-  <Project Path="ReversiGameSystem.csproj" Id="cb6d4e9a-855b-41d1-ba1d-38330a1dd21c" />
+  <Project Path="src/ReversiGameSystem.Client.Wpf/ReversiGameSystem.Client.Wpf.csproj" Id="cb6d4e9a-855b-41d1-ba1d-38330a1dd21c" />
+  <Project Path="src/ReversiGameSystem.Contracts/ReversiGameSystem.Contracts.csproj" Id="d9dc968b-c867-41a1-abd1-1853a481af4e" />
+  <Project Path="src/ReversiGameSystem.Domain/ReversiGameSystem.Domain.csproj" Id="26e704f1-4360-44fb-a725-c5fc02e03b2c" />
+  <Project Path="src/ReversiGameSystem.LocalRuntime/ReversiGameSystem.LocalRuntime.csproj" Id="45ff5368-b184-4489-8ad3-67fe234d941f" />
+  <Project Path="src/ReversiGameSystem.Server.Application/ReversiGameSystem.Server.Application.csproj" Id="fe67e273-7e6a-4640-b804-37dd43accb7a" />
+  <Project Path="src/ReversiGameSystem.Server.Host/ReversiGameSystem.Server.Host.csproj" Id="67af14c2-a7df-4b33-8300-56933c75d88c" />
+  <Project Path="src/ReversiGameSystem.Server.Persistence/ReversiGameSystem.Server.Persistence.csproj" Id="c0d97a3d-3ca3-45b0-89f9-e92230fbecdf" />
+  <Project Path="tests/ReversiGameSystem.Tests/ReversiGameSystem.Tests.csproj" Id="17a3ab47-c517-4a5d-b857-948d297d8e25" />
 </Solution>

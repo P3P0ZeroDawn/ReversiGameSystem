@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>ReversiGameSystem.Tests</RootNamespace>
+    <AssemblyName>ReversiGameSystem.Tests</AssemblyName>
+    <ProjectGuid>{17A3AB47-C517-4A5D-B857-948D297D8E25}</ProjectGuid>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <LangVersion>10.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <ClientProjectDirectory>..\..\src\ReversiGameSystem.Client.Wpf</ClientProjectDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Compile Include="$(ClientProjectDirectory)\Validation\EmailPolicy.cs">
+      <Link>EmailPolicy.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Validation\PasswordPolicy.cs">
+      <Link>PasswordPolicy.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Validation\UsernamePolicy.cs">
+      <Link>UsernamePolicy.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Validation\GuestUsernamePolicy.cs">
+      <Link>GuestUsernamePolicy.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Services\GuestSessionService.cs">
+      <Link>GuestSessionService.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Statistics\PlayerStatistics.cs">
+      <Link>PlayerStatistics.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Game\TurnTimePolicy.cs">
+      <Link>TurnTimePolicy.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Game\ReversiBoard.cs">
+      <Link>ReversiBoard.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Game\AvailableMatch.cs">
+      <Link>AvailableMatch.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Game\MatchCodePolicy.cs">
+      <Link>MatchCodePolicy.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Game\BoardPosition.cs">
+      <Link>BoardPosition.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Game\MatchMove.cs">
+      <Link>MatchMove.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Game\MatchEndReason.cs">
+      <Link>MatchEndReason.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Game\MatchInformation.cs">
+      <Link>MatchInformation.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Services\AvailableMatchesService.cs">
+      <Link>AvailableMatchesService.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Services\MatchCreationService.cs">
+      <Link>MatchCreationService.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Services\MatchSettingsService.cs">
+      <Link>MatchSettingsService.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Services\PrototypeMatchStore.cs">
+      <Link>PrototypeMatchStore.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Services\JoinMatchService.cs">
+      <Link>JoinMatchService.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Services\GameMoveService.cs">
+      <Link>GameMoveService.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Services\AbandonMatchService.cs">
+      <Link>AbandonMatchService.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Services\MatchInformationService.cs">
+      <Link>MatchInformationService.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Services\MovementHistoryService.cs">
+      <Link>MovementHistoryService.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Services\InstructionsService.cs">
+      <Link>InstructionsService.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Services\FriendRequestService.cs">
+      <Link>FriendRequestService.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Services\FriendRequestsService.cs">
+      <Link>FriendRequestsService.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Services\FriendRequestResponseService.cs">
+      <Link>FriendRequestResponseService.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Services\FriendsService.cs">
+      <Link>FriendsService.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Services\FriendRemovalService.cs">
+      <Link>FriendRemovalService.cs</Link>
+    </Compile>
+    <Compile Include="$(ClientProjectDirectory)\Services\ChatService.cs">
+      <Link>ChatService.cs</Link>
+    </Compile>
+    <Compile Include="ValidationPolicyTests.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

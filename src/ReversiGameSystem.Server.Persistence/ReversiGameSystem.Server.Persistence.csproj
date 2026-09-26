@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>10.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ReversiGameSystem.Server.Persistence</RootNamespace>
+    <AssemblyName>ReversiGameSystem.Server.Persistence</AssemblyName>
+    <ProjectGuid>{C0D97A3D-3CA3-45B0-89F9-E92230FBECDF}</ProjectGuid>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ReversiGameSystem.Server.Application\ReversiGameSystem.Server.Application.csproj" />
+  </ItemGroup>
+</Project>

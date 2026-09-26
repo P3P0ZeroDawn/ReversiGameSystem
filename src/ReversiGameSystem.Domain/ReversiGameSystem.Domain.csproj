@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>10.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ReversiGameSystem.Domain</RootNamespace>
+    <AssemblyName>ReversiGameSystem.Domain</AssemblyName>
+    <ProjectGuid>{26E704F1-4360-44FB-A725-C5FC02E03B2C}</ProjectGuid>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>10.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ReversiGameSystem.LocalRuntime</RootNamespace>
+    <AssemblyName>ReversiGameSystem.LocalRuntime</AssemblyName>
+    <ProjectGuid>{45FF5368-B184-4489-8AD3-67FE234D941F}</ProjectGuid>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ReversiGameSystem.Contracts\ReversiGameSystem.Contracts.csproj" />
+    <ProjectReference Include="..\ReversiGameSystem.Server.Application\ReversiGameSystem.Server.Application.csproj" />
+    <ProjectReference Include="..\ReversiGameSystem.Server.Persistence\ReversiGameSystem.Server.Persistence.csproj" />
+  </ItemGroup>
+</Project>
