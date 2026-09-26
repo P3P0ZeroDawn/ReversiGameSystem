@@ -8,6 +8,7 @@ using System.Windows.Threading;
 using ReversiGameSystem.Game;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
+using ServiceChatMessage = ReversiGameSystem.Services.ChatMessage;
 
 namespace ReversiGameSystem.Views;
 
@@ -27,8 +28,8 @@ public partial class GamePage : Page
     private readonly ChatService _chatService;
     private readonly DispatcherTimer _turnTimer;
     private readonly DispatcherTimer _systemMoveTimer;
-    private readonly List<ChatMessage> _visibleChatMessages =
-        new List<ChatMessage>();
+    private readonly List<ServiceChatMessage> _visibleChatMessages =
+        new List<ServiceChatMessage>();
     private int _remainingSeconds;
     private string? _statusResourceKey;
     private object[] _statusArguments = Array.Empty<object>();
@@ -401,7 +402,7 @@ public partial class GamePage : Page
     {
         ChatSendResult result = _chatService.Send(
             chatMessageTextBox.Text,
-            out ChatMessage? message,
+            out ServiceChatMessage? message,
             out DateTime? muteEndsAtUtc);
         if (result == ChatSendResult.Success && message != null)
         {
@@ -415,7 +416,7 @@ public partial class GamePage : Page
     private bool LoadChatMessages()
     {
         ChatReadResult result = _chatService.TryGetMessages(
-            out IReadOnlyList<ChatMessage> messages);
+            out IReadOnlyList<ServiceChatMessage> messages);
         _visibleChatMessages.Clear();
         if (result == ChatReadResult.Success)
         {
@@ -434,7 +435,7 @@ public partial class GamePage : Page
         return false;
     }
 
-    private void OnChatMessageReceived(ChatMessage message)
+    private void OnChatMessageReceived(ServiceChatMessage message)
     {
         if (!Dispatcher.CheckAccess())
         {
@@ -469,7 +470,7 @@ public partial class GamePage : Page
             return;
         }
 
-        foreach (ChatMessage message in _visibleChatMessages)
+        foreach (ServiceChatMessage message in _visibleChatMessages)
         {
             chatMessagesListBox.Items.Add(string.Format(
                 LocalizationManager.Instance["Chat_MessageFormat"],

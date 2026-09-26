@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
+ <!-- EF Designer content (DO NOT EDIT MANUALLY BELOW HERE) -->
+  <edmx:Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
+    <!-- Diagram content (shape and connector positions) -->
+    <edmx:Diagrams>
+      <Diagram DiagramId="c30043812502478ca188cbc320381188" Name="Diagram1">
+        <EntityTypeShape EntityType="ReversiGameSystemModel.Account" Width="1.5" PointX="0.75" PointY="8.75" IsExpanded="true" />
+        <EntityTypeShape EntityType="ReversiGameSystemModel.AccountSettings" Width="1.5" PointX="3" PointY="8.125" IsExpanded="true" />
+        <EntityTypeShape EntityType="ReversiGameSystemModel.ChatMessage" Width="1.5" PointX="8.25" PointY="7" IsExpanded="true" />
+        <EntityTypeShape EntityType="ReversiGameSystemModel.ChatMute" Width="1.5" PointX="13.5" PointY="9.25" IsExpanded="true" />
+        <EntityTypeShape EntityType="ReversiGameSystemModel.ChatViolation" Width="1.5" PointX="11.25" PointY="8.75" IsExpanded="true" />
+        <EntityTypeShape EntityType="ReversiGameSystemModel.Friendship" Width="1.5" PointX="3" PointY="12" IsExpanded="true" />
+        <EntityTypeShape EntityType="ReversiGameSystemModel.GameMatch" Width="1.5" PointX="8.25" PointY="13.875" IsExpanded="true" />
+        <EntityTypeShape EntityType="ReversiGameSystemModel.GameMove" Width="1.5" PointX="10.5" PointY="13.5" IsExpanded="true" />
+        <EntityTypeShape EntityType="ReversiGameSystemModel.MatchParticipant" Width="1.5" PointX="6" PointY="8.25" IsExpanded="true" />
+        <EntityTypeShape EntityType="ReversiGameSystemModel.ModerationPattern" Width="1.5" PointX="11.25" PointY="4.625" IsExpanded="true" />
+        <EntityTypeShape EntityType="ReversiGameSystemModel.ModerationRule" Width="1.5" PointX="9" PointY="10.25" IsExpanded="true" />
+        <EntityTypeShape EntityType="ReversiGameSystemModel.SupportedLocale" Width="1.5" PointX="0.75" PointY="5.375" IsExpanded="true" />
+        <EntityTypeShape EntityType="ReversiGameSystemModel.VerificationCode" Width="1.5" PointX="0.75" PointY="0.75" IsExpanded="true" />
+        <AssociationConnector Association="ReversiGameSystemModel.FK_AccountSettings_Account" ManuallyRouted="false" />
+        <AssociationConnector Association="ReversiGameSystemModel.FK_Friendship_AccountA" ManuallyRouted="false" />
+        <AssociationConnector Association="ReversiGameSystemModel.FK_Friendship_AccountB" ManuallyRouted="false" />
+        <AssociationConnector Association="ReversiGameSystemModel.FK_Friendship_RequestedBy" ManuallyRouted="false" />
+        <AssociationConnector Association="ReversiGameSystemModel.FK_MatchParticipant_Account" ManuallyRouted="false" />
+        <AssociationConnector Association="ReversiGameSystemModel.FK_AccountSettings_SupportedLocale" ManuallyRouted="false" />
+        <AssociationConnector Association="ReversiGameSystemModel.FK_ChatMessage_MatchParticipant" ManuallyRouted="false" />
+        <AssociationConnector Association="ReversiGameSystemModel.FK_ChatMute_ChatViolation" ManuallyRouted="false" />
+        <AssociationConnector Association="ReversiGameSystemModel.FK_ChatViolation_MatchParticipant" ManuallyRouted="false" />
+        <AssociationConnector Association="ReversiGameSystemModel.FK_ChatViolation_ModerationRule" ManuallyRouted="false" />
+        <AssociationConnector Association="ReversiGameSystemModel.FK_ChatViolation_SupportedLocale" ManuallyRouted="false" />
+        <AssociationConnector Association="ReversiGameSystemModel.FK_GameMatch_MatchParticipant" ManuallyRouted="false" />
+        <AssociationConnector Association="ReversiGameSystemModel.FK_GameMove_GameMatch" ManuallyRouted="false" />
+        <AssociationConnector Association="ReversiGameSystemModel.FK_MatchParticipant_GameMatch" ManuallyRouted="false" />
+        <AssociationConnector Association="ReversiGameSystemModel.FK_GameMove_MatchParticipant" ManuallyRouted="false" />
+        <AssociationConnector Association="ReversiGameSystemModel.FK_ModerationPattern_ModerationRule" ManuallyRouted="false" />
+        <AssociationConnector Association="ReversiGameSystemModel.FK_ModerationPattern_SupportedLocale" ManuallyRouted="false" />
+      </Diagram>
+    </edmx:Diagrams>
+  </edmx:Designer>
+</edmx:Edmx>

@@ -1,0 +1,1137 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
+  <!-- EF Runtime content -->
+  <edmx:Runtime>
+    <!-- SSDL content -->
+    <edmx:StorageModels>
+      <Schema Namespace="ReversiGameSystemModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+        <EntityType Name="Account">
+          <Key>
+            <PropertyRef Name="accountId" />
+          </Key>
+          <Property Name="accountId" Type="bigint" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="username" Type="nvarchar" MaxLength="50" Nullable="false" />
+          <Property Name="emailAddress" Type="nvarchar" MaxLength="254" Nullable="false" />
+          <Property Name="passwordHash" Type="varchar" MaxLength="255" Nullable="false" />
+          <Property Name="profileImageUri" Type="nvarchar" MaxLength="2048" />
+          <Property Name="statusCode" Type="varchar" MaxLength="20" Nullable="false" />
+          <Property Name="registeredAtUtc" Type="datetime2" Precision="3" Nullable="false" />
+        </EntityType>
+        <EntityType Name="AccountSettings">
+          <Key>
+            <PropertyRef Name="accountId" />
+          </Key>
+          <Property Name="accountId" Type="bigint" Nullable="false" />
+          <Property Name="preferredLocaleCode" Type="varchar" MaxLength="35" Nullable="false" />
+          <Property Name="timeZoneId" Type="varchar" MaxLength="100" />
+          <Property Name="boardBackgroundUri" Type="nvarchar" MaxLength="2048" />
+          <Property Name="pieceStyleCode" Type="varchar" MaxLength="20" Nullable="false" />
+        </EntityType>
+        <EntityType Name="ChatMessage">
+          <Key>
+            <PropertyRef Name="matchId" />
+            <PropertyRef Name="messageNumber" />
+          </Key>
+          <Property Name="matchId" Type="bigint" Nullable="false" />
+          <Property Name="messageNumber" Type="int" Nullable="false" />
+          <Property Name="senderSeatNumber" Type="tinyint" Nullable="false" />
+          <Property Name="content" Type="nvarchar" MaxLength="1000" Nullable="false" />
+          <Property Name="sentAtUtc" Type="datetime2" Precision="3" Nullable="false" />
+        </EntityType>
+        <EntityType Name="ChatMute">
+          <Key>
+            <PropertyRef Name="muteId" />
+          </Key>
+          <Property Name="muteId" Type="bigint" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="triggerViolationId" Type="bigint" Nullable="false" />
+          <Property Name="reasonCode" Type="varchar" MaxLength="50" Nullable="false" />
+          <Property Name="startsAtUtc" Type="datetime2" Precision="3" Nullable="false" />
+          <Property Name="endsAtUtc" Type="datetime2" Precision="3" Nullable="false" />
+        </EntityType>
+        <EntityType Name="ChatViolation">
+          <Key>
+            <PropertyRef Name="violationId" />
+          </Key>
+          <Property Name="violationId" Type="bigint" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="detectionEventId" Type="uniqueidentifier" Nullable="false" />
+          <Property Name="matchId" Type="bigint" Nullable="false" />
+          <Property Name="offenderSeatNumber" Type="tinyint" Nullable="false" />
+          <Property Name="ruleCode" Type="varchar" MaxLength="50" Nullable="false" />
+          <Property Name="detectedLocaleCode" Type="varchar" MaxLength="35" />
+          <Property Name="detectedAtUtc" Type="datetime2" Precision="3" Nullable="false" />
+        </EntityType>
+        <EntityType Name="Friendship">
+          <Key>
+            <PropertyRef Name="accountIdA" />
+            <PropertyRef Name="accountIdB" />
+          </Key>
+          <Property Name="accountIdA" Type="bigint" Nullable="false" />
+          <Property Name="accountIdB" Type="bigint" Nullable="false" />
+          <Property Name="requestedByAccountId" Type="bigint" Nullable="false" />
+          <Property Name="statusCode" Type="varchar" MaxLength="20" Nullable="false" />
+          <Property Name="requestedAtUtc" Type="datetime2" Precision="3" Nullable="false" />
+          <Property Name="respondedAtUtc" Type="datetime2" Precision="3" />
+          <Property Name="endedAtUtc" Type="datetime2" Precision="3" />
+        </EntityType>
+        <EntityType Name="GameMatch">
+          <Key>
+            <PropertyRef Name="matchId" />
+          </Key>
+          <Property Name="matchId" Type="bigint" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="matchCode" Type="varchar" MaxLength="12" Nullable="false" />
+          <Property Name="statusCode" Type="varchar" MaxLength="20" Nullable="false" />
+          <Property Name="turnDurationSeconds" Type="smallint" Nullable="false" />
+          <Property Name="countsTowardStatistics" Type="bit" Nullable="false" />
+          <Property Name="createdAtUtc" Type="datetime2" Precision="3" Nullable="false" />
+          <Property Name="startedAtUtc" Type="datetime2" Precision="3" />
+          <Property Name="endedAtUtc" Type="datetime2" Precision="3" />
+          <Property Name="endReasonCode" Type="varchar" MaxLength="30" />
+          <Property Name="currentTurnSeatNumber" Type="tinyint" />
+          <Property Name="turnStartedAtUtc" Type="datetime2" Precision="3" />
+        </EntityType>
+        <EntityType Name="GameMove">
+          <Key>
+            <PropertyRef Name="matchId" />
+            <PropertyRef Name="moveNumber" />
+          </Key>
+          <Property Name="matchId" Type="bigint" Nullable="false" />
+          <Property Name="moveNumber" Type="int" Nullable="false" />
+          <Property Name="seatNumber" Type="tinyint" Nullable="false" />
+          <Property Name="rowIndex" Type="tinyint" Nullable="false" />
+          <Property Name="columnIndex" Type="tinyint" Nullable="false" />
+          <Property Name="moveSourceCode" Type="varchar" MaxLength="30" Nullable="false" />
+          <Property Name="playedAtUtc" Type="datetime2" Precision="3" Nullable="false" />
+        </EntityType>
+        <EntityType Name="MatchParticipant">
+          <Key>
+            <PropertyRef Name="matchId" />
+            <PropertyRef Name="seatNumber" />
+          </Key>
+          <Property Name="matchId" Type="bigint" Nullable="false" />
+          <Property Name="seatNumber" Type="tinyint" Nullable="false" />
+          <Property Name="accountId" Type="bigint" />
+          <Property Name="participantTypeCode" Type="varchar" MaxLength="20" Nullable="false" />
+          <Property Name="displayNameSnapshot" Type="nvarchar" MaxLength="50" />
+          <Property Name="pieceColorCode" Type="varchar" MaxLength="10" Nullable="false" />
+          <Property Name="resultCode" Type="varchar" MaxLength="10" />
+          <Property Name="finalPieceCount" Type="tinyint" />
+          <Property Name="consecutiveTimeoutCount" Type="tinyint" Nullable="false" />
+          <Property Name="joinedAtUtc" Type="datetime2" Precision="3" Nullable="false" />
+          <Property Name="isCreator" Type="bit" Nullable="false" />
+        </EntityType>
+        <EntityType Name="ModerationPattern">
+          <Key>
+            <PropertyRef Name="moderationPatternId" />
+          </Key>
+          <Property Name="moderationPatternId" Type="bigint" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="ruleCode" Type="varchar" MaxLength="50" Nullable="false" />
+          <Property Name="localeCode" Type="varchar" MaxLength="35" Nullable="false" />
+          <Property Name="patternValue" Type="nvarchar" MaxLength="200" Nullable="false" />
+          <Property Name="patternTypeCode" Type="varchar" MaxLength="20" Nullable="false" />
+          <Property Name="isEnabled" Type="bit" Nullable="false" />
+        </EntityType>
+        <EntityType Name="ModerationRule">
+          <Key>
+            <PropertyRef Name="ruleCode" />
+          </Key>
+          <Property Name="ruleCode" Type="varchar" MaxLength="50" Nullable="false" />
+          <Property Name="violationThreshold" Type="tinyint" />
+          <Property Name="muteDurationSeconds" Type="int" />
+          <Property Name="isEnabled" Type="bit" Nullable="false" />
+        </EntityType>
+        <EntityType Name="SupportedLocale">
+          <Key>
+            <PropertyRef Name="localeCode" />
+          </Key>
+          <Property Name="localeCode" Type="varchar" MaxLength="35" Nullable="false" />
+          <Property Name="isEnabled" Type="bit" Nullable="false" />
+        </EntityType>
+        <EntityType Name="VerificationCode">
+          <Key>
+            <PropertyRef Name="verificationCodeId" />
+          </Key>
+          <Property Name="verificationCodeId" Type="bigint" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="emailAddress" Type="nvarchar" MaxLength="254" Nullable="false" />
+          <Property Name="purposeCode" Type="varchar" MaxLength="30" Nullable="false" />
+          <Property Name="codeHash" Type="varchar" MaxLength="255" Nullable="false" />
+          <Property Name="createdAtUtc" Type="datetime2" Precision="3" Nullable="false" />
+          <Property Name="expiresAtUtc" Type="datetime2" Precision="3" Nullable="false" />
+          <Property Name="usedAtUtc" Type="datetime2" Precision="3" />
+          <Property Name="invalidatedAtUtc" Type="datetime2" Precision="3" />
+        </EntityType>
+        <Association Name="FK_AccountSettings_Account">
+          <End Role="Account" Type="Self.Account" Multiplicity="1" />
+          <End Role="AccountSettings" Type="Self.AccountSettings" Multiplicity="0..1" />
+          <ReferentialConstraint>
+            <Principal Role="Account">
+              <PropertyRef Name="accountId" />
+            </Principal>
+            <Dependent Role="AccountSettings">
+              <PropertyRef Name="accountId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_AccountSettings_SupportedLocale">
+          <End Role="SupportedLocale" Type="Self.SupportedLocale" Multiplicity="1" />
+          <End Role="AccountSettings" Type="Self.AccountSettings" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="SupportedLocale">
+              <PropertyRef Name="localeCode" />
+            </Principal>
+            <Dependent Role="AccountSettings">
+              <PropertyRef Name="preferredLocaleCode" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ChatMessage_MatchParticipant">
+          <End Role="MatchParticipant" Type="Self.MatchParticipant" Multiplicity="1" />
+          <End Role="ChatMessage" Type="Self.ChatMessage" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="MatchParticipant">
+              <PropertyRef Name="matchId" />
+              <PropertyRef Name="seatNumber" />
+            </Principal>
+            <Dependent Role="ChatMessage">
+              <PropertyRef Name="matchId" />
+              <PropertyRef Name="senderSeatNumber" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ChatMute_ChatViolation">
+          <End Role="ChatViolation" Type="Self.ChatViolation" Multiplicity="1" />
+          <End Role="ChatMute" Type="Self.ChatMute" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="ChatViolation">
+              <PropertyRef Name="violationId" />
+            </Principal>
+            <Dependent Role="ChatMute">
+              <PropertyRef Name="triggerViolationId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ChatViolation_MatchParticipant">
+          <End Role="MatchParticipant" Type="Self.MatchParticipant" Multiplicity="1" />
+          <End Role="ChatViolation" Type="Self.ChatViolation" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="MatchParticipant">
+              <PropertyRef Name="matchId" />
+              <PropertyRef Name="seatNumber" />
+            </Principal>
+            <Dependent Role="ChatViolation">
+              <PropertyRef Name="matchId" />
+              <PropertyRef Name="offenderSeatNumber" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ChatViolation_ModerationRule">
+          <End Role="ModerationRule" Type="Self.ModerationRule" Multiplicity="1" />
+          <End Role="ChatViolation" Type="Self.ChatViolation" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="ModerationRule">
+              <PropertyRef Name="ruleCode" />
+            </Principal>
+            <Dependent Role="ChatViolation">
+              <PropertyRef Name="ruleCode" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ChatViolation_SupportedLocale">
+          <End Role="SupportedLocale" Type="Self.SupportedLocale" Multiplicity="0..1" />
+          <End Role="ChatViolation" Type="Self.ChatViolation" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="SupportedLocale">
+              <PropertyRef Name="localeCode" />
+            </Principal>
+            <Dependent Role="ChatViolation">
+              <PropertyRef Name="detectedLocaleCode" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Friendship_AccountA">
+          <End Role="Account" Type="Self.Account" Multiplicity="1" />
+          <End Role="Friendship" Type="Self.Friendship" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Account">
+              <PropertyRef Name="accountId" />
+            </Principal>
+            <Dependent Role="Friendship">
+              <PropertyRef Name="accountIdA" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Friendship_AccountB">
+          <End Role="Account" Type="Self.Account" Multiplicity="1" />
+          <End Role="Friendship" Type="Self.Friendship" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Account">
+              <PropertyRef Name="accountId" />
+            </Principal>
+            <Dependent Role="Friendship">
+              <PropertyRef Name="accountIdB" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Friendship_RequestedBy">
+          <End Role="Account" Type="Self.Account" Multiplicity="1" />
+          <End Role="Friendship" Type="Self.Friendship" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Account">
+              <PropertyRef Name="accountId" />
+            </Principal>
+            <Dependent Role="Friendship">
+              <PropertyRef Name="requestedByAccountId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_GameMatch_MatchParticipant">
+          <End Role="MatchParticipant" Type="Self.MatchParticipant" Multiplicity="0..1" />
+          <End Role="GameMatch" Type="Self.GameMatch" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="MatchParticipant">
+              <PropertyRef Name="matchId" />
+              <PropertyRef Name="seatNumber" />
+            </Principal>
+            <Dependent Role="GameMatch">
+              <PropertyRef Name="matchId" />
+              <PropertyRef Name="currentTurnSeatNumber" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_GameMove_GameMatch">
+          <End Role="GameMatch" Type="Self.GameMatch" Multiplicity="1" />
+          <End Role="GameMove" Type="Self.GameMove" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="GameMatch">
+              <PropertyRef Name="matchId" />
+            </Principal>
+            <Dependent Role="GameMove">
+              <PropertyRef Name="matchId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_GameMove_MatchParticipant">
+          <End Role="MatchParticipant" Type="Self.MatchParticipant" Multiplicity="1" />
+          <End Role="GameMove" Type="Self.GameMove" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="MatchParticipant">
+              <PropertyRef Name="matchId" />
+              <PropertyRef Name="seatNumber" />
+            </Principal>
+            <Dependent Role="GameMove">
+              <PropertyRef Name="matchId" />
+              <PropertyRef Name="seatNumber" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_MatchParticipant_Account">
+          <End Role="Account" Type="Self.Account" Multiplicity="0..1" />
+          <End Role="MatchParticipant" Type="Self.MatchParticipant" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Account">
+              <PropertyRef Name="accountId" />
+            </Principal>
+            <Dependent Role="MatchParticipant">
+              <PropertyRef Name="accountId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_MatchParticipant_GameMatch">
+          <End Role="GameMatch" Type="Self.GameMatch" Multiplicity="1" />
+          <End Role="MatchParticipant" Type="Self.MatchParticipant" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="GameMatch">
+              <PropertyRef Name="matchId" />
+            </Principal>
+            <Dependent Role="MatchParticipant">
+              <PropertyRef Name="matchId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ModerationPattern_ModerationRule">
+          <End Role="ModerationRule" Type="Self.ModerationRule" Multiplicity="1" />
+          <End Role="ModerationPattern" Type="Self.ModerationPattern" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="ModerationRule">
+              <PropertyRef Name="ruleCode" />
+            </Principal>
+            <Dependent Role="ModerationPattern">
+              <PropertyRef Name="ruleCode" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ModerationPattern_SupportedLocale">
+          <End Role="SupportedLocale" Type="Self.SupportedLocale" Multiplicity="1" />
+          <End Role="ModerationPattern" Type="Self.ModerationPattern" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="SupportedLocale">
+              <PropertyRef Name="localeCode" />
+            </Principal>
+            <Dependent Role="ModerationPattern">
+              <PropertyRef Name="localeCode" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <EntityContainer Name="ReversiGameSystemModelStoreContainer">
+          <EntitySet Name="Account" EntityType="Self.Account" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="AccountSettings" EntityType="Self.AccountSettings" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="ChatMessage" EntityType="Self.ChatMessage" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="ChatMute" EntityType="Self.ChatMute" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="ChatViolation" EntityType="Self.ChatViolation" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="Friendship" EntityType="Self.Friendship" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="GameMatch" EntityType="Self.GameMatch" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="GameMove" EntityType="Self.GameMove" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="MatchParticipant" EntityType="Self.MatchParticipant" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="ModerationPattern" EntityType="Self.ModerationPattern" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="ModerationRule" EntityType="Self.ModerationRule" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="SupportedLocale" EntityType="Self.SupportedLocale" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="VerificationCode" EntityType="Self.VerificationCode" Schema="dbo" store:Type="Tables" />
+          <AssociationSet Name="FK_AccountSettings_Account" Association="Self.FK_AccountSettings_Account">
+            <End Role="Account" EntitySet="Account" />
+            <End Role="AccountSettings" EntitySet="AccountSettings" />
+          </AssociationSet>
+          <AssociationSet Name="FK_AccountSettings_SupportedLocale" Association="Self.FK_AccountSettings_SupportedLocale">
+            <End Role="SupportedLocale" EntitySet="SupportedLocale" />
+            <End Role="AccountSettings" EntitySet="AccountSettings" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ChatMessage_MatchParticipant" Association="Self.FK_ChatMessage_MatchParticipant">
+            <End Role="MatchParticipant" EntitySet="MatchParticipant" />
+            <End Role="ChatMessage" EntitySet="ChatMessage" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ChatMute_ChatViolation" Association="Self.FK_ChatMute_ChatViolation">
+            <End Role="ChatViolation" EntitySet="ChatViolation" />
+            <End Role="ChatMute" EntitySet="ChatMute" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ChatViolation_MatchParticipant" Association="Self.FK_ChatViolation_MatchParticipant">
+            <End Role="MatchParticipant" EntitySet="MatchParticipant" />
+            <End Role="ChatViolation" EntitySet="ChatViolation" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ChatViolation_ModerationRule" Association="Self.FK_ChatViolation_ModerationRule">
+            <End Role="ModerationRule" EntitySet="ModerationRule" />
+            <End Role="ChatViolation" EntitySet="ChatViolation" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ChatViolation_SupportedLocale" Association="Self.FK_ChatViolation_SupportedLocale">
+            <End Role="SupportedLocale" EntitySet="SupportedLocale" />
+            <End Role="ChatViolation" EntitySet="ChatViolation" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Friendship_AccountA" Association="Self.FK_Friendship_AccountA">
+            <End Role="Account" EntitySet="Account" />
+            <End Role="Friendship" EntitySet="Friendship" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Friendship_AccountB" Association="Self.FK_Friendship_AccountB">
+            <End Role="Account" EntitySet="Account" />
+            <End Role="Friendship" EntitySet="Friendship" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Friendship_RequestedBy" Association="Self.FK_Friendship_RequestedBy">
+            <End Role="Account" EntitySet="Account" />
+            <End Role="Friendship" EntitySet="Friendship" />
+          </AssociationSet>
+          <AssociationSet Name="FK_GameMatch_MatchParticipant" Association="Self.FK_GameMatch_MatchParticipant">
+            <End Role="MatchParticipant" EntitySet="MatchParticipant" />
+            <End Role="GameMatch" EntitySet="GameMatch" />
+          </AssociationSet>
+          <AssociationSet Name="FK_GameMove_GameMatch" Association="Self.FK_GameMove_GameMatch">
+            <End Role="GameMatch" EntitySet="GameMatch" />
+            <End Role="GameMove" EntitySet="GameMove" />
+          </AssociationSet>
+          <AssociationSet Name="FK_GameMove_MatchParticipant" Association="Self.FK_GameMove_MatchParticipant">
+            <End Role="MatchParticipant" EntitySet="MatchParticipant" />
+            <End Role="GameMove" EntitySet="GameMove" />
+          </AssociationSet>
+          <AssociationSet Name="FK_MatchParticipant_Account" Association="Self.FK_MatchParticipant_Account">
+            <End Role="Account" EntitySet="Account" />
+            <End Role="MatchParticipant" EntitySet="MatchParticipant" />
+          </AssociationSet>
+          <AssociationSet Name="FK_MatchParticipant_GameMatch" Association="Self.FK_MatchParticipant_GameMatch">
+            <End Role="GameMatch" EntitySet="GameMatch" />
+            <End Role="MatchParticipant" EntitySet="MatchParticipant" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ModerationPattern_ModerationRule" Association="Self.FK_ModerationPattern_ModerationRule">
+            <End Role="ModerationRule" EntitySet="ModerationRule" />
+            <End Role="ModerationPattern" EntitySet="ModerationPattern" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ModerationPattern_SupportedLocale" Association="Self.FK_ModerationPattern_SupportedLocale">
+            <End Role="SupportedLocale" EntitySet="SupportedLocale" />
+            <End Role="ModerationPattern" EntitySet="ModerationPattern" />
+          </AssociationSet>
+        </EntityContainer>
+      </Schema>
+    </edmx:StorageModels>
+    <!-- CSDL content -->
+    <edmx:ConceptualModels>
+      <Schema Namespace="ReversiGameSystemModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
+        <EntityType Name="Account">
+          <Key>
+            <PropertyRef Name="accountId" />
+          </Key>
+          <Property Name="accountId" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="username" Type="String" MaxLength="50" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="emailAddress" Type="String" MaxLength="254" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="passwordHash" Type="String" MaxLength="255" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="profileImageUri" Type="String" MaxLength="2048" FixedLength="false" Unicode="true" />
+          <Property Name="statusCode" Type="String" MaxLength="20" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="registeredAtUtc" Type="DateTime" Nullable="false" Precision="3" />
+          <NavigationProperty Name="AccountSettings" Relationship="Self.FK_AccountSettings_Account" FromRole="Account" ToRole="AccountSettings" />
+          <NavigationProperty Name="Friendship" Relationship="Self.FK_Friendship_AccountA" FromRole="Account" ToRole="Friendship" />
+          <NavigationProperty Name="Friendship1" Relationship="Self.FK_Friendship_AccountB" FromRole="Account" ToRole="Friendship" />
+          <NavigationProperty Name="Friendship2" Relationship="Self.FK_Friendship_RequestedBy" FromRole="Account" ToRole="Friendship" />
+          <NavigationProperty Name="MatchParticipant" Relationship="Self.FK_MatchParticipant_Account" FromRole="Account" ToRole="MatchParticipant" />
+        </EntityType>
+        <EntityType Name="AccountSettings">
+          <Key>
+            <PropertyRef Name="accountId" />
+          </Key>
+          <Property Name="accountId" Type="Int64" Nullable="false" />
+          <Property Name="preferredLocaleCode" Type="String" MaxLength="35" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="timeZoneId" Type="String" MaxLength="100" FixedLength="false" Unicode="false" />
+          <Property Name="boardBackgroundUri" Type="String" MaxLength="2048" FixedLength="false" Unicode="true" />
+          <Property Name="pieceStyleCode" Type="String" MaxLength="20" FixedLength="false" Unicode="false" Nullable="false" />
+          <NavigationProperty Name="Account" Relationship="Self.FK_AccountSettings_Account" FromRole="AccountSettings" ToRole="Account" />
+          <NavigationProperty Name="SupportedLocale" Relationship="Self.FK_AccountSettings_SupportedLocale" FromRole="AccountSettings" ToRole="SupportedLocale" />
+        </EntityType>
+        <EntityType Name="ChatMessage">
+          <Key>
+            <PropertyRef Name="matchId" />
+            <PropertyRef Name="messageNumber" />
+          </Key>
+          <Property Name="matchId" Type="Int64" Nullable="false" />
+          <Property Name="messageNumber" Type="Int32" Nullable="false" />
+          <Property Name="senderSeatNumber" Type="Byte" Nullable="false" />
+          <Property Name="content" Type="String" MaxLength="1000" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="sentAtUtc" Type="DateTime" Nullable="false" Precision="3" />
+          <NavigationProperty Name="MatchParticipant" Relationship="Self.FK_ChatMessage_MatchParticipant" FromRole="ChatMessage" ToRole="MatchParticipant" />
+        </EntityType>
+        <EntityType Name="ChatMute">
+          <Key>
+            <PropertyRef Name="muteId" />
+          </Key>
+          <Property Name="muteId" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="triggerViolationId" Type="Int64" Nullable="false" />
+          <Property Name="reasonCode" Type="String" MaxLength="50" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="startsAtUtc" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="endsAtUtc" Type="DateTime" Nullable="false" Precision="3" />
+          <NavigationProperty Name="ChatViolation" Relationship="Self.FK_ChatMute_ChatViolation" FromRole="ChatMute" ToRole="ChatViolation" />
+        </EntityType>
+        <EntityType Name="ChatViolation">
+          <Key>
+            <PropertyRef Name="violationId" />
+          </Key>
+          <Property Name="violationId" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="detectionEventId" Type="Guid" Nullable="false" />
+          <Property Name="matchId" Type="Int64" Nullable="false" />
+          <Property Name="offenderSeatNumber" Type="Byte" Nullable="false" />
+          <Property Name="ruleCode" Type="String" MaxLength="50" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="detectedLocaleCode" Type="String" MaxLength="35" FixedLength="false" Unicode="false" />
+          <Property Name="detectedAtUtc" Type="DateTime" Nullable="false" Precision="3" />
+          <NavigationProperty Name="ChatMute" Relationship="Self.FK_ChatMute_ChatViolation" FromRole="ChatViolation" ToRole="ChatMute" />
+          <NavigationProperty Name="MatchParticipant" Relationship="Self.FK_ChatViolation_MatchParticipant" FromRole="ChatViolation" ToRole="MatchParticipant" />
+          <NavigationProperty Name="ModerationRule" Relationship="Self.FK_ChatViolation_ModerationRule" FromRole="ChatViolation" ToRole="ModerationRule" />
+          <NavigationProperty Name="SupportedLocale" Relationship="Self.FK_ChatViolation_SupportedLocale" FromRole="ChatViolation" ToRole="SupportedLocale" />
+        </EntityType>
+        <EntityType Name="Friendship">
+          <Key>
+            <PropertyRef Name="accountIdA" />
+            <PropertyRef Name="accountIdB" />
+          </Key>
+          <Property Name="accountIdA" Type="Int64" Nullable="false" />
+          <Property Name="accountIdB" Type="Int64" Nullable="false" />
+          <Property Name="requestedByAccountId" Type="Int64" Nullable="false" />
+          <Property Name="statusCode" Type="String" MaxLength="20" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="requestedAtUtc" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="respondedAtUtc" Type="DateTime" Precision="3" />
+          <Property Name="endedAtUtc" Type="DateTime" Precision="3" />
+          <NavigationProperty Name="Account" Relationship="Self.FK_Friendship_AccountA" FromRole="Friendship" ToRole="Account" />
+          <NavigationProperty Name="Account1" Relationship="Self.FK_Friendship_AccountB" FromRole="Friendship" ToRole="Account" />
+          <NavigationProperty Name="Account2" Relationship="Self.FK_Friendship_RequestedBy" FromRole="Friendship" ToRole="Account" />
+        </EntityType>
+        <EntityType Name="GameMatch">
+          <Key>
+            <PropertyRef Name="matchId" />
+          </Key>
+          <Property Name="matchId" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="matchCode" Type="String" MaxLength="12" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="statusCode" Type="String" MaxLength="20" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="turnDurationSeconds" Type="Int16" Nullable="false" />
+          <Property Name="countsTowardStatistics" Type="Boolean" Nullable="false" />
+          <Property Name="createdAtUtc" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="startedAtUtc" Type="DateTime" Precision="3" />
+          <Property Name="endedAtUtc" Type="DateTime" Precision="3" />
+          <Property Name="endReasonCode" Type="String" MaxLength="30" FixedLength="false" Unicode="false" />
+          <Property Name="currentTurnSeatNumber" Type="Byte" />
+          <Property Name="turnStartedAtUtc" Type="DateTime" Precision="3" />
+          <NavigationProperty Name="MatchParticipant" Relationship="Self.FK_GameMatch_MatchParticipant" FromRole="GameMatch" ToRole="MatchParticipant" />
+          <NavigationProperty Name="GameMove" Relationship="Self.FK_GameMove_GameMatch" FromRole="GameMatch" ToRole="GameMove" />
+          <NavigationProperty Name="MatchParticipant1" Relationship="Self.FK_MatchParticipant_GameMatch" FromRole="GameMatch" ToRole="MatchParticipant" />
+        </EntityType>
+        <EntityType Name="GameMove">
+          <Key>
+            <PropertyRef Name="matchId" />
+            <PropertyRef Name="moveNumber" />
+          </Key>
+          <Property Name="matchId" Type="Int64" Nullable="false" />
+          <Property Name="moveNumber" Type="Int32" Nullable="false" />
+          <Property Name="seatNumber" Type="Byte" Nullable="false" />
+          <Property Name="rowIndex" Type="Byte" Nullable="false" />
+          <Property Name="columnIndex" Type="Byte" Nullable="false" />
+          <Property Name="moveSourceCode" Type="String" MaxLength="30" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="playedAtUtc" Type="DateTime" Nullable="false" Precision="3" />
+          <NavigationProperty Name="GameMatch" Relationship="Self.FK_GameMove_GameMatch" FromRole="GameMove" ToRole="GameMatch" />
+          <NavigationProperty Name="MatchParticipant" Relationship="Self.FK_GameMove_MatchParticipant" FromRole="GameMove" ToRole="MatchParticipant" />
+        </EntityType>
+        <EntityType Name="MatchParticipant">
+          <Key>
+            <PropertyRef Name="matchId" />
+            <PropertyRef Name="seatNumber" />
+          </Key>
+          <Property Name="matchId" Type="Int64" Nullable="false" />
+          <Property Name="seatNumber" Type="Byte" Nullable="false" />
+          <Property Name="accountId" Type="Int64" />
+          <Property Name="participantTypeCode" Type="String" MaxLength="20" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="displayNameSnapshot" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="pieceColorCode" Type="String" MaxLength="10" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="resultCode" Type="String" MaxLength="10" FixedLength="false" Unicode="false" />
+          <Property Name="finalPieceCount" Type="Byte" />
+          <Property Name="consecutiveTimeoutCount" Type="Byte" Nullable="false" />
+          <Property Name="joinedAtUtc" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="isCreator" Type="Boolean" Nullable="false" />
+          <NavigationProperty Name="Account" Relationship="Self.FK_MatchParticipant_Account" FromRole="MatchParticipant" ToRole="Account" />
+          <NavigationProperty Name="ChatMessage" Relationship="Self.FK_ChatMessage_MatchParticipant" FromRole="MatchParticipant" ToRole="ChatMessage" />
+          <NavigationProperty Name="ChatViolation" Relationship="Self.FK_ChatViolation_MatchParticipant" FromRole="MatchParticipant" ToRole="ChatViolation" />
+          <NavigationProperty Name="GameMatch" Relationship="Self.FK_GameMatch_MatchParticipant" FromRole="MatchParticipant" ToRole="GameMatch" />
+          <NavigationProperty Name="GameMatch1" Relationship="Self.FK_MatchParticipant_GameMatch" FromRole="MatchParticipant" ToRole="GameMatch" />
+          <NavigationProperty Name="GameMove" Relationship="Self.FK_GameMove_MatchParticipant" FromRole="MatchParticipant" ToRole="GameMove" />
+        </EntityType>
+        <EntityType Name="ModerationPattern">
+          <Key>
+            <PropertyRef Name="moderationPatternId" />
+          </Key>
+          <Property Name="moderationPatternId" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="ruleCode" Type="String" MaxLength="50" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="localeCode" Type="String" MaxLength="35" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="patternValue" Type="String" MaxLength="200" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="patternTypeCode" Type="String" MaxLength="20" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="isEnabled" Type="Boolean" Nullable="false" />
+          <NavigationProperty Name="ModerationRule" Relationship="Self.FK_ModerationPattern_ModerationRule" FromRole="ModerationPattern" ToRole="ModerationRule" />
+          <NavigationProperty Name="SupportedLocale" Relationship="Self.FK_ModerationPattern_SupportedLocale" FromRole="ModerationPattern" ToRole="SupportedLocale" />
+        </EntityType>
+        <EntityType Name="ModerationRule">
+          <Key>
+            <PropertyRef Name="ruleCode" />
+          </Key>
+          <Property Name="ruleCode" Type="String" MaxLength="50" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="violationThreshold" Type="Byte" />
+          <Property Name="muteDurationSeconds" Type="Int32" />
+          <Property Name="isEnabled" Type="Boolean" Nullable="false" />
+          <NavigationProperty Name="ChatViolation" Relationship="Self.FK_ChatViolation_ModerationRule" FromRole="ModerationRule" ToRole="ChatViolation" />
+          <NavigationProperty Name="ModerationPattern" Relationship="Self.FK_ModerationPattern_ModerationRule" FromRole="ModerationRule" ToRole="ModerationPattern" />
+        </EntityType>
+        <EntityType Name="SupportedLocale">
+          <Key>
+            <PropertyRef Name="localeCode" />
+          </Key>
+          <Property Name="localeCode" Type="String" MaxLength="35" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="isEnabled" Type="Boolean" Nullable="false" />
+          <NavigationProperty Name="AccountSettings" Relationship="Self.FK_AccountSettings_SupportedLocale" FromRole="SupportedLocale" ToRole="AccountSettings" />
+          <NavigationProperty Name="ChatViolation" Relationship="Self.FK_ChatViolation_SupportedLocale" FromRole="SupportedLocale" ToRole="ChatViolation" />
+          <NavigationProperty Name="ModerationPattern" Relationship="Self.FK_ModerationPattern_SupportedLocale" FromRole="SupportedLocale" ToRole="ModerationPattern" />
+        </EntityType>
+        <EntityType Name="VerificationCode">
+          <Key>
+            <PropertyRef Name="verificationCodeId" />
+          </Key>
+          <Property Name="verificationCodeId" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="emailAddress" Type="String" MaxLength="254" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="purposeCode" Type="String" MaxLength="30" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="codeHash" Type="String" MaxLength="255" FixedLength="false" Unicode="false" Nullable="false" />
+          <Property Name="createdAtUtc" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="expiresAtUtc" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="usedAtUtc" Type="DateTime" Precision="3" />
+          <Property Name="invalidatedAtUtc" Type="DateTime" Precision="3" />
+        </EntityType>
+        <Association Name="FK_AccountSettings_Account">
+          <End Role="Account" Type="Self.Account" Multiplicity="1" />
+          <End Role="AccountSettings" Type="Self.AccountSettings" Multiplicity="0..1" />
+          <ReferentialConstraint>
+            <Principal Role="Account">
+              <PropertyRef Name="accountId" />
+            </Principal>
+            <Dependent Role="AccountSettings">
+              <PropertyRef Name="accountId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Friendship_AccountA">
+          <End Role="Account" Type="Self.Account" Multiplicity="1" />
+          <End Role="Friendship" Type="Self.Friendship" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Account">
+              <PropertyRef Name="accountId" />
+            </Principal>
+            <Dependent Role="Friendship">
+              <PropertyRef Name="accountIdA" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Friendship_AccountB">
+          <End Role="Account" Type="Self.Account" Multiplicity="1" />
+          <End Role="Friendship" Type="Self.Friendship" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Account">
+              <PropertyRef Name="accountId" />
+            </Principal>
+            <Dependent Role="Friendship">
+              <PropertyRef Name="accountIdB" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Friendship_RequestedBy">
+          <End Role="Account" Type="Self.Account" Multiplicity="1" />
+          <End Role="Friendship" Type="Self.Friendship" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Account">
+              <PropertyRef Name="accountId" />
+            </Principal>
+            <Dependent Role="Friendship">
+              <PropertyRef Name="requestedByAccountId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_MatchParticipant_Account">
+          <End Role="Account" Type="Self.Account" Multiplicity="0..1" />
+          <End Role="MatchParticipant" Type="Self.MatchParticipant" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Account">
+              <PropertyRef Name="accountId" />
+            </Principal>
+            <Dependent Role="MatchParticipant">
+              <PropertyRef Name="accountId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_AccountSettings_SupportedLocale">
+          <End Role="SupportedLocale" Type="Self.SupportedLocale" Multiplicity="1" />
+          <End Role="AccountSettings" Type="Self.AccountSettings" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="SupportedLocale">
+              <PropertyRef Name="localeCode" />
+            </Principal>
+            <Dependent Role="AccountSettings">
+              <PropertyRef Name="preferredLocaleCode" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ChatMessage_MatchParticipant">
+          <End Role="MatchParticipant" Type="Self.MatchParticipant" Multiplicity="1" />
+          <End Role="ChatMessage" Type="Self.ChatMessage" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="MatchParticipant">
+              <PropertyRef Name="matchId" />
+              <PropertyRef Name="seatNumber" />
+            </Principal>
+            <Dependent Role="ChatMessage">
+              <PropertyRef Name="matchId" />
+              <PropertyRef Name="senderSeatNumber" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ChatMute_ChatViolation">
+          <End Role="ChatViolation" Type="Self.ChatViolation" Multiplicity="1" />
+          <End Role="ChatMute" Type="Self.ChatMute" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="ChatViolation">
+              <PropertyRef Name="violationId" />
+            </Principal>
+            <Dependent Role="ChatMute">
+              <PropertyRef Name="triggerViolationId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ChatViolation_MatchParticipant">
+          <End Role="MatchParticipant" Type="Self.MatchParticipant" Multiplicity="1" />
+          <End Role="ChatViolation" Type="Self.ChatViolation" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="MatchParticipant">
+              <PropertyRef Name="matchId" />
+              <PropertyRef Name="seatNumber" />
+            </Principal>
+            <Dependent Role="ChatViolation">
+              <PropertyRef Name="matchId" />
+              <PropertyRef Name="offenderSeatNumber" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ChatViolation_ModerationRule">
+          <End Role="ModerationRule" Type="Self.ModerationRule" Multiplicity="1" />
+          <End Role="ChatViolation" Type="Self.ChatViolation" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="ModerationRule">
+              <PropertyRef Name="ruleCode" />
+            </Principal>
+            <Dependent Role="ChatViolation">
+              <PropertyRef Name="ruleCode" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ChatViolation_SupportedLocale">
+          <End Role="SupportedLocale" Type="Self.SupportedLocale" Multiplicity="0..1" />
+          <End Role="ChatViolation" Type="Self.ChatViolation" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="SupportedLocale">
+              <PropertyRef Name="localeCode" />
+            </Principal>
+            <Dependent Role="ChatViolation">
+              <PropertyRef Name="detectedLocaleCode" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_GameMatch_MatchParticipant">
+          <End Role="MatchParticipant" Type="Self.MatchParticipant" Multiplicity="0..1" />
+          <End Role="GameMatch" Type="Self.GameMatch" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="MatchParticipant">
+              <PropertyRef Name="matchId" />
+              <PropertyRef Name="seatNumber" />
+            </Principal>
+            <Dependent Role="GameMatch">
+              <PropertyRef Name="matchId" />
+              <PropertyRef Name="currentTurnSeatNumber" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_GameMove_GameMatch">
+          <End Role="GameMatch" Type="Self.GameMatch" Multiplicity="1" />
+          <End Role="GameMove" Type="Self.GameMove" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="GameMatch">
+              <PropertyRef Name="matchId" />
+            </Principal>
+            <Dependent Role="GameMove">
+              <PropertyRef Name="matchId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_MatchParticipant_GameMatch">
+          <End Role="GameMatch" Type="Self.GameMatch" Multiplicity="1" />
+          <End Role="MatchParticipant" Type="Self.MatchParticipant" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="GameMatch">
+              <PropertyRef Name="matchId" />
+            </Principal>
+            <Dependent Role="MatchParticipant">
+              <PropertyRef Name="matchId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_GameMove_MatchParticipant">
+          <End Role="MatchParticipant" Type="Self.MatchParticipant" Multiplicity="1" />
+          <End Role="GameMove" Type="Self.GameMove" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="MatchParticipant">
+              <PropertyRef Name="matchId" />
+              <PropertyRef Name="seatNumber" />
+            </Principal>
+            <Dependent Role="GameMove">
+              <PropertyRef Name="matchId" />
+              <PropertyRef Name="seatNumber" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ModerationPattern_ModerationRule">
+          <End Role="ModerationRule" Type="Self.ModerationRule" Multiplicity="1" />
+          <End Role="ModerationPattern" Type="Self.ModerationPattern" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="ModerationRule">
+              <PropertyRef Name="ruleCode" />
+            </Principal>
+            <Dependent Role="ModerationPattern">
+              <PropertyRef Name="ruleCode" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ModerationPattern_SupportedLocale">
+          <End Role="SupportedLocale" Type="Self.SupportedLocale" Multiplicity="1" />
+          <End Role="ModerationPattern" Type="Self.ModerationPattern" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="SupportedLocale">
+              <PropertyRef Name="localeCode" />
+            </Principal>
+            <Dependent Role="ModerationPattern">
+              <PropertyRef Name="localeCode" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <EntityContainer Name="ReversiGameSystemEntities" annotation:LazyLoadingEnabled="true">
+          <EntitySet Name="Account" EntityType="Self.Account" />
+          <EntitySet Name="AccountSettings" EntityType="Self.AccountSettings" />
+          <EntitySet Name="ChatMessage" EntityType="Self.ChatMessage" />
+          <EntitySet Name="ChatMute" EntityType="Self.ChatMute" />
+          <EntitySet Name="ChatViolation" EntityType="Self.ChatViolation" />
+          <EntitySet Name="Friendship" EntityType="Self.Friendship" />
+          <EntitySet Name="GameMatch" EntityType="Self.GameMatch" />
+          <EntitySet Name="GameMove" EntityType="Self.GameMove" />
+          <EntitySet Name="MatchParticipant" EntityType="Self.MatchParticipant" />
+          <EntitySet Name="ModerationPattern" EntityType="Self.ModerationPattern" />
+          <EntitySet Name="ModerationRule" EntityType="Self.ModerationRule" />
+          <EntitySet Name="SupportedLocale" EntityType="Self.SupportedLocale" />
+          <EntitySet Name="VerificationCode" EntityType="Self.VerificationCode" />
+          <AssociationSet Name="FK_AccountSettings_Account" Association="Self.FK_AccountSettings_Account">
+            <End Role="Account" EntitySet="Account" />
+            <End Role="AccountSettings" EntitySet="AccountSettings" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Friendship_AccountA" Association="Self.FK_Friendship_AccountA">
+            <End Role="Account" EntitySet="Account" />
+            <End Role="Friendship" EntitySet="Friendship" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Friendship_AccountB" Association="Self.FK_Friendship_AccountB">
+            <End Role="Account" EntitySet="Account" />
+            <End Role="Friendship" EntitySet="Friendship" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Friendship_RequestedBy" Association="Self.FK_Friendship_RequestedBy">
+            <End Role="Account" EntitySet="Account" />
+            <End Role="Friendship" EntitySet="Friendship" />
+          </AssociationSet>
+          <AssociationSet Name="FK_MatchParticipant_Account" Association="Self.FK_MatchParticipant_Account">
+            <End Role="Account" EntitySet="Account" />
+            <End Role="MatchParticipant" EntitySet="MatchParticipant" />
+          </AssociationSet>
+          <AssociationSet Name="FK_AccountSettings_SupportedLocale" Association="Self.FK_AccountSettings_SupportedLocale">
+            <End Role="SupportedLocale" EntitySet="SupportedLocale" />
+            <End Role="AccountSettings" EntitySet="AccountSettings" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ChatMessage_MatchParticipant" Association="Self.FK_ChatMessage_MatchParticipant">
+            <End Role="MatchParticipant" EntitySet="MatchParticipant" />
+            <End Role="ChatMessage" EntitySet="ChatMessage" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ChatMute_ChatViolation" Association="Self.FK_ChatMute_ChatViolation">
+            <End Role="ChatViolation" EntitySet="ChatViolation" />
+            <End Role="ChatMute" EntitySet="ChatMute" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ChatViolation_MatchParticipant" Association="Self.FK_ChatViolation_MatchParticipant">
+            <End Role="MatchParticipant" EntitySet="MatchParticipant" />
+            <End Role="ChatViolation" EntitySet="ChatViolation" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ChatViolation_ModerationRule" Association="Self.FK_ChatViolation_ModerationRule">
+            <End Role="ModerationRule" EntitySet="ModerationRule" />
+            <End Role="ChatViolation" EntitySet="ChatViolation" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ChatViolation_SupportedLocale" Association="Self.FK_ChatViolation_SupportedLocale">
+            <End Role="SupportedLocale" EntitySet="SupportedLocale" />
+            <End Role="ChatViolation" EntitySet="ChatViolation" />
+          </AssociationSet>
+          <AssociationSet Name="FK_GameMatch_MatchParticipant" Association="Self.FK_GameMatch_MatchParticipant">
+            <End Role="MatchParticipant" EntitySet="MatchParticipant" />
+            <End Role="GameMatch" EntitySet="GameMatch" />
+          </AssociationSet>
+          <AssociationSet Name="FK_GameMove_GameMatch" Association="Self.FK_GameMove_GameMatch">
+            <End Role="GameMatch" EntitySet="GameMatch" />
+            <End Role="GameMove" EntitySet="GameMove" />
+          </AssociationSet>
+          <AssociationSet Name="FK_MatchParticipant_GameMatch" Association="Self.FK_MatchParticipant_GameMatch">
+            <End Role="GameMatch" EntitySet="GameMatch" />
+            <End Role="MatchParticipant" EntitySet="MatchParticipant" />
+          </AssociationSet>
+          <AssociationSet Name="FK_GameMove_MatchParticipant" Association="Self.FK_GameMove_MatchParticipant">
+            <End Role="MatchParticipant" EntitySet="MatchParticipant" />
+            <End Role="GameMove" EntitySet="GameMove" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ModerationPattern_ModerationRule" Association="Self.FK_ModerationPattern_ModerationRule">
+            <End Role="ModerationRule" EntitySet="ModerationRule" />
+            <End Role="ModerationPattern" EntitySet="ModerationPattern" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ModerationPattern_SupportedLocale" Association="Self.FK_ModerationPattern_SupportedLocale">
+            <End Role="SupportedLocale" EntitySet="SupportedLocale" />
+            <End Role="ModerationPattern" EntitySet="ModerationPattern" />
+          </AssociationSet>
+        </EntityContainer>
+      </Schema>
+    </edmx:ConceptualModels>
+    <!-- C-S mapping content -->
+    <edmx:Mappings>
+      <Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2009/11/mapping/cs">
+        <EntityContainerMapping StorageEntityContainer="ReversiGameSystemModelStoreContainer" CdmEntityContainer="ReversiGameSystemEntities">
+          <EntitySetMapping Name="Account">
+            <EntityTypeMapping TypeName="ReversiGameSystemModel.Account">
+              <MappingFragment StoreEntitySet="Account">
+                <ScalarProperty Name="accountId" ColumnName="accountId" />
+                <ScalarProperty Name="username" ColumnName="username" />
+                <ScalarProperty Name="emailAddress" ColumnName="emailAddress" />
+                <ScalarProperty Name="passwordHash" ColumnName="passwordHash" />
+                <ScalarProperty Name="profileImageUri" ColumnName="profileImageUri" />
+                <ScalarProperty Name="statusCode" ColumnName="statusCode" />
+                <ScalarProperty Name="registeredAtUtc" ColumnName="registeredAtUtc" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="AccountSettings">
+            <EntityTypeMapping TypeName="ReversiGameSystemModel.AccountSettings">
+              <MappingFragment StoreEntitySet="AccountSettings">
+                <ScalarProperty Name="accountId" ColumnName="accountId" />
+                <ScalarProperty Name="preferredLocaleCode" ColumnName="preferredLocaleCode" />
+                <ScalarProperty Name="timeZoneId" ColumnName="timeZoneId" />
+                <ScalarProperty Name="boardBackgroundUri" ColumnName="boardBackgroundUri" />
+                <ScalarProperty Name="pieceStyleCode" ColumnName="pieceStyleCode" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="ChatMessage">
+            <EntityTypeMapping TypeName="ReversiGameSystemModel.ChatMessage">
+              <MappingFragment StoreEntitySet="ChatMessage">
+                <ScalarProperty Name="matchId" ColumnName="matchId" />
+                <ScalarProperty Name="messageNumber" ColumnName="messageNumber" />
+                <ScalarProperty Name="senderSeatNumber" ColumnName="senderSeatNumber" />
+                <ScalarProperty Name="content" ColumnName="content" />
+                <ScalarProperty Name="sentAtUtc" ColumnName="sentAtUtc" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="ChatMute">
+            <EntityTypeMapping TypeName="ReversiGameSystemModel.ChatMute">
+              <MappingFragment StoreEntitySet="ChatMute">
+                <ScalarProperty Name="muteId" ColumnName="muteId" />
+                <ScalarProperty Name="triggerViolationId" ColumnName="triggerViolationId" />
+                <ScalarProperty Name="reasonCode" ColumnName="reasonCode" />
+                <ScalarProperty Name="startsAtUtc" ColumnName="startsAtUtc" />
+                <ScalarProperty Name="endsAtUtc" ColumnName="endsAtUtc" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="ChatViolation">
+            <EntityTypeMapping TypeName="ReversiGameSystemModel.ChatViolation">
+              <MappingFragment StoreEntitySet="ChatViolation">
+                <ScalarProperty Name="violationId" ColumnName="violationId" />
+                <ScalarProperty Name="detectionEventId" ColumnName="detectionEventId" />
+                <ScalarProperty Name="matchId" ColumnName="matchId" />
+                <ScalarProperty Name="offenderSeatNumber" ColumnName="offenderSeatNumber" />
+                <ScalarProperty Name="ruleCode" ColumnName="ruleCode" />
+                <ScalarProperty Name="detectedLocaleCode" ColumnName="detectedLocaleCode" />
+                <ScalarProperty Name="detectedAtUtc" ColumnName="detectedAtUtc" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="Friendship">
+            <EntityTypeMapping TypeName="ReversiGameSystemModel.Friendship">
+              <MappingFragment StoreEntitySet="Friendship">
+                <ScalarProperty Name="accountIdA" ColumnName="accountIdA" />
+                <ScalarProperty Name="accountIdB" ColumnName="accountIdB" />
+                <ScalarProperty Name="requestedByAccountId" ColumnName="requestedByAccountId" />
+                <ScalarProperty Name="statusCode" ColumnName="statusCode" />
+                <ScalarProperty Name="requestedAtUtc" ColumnName="requestedAtUtc" />
+                <ScalarProperty Name="respondedAtUtc" ColumnName="respondedAtUtc" />
+                <ScalarProperty Name="endedAtUtc" ColumnName="endedAtUtc" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="GameMatch">
+            <EntityTypeMapping TypeName="ReversiGameSystemModel.GameMatch">
+              <MappingFragment StoreEntitySet="GameMatch">
+                <ScalarProperty Name="matchId" ColumnName="matchId" />
+                <ScalarProperty Name="matchCode" ColumnName="matchCode" />
+                <ScalarProperty Name="statusCode" ColumnName="statusCode" />
+                <ScalarProperty Name="turnDurationSeconds" ColumnName="turnDurationSeconds" />
+                <ScalarProperty Name="countsTowardStatistics" ColumnName="countsTowardStatistics" />
+                <ScalarProperty Name="createdAtUtc" ColumnName="createdAtUtc" />
+                <ScalarProperty Name="startedAtUtc" ColumnName="startedAtUtc" />
+                <ScalarProperty Name="endedAtUtc" ColumnName="endedAtUtc" />
+                <ScalarProperty Name="endReasonCode" ColumnName="endReasonCode" />
+                <ScalarProperty Name="currentTurnSeatNumber" ColumnName="currentTurnSeatNumber" />
+                <ScalarProperty Name="turnStartedAtUtc" ColumnName="turnStartedAtUtc" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="GameMove">
+            <EntityTypeMapping TypeName="ReversiGameSystemModel.GameMove">
+              <MappingFragment StoreEntitySet="GameMove">
+                <ScalarProperty Name="matchId" ColumnName="matchId" />
+                <ScalarProperty Name="moveNumber" ColumnName="moveNumber" />
+                <ScalarProperty Name="seatNumber" ColumnName="seatNumber" />
+                <ScalarProperty Name="rowIndex" ColumnName="rowIndex" />
+                <ScalarProperty Name="columnIndex" ColumnName="columnIndex" />
+                <ScalarProperty Name="moveSourceCode" ColumnName="moveSourceCode" />
+                <ScalarProperty Name="playedAtUtc" ColumnName="playedAtUtc" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="MatchParticipant">
+            <EntityTypeMapping TypeName="ReversiGameSystemModel.MatchParticipant">
+              <MappingFragment StoreEntitySet="MatchParticipant">
+                <ScalarProperty Name="matchId" ColumnName="matchId" />
+                <ScalarProperty Name="seatNumber" ColumnName="seatNumber" />
+                <ScalarProperty Name="accountId" ColumnName="accountId" />
+                <ScalarProperty Name="participantTypeCode" ColumnName="participantTypeCode" />
+                <ScalarProperty Name="displayNameSnapshot" ColumnName="displayNameSnapshot" />
+                <ScalarProperty Name="pieceColorCode" ColumnName="pieceColorCode" />
+                <ScalarProperty Name="resultCode" ColumnName="resultCode" />
+                <ScalarProperty Name="finalPieceCount" ColumnName="finalPieceCount" />
+                <ScalarProperty Name="consecutiveTimeoutCount" ColumnName="consecutiveTimeoutCount" />
+                <ScalarProperty Name="joinedAtUtc" ColumnName="joinedAtUtc" />
+                <ScalarProperty Name="isCreator" ColumnName="isCreator" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="ModerationPattern">
+            <EntityTypeMapping TypeName="ReversiGameSystemModel.ModerationPattern">
+              <MappingFragment StoreEntitySet="ModerationPattern">
+                <ScalarProperty Name="moderationPatternId" ColumnName="moderationPatternId" />
+                <ScalarProperty Name="ruleCode" ColumnName="ruleCode" />
+                <ScalarProperty Name="localeCode" ColumnName="localeCode" />
+                <ScalarProperty Name="patternValue" ColumnName="patternValue" />
+                <ScalarProperty Name="patternTypeCode" ColumnName="patternTypeCode" />
+                <ScalarProperty Name="isEnabled" ColumnName="isEnabled" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="ModerationRule">
+            <EntityTypeMapping TypeName="ReversiGameSystemModel.ModerationRule">
+              <MappingFragment StoreEntitySet="ModerationRule">
+                <ScalarProperty Name="ruleCode" ColumnName="ruleCode" />
+                <ScalarProperty Name="violationThreshold" ColumnName="violationThreshold" />
+                <ScalarProperty Name="muteDurationSeconds" ColumnName="muteDurationSeconds" />
+                <ScalarProperty Name="isEnabled" ColumnName="isEnabled" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="SupportedLocale">
+            <EntityTypeMapping TypeName="ReversiGameSystemModel.SupportedLocale">
+              <MappingFragment StoreEntitySet="SupportedLocale">
+                <ScalarProperty Name="localeCode" ColumnName="localeCode" />
+                <ScalarProperty Name="isEnabled" ColumnName="isEnabled" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="VerificationCode">
+            <EntityTypeMapping TypeName="ReversiGameSystemModel.VerificationCode">
+              <MappingFragment StoreEntitySet="VerificationCode">
+                <ScalarProperty Name="verificationCodeId" ColumnName="verificationCodeId" />
+                <ScalarProperty Name="emailAddress" ColumnName="emailAddress" />
+                <ScalarProperty Name="purposeCode" ColumnName="purposeCode" />
+                <ScalarProperty Name="codeHash" ColumnName="codeHash" />
+                <ScalarProperty Name="createdAtUtc" ColumnName="createdAtUtc" />
+                <ScalarProperty Name="expiresAtUtc" ColumnName="expiresAtUtc" />
+                <ScalarProperty Name="usedAtUtc" ColumnName="usedAtUtc" />
+                <ScalarProperty Name="invalidatedAtUtc" ColumnName="invalidatedAtUtc" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+        </EntityContainerMapping>
+      </Mapping>
+    </edmx:Mappings>
+  </edmx:Runtime>
+  <!-- EF Designer content (DO NOT EDIT MANUALLY BELOW HERE) -->
+  <Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
+    <Connection>
+      <DesignerInfoPropertySet>
+        <DesignerProperty Name="MetadataArtifactProcessing" Value="EmbedInOutputAssembly" />
+      </DesignerInfoPropertySet>
+    </Connection>
+    <Options>
+      <DesignerInfoPropertySet>
+        <DesignerProperty Name="ValidateOnBuild" Value="true" />
+        <DesignerProperty Name="EnablePluralization" Value="false" />
+        <DesignerProperty Name="IncludeForeignKeysInModel" Value="true" />
+        <DesignerProperty Name="UseLegacyProvider" Value="false" />
+        <DesignerProperty Name="CodeGenerationStrategy" Value="None" />
+      </DesignerInfoPropertySet>
+    </Options>
+    <!-- Diagram content (shape and connector positions) -->
+    <Diagrams></Diagrams>
+  </Designer>
+</edmx:Edmx>
