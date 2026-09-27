@@ -111,6 +111,7 @@
     <Compile Include="LocalRuntimeTests.cs" />
     <Compile Include="LoginHandlerTests.cs" />
     <Compile Include="PersistenceModelTests.cs" />
+    <Compile Include="PlayerProfileHandlerTests.cs" />
     <Compile Include="ValidationPolicyTests.cs" />
   </ItemGroup>
   <ItemGroup>

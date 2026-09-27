@@ -44,6 +44,7 @@ internal static class ValidationPolicyTestRunner
         LoginHandlerTests loginTests = new LoginHandlerTests();
         LocalRuntimeTests localRuntimeTests = new LocalRuntimeTests();
         PersistenceModelTests persistenceModelTests = new PersistenceModelTests();
+        PlayerProfileHandlerTests playerProfileTests = new PlayerProfileHandlerTests();
         Action[] tests =
         {
             emailTests.Validate_OrdinaryAddress_ReturnsNone,
@@ -197,7 +198,13 @@ internal static class ValidationPolicyTestRunner
             localRuntimeTests.LoginAsync_MapsAuthenticatedSession,
             localRuntimeTests.GetPlayerProfileAsync_MapsProfileStatistics,
             localRuntimeTests.GetLeaderboardAsync_MapsRankedEntries,
-            persistenceModelTests.CreateContext_ValidEnvironment_LoadsEmbeddedModel
+            persistenceModelTests.CreateContext_ValidEnvironment_LoadsEmbeddedModel,
+            playerProfileTests.ExecuteAsync_CurrentPlayer_ReturnsCalculatedStatistics,
+            playerProfileTests.ExecuteAsync_PublicProfile_UsesRequestedAccount,
+            playerProfileTests.ExecuteAsync_MissingOrInvalidInput_ReturnsInvalidRequest,
+            playerProfileTests.ExecuteAsync_UnknownSession_ReturnsInvalidSession,
+            playerProfileTests.ExecuteAsync_MissingAccount_ReturnsAccountNotFound,
+            playerProfileTests.ExecuteAsync_UnavailableStore_ReturnsServiceUnavailable
         };
 
         try
