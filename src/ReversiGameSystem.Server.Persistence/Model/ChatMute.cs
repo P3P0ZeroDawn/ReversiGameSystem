@@ -7,7 +7,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace ReversiGameSystem
+namespace ReversiGameSystem.Server.Persistence.Model
 {
     using System;
     using System.Collections.Generic;

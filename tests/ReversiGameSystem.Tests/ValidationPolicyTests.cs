@@ -40,6 +40,7 @@ internal static class ValidationPolicyTestRunner
         ChatReadServiceTests chatReadTests = new ChatReadServiceTests();
         ContractSerializationTests contractTests = new ContractSerializationTests();
         LocalRuntimeTests localRuntimeTests = new LocalRuntimeTests();
+        PersistenceModelTests persistenceModelTests = new PersistenceModelTests();
         Action[] tests =
         {
             emailTests.Validate_OrdinaryAddress_ReturnsNone,
@@ -177,7 +178,8 @@ internal static class ValidationPolicyTestRunner
             localRuntimeTests.CreateAccountAsync_MapsRequestAndResponse,
             localRuntimeTests.LoginAsync_MapsAuthenticatedSession,
             localRuntimeTests.GetPlayerProfileAsync_MapsProfileStatistics,
-            localRuntimeTests.GetLeaderboardAsync_MapsRankedEntries
+            localRuntimeTests.GetLeaderboardAsync_MapsRankedEntries,
+            persistenceModelTests.CreateContext_ValidEnvironment_LoadsEmbeddedModel
         };
 
         try

@@ -7,26 +7,25 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace ReversiGameSystem
+namespace ReversiGameSystem.Server.Persistence.Model
 {
     using System;
     using System.Collections.Generic;
     
-    public partial class SupportedLocale
+    public partial class ModerationRule
     {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
-        public SupportedLocale()
+        public ModerationRule()
         {
-            this.AccountSettings = new HashSet<AccountSettings>();
             this.ChatViolation = new HashSet<ChatViolation>();
             this.ModerationPattern = new HashSet<ModerationPattern>();
         }
     
-        public string localeCode { get; set; }
+        public string ruleCode { get; set; }
+        public Nullable<byte> violationThreshold { get; set; }
+        public Nullable<int> muteDurationSeconds { get; set; }
         public bool isEnabled { get; set; }
     
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<AccountSettings> AccountSettings { get; set; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<ChatViolation> ChatViolation { get; set; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]

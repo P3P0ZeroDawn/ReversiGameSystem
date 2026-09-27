@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\packages\EntityFramework.6.5.2\build\EntityFramework.props" Condition="Exists('..\..\packages\EntityFramework.6.5.2\build\EntityFramework.props')" />
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
     <LangVersion>10.0</LangVersion>
@@ -8,6 +9,70 @@
     <ProjectGuid>{C0D97A3D-3CA3-45B0-89F9-E92230FBECDF}</ProjectGuid>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\EntityFramework.6.5.2\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\EntityFramework.6.5.2\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Data" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\ReversiGameSystem.Server.Application\ReversiGameSystem.Server.Application.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Model\Account.cs;Model\AccountSettings.cs;Model\ChatMessage.cs;Model\ChatMute.cs;Model\ChatViolation.cs;Model\Friendship.cs;Model\GameMatch.cs;Model\GameMove.cs;Model\MatchParticipant.cs;Model\ModerationPattern.cs;Model\ModerationRule.cs;Model\SupportedLocale.cs;Model\VerificationCode.cs">
+      <DependentUpon>Database_model.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Model\Database_model.Context.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Database_model.Context.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Model\Database_model.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Database_model.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Model\Database_model.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Database_model.edmx</DependentUpon>
+    </Compile>
+    <None Remove="Model\Database_model.edmx" />
+    <EntityDeploy Include="Model\Database_model.edmx">
+      <Generator>EntityModelCodeGenerator</Generator>
+      <LastGenOutput>Database_model.Designer.cs</LastGenOutput>
+    </EntityDeploy>
+    <None Update="Model\Database_model.edmx.diagram">
+      <DependentUpon>Database_model.edmx</DependentUpon>
+    </None>
+    <None Remove="Model\Database_model.Context.tt" />
+    <Content Include="Model\Database_model.Context.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <CustomToolNamespace>ReversiGameSystem.Server.Persistence.Model</CustomToolNamespace>
+      <DependentUpon>Database_model.edmx</DependentUpon>
+      <LastGenOutput>Database_model.Context.cs</LastGenOutput>
+    </Content>
+    <None Remove="Model\Database_model.tt" />
+    <Content Include="Model\Database_model.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <CustomToolNamespace>ReversiGameSystem.Server.Persistence.Model</CustomToolNamespace>
+      <DependentUpon>Database_model.edmx</DependentUpon>
+      <LastGenOutput>Database_model.cs</LastGenOutput>
+    </Content>
+    <None Include="..\..\.env.example" Link=".env.example" />
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Restore NuGet packages to continue. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\..\packages\EntityFramework.6.5.2\build\EntityFramework.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\EntityFramework.6.5.2\build\EntityFramework.props'))" />
+    <Error Condition="!Exists('..\..\packages\EntityFramework.6.5.2\build\EntityFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\EntityFramework.6.5.2\build\EntityFramework.targets'))" />
+  </Target>
+  <Import Project="..\..\packages\EntityFramework.6.5.2\build\EntityFramework.targets" Condition="Exists('..\..\packages\EntityFramework.6.5.2\build\EntityFramework.targets')" />
 </Project>

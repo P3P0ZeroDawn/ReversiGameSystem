@@ -4,7 +4,7 @@ using System.Data.Entity.Core.EntityClient;
 using System.Data.SqlClient;
 using System.IO;
 
-namespace ReversiGameSystem;
+namespace ReversiGameSystem.Server.Persistence.Model;
 
 /// <summary>
 /// Creates the Entity Framework connection without storing machine-specific
@@ -16,11 +16,11 @@ internal static class DatabaseConnectionFactory
         "REVERSI_DB_CONNECTION_STRING";
 
     private const string ModelMetadata =
-        "res://*/Database_model.csdl|" +
-        "res://*/Database_model.ssdl|" +
-        "res://*/Database_model.msl";
+        "res://*/Model.Database_model.csdl|" +
+        "res://*/Model.Database_model.ssdl|" +
+        "res://*/Model.Database_model.msl";
 
-    internal static EntityConnection CreateEntityConnection()
+    internal static string CreateEntityConnectionString()
     {
         string providerConnectionString = GetProviderConnectionString();
 
@@ -53,7 +53,7 @@ internal static class DatabaseConnectionFactory
                 ProviderConnectionString = sqlBuilder.ConnectionString
             };
 
-        return new EntityConnection(entityBuilder.ConnectionString);
+        return entityBuilder.ConnectionString;
     }
 
     private static string GetProviderConnectionString()

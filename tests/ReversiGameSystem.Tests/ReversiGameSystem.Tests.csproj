@@ -15,6 +15,13 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\EntityFramework.6.5.2\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\EntityFramework.6.5.2\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Data" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml" />
@@ -110,6 +117,7 @@
     </Compile>
     <Compile Include="ContractSerializationTests.cs" />
     <Compile Include="LocalRuntimeTests.cs" />
+    <Compile Include="PersistenceModelTests.cs" />
     <Compile Include="ValidationPolicyTests.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -124,6 +132,10 @@
     <ProjectReference Include="..\..\src\ReversiGameSystem.Server.Application\ReversiGameSystem.Server.Application.csproj">
       <Project>{FE67E273-7E6A-4640-B804-37DD43ACCB7A}</Project>
       <Name>ReversiGameSystem.Server.Application</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\src\ReversiGameSystem.Server.Persistence\ReversiGameSystem.Server.Persistence.csproj">
+      <Project>{C0D97A3D-3CA3-45B0-89F9-E92230FBECDF}</Project>
+      <Name>ReversiGameSystem.Server.Persistence</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

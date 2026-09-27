@@ -7,22 +7,19 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace ReversiGameSystem
+namespace ReversiGameSystem.Server.Persistence.Model
 {
     using System;
     using System.Collections.Generic;
     
-    public partial class GameMove
+    public partial class ChatMessage
     {
         public long matchId { get; set; }
-        public int moveNumber { get; set; }
-        public byte seatNumber { get; set; }
-        public byte rowIndex { get; set; }
-        public byte columnIndex { get; set; }
-        public string moveSourceCode { get; set; }
-        public System.DateTime playedAtUtc { get; set; }
+        public int messageNumber { get; set; }
+        public byte senderSeatNumber { get; set; }
+        public string content { get; set; }
+        public System.DateTime sentAtUtc { get; set; }
     
-        public virtual GameMatch GameMatch { get; set; }
         public virtual MatchParticipant MatchParticipant { get; set; }
     }
 }
