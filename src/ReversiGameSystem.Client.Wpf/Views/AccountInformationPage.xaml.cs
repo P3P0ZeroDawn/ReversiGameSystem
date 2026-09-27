@@ -105,29 +105,19 @@ public partial class AccountInformationPage : Page
             return;
         }
 
-        try
-        {
-            PlayerProfileResponse response = await ClientRuntime.Services.PlayerService
-                .GetPlayerProfileAsync(new PlayerProfileRequest
-                {
-                    SessionToken = sessionToken
-                });
-            if (response.ResultCode == PlayerProfileResultCode.Success
-                && response.Profile != null)
+        PlayerProfileResponse response = await ClientRuntime.Services.PlayerService
+            .GetPlayerProfileAsync(new PlayerProfileRequest
             {
-                ApplyProfile(response.Profile);
-                return;
-            }
-
-            ShowProfileLoadError(response.ResultCode);
-        }
-        catch (Exception)
+                SessionToken = sessionToken
+            });
+        if (response.ResultCode == PlayerProfileResultCode.Success
+            && response.Profile != null)
         {
-            _dialogService.ShowError(
-                this,
-                "PlayerStatistics_ServerConnectionFailedTitle",
-                "PlayerStatistics_ServerConnectionFailedMessage");
+            ApplyProfile(response.Profile);
+            return;
         }
+
+        ShowProfileLoadError(response.ResultCode);
     }
 
     private void ApplyProfile(PlayerProfileDto profile)
@@ -136,9 +126,10 @@ public partial class AccountInformationPage : Page
         usernameTextBlock.Text = profile.Username;
         playerStatisticsControl.SetStatistics(profile.Statistics);
 
-        System.Windows.Media.Imaging.BitmapSource? profileImage =
-            ClientRuntime.TryLoadProfileImage(profile.ProfileImageUri);
-        if (profileImage == null)
+        if (!ClientRuntime.TryLoadProfileImage(
+            profile.ProfileImageUri,
+            out System.Windows.Media.Imaging.BitmapSource? profileImage)
+            || profileImage == null)
         {
             return;
         }

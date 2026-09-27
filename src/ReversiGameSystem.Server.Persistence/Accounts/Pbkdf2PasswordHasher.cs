@@ -5,6 +5,9 @@ using ReversiGameSystem.Server.Application.Accounts;
 
 namespace ReversiGameSystem.Server.Persistence.Accounts;
 
+/// <summary>
+/// Represents pbkdf2 password hasher.
+/// </summary>
 public sealed class Pbkdf2PasswordHasher : IPasswordHasher
 {
     private const string Algorithm = "PBKDF2-SHA256";
@@ -13,6 +16,11 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
     private const int SaltSize = 16;
     private const int HashSize = 32;
 
+    /// <summary>
+    /// Performs the hash operation.
+    /// </summary>
+    /// <param name="password">The password.</param>
+    /// <returns>The result of the operation.</returns>
     public string Hash(string password)
     {
         if (password == null)
@@ -26,7 +34,7 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
             random.GetBytes(salt);
         }
 
-        byte[] hash = Derive(password, salt, IterationCount, HashSize);
+        byte[] hash = Derive(password, salt, IterationCount);
         return string.Join(
             "$",
             Algorithm,
@@ -35,6 +43,12 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
             Convert.ToBase64String(hash));
     }
 
+    /// <summary>
+    /// Performs the verify operation.
+    /// </summary>
+    /// <param name="password">The password.</param>
+    /// <param name="encodedHash">The encoded hash.</param>
+    /// <returns>The result of the operation.</returns>
     public bool Verify(string password, string encodedHash)
     {
         if (password == null || string.IsNullOrWhiteSpace(encodedHash))
@@ -42,12 +56,23 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
             return false;
         }
 
+        if (!TryParse(encodedHash, out PasswordHashComponents? components)
+            || components == null)
+        {
+            return false;
+        }
+
+        byte[] actualHash = Derive(password, components.Salt, components.Iterations);
+        return FixedTimeEquals(components.Hash, actualHash);
+    }
+
+    private static bool TryParse(
+        string encodedHash,
+        out PasswordHashComponents? components)
+    {
+        components = null;
         string[] parts = encodedHash.Split('$');
-        if (parts.Length != 4
-            || !string.Equals(parts[0], Algorithm, StringComparison.Ordinal)
-            || !int.TryParse(parts[1], out int iterations)
-            || iterations < 1
-            || iterations > MaximumAcceptedIterationCount)
+        if (!HasValidHeader(parts, out int iterations))
         {
             return false;
         }
@@ -55,14 +80,14 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
         try
         {
             byte[] salt = Convert.FromBase64String(parts[2]);
-            byte[] expectedHash = Convert.FromBase64String(parts[3]);
-            if (salt.Length != SaltSize || expectedHash.Length != HashSize)
+            byte[] hash = Convert.FromBase64String(parts[3]);
+            if (salt.Length != SaltSize || hash.Length != HashSize)
             {
                 return false;
             }
 
-            byte[] actualHash = Derive(password, salt, iterations, expectedHash.Length);
-            return FixedTimeEquals(expectedHash, actualHash);
+            components = new PasswordHashComponents(iterations, salt, hash);
+            return true;
         }
         catch (FormatException)
         {
@@ -74,7 +99,17 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
         }
     }
 
-    private static byte[] Derive(string password, byte[] salt, int iterations, int size)
+    private static bool HasValidHeader(string[] parts, out int iterations)
+    {
+        iterations = 0;
+        return parts.Length == 4
+            && string.Equals(parts[0], Algorithm, StringComparison.Ordinal)
+            && int.TryParse(parts[1], out iterations)
+            && iterations >= 1
+            && iterations <= MaximumAcceptedIterationCount;
+    }
+
+    private static byte[] Derive(string password, byte[] salt, int iterations)
     {
         string normalizedPassword = password.Normalize(NormalizationForm.FormC);
         using (Rfc2898DeriveBytes deriveBytes = new Rfc2898DeriveBytes(
@@ -83,7 +118,7 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
             iterations,
             HashAlgorithmName.SHA256))
         {
-            return deriveBytes.GetBytes(size);
+            return deriveBytes.GetBytes(HashSize);
         }
     }
 
@@ -101,5 +136,21 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
         }
 
         return difference == 0;
+    }
+
+    private sealed class PasswordHashComponents
+    {
+        internal PasswordHashComponents(int iterations, byte[] salt, byte[] hash)
+        {
+            Iterations = iterations;
+            Salt = salt;
+            Hash = hash;
+        }
+
+        internal int Iterations { get; }
+
+        internal byte[] Salt { get; }
+
+        internal byte[] Hash { get; }
     }
 }

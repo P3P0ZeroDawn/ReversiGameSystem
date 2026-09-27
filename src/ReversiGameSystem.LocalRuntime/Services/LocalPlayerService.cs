@@ -9,21 +9,34 @@ using ReversiGameSystem.Server.Application.Players;
 
 namespace ReversiGameSystem.LocalRuntime.Services;
 
+/// <summary>
+/// Represents local player service.
+/// </summary>
 public sealed class LocalPlayerService : IPlayerService
 {
-    private readonly IGetPlayerProfileHandler getPlayerProfileHandler;
-    private readonly IGetLeaderboardHandler getLeaderboardHandler;
+    private readonly IGetPlayerProfileHandler _getPlayerProfileHandler;
+    private readonly IGetLeaderboardHandler _getLeaderboardHandler;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LocalPlayerService"/> class.
+    /// </summary>
+    /// <param name="getPlayerProfileHandler">The get player profile handler.</param>
+    /// <param name="getLeaderboardHandler">The get leaderboard handler.</param>
     public LocalPlayerService(
         IGetPlayerProfileHandler getPlayerProfileHandler,
         IGetLeaderboardHandler getLeaderboardHandler)
     {
-        this.getPlayerProfileHandler = getPlayerProfileHandler
+        _getPlayerProfileHandler = getPlayerProfileHandler
             ?? throw new ArgumentNullException(nameof(getPlayerProfileHandler));
-        this.getLeaderboardHandler = getLeaderboardHandler
+        _getLeaderboardHandler = getLeaderboardHandler
             ?? throw new ArgumentNullException(nameof(getLeaderboardHandler));
     }
 
+    /// <summary>
+    /// Performs the get player profile async operation.
+    /// </summary>
+    /// <param name="request">The request.</param>
+    /// <returns>The result of the operation.</returns>
     public async Task<PlayerProfileResponse> GetPlayerProfileAsync(PlayerProfileRequest request)
     {
         if (request == null)
@@ -31,16 +44,26 @@ public sealed class LocalPlayerService : IPlayerService
             throw new ArgumentNullException(nameof(request));
         }
 
-        PlayerProfileResult result = await getPlayerProfileHandler.ExecuteAsync(
+        PlayerProfileResult result = await _getPlayerProfileHandler.ExecuteAsync(
             new PlayerProfileQuery(request.SessionToken, request.AccountId));
 
-        return new PlayerProfileResponse
+        PlayerProfileResponse response = new PlayerProfileResponse
         {
-            ResultCode = Map(result.Outcome),
-            Profile = Map(result.Profile)
+            ResultCode = Map(result.Outcome)
         };
+        if (result.Profile != null)
+        {
+            response.Profile = Map(result.Profile);
+        }
+
+        return response;
     }
 
+    /// <summary>
+    /// Performs the get leaderboard async operation.
+    /// </summary>
+    /// <param name="request">The request.</param>
+    /// <returns>The result of the operation.</returns>
     public async Task<LeaderboardResponse> GetLeaderboardAsync(LeaderboardRequest request)
     {
         if (request == null)
@@ -48,7 +71,7 @@ public sealed class LocalPlayerService : IPlayerService
             throw new ArgumentNullException(nameof(request));
         }
 
-        LeaderboardResult result = await getLeaderboardHandler.ExecuteAsync(
+        LeaderboardResult result = await _getLeaderboardHandler.ExecuteAsync(
             new LeaderboardQuery(request.MaximumEntries));
 
         return new LeaderboardResponse
@@ -82,24 +105,22 @@ public sealed class LocalPlayerService : IPlayerService
         };
     }
 
-    private static PlayerProfileDto? Map(PlayerProfile? profile)
+    private static PlayerProfileDto Map(PlayerProfile profile)
     {
-        return profile == null
-            ? null
-            : new PlayerProfileDto
+        return new PlayerProfileDto
+        {
+            AccountId = profile.AccountId,
+            Username = profile.Username,
+            ProfileImageUri = profile.ProfileImageUri,
+            Statistics = new PlayerStatisticsDto
             {
-                AccountId = profile.AccountId,
-                Username = profile.Username,
-                ProfileImageUri = profile.ProfileImageUri,
-                Statistics = new PlayerStatisticsDto
-                {
-                    MatchesPlayed = profile.Statistics.MatchesPlayed,
-                    Wins = profile.Statistics.Wins,
-                    Losses = profile.Statistics.Losses,
-                    Draws = profile.Statistics.Draws,
-                    WinRate = profile.Statistics.WinRate
-                }
-            };
+                MatchesPlayed = profile.Statistics.MatchesPlayed,
+                Wins = profile.Statistics.Wins,
+                Losses = profile.Statistics.Losses,
+                Draws = profile.Statistics.Draws,
+                WinRate = profile.Statistics.WinRate
+            }
+        };
     }
 
     private static LeaderboardEntryDto Map(LeaderboardEntry entry)

@@ -12,15 +12,31 @@ internal static class ClientRuntime
 
     internal static LocalRuntimeServices Services => Runtime.Value;
 
-    internal static BitmapSource? TryLoadProfileImage(string? profileImageUri)
+    internal static bool TryLoadProfileImage(
+        string? profileImageUri,
+        out BitmapSource? profileImage)
     {
+        profileImage = null;
+        if (!TryResolveProfileImagePath(profileImageUri, out string? path))
+        {
+            return false;
+        }
+
+        return TryLoadBitmap(path, out profileImage);
+    }
+
+    private static bool TryResolveProfileImagePath(
+        string? profileImageUri,
+        out string? path)
+    {
+        path = null;
         string? profileImageDirectory = Services.ProfileImageDirectory;
         if (profileImageUri == null
             || string.IsNullOrWhiteSpace(profileImageUri)
             || profileImageDirectory == null
             || string.IsNullOrWhiteSpace(profileImageDirectory))
         {
-            return null;
+            return false;
         }
 
         string normalizedUri = profileImageUri.Replace('\\', '/');
@@ -28,15 +44,21 @@ internal static class ClientRuntime
         if (!normalizedUri.StartsWith(expectedPrefix, StringComparison.Ordinal)
             || normalizedUri.IndexOf('/', expectedPrefix.Length) >= 0)
         {
-            return null;
+            return false;
         }
 
-        string path = Path.Combine(
+        path = Path.Combine(
             profileImageDirectory,
             normalizedUri.Substring(expectedPrefix.Length));
-        if (!File.Exists(path))
+        return File.Exists(path);
+    }
+
+    private static bool TryLoadBitmap(string? path, out BitmapSource? profileImage)
+    {
+        profileImage = null;
+        if (path == null)
         {
-            return null;
+            return false;
         }
 
         try
@@ -47,15 +69,24 @@ internal static class ClientRuntime
             image.CacheOption = BitmapCacheOption.OnLoad;
             image.EndInit();
             image.Freeze();
-            return image;
+            profileImage = image;
+            return true;
         }
-        catch (Exception exception) when (
-            exception is IOException
-            || exception is UnauthorizedAccessException
-            || exception is NotSupportedException
-            || exception is ArgumentException)
+        catch (IOException)
         {
-            return null;
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+        catch (NotSupportedException)
+        {
+            return false;
+        }
+        catch (ArgumentException)
+        {
+            return false;
         }
     }
 }

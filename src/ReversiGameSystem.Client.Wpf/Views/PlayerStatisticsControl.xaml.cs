@@ -92,36 +92,26 @@ public partial class PlayerStatisticsControl : UserControl
         }
 
         ClearStatistics();
-        try
-        {
-            PlayerProfileResponse response = await ClientRuntime.Services.PlayerService
-                .GetPlayerProfileAsync(new PlayerProfileRequest
-                {
-                    SessionToken = sessionToken
-                });
-            if (response.ResultCode == PlayerProfileResultCode.Success
-                && response.Profile != null)
+        PlayerProfileResponse response = await ClientRuntime.Services.PlayerService
+            .GetPlayerProfileAsync(new PlayerProfileRequest
             {
-                SetStatistics(response.Profile.Statistics);
-                return;
-            }
-
-            string resourcePrefix = response.ResultCode ==
-                PlayerProfileResultCode.ServiceUnavailable
-                    ? "PlayerStatistics_ServerConnectionFailed"
-                    : "PlayerStatistics_RetrievalError";
-            _dialogService.ShowError(
-                this,
-                resourcePrefix + "Title",
-                resourcePrefix + "Message");
-        }
-        catch (Exception)
+                SessionToken = sessionToken
+            });
+        if (response.ResultCode == PlayerProfileResultCode.Success
+            && response.Profile != null)
         {
-            _dialogService.ShowError(
-                this,
-                "PlayerStatistics_ServerConnectionFailedTitle",
-                "PlayerStatistics_ServerConnectionFailedMessage");
+            SetStatistics(response.Profile.Statistics);
+            return;
         }
+
+        string resourcePrefix = response.ResultCode ==
+            PlayerProfileResultCode.ServiceUnavailable
+                ? "PlayerStatistics_ServerConnectionFailed"
+                : "PlayerStatistics_RetrievalError";
+        _dialogService.ShowError(
+            this,
+            resourcePrefix + "Title",
+            resourcePrefix + "Message");
     }
 
     private void ClearStatistics()

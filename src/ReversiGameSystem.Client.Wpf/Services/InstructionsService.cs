@@ -82,12 +82,27 @@ internal sealed class InstructionsService
             value = _resourceLookup(key);
             return !string.IsNullOrWhiteSpace(value);
         }
-        catch (Exception exception) when (
-            exception is InvalidOperationException
-            || exception is System.Resources.MissingManifestResourceException
-            || exception is System.Resources.MissingSatelliteAssemblyException
-            || exception is System.IO.IOException
-            || exception is BadImageFormatException)
+        catch (InvalidOperationException)
+        {
+            value = string.Empty;
+            return false;
+        }
+        catch (System.Resources.MissingManifestResourceException)
+        {
+            value = string.Empty;
+            return false;
+        }
+        catch (System.Resources.MissingSatelliteAssemblyException)
+        {
+            value = string.Empty;
+            return false;
+        }
+        catch (System.IO.IOException)
+        {
+            value = string.Empty;
+            return false;
+        }
+        catch (BadImageFormatException)
         {
             value = string.Empty;
             return false;

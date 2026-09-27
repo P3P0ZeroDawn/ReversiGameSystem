@@ -8,8 +8,16 @@ using ReversiGameSystem.Server.Persistence.Model;
 
 namespace ReversiGameSystem.Server.Persistence.Accounts;
 
+/// <summary>
+/// Represents entity framework account login store.
+/// </summary>
 public sealed class EntityFrameworkAccountLoginStore : IAccountLoginStore
 {
+    /// <summary>
+    /// Performs the find by login async operation.
+    /// </summary>
+    /// <param name="login">The login.</param>
+    /// <returns>The result of the operation.</returns>
     public async Task<AccountLoginLookupResult> FindByLoginAsync(string login)
     {
         if (string.IsNullOrWhiteSpace(login))
@@ -39,10 +47,15 @@ public sealed class EntityFrameworkAccountLoginStore : IAccountLoginStore
                         account.statusCode));
             }
         }
-        catch (Exception exception) when (
-            exception is EntityException
-            || exception is SqlException
-            || exception is InvalidOperationException)
+        catch (EntityException)
+        {
+            return new AccountLoginLookupResult(AccountLoginLookupOutcome.Unavailable);
+        }
+        catch (SqlException)
+        {
+            return new AccountLoginLookupResult(AccountLoginLookupOutcome.Unavailable);
+        }
+        catch (InvalidOperationException)
         {
             return new AccountLoginLookupResult(AccountLoginLookupOutcome.Unavailable);
         }

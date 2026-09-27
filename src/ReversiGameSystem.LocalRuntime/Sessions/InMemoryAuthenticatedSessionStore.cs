@@ -6,30 +6,49 @@ using ReversiGameSystem.Server.Application.Accounts;
 
 namespace ReversiGameSystem.LocalRuntime.Sessions;
 
+/// <summary>
+/// Represents in memory authenticated session store.
+/// </summary>
 public sealed class InMemoryAuthenticatedSessionStore : IAuthenticatedSessionStore
 {
     private static readonly TimeSpan DefaultLifetime = TimeSpan.FromHours(8);
-    private readonly ConcurrentDictionary<string, AuthenticatedSessionRecord> sessions =
+    private readonly ConcurrentDictionary<string, AuthenticatedSessionRecord> _sessions =
         new ConcurrentDictionary<string, AuthenticatedSessionRecord>(StringComparer.Ordinal);
-    private readonly IUtcClock clock;
-    private readonly TimeSpan sessionLifetime;
+    private readonly IUtcClock _clock;
+    private readonly TimeSpan _sessionLifetime;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InMemoryAuthenticatedSessionStore"/> class.
+    /// </summary>
+    /// <param name="clock">The clock.</param>
     public InMemoryAuthenticatedSessionStore(IUtcClock clock)
         : this(clock, DefaultLifetime)
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InMemoryAuthenticatedSessionStore"/> class.
+    /// </summary>
+    /// <param name="clock">The clock.</param>
+    /// <param name="sessionLifetime">The session lifetime.</param>
     public InMemoryAuthenticatedSessionStore(IUtcClock clock, TimeSpan sessionLifetime)
     {
-        this.clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         if (sessionLifetime <= TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(sessionLifetime));
         }
 
-        this.sessionLifetime = sessionLifetime;
+        _sessionLifetime = sessionLifetime;
     }
 
+    /// <summary>
+    /// Performs the create async operation.
+    /// </summary>
+    /// <param name="accountId">The account id.</param>
+    /// <param name="username">The username.</param>
+    /// <param name="emailAddress">The email address.</param>
+    /// <returns>The result of the operation.</returns>
     public Task<AuthenticatedSessionRecord> CreateAsync(
         long accountId,
         string username,
@@ -43,24 +62,29 @@ public sealed class InMemoryAuthenticatedSessionStore : IAuthenticatedSessionSto
                 accountId,
                 username,
                 emailAddress,
-                clock.UtcNow.Add(sessionLifetime));
+                _clock.UtcNow.Add(_sessionLifetime));
         }
-        while (!sessions.TryAdd(session.SessionToken, session));
+        while (!_sessions.TryAdd(session.SessionToken, session));
 
         return Task.FromResult(session);
     }
 
+    /// <summary>
+    /// Performs the find async operation.
+    /// </summary>
+    /// <param name="sessionToken">The session token.</param>
+    /// <returns>The result of the operation.</returns>
     public Task<AuthenticatedSessionRecord?> FindAsync(string sessionToken)
     {
         if (string.IsNullOrWhiteSpace(sessionToken)
-            || !sessions.TryGetValue(sessionToken, out AuthenticatedSessionRecord? session))
+            || !_sessions.TryGetValue(sessionToken, out AuthenticatedSessionRecord? session))
         {
             return Task.FromResult<AuthenticatedSessionRecord?>(null);
         }
 
-        if (session.ExpiresAtUtc <= clock.UtcNow)
+        if (session.ExpiresAtUtc <= _clock.UtcNow)
         {
-            sessions.TryRemove(sessionToken, out _);
+            _sessions.TryRemove(sessionToken, out _);
             return Task.FromResult<AuthenticatedSessionRecord?>(null);
         }
 

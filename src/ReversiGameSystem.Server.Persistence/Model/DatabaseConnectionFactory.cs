@@ -70,9 +70,10 @@ internal static class DatabaseConnectionFactory
             && TryReadVariable(
                 environmentFile,
                 ConnectionStringVariable,
-                out configuredValue))
+                out string? fileValue)
+            && fileValue != null)
         {
-            return configuredValue!;
+            return fileValue;
         }
 
         throw new InvalidOperationException(

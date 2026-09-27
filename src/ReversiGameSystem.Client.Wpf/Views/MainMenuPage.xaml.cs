@@ -62,41 +62,41 @@ public partial class MainMenuPage : Page
     private async System.Threading.Tasks.Task LoadLeaderboardAsync()
     {
         _leaderboardLoaded = true;
-        try
-        {
-            LeaderboardResponse response = await ClientRuntime.Services.PlayerService
-                .GetLeaderboardAsync(new LeaderboardRequest { MaximumEntries = 10 });
-            if (response.ResultCode != LeaderboardResultCode.Success)
-            {
-                ShowLeaderboardError();
-                return;
-            }
-
-            CultureInfo culture = CultureInfo.GetCultureInfo(
-                LocalizationManager.Instance.CultureName);
-            List<LeaderboardItem> items = new List<LeaderboardItem>();
-            foreach (LeaderboardEntryDto entry in response.Entries)
-            {
-                items.Add(new LeaderboardItem
-                {
-                    Position = "#" + entry.Rank.ToString("N0", culture),
-                    Username = entry.Username,
-                    WinsText = string.Format(
-                        culture,
-                        LocalizationManager.Instance["MainMenu_TopWinnersWinsFormat"],
-                        entry.Wins)
-                });
-            }
-
-            topWinnersItemsControl.ItemsSource = items;
-            topWinnersEmptyTextBlock.Visibility = items.Count == 0
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-        }
-        catch (Exception)
+        LeaderboardResponse response = await ClientRuntime.Services.PlayerService
+            .GetLeaderboardAsync(new LeaderboardRequest { MaximumEntries = 10 });
+        if (response.ResultCode != LeaderboardResultCode.Success)
         {
             ShowLeaderboardError();
+            return;
         }
+
+        CultureInfo culture = CultureInfo.GetCultureInfo(
+            LocalizationManager.Instance.CultureName);
+        List<LeaderboardItem> items = new List<LeaderboardItem>();
+        foreach (LeaderboardEntryDto entry in response.Entries)
+        {
+            items.Add(CreateLeaderboardItem(entry, culture));
+        }
+
+        topWinnersItemsControl.ItemsSource = items;
+        topWinnersEmptyTextBlock.Visibility = items.Count == 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private static LeaderboardItem CreateLeaderboardItem(
+        LeaderboardEntryDto entry,
+        CultureInfo culture)
+    {
+        return new LeaderboardItem
+        {
+            Position = "#" + entry.Rank.ToString("N0", culture),
+            Username = entry.Username,
+            WinsText = string.Format(
+                culture,
+                LocalizationManager.Instance["MainMenu_TopWinnersWinsFormat"],
+                entry.Wins)
+        };
     }
 
     private void ShowLeaderboardError()

@@ -9,11 +9,19 @@ using ReversiGameSystem.Server.Persistence.Model;
 
 namespace ReversiGameSystem.Server.Persistence.Accounts;
 
+/// <summary>
+/// Represents entity framework account registration store.
+/// </summary>
 public sealed class EntityFrameworkAccountRegistrationStore : IAccountRegistrationStore
 {
     private const string ActiveStatusCode = "ACTIVE";
     private const string StandardPieceStyleCode = "STANDARD";
 
+    /// <summary>
+    /// Performs the register async operation.
+    /// </summary>
+    /// <param name="registration">The registration.</param>
+    /// <returns>The result of the operation.</returns>
     public async Task<AccountRegistrationStoreResult> RegisterAsync(
         AccountRegistrationData registration)
     {
@@ -62,10 +70,17 @@ public sealed class EntityFrameworkAccountRegistrationStore : IAccountRegistrati
         {
             return MapUpdateException(exception);
         }
-        catch (Exception exception) when (
-            exception is EntityException
-            || exception is SqlException
-            || exception is InvalidOperationException)
+        catch (EntityException)
+        {
+            return new AccountRegistrationStoreResult(
+                AccountRegistrationStoreOutcome.Unavailable);
+        }
+        catch (SqlException)
+        {
+            return new AccountRegistrationStoreResult(
+                AccountRegistrationStoreOutcome.Unavailable);
+        }
+        catch (InvalidOperationException)
         {
             return new AccountRegistrationStoreResult(
                 AccountRegistrationStoreOutcome.Unavailable);
@@ -97,8 +112,9 @@ public sealed class EntityFrameworkAccountRegistrationStore : IAccountRegistrati
     private static AccountRegistrationStoreResult MapUpdateException(
         DbUpdateException exception)
     {
-        SqlException? sqlException = FindSqlException(exception);
-        if (sqlException == null || (sqlException.Number != 2601 && sqlException.Number != 2627))
+        if (!TryFindSqlException(exception, out SqlException? sqlException)
+            || sqlException == null
+            || (sqlException.Number != 2601 && sqlException.Number != 2627))
         {
             return new AccountRegistrationStoreResult(
                 AccountRegistrationStoreOutcome.Unavailable);
@@ -123,19 +139,23 @@ public sealed class EntityFrameworkAccountRegistrationStore : IAccountRegistrati
         return new AccountRegistrationStoreResult(AccountRegistrationStoreOutcome.Unavailable);
     }
 
-    private static SqlException? FindSqlException(Exception exception)
+    private static bool TryFindSqlException(
+        Exception exception,
+        out SqlException? sqlException)
     {
         Exception? current = exception;
         while (current != null)
         {
-            if (current is SqlException sqlException)
+            if (current is SqlException currentSqlException)
             {
-                return sqlException;
+                sqlException = currentSqlException;
+                return true;
             }
 
             current = current.InnerException;
         }
 
-        return null;
+        sqlException = null;
+        return false;
     }
 }

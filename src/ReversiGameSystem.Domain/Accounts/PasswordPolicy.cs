@@ -8,9 +8,20 @@ namespace ReversiGameSystem.Domain.Accounts;
 /// </summary>
 public static class PasswordPolicy
 {
+    /// <summary>
+    /// Represents the minimum length.
+    /// </summary>
     public const int MinimumLength = 8;
+    /// <summary>
+    /// Represents the maximum length.
+    /// </summary>
     public const int MaximumLength = 128;
 
+    /// <summary>
+    /// Performs the validate operation.
+    /// </summary>
+    /// <param name="password">The password.</param>
+    /// <returns>The result of the operation.</returns>
     public static PasswordValidationError Validate(string password)
     {
         int characterCount = 0;
@@ -123,14 +134,41 @@ public static class PasswordPolicy
     }
 }
 
+/// <summary>
+/// Defines the supported password validation error values.
+/// </summary>
 public enum PasswordValidationError
 {
+    /// <summary>
+    /// Represents none.
+    /// </summary>
     None,
+    /// <summary>
+    /// Represents too short.
+    /// </summary>
     TooShort,
+    /// <summary>
+    /// Represents too long.
+    /// </summary>
     TooLong,
+    /// <summary>
+    /// Represents unsupported character.
+    /// </summary>
     UnsupportedCharacter,
+    /// <summary>
+    /// Represents missing uppercase letter.
+    /// </summary>
     MissingUppercaseLetter,
+    /// <summary>
+    /// Represents missing lowercase letter.
+    /// </summary>
     MissingLowercaseLetter,
+    /// <summary>
+    /// Represents missing digit.
+    /// </summary>
     MissingDigit,
+    /// <summary>
+    /// Represents missing symbol.
+    /// </summary>
     MissingSymbol
 }

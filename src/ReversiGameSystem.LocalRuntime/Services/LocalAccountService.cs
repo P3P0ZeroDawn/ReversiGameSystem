@@ -6,21 +6,34 @@ using ReversiGameSystem.Server.Application.Accounts;
 
 namespace ReversiGameSystem.LocalRuntime.Services;
 
+/// <summary>
+/// Represents local account service.
+/// </summary>
 public sealed class LocalAccountService : IAccountService
 {
-    private readonly ICreateAccountHandler createAccountHandler;
-    private readonly ILoginHandler loginHandler;
+    private readonly ICreateAccountHandler _createAccountHandler;
+    private readonly ILoginHandler _loginHandler;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LocalAccountService"/> class.
+    /// </summary>
+    /// <param name="createAccountHandler">The create account handler.</param>
+    /// <param name="loginHandler">The login handler.</param>
     public LocalAccountService(
         ICreateAccountHandler createAccountHandler,
         ILoginHandler loginHandler)
     {
-        this.createAccountHandler = createAccountHandler
+        _createAccountHandler = createAccountHandler
             ?? throw new ArgumentNullException(nameof(createAccountHandler));
-        this.loginHandler = loginHandler
+        _loginHandler = loginHandler
             ?? throw new ArgumentNullException(nameof(loginHandler));
     }
 
+    /// <summary>
+    /// Performs the create account async operation.
+    /// </summary>
+    /// <param name="request">The request.</param>
+    /// <returns>The result of the operation.</returns>
     public async Task<CreateAccountResponse> CreateAccountAsync(CreateAccountRequest request)
     {
         if (request == null)
@@ -34,7 +47,7 @@ public sealed class LocalAccountService : IAccountService
                 (byte[])request.ProfileImage.Content.Clone(),
                 request.ProfileImage.MediaType);
 
-        CreateAccountResult result = await createAccountHandler.ExecuteAsync(
+        CreateAccountResult result = await _createAccountHandler.ExecuteAsync(
             new CreateAccountCommand(
                 request.Username,
                 request.EmailAddress,
@@ -49,6 +62,11 @@ public sealed class LocalAccountService : IAccountService
         };
     }
 
+    /// <summary>
+    /// Performs the login async operation.
+    /// </summary>
+    /// <param name="request">The request.</param>
+    /// <returns>The result of the operation.</returns>
     public async Task<LoginResponse> LoginAsync(LoginRequest request)
     {
         if (request == null)
@@ -56,14 +74,19 @@ public sealed class LocalAccountService : IAccountService
             throw new ArgumentNullException(nameof(request));
         }
 
-        LoginResult result = await loginHandler.ExecuteAsync(
+        LoginResult result = await _loginHandler.ExecuteAsync(
             new LoginCommand(request.Login, request.Password));
 
-        return new LoginResponse
+        LoginResponse response = new LoginResponse
         {
-            ResultCode = Map(result.Outcome),
-            Session = Map(result.Session)
+            ResultCode = Map(result.Outcome)
         };
+        if (result.Session != null)
+        {
+            response.Session = Map(result.Session);
+        }
+
+        return response;
     }
 
     private static CreateAccountResultCode Map(CreateAccountOutcome outcome)
@@ -75,8 +98,10 @@ public sealed class LocalAccountService : IAccountService
             CreateAccountOutcome.InvalidUsername => CreateAccountResultCode.InvalidUsername,
             CreateAccountOutcome.InvalidEmailAddress => CreateAccountResultCode.InvalidEmailAddress,
             CreateAccountOutcome.InvalidPassword => CreateAccountResultCode.InvalidPassword,
-            CreateAccountOutcome.UsernameAlreadyExists => CreateAccountResultCode.UsernameAlreadyExists,
-            CreateAccountOutcome.EmailAddressAlreadyExists => CreateAccountResultCode.EmailAddressAlreadyExists,
+            CreateAccountOutcome.UsernameAlreadyExists =>
+                CreateAccountResultCode.UsernameAlreadyExists,
+            CreateAccountOutcome.EmailAddressAlreadyExists =>
+                CreateAccountResultCode.EmailAddressAlreadyExists,
             CreateAccountOutcome.ServiceUnavailable => CreateAccountResultCode.ServiceUnavailable,
             _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null)
         };
@@ -95,16 +120,14 @@ public sealed class LocalAccountService : IAccountService
         };
     }
 
-    private static AuthenticatedSessionDto? Map(AuthenticatedSession? session)
+    private static AuthenticatedSessionDto Map(AuthenticatedSession session)
     {
-        return session == null
-            ? null
-            : new AuthenticatedSessionDto
-            {
-                SessionToken = session.SessionToken,
-                AccountId = session.AccountId,
-                Username = session.Username,
-                EmailAddress = session.EmailAddress
-            };
+        return new AuthenticatedSessionDto
+        {
+            SessionToken = session.SessionToken,
+            AccountId = session.AccountId,
+            Username = session.Username,
+            EmailAddress = session.EmailAddress
+        };
     }
 }

@@ -110,29 +110,39 @@ public sealed class LocalizationManager : INotifyPropertyChanged
                 ? CultureInfo.InvariantCulture
                 : CultureInfo.GetCultureInfo(cultureName);
             ResourceSet? target = manager.GetResourceSet(requestedCulture, true, false);
-            if (source == null || target == null)
-            {
-                return false;
-            }
-
-            foreach (DictionaryEntry entry in source)
-            {
-                if (entry.Key is string key && target.GetString(key) == null)
-                {
-                    return false;
-                }
-            }
-
-            return true;
+            return source != null
+                && target != null
+                && ContainsAllResources(source, target);
         }
-        catch (Exception exception) when (
-            exception is MissingManifestResourceException
-            || exception is MissingSatelliteAssemblyException
-            || exception is IOException
-            || exception is BadImageFormatException)
+        catch (MissingManifestResourceException)
         {
             return false;
         }
+        catch (MissingSatelliteAssemblyException)
+        {
+            return false;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (BadImageFormatException)
+        {
+            return false;
+        }
+    }
+
+    private static bool ContainsAllResources(ResourceSet source, ResourceSet target)
+    {
+        foreach (DictionaryEntry entry in source)
+        {
+            if (entry.Key is string key && target.GetString(key) == null)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private void SetCulture(string cultureName)

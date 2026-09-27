@@ -57,12 +57,6 @@ public partial class LoginScreenPage : Page
                 });
             HandleLoginResponse(response);
         }
-        catch (Exception)
-        {
-            ShowLoginError(
-                "LoginScreen_ServiceUnavailableTitle",
-                "LoginScreen_ServiceUnavailableMessage");
-        }
         finally
         {
             loginButton.IsEnabled = true;

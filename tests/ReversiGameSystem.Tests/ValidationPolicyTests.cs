@@ -46,6 +46,8 @@ internal static class ValidationPolicyTestRunner
         LocalRuntimeTests localRuntimeTests = new LocalRuntimeTests();
         PersistenceModelTests persistenceModelTests = new PersistenceModelTests();
         PlayerProfileHandlerTests playerProfileTests = new PlayerProfileHandlerTests();
+        ProfileImageStoreIntegrationTests profileImageStoreTests =
+            new ProfileImageStoreIntegrationTests();
         Action[] tests =
         {
             emailTests.Validate_OrdinaryAddress_ReturnsNone,
@@ -179,7 +181,8 @@ internal static class ValidationPolicyTestRunner
             contractTests.LoginResponse_RoundTrip_PreservesSession,
             contractTests.PlayerProfileResponse_RoundTrip_PreservesStatistics,
             contractTests.LeaderboardResponse_RoundTrip_PreservesEntries,
-            contractTests.ServiceContracts_DeclareExpectedOperations,
+            contractTests.AccountServiceContract_DeclaredOperations_MatchesExpectedCount,
+            contractTests.PlayerServiceContract_DeclaredOperations_MatchesExpectedCount,
             createAccountTests.ExecuteAsync_ValidRequest_StoresAccount,
             createAccountTests.ExecuteAsync_MissingRequiredValue_ReturnsInvalidRequest,
             createAccountTests.ExecuteAsync_InvalidFields_ReturnSpecificOutcomes,
@@ -187,11 +190,11 @@ internal static class ValidationPolicyTestRunner
             createAccountTests.ExecuteAsync_DuplicateUsername_RemovesStoredImage,
             createAccountTests.ExecuteAsync_UnsupportedLocale_ReturnsInvalidRequest,
             createAccountTests.PasswordHasher_HashAndVerify_UsesSaltedPbkdf2,
-            createAccountTests.ProfileImageStore_SaveAndDelete_UsesRelativeUri,
+            profileImageStoreTests.SaveAndDelete_ValidImage_UsesRelativeUri,
             leaderboardTests.ExecuteAsync_ValidRequest_ReturnsRankedEntries,
             leaderboardTests.ExecuteAsync_InvalidMaximum_ReturnsInvalidRequest,
             leaderboardTests.ExecuteAsync_UnavailableStore_ReturnsServiceUnavailable,
-            leaderboardTests.ExecuteAsync_StoreFailure_ReturnsServiceUnavailable,
+            leaderboardTests.ExecuteAsync_StoreFailure_PropagatesException,
             loginTests.ExecuteAsync_ValidCredentials_CreatesSession,
             loginTests.ExecuteAsync_MissingCredentials_ReturnsInvalidRequest,
             loginTests.ExecuteAsync_UnknownAccount_ReturnsInvalidCredentials,
@@ -687,9 +690,10 @@ internal sealed class ChatServiceTests
         // Assert
         TestAssert.AreEqual(ChatSendResult.Success, result);
         TestAssert.AreEqual(true, message != null);
-        TestAssert.AreEqual("Pedro", message!.SenderUsername);
-        TestAssert.AreEqual("Good move!", message.Content);
-        TestAssert.AreEqual(now, message.SentAtUtc);
+        ChatMessage actualMessage = TestAssert.IsNotNull(message);
+        TestAssert.AreEqual("Pedro", actualMessage.SenderUsername);
+        TestAssert.AreEqual("Good move!", actualMessage.Content);
+        TestAssert.AreEqual(now, actualMessage.SentAtUtc);
         TestAssert.AreEqual(1, GetMessages(service).Count);
     }
 
@@ -812,7 +816,7 @@ internal sealed class ChatServiceTests
         TestAssert.AreEqual(ChatSendResult.PlayerMuted, third);
         TestAssert.AreEqual(
             now.Add(ChatStore.MuteDuration),
-            muteEndsAtUtc!.Value);
+            TestAssert.HasValue(muteEndsAtUtc));
         TestAssert.AreEqual(3, store.GetInfringementCount("Pedro"));
         TestAssert.AreEqual(0, GetMessages(service).Count);
     }
@@ -836,7 +840,7 @@ internal sealed class ChatServiceTests
 
         // Act
         ChatSendResult mutedResult = service.Send("Good move", out _, out _);
-        now = muteEndsAtUtc!.Value.AddSeconds(1);
+        now = TestAssert.HasValue(muteEndsAtUtc).AddSeconds(1);
         ChatSendResult successResult = service.Send(
             "Good move",
             out ChatMessage? message,
@@ -974,8 +978,9 @@ internal sealed class InstructionsServiceTests
         // Assert
         TestAssert.AreEqual(InstructionsLoadResult.Success, result);
         TestAssert.AreEqual(true, content != null);
-        TestAssert.AreEqual("How to play", content!.Title);
-        TestAssert.AreEqual("Rules", content.Message);
+        InstructionsContent actualContent = TestAssert.IsNotNull(content);
+        TestAssert.AreEqual("How to play", actualContent.Title);
+        TestAssert.AreEqual("Rules", actualContent.Message);
     }
 
     internal void TryLoadForMatch_CompleteResources_AddsContext()
@@ -991,7 +996,7 @@ internal sealed class InstructionsServiceTests
 
         // Assert
         TestAssert.AreEqual(InstructionsLoadResult.Success, result);
-        TestAssert.AreEqual("dark / 40 / Rules", content!.Message);
+        TestAssert.AreEqual("dark / 40 / Rules", TestAssert.IsNotNull(content).Message);
     }
 
     internal void TryLoadGeneral_MissingResource_ReturnsError()
@@ -1326,7 +1331,7 @@ internal sealed class GameMoveServiceTests
         // Assert
         TestAssert.AreEqual(GameMoveResult.Success, result);
         TestAssert.AreEqual(true, move != null);
-        TestAssert.AreEqual(false, move!.WasAutomatic);
+        TestAssert.AreEqual(false, TestAssert.IsNotNull(move).WasAutomatic);
         TestAssert.AreEqual<DiscColor?>(null, skippedColor);
         TestAssert.AreEqual(1, session.Moves.Count);
         TestAssert.AreEqual(4, session.Board.Count(DiscColor.Black));
@@ -1479,8 +1484,9 @@ internal sealed class GameMoveServiceTests
         // Assert
         TestAssert.AreEqual(TurnTimeoutResult.AutomaticMove, result);
         TestAssert.AreEqual(true, move != null);
-        TestAssert.AreEqual(true, move!.WasAutomatic);
-        TestAssert.AreEqual(MatchMoveOrigin.Timeout, move.Origin);
+        MatchMove actualMove = TestAssert.IsNotNull(move);
+        TestAssert.AreEqual(true, actualMove.WasAutomatic);
+        TestAssert.AreEqual(MatchMoveOrigin.Timeout, actualMove.Origin);
         TestAssert.AreEqual(1, session.Moves.Count);
         TestAssert.AreEqual(1, session.GetConsecutiveTimeouts(DiscColor.Black));
         TestAssert.AreEqual(DiscColor.White, session.CurrentTurnColor);
@@ -1534,7 +1540,7 @@ internal sealed class GameMoveServiceTests
         // Assert
         TestAssert.AreEqual(GameMoveResult.Success, result);
         TestAssert.AreEqual(true, move != null);
-        TestAssert.AreEqual(MatchMoveOrigin.System, move!.Origin);
+        TestAssert.AreEqual(MatchMoveOrigin.System, TestAssert.IsNotNull(move).Origin);
         TestAssert.AreEqual(2, session.Moves.Count);
         TestAssert.AreEqual(DiscColor.Black, session.CurrentTurnColor);
     }
@@ -1637,13 +1643,14 @@ internal sealed class JoinMatchServiceTests
         // Assert
         TestAssert.AreEqual(JoinMatchResult.Success, result);
         TestAssert.AreEqual(true, session != null);
-        TestAssert.AreEqual(MatchState.InProgress, session!.State);
-        TestAssert.AreEqual("Ana", session.CreatorName);
-        TestAssert.AreEqual("Pedro", session.OpponentName);
-        TestAssert.AreEqual("Pedro", session.LocalPlayerName);
-        TestAssert.AreEqual(DiscColor.White, session.LocalPlayerColor);
-        TestAssert.AreEqual(2, session.Board.Count(DiscColor.Black));
-        TestAssert.AreEqual(2, session.Board.Count(DiscColor.White));
+        MatchSession actualSession = TestAssert.IsNotNull(session);
+        TestAssert.AreEqual(MatchState.InProgress, actualSession.State);
+        TestAssert.AreEqual("Ana", actualSession.CreatorName);
+        TestAssert.AreEqual("Pedro", actualSession.OpponentName);
+        TestAssert.AreEqual("Pedro", actualSession.LocalPlayerName);
+        TestAssert.AreEqual(DiscColor.White, actualSession.LocalPlayerColor);
+        TestAssert.AreEqual(2, actualSession.Board.Count(DiscColor.Black));
+        TestAssert.AreEqual(2, actualSession.Board.Count(DiscColor.White));
     }
 
     internal void TryJoinByCode_AvailableMatch_PreservesGuestSession()
@@ -1658,9 +1665,10 @@ internal sealed class JoinMatchServiceTests
         // Assert
         TestAssert.AreEqual(JoinMatchResult.Success, result);
         TestAssert.AreEqual(true, session != null);
-        TestAssert.AreEqual("Invitado", session!.GuestName);
-        TestAssert.AreEqual("Invitado", session.LocalPlayerName);
-        TestAssert.AreEqual(MatchState.InProgress, session.State);
+        MatchSession actualSession = TestAssert.IsNotNull(session);
+        TestAssert.AreEqual("Invitado", actualSession.GuestName);
+        TestAssert.AreEqual("Invitado", actualSession.LocalPlayerName);
+        TestAssert.AreEqual(MatchState.InProgress, actualSession.State);
         TestAssert.AreEqual(JoinMatchResult.MatchCodeNotAvailable, secondAttempt);
     }
 }
@@ -1866,8 +1874,9 @@ internal sealed class ReversiBoardTests
         // Assert
         TestAssert.AreEqual(true, applied);
         TestAssert.AreEqual(true, updatedBoard != null);
-        TestAssert.AreEqual(4, updatedBoard!.Count(DiscColor.Black));
-        TestAssert.AreEqual(1, updatedBoard.Count(DiscColor.White));
+        ReversiBoard actualBoard = TestAssert.IsNotNull(updatedBoard);
+        TestAssert.AreEqual(4, actualBoard.Count(DiscColor.Black));
+        TestAssert.AreEqual(1, actualBoard.Count(DiscColor.White));
         TestAssert.AreEqual(2, board.Count(DiscColor.Black));
         TestAssert.AreEqual(2, board.Count(DiscColor.White));
     }
@@ -1888,8 +1897,9 @@ internal sealed class ReversiBoardTests
         // Assert
         TestAssert.AreEqual(true, applied);
         TestAssert.AreEqual(true, updatedBoard != null);
-        TestAssert.AreEqual(17, updatedBoard!.Count(DiscColor.Black));
-        TestAssert.AreEqual(0, updatedBoard.Count(DiscColor.White));
+        ReversiBoard actualBoard = TestAssert.IsNotNull(updatedBoard);
+        TestAssert.AreEqual(17, actualBoard.Count(DiscColor.Black));
+        TestAssert.AreEqual(0, actualBoard.Count(DiscColor.White));
     }
 
     internal void FromRows_ValidSnapshot_ParsesEveryCell()
@@ -2596,5 +2606,42 @@ internal static class TestAssert
         {
             throw new InvalidOperationException($"Expected {expected}, but received {actual}.");
         }
+    }
+
+    internal static TValue IsNotNull<TValue>(TValue? value)
+        where TValue : class
+    {
+        if (value == null)
+        {
+            throw new InvalidOperationException("Expected a non-null value.");
+        }
+
+        return value;
+    }
+
+    internal static TValue HasValue<TValue>(TValue? value)
+        where TValue : struct
+    {
+        if (!value.HasValue)
+        {
+            throw new InvalidOperationException("Expected a value.");
+        }
+
+        return value.Value;
+    }
+
+    internal static TException Throws<TException>(Action action)
+        where TException : Exception
+    {
+        try
+        {
+            action();
+        }
+        catch (TException exception)
+        {
+            return exception;
+        }
+
+        throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
     }
 }

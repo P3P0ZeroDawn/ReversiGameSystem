@@ -9,6 +9,7 @@ internal sealed class PlayerProfileHandlerTests
 {
     internal void ExecuteAsync_CurrentPlayer_ReturnsCalculatedStatistics()
     {
+        // Arrange
         PlayerProfileSessionStoreStub sessionStore = new PlayerProfileSessionStoreStub
         {
             Session = CreateSession(42)
@@ -27,11 +28,13 @@ internal sealed class PlayerProfileHandlerTests
         };
         GetPlayerProfileHandler handler = new GetPlayerProfileHandler(sessionStore, profileStore);
 
+        // Act
         PlayerProfileResult result = handler.ExecuteAsync(
             new PlayerProfileQuery("session-token", null))
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(PlayerProfileOutcome.Success, result.Outcome);
         TestAssert.AreEqual("session-token", sessionStore.SessionToken);
         TestAssert.AreEqual<long?>(42, profileStore.AccountId);
@@ -46,6 +49,7 @@ internal sealed class PlayerProfileHandlerTests
 
     internal void ExecuteAsync_PublicProfile_UsesRequestedAccount()
     {
+        // Arrange
         PlayerProfileStoreStub profileStore = new PlayerProfileStoreStub
         {
             Result = new PlayerProfileStoreResult(
@@ -56,11 +60,13 @@ internal sealed class PlayerProfileHandlerTests
             new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
             profileStore);
 
+        // Act
         PlayerProfileResult result = handler.ExecuteAsync(
             new PlayerProfileQuery("session-token", 99))
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(PlayerProfileOutcome.Success, result.Outcome);
         TestAssert.AreEqual<long?>(99, profileStore.AccountId);
         TestAssert.AreEqual(0d, result.Profile?.Statistics.WinRate);
@@ -68,37 +74,44 @@ internal sealed class PlayerProfileHandlerTests
 
     internal void ExecuteAsync_MissingOrInvalidInput_ReturnsInvalidRequest()
     {
+        // Arrange
         GetPlayerProfileHandler handler = new GetPlayerProfileHandler(
             new PlayerProfileSessionStoreStub(),
             new PlayerProfileStoreStub());
 
+        // Act
         PlayerProfileResult missingToken = handler.ExecuteAsync(
             new PlayerProfileQuery("", null)).GetAwaiter().GetResult();
         PlayerProfileResult invalidAccount = handler.ExecuteAsync(
             new PlayerProfileQuery("session-token", 0)).GetAwaiter().GetResult();
 
+        // Assert
         TestAssert.AreEqual(PlayerProfileOutcome.InvalidRequest, missingToken.Outcome);
         TestAssert.AreEqual(PlayerProfileOutcome.InvalidRequest, invalidAccount.Outcome);
     }
 
     internal void ExecuteAsync_UnknownSession_ReturnsInvalidSession()
     {
+        // Arrange
         PlayerProfileStoreStub profileStore = new PlayerProfileStoreStub();
         GetPlayerProfileHandler handler = new GetPlayerProfileHandler(
             new PlayerProfileSessionStoreStub(),
             profileStore);
 
+        // Act
         PlayerProfileResult result = handler.ExecuteAsync(
             new PlayerProfileQuery("unknown-token", null))
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(PlayerProfileOutcome.InvalidSession, result.Outcome);
         TestAssert.AreEqual<long?>(null, profileStore.AccountId);
     }
 
     internal void ExecuteAsync_MissingAccount_ReturnsAccountNotFound()
     {
+        // Arrange
         GetPlayerProfileHandler handler = new GetPlayerProfileHandler(
             new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
             new PlayerProfileStoreStub
@@ -106,16 +119,19 @@ internal sealed class PlayerProfileHandlerTests
                 Result = new PlayerProfileStoreResult(PlayerProfileStoreOutcome.NotFound)
             });
 
+        // Act
         PlayerProfileResult result = handler.ExecuteAsync(
             new PlayerProfileQuery("session-token", null))
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(PlayerProfileOutcome.AccountNotFound, result.Outcome);
     }
 
     internal void ExecuteAsync_UnavailableStore_ReturnsServiceUnavailable()
     {
+        // Arrange
         GetPlayerProfileHandler handler = new GetPlayerProfileHandler(
             new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
             new PlayerProfileStoreStub
@@ -123,11 +139,13 @@ internal sealed class PlayerProfileHandlerTests
                 Result = new PlayerProfileStoreResult(PlayerProfileStoreOutcome.Unavailable)
             });
 
+        // Act
         PlayerProfileResult result = handler.ExecuteAsync(
             new PlayerProfileQuery("session-token", null))
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(PlayerProfileOutcome.ServiceUnavailable, result.Outcome);
     }
 

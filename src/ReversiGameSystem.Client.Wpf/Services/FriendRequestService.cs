@@ -379,7 +379,13 @@ internal static class FriendshipPreviewState
         GetService(requesterUsername);
         lock (SyncRoot)
         {
-            return _store!;
+            if (_store == null)
+            {
+                throw new InvalidOperationException(
+                    "The friendship store was not initialized.");
+            }
+
+            return _store;
         }
     }
 }

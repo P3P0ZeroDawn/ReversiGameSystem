@@ -80,10 +80,6 @@ public partial class AccountCreationPage : Page
                     });
             HandleCreateAccountResponse(response, email);
         }
-        catch (Exception)
-        {
-            ShowServiceUnavailable();
-        }
         finally
         {
             createAccountButton.IsEnabled = true;
@@ -150,10 +146,15 @@ public partial class AccountCreationPage : Page
             };
             return true;
         }
-        catch (Exception exception) when (
-            exception is IOException
-            || exception is UnauthorizedAccessException
-            || exception is NotSupportedException)
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+        catch (NotSupportedException)
         {
             return false;
         }

@@ -51,64 +51,100 @@ public partial class MatchHistoryPage : Page
         CultureInfo culture = CultureInfo.GetCultureInfo(localization.CultureName);
         foreach (MatchInformation match in matches)
         {
-            string opponentName = match.BlackPlayerName == _playerName
-                ? match.WhitePlayerName
-                : match.BlackPlayerName;
-            bool playerUsesBlackPieces = match.BlackPlayerName == _playerName;
-            bool isFinished = match.State == MatchRecordState.Finished;
-            bool isDraw = isFinished && match.WinnerName == null;
-            bool isVictory = isFinished && match.WinnerName == _playerName;
-            string resultKey = !isFinished
-                ? "MatchHistory_InProgressResult"
-                : isDraw
-                    ? "MatchHistory_DrawResult"
-                    : isVictory
-                        ? "MatchHistory_VictoryResult"
-                        : "MatchHistory_DefeatResult";
-            ReversiBoard board = match.LatestBoard;
-            items.Add(new MatchHistoryItem
-            {
-                MatchId = match.Id,
-                ResultText = localization[resultKey],
-                ResultSymbol = !isFinished ? "…" : isDraw ? "=" : isVictory ? "✓" : "×",
-                ResultBackground = new SolidColorBrush(!isFinished
-                    ? Color.FromRgb(46, 112, 145)
-                    : isDraw
-                    ? Color.FromRgb(102, 122, 109)
-                    : isVictory ? Color.FromRgb(23, 106, 73) : Color.FromRgb(198, 66, 75)),
-                ResultForeground = new SolidColorBrush(!isFinished
-                    ? Color.FromRgb(46, 112, 145)
-                    : isVictory
-                    ? Color.FromRgb(23, 106, 73)
-                    : isDraw ? Color.FromRgb(82, 104, 91) : Color.FromRgb(169, 44, 53)),
-                OpponentText = string.Format(
-                    localization["MatchHistory_OpponentFormat"], opponentName),
-                DateText = string.Format(
-                    localization["MatchHistory_DateFormat"],
-                    match.RecordedAtUtc.ToLocalTime().ToString("g", culture)),
-                StateText = string.Format(
-                    localization["MatchHistory_StateFormat"],
-                    localization[isFinished
-                        ? "MatchHistory_FinishedState"
-                        : "MatchHistory_InProgressState"]),
-                ScoreText = string.Format(
-                    localization[isFinished
-                        ? "MatchHistory_FinalScoreFormat"
-                        : "MatchHistory_CurrentScoreFormat"],
-                    board.Count(playerUsesBlackPieces
-                        ? DiscColor.Black
-                        : DiscColor.White),
-                    board.Count(playerUsesBlackPieces
-                        ? DiscColor.White
-                        : DiscColor.Black)),
-                EndReasonText = GetEndReasonText(match, localization)
-            });
+            items.Add(CreateHistoryItem(match, localization, culture));
         }
 
         historyItemsControl.ItemsSource = items;
         emptyHistoryTextBlock.Visibility = items.Count == 0
             ? Visibility.Visible
             : Visibility.Collapsed;
+    }
+
+    private MatchHistoryItem CreateHistoryItem(
+        MatchInformation match,
+        LocalizationManager localization,
+        CultureInfo culture)
+    {
+        bool playerUsesBlackPieces = match.BlackPlayerName == _playerName;
+        string opponentName = playerUsesBlackPieces
+            ? match.WhitePlayerName
+            : match.BlackPlayerName;
+        MatchOutcomePresentation outcome = CreateOutcomePresentation(match);
+
+        return new MatchHistoryItem
+        {
+            MatchId = match.Id,
+            ResultText = localization[outcome.ResultKey],
+            ResultSymbol = outcome.Symbol,
+            ResultBackground = new SolidColorBrush(outcome.Background),
+            ResultForeground = new SolidColorBrush(outcome.Foreground),
+            OpponentText = string.Format(
+                localization["MatchHistory_OpponentFormat"],
+                opponentName),
+            DateText = CreateDateText(match, localization, culture),
+            StateText = CreateStateText(match, localization),
+            ScoreText = CreateScoreText(match, localization, playerUsesBlackPieces),
+            EndReasonText = GetEndReasonText(match, localization)
+        };
+    }
+
+    private MatchOutcomePresentation CreateOutcomePresentation(MatchInformation match)
+    {
+        if (match.State != MatchRecordState.Finished)
+        {
+            return MatchOutcomePresentation.InProgress();
+        }
+
+        if (match.WinnerName == null)
+        {
+            return MatchOutcomePresentation.Draw();
+        }
+
+        return match.WinnerName == _playerName
+            ? MatchOutcomePresentation.Victory()
+            : MatchOutcomePresentation.Defeat();
+    }
+
+    private static string CreateDateText(
+        MatchInformation match,
+        LocalizationManager localization,
+        CultureInfo culture)
+    {
+        return string.Format(
+            localization["MatchHistory_DateFormat"],
+            match.RecordedAtUtc.ToLocalTime().ToString("g", culture));
+    }
+
+    private static string CreateStateText(
+        MatchInformation match,
+        LocalizationManager localization)
+    {
+        string stateKey = match.State == MatchRecordState.Finished
+            ? "MatchHistory_FinishedState"
+            : "MatchHistory_InProgressState";
+        return string.Format(
+            localization["MatchHistory_StateFormat"],
+            localization[stateKey]);
+    }
+
+    private static string CreateScoreText(
+        MatchInformation match,
+        LocalizationManager localization,
+        bool playerUsesBlackPieces)
+    {
+        string scoreKey = match.State == MatchRecordState.Finished
+            ? "MatchHistory_FinalScoreFormat"
+            : "MatchHistory_CurrentScoreFormat";
+        DiscColor playerColor = playerUsesBlackPieces
+            ? DiscColor.Black
+            : DiscColor.White;
+        DiscColor opponentColor = playerUsesBlackPieces
+            ? DiscColor.White
+            : DiscColor.Black;
+        return string.Format(
+            localization[scoreKey],
+            match.LatestBoard.Count(playerColor),
+            match.LatestBoard.Count(opponentColor));
     }
 
     private static string GetEndReasonText(
@@ -193,5 +229,78 @@ public partial class MatchHistoryPage : Page
         public string StateText { get; set; } = string.Empty;
         public string ScoreText { get; set; } = string.Empty;
         public string EndReasonText { get; set; } = string.Empty;
+    }
+
+    private sealed class MatchOutcomePresentation
+    {
+        private MatchOutcomePresentation(
+            string resultKey,
+            string symbol,
+            MatchOutcomeColors colors)
+        {
+            ResultKey = resultKey;
+            Symbol = symbol;
+            Background = colors.Background;
+            Foreground = colors.Foreground;
+        }
+
+        internal string ResultKey { get; }
+
+        internal string Symbol { get; }
+
+        internal Color Background { get; }
+
+        internal Color Foreground { get; }
+
+        internal static MatchOutcomePresentation InProgress()
+        {
+            Color color = Color.FromRgb(46, 112, 145);
+            return new MatchOutcomePresentation(
+                "MatchHistory_InProgressResult",
+                "…",
+                new MatchOutcomeColors(color, color));
+        }
+
+        internal static MatchOutcomePresentation Draw()
+        {
+            return new MatchOutcomePresentation(
+                "MatchHistory_DrawResult",
+                "=",
+                new MatchOutcomeColors(
+                    Color.FromRgb(102, 122, 109),
+                    Color.FromRgb(82, 104, 91)));
+        }
+
+        internal static MatchOutcomePresentation Victory()
+        {
+            Color color = Color.FromRgb(23, 106, 73);
+            return new MatchOutcomePresentation(
+                "MatchHistory_VictoryResult",
+                "✓",
+                new MatchOutcomeColors(color, color));
+        }
+
+        internal static MatchOutcomePresentation Defeat()
+        {
+            return new MatchOutcomePresentation(
+                "MatchHistory_DefeatResult",
+                "×",
+                new MatchOutcomeColors(
+                    Color.FromRgb(198, 66, 75),
+                    Color.FromRgb(169, 44, 53)));
+        }
+    }
+
+    private sealed class MatchOutcomeColors
+    {
+        internal MatchOutcomeColors(Color background, Color foreground)
+        {
+            Background = background;
+            Foreground = foreground;
+        }
+
+        internal Color Background { get; }
+
+        internal Color Foreground { get; }
     }
 }

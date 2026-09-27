@@ -2,11 +2,26 @@ using System;
 
 namespace ReversiGameSystem.Domain.Accounts;
 
+/// <summary>
+/// Represents profile image policy.
+/// </summary>
 public static class ProfileImagePolicy
 {
+    /// <summary>
+    /// Represents the maximum file bytes.
+    /// </summary>
     public const int MaximumFileBytes = 5 * 1024 * 1024;
+    /// <summary>
+    /// Represents the maximum dimension.
+    /// </summary>
     public const int MaximumDimension = 4096;
 
+    /// <summary>
+    /// Performs the is supported operation.
+    /// </summary>
+    /// <param name="content">The content.</param>
+    /// <param name="mediaType">The media type.</param>
+    /// <returns>The result of the operation.</returns>
     public static bool IsSupported(byte[] content, string mediaType)
     {
         if (content == null || content.Length == 0 || content.Length > MaximumFileBytes)

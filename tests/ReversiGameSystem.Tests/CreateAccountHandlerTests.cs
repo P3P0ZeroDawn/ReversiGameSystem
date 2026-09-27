@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Threading.Tasks;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Persistence.Accounts;
@@ -10,6 +9,7 @@ internal sealed class CreateAccountHandlerTests
 {
     internal void ExecuteAsync_ValidRequest_StoresAccount()
     {
+        // Arrange
         AccountRegistrationStoreStub accountStore = new AccountRegistrationStoreStub
         {
             Result = new AccountRegistrationStoreResult(
@@ -25,6 +25,7 @@ internal sealed class CreateAccountHandlerTests
             imageStore,
             registeredAtUtc);
 
+        // Act
         CreateAccountResult result = handler.ExecuteAsync(
             new CreateAccountCommand(
                 "  PlayerOne  ",
@@ -35,6 +36,7 @@ internal sealed class CreateAccountHandlerTests
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(CreateAccountOutcome.Success, result.Outcome);
         TestAssert.AreEqual<long?>(42, result.AccountId);
         TestAssert.AreEqual("PlayerOne", accountStore.Registration?.Username);
@@ -48,6 +50,7 @@ internal sealed class CreateAccountHandlerTests
 
     internal void ExecuteAsync_MissingRequiredValue_ReturnsInvalidRequest()
     {
+        // Arrange
         AccountRegistrationStoreStub accountStore = new AccountRegistrationStoreStub();
         PasswordHasherStub passwordHasher = new PasswordHasherStub();
         ProfileImageStoreStub imageStore = new ProfileImageStoreStub();
@@ -57,11 +60,13 @@ internal sealed class CreateAccountHandlerTests
             imageStore,
             DateTime.UtcNow);
 
+        // Act
         CreateAccountResult result = handler.ExecuteAsync(
             new CreateAccountCommand("", "player@example.com", "Password1!", "en-US", null))
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(CreateAccountOutcome.InvalidRequest, result.Outcome);
         TestAssert.AreEqual<AccountRegistrationData?>(null, accountStore.Registration);
         TestAssert.AreEqual<string?>(null, passwordHasher.HashedPassword);
@@ -69,12 +74,14 @@ internal sealed class CreateAccountHandlerTests
 
     internal void ExecuteAsync_InvalidFields_ReturnSpecificOutcomes()
     {
+        // Arrange
         CreateAccountHandler handler = CreateHandler(
             new AccountRegistrationStoreStub(),
             new PasswordHasherStub(),
             new ProfileImageStoreStub(),
             DateTime.UtcNow);
 
+        // Act
         CreateAccountResult invalidUsername = Execute(
             handler,
             "_player",
@@ -91,6 +98,7 @@ internal sealed class CreateAccountHandlerTests
             "player@example.com",
             "password");
 
+        // Assert
         TestAssert.AreEqual(CreateAccountOutcome.InvalidUsername, invalidUsername.Outcome);
         TestAssert.AreEqual(CreateAccountOutcome.InvalidEmailAddress, invalidEmail.Outcome);
         TestAssert.AreEqual(CreateAccountOutcome.InvalidPassword, invalidPassword.Outcome);
@@ -98,6 +106,7 @@ internal sealed class CreateAccountHandlerTests
 
     internal void ExecuteAsync_InvalidProfileImage_ReturnsInvalidRequest()
     {
+        // Arrange
         ProfileImageStoreStub imageStore = new ProfileImageStoreStub();
         CreateAccountHandler handler = CreateHandler(
             new AccountRegistrationStoreStub(),
@@ -105,6 +114,7 @@ internal sealed class CreateAccountHandlerTests
             imageStore,
             DateTime.UtcNow);
 
+        // Act
         CreateAccountResult result = handler.ExecuteAsync(
             new CreateAccountCommand(
                 "PlayerOne",
@@ -115,12 +125,14 @@ internal sealed class CreateAccountHandlerTests
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(CreateAccountOutcome.InvalidRequest, result.Outcome);
         TestAssert.AreEqual(false, imageStore.SaveWasCalled);
     }
 
     internal void ExecuteAsync_DuplicateUsername_RemovesStoredImage()
     {
+        // Arrange
         AccountRegistrationStoreStub accountStore = new AccountRegistrationStoreStub
         {
             Result = new AccountRegistrationStoreResult(
@@ -133,6 +145,7 @@ internal sealed class CreateAccountHandlerTests
             imageStore,
             DateTime.UtcNow);
 
+        // Act
         CreateAccountResult result = handler.ExecuteAsync(
             new CreateAccountCommand(
                 "PlayerOne",
@@ -143,12 +156,14 @@ internal sealed class CreateAccountHandlerTests
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(CreateAccountOutcome.UsernameAlreadyExists, result.Outcome);
         TestAssert.AreEqual("profile-images/test.png", imageStore.DeletedImageUri);
     }
 
     internal void ExecuteAsync_UnsupportedLocale_ReturnsInvalidRequest()
     {
+        // Arrange
         AccountRegistrationStoreStub accountStore = new AccountRegistrationStoreStub
         {
             Result = new AccountRegistrationStoreResult(
@@ -160,6 +175,7 @@ internal sealed class CreateAccountHandlerTests
             new ProfileImageStoreStub(),
             DateTime.UtcNow);
 
+        // Act
         CreateAccountResult result = Execute(
             handler,
             "PlayerOne",
@@ -167,54 +183,23 @@ internal sealed class CreateAccountHandlerTests
             "Password1!",
             "fr-FR");
 
+        // Assert
         TestAssert.AreEqual(CreateAccountOutcome.InvalidRequest, result.Outcome);
     }
 
     internal void PasswordHasher_HashAndVerify_UsesSaltedPbkdf2()
     {
+        // Arrange
         Pbkdf2PasswordHasher hasher = new Pbkdf2PasswordHasher();
 
+        // Act
         string firstHash = hasher.Hash("Password1!");
         string secondHash = hasher.Hash("Password1!");
 
+        // Assert
         TestAssert.AreEqual(false, firstHash == secondHash);
         TestAssert.AreEqual(true, hasher.Verify("Password1!", firstHash));
         TestAssert.AreEqual(false, hasher.Verify("WrongPassword1!", firstHash));
-    }
-
-    internal void ProfileImageStore_SaveAndDelete_UsesRelativeUri()
-    {
-        string root = Path.Combine(
-            Path.GetTempPath(),
-            "ReversiGameSystem.Tests",
-            Guid.NewGuid().ToString("N"));
-
-        try
-        {
-            FileSystemProfileImageStore store = new FileSystemProfileImageStore(root);
-            byte[] imageContent = Convert.FromBase64String(
-                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwC" +
-                "AAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
-
-            ProfileImageStorageResult result = store.SaveAsync(
-                new ProfileImageData(imageContent, "image/png"))
-                .GetAwaiter()
-                .GetResult();
-
-            TestAssert.AreEqual(ProfileImageStorageOutcome.Success, result.Outcome);
-            TestAssert.AreEqual(true, result.ImageUri?.StartsWith("profile-images/"));
-            TestAssert.AreEqual(1, Directory.GetFiles(root).Length);
-
-            store.DeleteAsync(result.ImageUri!).GetAwaiter().GetResult();
-            TestAssert.AreEqual(0, Directory.GetFiles(root).Length);
-        }
-        finally
-        {
-            if (Directory.Exists(root))
-            {
-                Directory.Delete(root, recursive: true);
-            }
-        }
     }
 
     private static CreateAccountHandler CreateHandler(

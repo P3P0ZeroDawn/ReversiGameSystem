@@ -11,6 +11,9 @@ using ReversiGameSystem.Server.Persistence.Players;
 
 namespace ReversiGameSystem.LocalRuntime;
 
+/// <summary>
+/// Represents local runtime services.
+/// </summary>
 public sealed class LocalRuntimeServices
 {
     internal LocalRuntimeServices(
@@ -23,15 +26,31 @@ public sealed class LocalRuntimeServices
         ProfileImageDirectory = profileImageDirectory;
     }
 
+    /// <summary>
+    /// Gets the account service.
+    /// </summary>
     public IAccountService AccountService { get; }
 
+    /// <summary>
+    /// Gets the player service.
+    /// </summary>
     public IPlayerService PlayerService { get; }
 
+    /// <summary>
+    /// Gets the profile image directory.
+    /// </summary>
     public string? ProfileImageDirectory { get; }
 }
 
+/// <summary>
+/// Represents local runtime factory.
+/// </summary>
 public static class LocalRuntimeFactory
 {
+    /// <summary>
+    /// Performs the create default operation.
+    /// </summary>
+    /// <returns>The result of the operation.</returns>
     public static LocalRuntimeServices CreateDefault()
     {
         string profileImageDirectory = System.IO.Path.Combine(
@@ -41,6 +60,11 @@ public static class LocalRuntimeFactory
         return CreateDefault(profileImageDirectory);
     }
 
+    /// <summary>
+    /// Performs the create default operation.
+    /// </summary>
+    /// <param name="profileImageDirectory">The profile image directory.</param>
+    /// <returns>The result of the operation.</returns>
     public static LocalRuntimeServices CreateDefault(string profileImageDirectory)
     {
         SystemUtcClock clock = new SystemUtcClock();
@@ -67,6 +91,14 @@ public static class LocalRuntimeFactory
             profileImageDirectory);
     }
 
+    /// <summary>
+    /// Performs the create operation.
+    /// </summary>
+    /// <param name="createAccountHandler">The create account handler.</param>
+    /// <param name="loginHandler">The login handler.</param>
+    /// <param name="getPlayerProfileHandler">The get player profile handler.</param>
+    /// <param name="getLeaderboardHandler">The get leaderboard handler.</param>
+    /// <returns>The result of the operation.</returns>
     public static LocalRuntimeServices Create(
         ICreateAccountHandler createAccountHandler,
         ILoginHandler loginHandler,

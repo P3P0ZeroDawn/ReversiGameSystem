@@ -8,21 +8,35 @@ using ReversiGameSystem.Server.Application.Accounts;
 
 namespace ReversiGameSystem.Server.Persistence.Accounts;
 
+/// <summary>
+/// Represents file system profile image store.
+/// </summary>
 public sealed class FileSystemProfileImageStore : IProfileImageStore
 {
     private const string UriDirectory = "profile-images";
-    private readonly string storageDirectory;
+    private readonly string _storageDirectory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FileSystemProfileImageStore"/> class.
+    /// </summary>
+    /// <param name="storageDirectory">The storage directory.</param>
     public FileSystemProfileImageStore(string storageDirectory)
     {
         if (string.IsNullOrWhiteSpace(storageDirectory))
         {
-            throw new ArgumentException("A profile image directory is required.", nameof(storageDirectory));
+            throw new ArgumentException(
+                "A profile image directory is required.",
+                nameof(storageDirectory));
         }
 
-        this.storageDirectory = Path.GetFullPath(storageDirectory);
+        _storageDirectory = Path.GetFullPath(storageDirectory);
     }
 
+    /// <summary>
+    /// Performs the save async operation.
+    /// </summary>
+    /// <param name="image">The image.</param>
+    /// <returns>The result of the operation.</returns>
     public Task<ProfileImageStorageResult> SaveAsync(ProfileImageData image)
     {
         if (image == null
@@ -40,12 +54,12 @@ public sealed class FileSystemProfileImageStore : IProfileImageStore
                 ? ".png"
                 : ".jpg";
         string fileName = Guid.NewGuid().ToString("N") + extension;
-        string finalPath = Path.Combine(storageDirectory, fileName);
+        string finalPath = Path.Combine(_storageDirectory, fileName);
         string temporaryPath = finalPath + ".tmp";
 
         try
         {
-            Directory.CreateDirectory(storageDirectory);
+            Directory.CreateDirectory(_storageDirectory);
             File.WriteAllBytes(temporaryPath, image.Content);
             File.Move(temporaryPath, finalPath);
 
@@ -54,18 +68,29 @@ public sealed class FileSystemProfileImageStore : IProfileImageStore
                     ProfileImageStorageOutcome.Success,
                     UriDirectory + "/" + fileName));
         }
-        catch (Exception exception) when (
-            exception is IOException
-            || exception is UnauthorizedAccessException
-            || exception is SecurityException
-            || exception is NotSupportedException)
+        catch (IOException)
         {
-            TryDeleteFile(temporaryPath);
-            return Task.FromResult(
-                new ProfileImageStorageResult(ProfileImageStorageOutcome.Unavailable));
+            return CreateUnavailableResult(temporaryPath);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return CreateUnavailableResult(temporaryPath);
+        }
+        catch (SecurityException)
+        {
+            return CreateUnavailableResult(temporaryPath);
+        }
+        catch (NotSupportedException)
+        {
+            return CreateUnavailableResult(temporaryPath);
         }
     }
 
+    /// <summary>
+    /// Performs the delete async operation.
+    /// </summary>
+    /// <param name="imageUri">The image uri.</param>
+    /// <returns>The result of the operation.</returns>
     public Task DeleteAsync(string imageUri)
     {
         if (string.IsNullOrWhiteSpace(imageUri))
@@ -82,7 +107,7 @@ public sealed class FileSystemProfileImageStore : IProfileImageStore
         }
 
         string fileName = normalizedUri.Substring(expectedPrefix.Length);
-        TryDeleteFile(Path.Combine(storageDirectory, fileName));
+        TryDeleteFile(Path.Combine(_storageDirectory, fileName));
         return Task.CompletedTask;
     }
 
@@ -91,7 +116,10 @@ public sealed class FileSystemProfileImageStore : IProfileImageStore
         try
         {
             using (MemoryStream stream = new MemoryStream(content, writable: false))
-            using (Image image = Image.FromStream(stream, useEmbeddedColorManagement: false, validateImageData: true))
+            using (Image image = Image.FromStream(
+                stream,
+                useEmbeddedColorManagement: false,
+                validateImageData: true))
             {
                 return image.Width >= 1
                     && image.Height >= 1
@@ -109,7 +137,15 @@ public sealed class FileSystemProfileImageStore : IProfileImageStore
         }
     }
 
-    private static void TryDeleteFile(string path)
+    private static Task<ProfileImageStorageResult> CreateUnavailableResult(
+        string temporaryPath)
+    {
+        TryDeleteFile(temporaryPath);
+        return Task.FromResult(
+            new ProfileImageStorageResult(ProfileImageStorageOutcome.Unavailable));
+    }
+
+    private static bool TryDeleteFile(string path)
     {
         try
         {
@@ -117,13 +153,24 @@ public sealed class FileSystemProfileImageStore : IProfileImageStore
             {
                 File.Delete(path);
             }
+
+            return true;
         }
-        catch (Exception exception) when (
-            exception is IOException
-            || exception is UnauthorizedAccessException
-            || exception is SecurityException
-            || exception is NotSupportedException)
+        catch (IOException)
         {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+        catch (SecurityException)
+        {
+            return false;
+        }
+        catch (NotSupportedException)
+        {
+            return false;
         }
     }
 }

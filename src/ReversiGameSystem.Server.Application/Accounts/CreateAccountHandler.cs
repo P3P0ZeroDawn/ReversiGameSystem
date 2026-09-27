@@ -1,31 +1,48 @@
 using System;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using ReversiGameSystem.Domain.Accounts;
 
 namespace ReversiGameSystem.Server.Application.Accounts;
 
+/// <summary>
+/// Represents create account handler.
+/// </summary>
 public sealed class CreateAccountHandler : ICreateAccountHandler
 {
     private const int MaximumLocaleCodeLength = 35;
-    private readonly IAccountRegistrationStore accountStore;
-    private readonly IPasswordHasher passwordHasher;
-    private readonly IProfileImageStore profileImageStore;
-    private readonly IUtcClock clock;
+    private readonly IAccountRegistrationStore _accountStore;
+    private readonly IPasswordHasher _passwordHasher;
+    private readonly IProfileImageStore _profileImageStore;
+    private readonly IUtcClock _clock;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CreateAccountHandler"/> class.
+    /// </summary>
+    /// <param name="accountStore">The account store.</param>
+    /// <param name="passwordHasher">The password hasher.</param>
+    /// <param name="profileImageStore">The profile image store.</param>
+    /// <param name="clock">The clock.</param>
     public CreateAccountHandler(
         IAccountRegistrationStore accountStore,
         IPasswordHasher passwordHasher,
         IProfileImageStore profileImageStore,
         IUtcClock clock)
     {
-        this.accountStore = accountStore ?? throw new ArgumentNullException(nameof(accountStore));
-        this.passwordHasher = passwordHasher ?? throw new ArgumentNullException(nameof(passwordHasher));
-        this.profileImageStore = profileImageStore
+        _accountStore = accountStore ?? throw new ArgumentNullException(nameof(accountStore));
+        _passwordHasher = passwordHasher
+            ?? throw new ArgumentNullException(nameof(passwordHasher));
+        _profileImageStore = profileImageStore
             ?? throw new ArgumentNullException(nameof(profileImageStore));
-        this.clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
     }
 
+    /// <summary>
+    /// Performs the execute async operation.
+    /// </summary>
+    /// <param name="command">The command.</param>
+    /// <returns>The result of the operation.</returns>
     public async Task<CreateAccountResult> ExecuteAsync(CreateAccountCommand command)
     {
         if (command == null)
@@ -33,60 +50,29 @@ public sealed class CreateAccountHandler : ICreateAccountHandler
             return new CreateAccountResult(CreateAccountOutcome.InvalidRequest);
         }
 
-        string username = command.Username?.Trim() ?? string.Empty;
-        string emailAddress = command.EmailAddress?.Trim() ?? string.Empty;
-        string password = command.Password ?? string.Empty;
-        string localeCode = command.PreferredLocaleCode?.Trim() ?? string.Empty;
-
-        CreateAccountOutcome? validationFailure = Validate(
-            username,
-            emailAddress,
-            password,
-            localeCode,
-            command.ProfileImage);
-        if (validationFailure.HasValue)
+        NormalizedAccountInput input = Normalize(command);
+        CreateAccountValidationResult validationResult = Validate(input);
+        if (!validationResult.IsValid)
         {
-            return new CreateAccountResult(validationFailure.Value);
+            return new CreateAccountResult(validationResult.FailureOutcome);
         }
 
-        string normalizedPassword = password.Normalize(NormalizationForm.FormC);
-        string passwordHash;
-        try
-        {
-            passwordHash = passwordHasher.Hash(normalizedPassword);
-        }
-        catch (Exception)
+        PasswordHashResult passwordResult = CreatePasswordHash(input.Password);
+        if (!passwordResult.IsSuccess)
         {
             return new CreateAccountResult(CreateAccountOutcome.ServiceUnavailable);
         }
 
-        ProfileImageStorageResult imageResult = await StoreProfileImageAsync(command.ProfileImage);
+        ProfileImageStorageResult imageResult = await StoreProfileImageAsync(input.ProfileImage);
         if (imageResult.Outcome != ProfileImageStorageOutcome.Success)
         {
-            return new CreateAccountResult(
-                imageResult.Outcome == ProfileImageStorageOutcome.InvalidImage
-                    ? CreateAccountOutcome.InvalidRequest
-                    : CreateAccountOutcome.ServiceUnavailable);
+            return MapImageFailure(imageResult.Outcome);
         }
 
-        AccountRegistrationStoreResult storeResult;
-        try
-        {
-            storeResult = await accountStore.RegisterAsync(
-                new AccountRegistrationData(
-                    username,
-                    emailAddress,
-                    passwordHash,
-                    localeCode,
-                    imageResult.ImageUri,
-                    clock.UtcNow));
-        }
-        catch (Exception)
-        {
-            await DeleteProfileImageIfNecessaryAsync(imageResult.ImageUri);
-            return new CreateAccountResult(CreateAccountOutcome.ServiceUnavailable);
-        }
-
+        AccountRegistrationStoreResult storeResult = await RegisterAsync(
+            input,
+            passwordResult.PasswordHash,
+            imageResult.ImageUri);
         if (storeResult.Outcome != AccountRegistrationStoreOutcome.Success)
         {
             await DeleteProfileImageIfNecessaryAsync(imageResult.ImageUri);
@@ -95,41 +81,80 @@ public sealed class CreateAccountHandler : ICreateAccountHandler
         return Map(storeResult);
     }
 
-    private static CreateAccountOutcome? Validate(
-        string username,
-        string emailAddress,
-        string password,
-        string localeCode,
-        ProfileImageData? profileImage)
+    private static NormalizedAccountInput Normalize(CreateAccountCommand command)
     {
-        if (string.IsNullOrWhiteSpace(username)
-            || string.IsNullOrWhiteSpace(emailAddress)
-            || string.IsNullOrWhiteSpace(password)
-            || string.IsNullOrWhiteSpace(localeCode)
-            || localeCode.Length > MaximumLocaleCodeLength)
+        return new NormalizedAccountInput
         {
-            return CreateAccountOutcome.InvalidRequest;
+            Username = command.Username?.Trim() ?? string.Empty,
+            EmailAddress = command.EmailAddress?.Trim() ?? string.Empty,
+            Password = command.Password ?? string.Empty,
+            LocaleCode = command.PreferredLocaleCode?.Trim() ?? string.Empty,
+            ProfileImage = command.ProfileImage
+        };
+    }
+
+    private static CreateAccountValidationResult Validate(NormalizedAccountInput input)
+    {
+        if (HasMissingOrInvalidRequiredValue(input))
+        {
+            return CreateAccountValidationResult.Failure(
+                CreateAccountOutcome.InvalidRequest);
         }
 
-        if (UsernamePolicy.Validate(username) != UsernameValidationError.None)
+        if (UsernamePolicy.Validate(input.Username) != UsernameValidationError.None)
         {
-            return CreateAccountOutcome.InvalidUsername;
+            return CreateAccountValidationResult.Failure(
+                CreateAccountOutcome.InvalidUsername);
         }
 
-        if (EmailPolicy.Validate(emailAddress) != EmailValidationError.None)
+        if (EmailPolicy.Validate(input.EmailAddress) != EmailValidationError.None)
         {
-            return CreateAccountOutcome.InvalidEmailAddress;
+            return CreateAccountValidationResult.Failure(
+                CreateAccountOutcome.InvalidEmailAddress);
         }
 
-        if (PasswordPolicy.Validate(password) != PasswordValidationError.None)
+        if (PasswordPolicy.Validate(input.Password) != PasswordValidationError.None)
         {
-            return CreateAccountOutcome.InvalidPassword;
+            return CreateAccountValidationResult.Failure(
+                CreateAccountOutcome.InvalidPassword);
         }
 
-        return profileImage != null
-            && !ProfileImagePolicy.IsSupported(profileImage.Content, profileImage.MediaType)
-                ? CreateAccountOutcome.InvalidRequest
-                : null;
+        if (input.ProfileImage != null
+            && !ProfileImagePolicy.IsSupported(
+                input.ProfileImage.Content,
+                input.ProfileImage.MediaType))
+        {
+            return CreateAccountValidationResult.Failure(
+                CreateAccountOutcome.InvalidRequest);
+        }
+
+        return CreateAccountValidationResult.Success();
+    }
+
+    private static bool HasMissingOrInvalidRequiredValue(NormalizedAccountInput input)
+    {
+        return string.IsNullOrWhiteSpace(input.Username)
+            || string.IsNullOrWhiteSpace(input.EmailAddress)
+            || string.IsNullOrWhiteSpace(input.Password)
+            || string.IsNullOrWhiteSpace(input.LocaleCode)
+            || input.LocaleCode.Length > MaximumLocaleCodeLength;
+    }
+
+    private PasswordHashResult CreatePasswordHash(string password)
+    {
+        try
+        {
+            string normalizedPassword = password.Normalize(NormalizationForm.FormC);
+            return PasswordHashResult.Success(_passwordHasher.Hash(normalizedPassword));
+        }
+        catch (ArgumentException)
+        {
+            return PasswordHashResult.Failure();
+        }
+        catch (CryptographicException)
+        {
+            return PasswordHashResult.Failure();
+        }
     }
 
     private async Task<ProfileImageStorageResult> StoreProfileImageAsync(
@@ -140,31 +165,42 @@ public sealed class CreateAccountHandler : ICreateAccountHandler
             return new ProfileImageStorageResult(ProfileImageStorageOutcome.Success);
         }
 
-        try
-        {
-            return await profileImageStore.SaveAsync(profileImage);
-        }
-        catch (Exception)
-        {
-            return new ProfileImageStorageResult(ProfileImageStorageOutcome.Unavailable);
-        }
+        return await _profileImageStore.SaveAsync(profileImage);
+    }
+
+    private Task<AccountRegistrationStoreResult> RegisterAsync(
+        NormalizedAccountInput input,
+        string passwordHash,
+        string? imageUri)
+    {
+        AccountRegistrationData registration = new AccountRegistrationData(
+            input.Username,
+            input.EmailAddress,
+            passwordHash,
+            input.LocaleCode,
+            imageUri,
+            _clock.UtcNow);
+        return _accountStore.RegisterAsync(registration);
     }
 
     private async Task DeleteProfileImageIfNecessaryAsync(string? imageUri)
     {
-        if (string.IsNullOrWhiteSpace(imageUri))
+        if (imageUri == null || string.IsNullOrWhiteSpace(imageUri))
         {
             return;
         }
 
-        try
-        {
-            await profileImageStore.DeleteAsync(imageUri!);
-        }
-        catch (Exception)
-        {
-            // Account creation has already failed; cleanup is best effort.
-        }
+        await _profileImageStore.DeleteAsync(imageUri);
+    }
+
+    private static CreateAccountResult MapImageFailure(
+        ProfileImageStorageOutcome outcome)
+    {
+        CreateAccountOutcome accountOutcome = outcome ==
+            ProfileImageStorageOutcome.InvalidImage
+                ? CreateAccountOutcome.InvalidRequest
+                : CreateAccountOutcome.ServiceUnavailable;
+        return new CreateAccountResult(accountOutcome);
     }
 
     private static CreateAccountResult Map(AccountRegistrationStoreResult result)
@@ -183,5 +219,69 @@ public sealed class CreateAccountHandler : ICreateAccountHandler
                 new CreateAccountResult(CreateAccountOutcome.ServiceUnavailable),
             _ => throw new ArgumentOutOfRangeException(nameof(result), result.Outcome, null)
         };
+    }
+
+    private sealed class NormalizedAccountInput
+    {
+        internal string Username { get; set; } = string.Empty;
+
+        internal string EmailAddress { get; set; } = string.Empty;
+
+        internal string Password { get; set; } = string.Empty;
+
+        internal string LocaleCode { get; set; } = string.Empty;
+
+        internal ProfileImageData? ProfileImage { get; set; }
+    }
+
+    private sealed class CreateAccountValidationResult
+    {
+        private CreateAccountValidationResult(
+            bool isValid,
+            CreateAccountOutcome failureOutcome)
+        {
+            IsValid = isValid;
+            FailureOutcome = failureOutcome;
+        }
+
+        internal bool IsValid { get; }
+
+        internal CreateAccountOutcome FailureOutcome { get; }
+
+        internal static CreateAccountValidationResult Success()
+        {
+            return new CreateAccountValidationResult(
+                true,
+                CreateAccountOutcome.InvalidRequest);
+        }
+
+        internal static CreateAccountValidationResult Failure(
+            CreateAccountOutcome outcome)
+        {
+            return new CreateAccountValidationResult(false, outcome);
+        }
+    }
+
+    private sealed class PasswordHashResult
+    {
+        private PasswordHashResult(bool isSuccess, string passwordHash)
+        {
+            IsSuccess = isSuccess;
+            PasswordHash = passwordHash;
+        }
+
+        internal bool IsSuccess { get; }
+
+        internal string PasswordHash { get; }
+
+        internal static PasswordHashResult Success(string passwordHash)
+        {
+            return new PasswordHashResult(true, passwordHash);
+        }
+
+        internal static PasswordHashResult Failure()
+        {
+            return new PasswordHashResult(false, string.Empty);
+        }
     }
 }

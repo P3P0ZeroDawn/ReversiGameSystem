@@ -9,6 +9,7 @@ internal sealed class PersistenceModelTests
 {
     internal void CreateContext_ValidEnvironment_LoadsEmbeddedModel()
     {
+        // Arrange
         const string variableName = "REVERSI_DB_CONNECTION_STRING";
         string? originalValue = Environment.GetEnvironmentVariable(variableName);
 
@@ -19,12 +20,15 @@ internal sealed class PersistenceModelTests
                 "Server=localhost;Database=ReversiGameSystem;" +
                 "Integrated Security=True;TrustServerCertificate=True;");
 
+            // Act
             using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
-            var entityTypes = ((IObjectContextAdapter)context)
+            System.Collections.ObjectModel.ReadOnlyCollection<EntityType> entityTypes =
+                ((IObjectContextAdapter)context)
                 .ObjectContext
                 .MetadataWorkspace
                 .GetItems<EntityType>(DataSpace.CSpace);
 
+            // Assert
             TestAssert.AreEqual(13, entityTypes.Count);
         }
         finally

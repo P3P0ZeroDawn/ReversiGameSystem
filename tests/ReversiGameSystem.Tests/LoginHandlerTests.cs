@@ -9,6 +9,7 @@ internal sealed class LoginHandlerTests
 {
     internal void ExecuteAsync_ValidCredentials_CreatesSession()
     {
+        // Arrange
         AccountLoginStoreStub accountStore = new AccountLoginStoreStub
         {
             Result = FoundAccount("ACTIVE")
@@ -20,11 +21,13 @@ internal sealed class LoginHandlerTests
         AuthenticatedSessionStoreStub sessionStore = new AuthenticatedSessionStoreStub();
         LoginHandler handler = new LoginHandler(accountStore, passwordHasher, sessionStore);
 
+        // Act
         LoginResult result = handler.ExecuteAsync(
             new LoginCommand("  player@example.com  ", "A\u0301b12345!"))
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(LoginOutcome.Success, result.Outcome);
         TestAssert.AreEqual("player@example.com", accountStore.Login);
         TestAssert.AreEqual("Áb12345!", passwordHasher.Password);
@@ -36,22 +39,26 @@ internal sealed class LoginHandlerTests
 
     internal void ExecuteAsync_MissingCredentials_ReturnsInvalidRequest()
     {
+        // Arrange
         AccountLoginStoreStub accountStore = new AccountLoginStoreStub();
         LoginHandler handler = new LoginHandler(
             accountStore,
             new LoginPasswordHasherStub(),
             new AuthenticatedSessionStoreStub());
 
+        // Act
         LoginResult result = handler.ExecuteAsync(new LoginCommand("", ""))
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(LoginOutcome.InvalidRequest, result.Outcome);
         TestAssert.AreEqual<string?>(null, accountStore.Login);
     }
 
     internal void ExecuteAsync_UnknownAccount_ReturnsInvalidCredentials()
     {
+        // Arrange
         AccountLoginStoreStub accountStore = new AccountLoginStoreStub
         {
             Result = new AccountLoginLookupResult(AccountLoginLookupOutcome.NotFound)
@@ -61,16 +68,19 @@ internal sealed class LoginHandlerTests
             new LoginPasswordHasherStub(),
             new AuthenticatedSessionStoreStub());
 
+        // Act
         LoginResult result = handler.ExecuteAsync(
             new LoginCommand("UnknownPlayer", "Password1!"))
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(LoginOutcome.InvalidCredentials, result.Outcome);
     }
 
     internal void ExecuteAsync_WrongPassword_ReturnsInvalidCredentials()
     {
+        // Arrange
         LoginPasswordHasherStub passwordHasher = new LoginPasswordHasherStub
         {
             VerifyResult = false
@@ -81,34 +91,40 @@ internal sealed class LoginHandlerTests
             passwordHasher,
             sessionStore);
 
+        // Act
         LoginResult result = handler.ExecuteAsync(
             new LoginCommand("PlayerOne", "WrongPassword1!"))
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(LoginOutcome.InvalidCredentials, result.Outcome);
         TestAssert.AreEqual<long?>(null, sessionStore.AccountId);
     }
 
     internal void ExecuteAsync_InactiveAccount_ReturnsAccountInactive()
     {
+        // Arrange
         AuthenticatedSessionStoreStub sessionStore = new AuthenticatedSessionStoreStub();
         LoginHandler handler = new LoginHandler(
             new AccountLoginStoreStub { Result = FoundAccount("DISABLED") },
             new LoginPasswordHasherStub { VerifyResult = true },
             sessionStore);
 
+        // Act
         LoginResult result = handler.ExecuteAsync(
             new LoginCommand("PlayerOne", "Password1!"))
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(LoginOutcome.AccountInactive, result.Outcome);
         TestAssert.AreEqual<long?>(null, sessionStore.AccountId);
     }
 
     internal void ExecuteAsync_UnavailableStore_ReturnsServiceUnavailable()
     {
+        // Arrange
         LoginHandler handler = new LoginHandler(
             new AccountLoginStoreStub
             {
@@ -117,22 +133,26 @@ internal sealed class LoginHandlerTests
             new LoginPasswordHasherStub(),
             new AuthenticatedSessionStoreStub());
 
+        // Act
         LoginResult result = handler.ExecuteAsync(
             new LoginCommand("PlayerOne", "Password1!"))
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(LoginOutcome.ServiceUnavailable, result.Outcome);
     }
 
     internal void SessionStore_CreateFindAndExpire_EnforcesLifetime()
     {
+        // Arrange
         MutableUtcClock clock = new MutableUtcClock(
             new DateTime(2026, 9, 26, 12, 0, 0, DateTimeKind.Utc));
         InMemoryAuthenticatedSessionStore store = new InMemoryAuthenticatedSessionStore(
             clock,
             TimeSpan.FromMinutes(30));
 
+        // Act
         AuthenticatedSessionRecord first = store.CreateAsync(
             42,
             "PlayerOne",
@@ -149,6 +169,7 @@ internal sealed class LoginHandlerTests
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(false, first.SessionToken == second.SessionToken);
         TestAssert.AreEqual<long?>(42, active?.AccountId);
         TestAssert.AreEqual<AuthenticatedSessionRecord?>(null, expired);

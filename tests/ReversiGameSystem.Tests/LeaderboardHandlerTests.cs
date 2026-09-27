@@ -9,6 +9,7 @@ internal sealed class LeaderboardHandlerTests
 {
     internal void ExecuteAsync_ValidRequest_ReturnsRankedEntries()
     {
+        // Arrange
         LeaderboardEntry expectedEntry = new LeaderboardEntry(
             1,
             42,
@@ -25,10 +26,12 @@ internal sealed class LeaderboardHandlerTests
         };
         GetLeaderboardHandler handler = new GetLeaderboardHandler(store);
 
+        // Act
         LeaderboardResult result = handler.ExecuteAsync(new LeaderboardQuery(10))
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(LeaderboardOutcome.Success, result.Outcome);
         TestAssert.AreEqual(10, store.MaximumEntries);
         TestAssert.AreEqual(1, result.Entries.Count);
@@ -37,9 +40,11 @@ internal sealed class LeaderboardHandlerTests
 
     internal void ExecuteAsync_InvalidMaximum_ReturnsInvalidRequest()
     {
+        // Arrange
         LeaderboardStoreStub store = new LeaderboardStoreStub();
         GetLeaderboardHandler handler = new GetLeaderboardHandler(store);
 
+        // Act
         LeaderboardResult belowMinimum = handler.ExecuteAsync(new LeaderboardQuery(0))
             .GetAwaiter()
             .GetResult();
@@ -48,6 +53,7 @@ internal sealed class LeaderboardHandlerTests
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(LeaderboardOutcome.InvalidRequest, belowMinimum.Outcome);
         TestAssert.AreEqual(LeaderboardOutcome.InvalidRequest, aboveMaximum.Outcome);
         TestAssert.AreEqual<int?>(null, store.MaximumEntries);
@@ -55,29 +61,36 @@ internal sealed class LeaderboardHandlerTests
 
     internal void ExecuteAsync_UnavailableStore_ReturnsServiceUnavailable()
     {
+        // Arrange
         GetLeaderboardHandler handler = new GetLeaderboardHandler(
             new LeaderboardStoreStub
             {
                 Result = new LeaderboardStoreResult(LeaderboardStoreOutcome.Unavailable)
             });
 
+        // Act
         LeaderboardResult result = handler.ExecuteAsync(new LeaderboardQuery(10))
             .GetAwaiter()
             .GetResult();
 
+        // Assert
         TestAssert.AreEqual(LeaderboardOutcome.ServiceUnavailable, result.Outcome);
     }
 
-    internal void ExecuteAsync_StoreFailure_ReturnsServiceUnavailable()
+    internal void ExecuteAsync_StoreFailure_PropagatesException()
     {
+        // Arrange
         GetLeaderboardHandler handler = new GetLeaderboardHandler(
             new LeaderboardStoreStub { ThrowOnGet = true });
 
-        LeaderboardResult result = handler.ExecuteAsync(new LeaderboardQuery(10))
-            .GetAwaiter()
-            .GetResult();
+        // Act
+        InvalidOperationException exception = TestAssert.Throws<InvalidOperationException>(
+            () => handler.ExecuteAsync(new LeaderboardQuery(10))
+                .GetAwaiter()
+                .GetResult());
 
-        TestAssert.AreEqual(LeaderboardOutcome.ServiceUnavailable, result.Outcome);
+        // Assert
+        TestAssert.AreEqual("Simulated leaderboard store failure.", exception.Message);
     }
 }
 

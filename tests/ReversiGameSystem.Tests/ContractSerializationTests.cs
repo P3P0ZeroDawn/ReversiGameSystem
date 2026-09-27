@@ -16,6 +16,7 @@ internal sealed class ContractSerializationTests
 {
     internal void CreateAccountRequest_RoundTrip_PreservesFields()
     {
+        // Arrange
         CreateAccountRequest request = new CreateAccountRequest
         {
             Username = "player_one",
@@ -29,19 +30,23 @@ internal sealed class ContractSerializationTests
             }
         };
 
+        // Act
         CreateAccountRequest result = RoundTrip(request);
 
+        // Assert
         TestAssert.AreEqual(request.Username, result.Username);
         TestAssert.AreEqual(request.EmailAddress, result.EmailAddress);
         TestAssert.AreEqual(request.Password, result.Password);
         TestAssert.AreEqual(request.PreferredLocaleCode, result.PreferredLocaleCode);
-        AssertNotNull(result.ProfileImage);
-        TestAssert.AreEqual(request.ProfileImage.MediaType, result.ProfileImage!.MediaType);
-        TestAssert.AreEqual(request.ProfileImage.Content.Length, result.ProfileImage.Content.Length);
+        ProfileImageUploadDto expectedImage = TestAssert.IsNotNull(request.ProfileImage);
+        ProfileImageUploadDto actualImage = TestAssert.IsNotNull(result.ProfileImage);
+        TestAssert.AreEqual(expectedImage.MediaType, actualImage.MediaType);
+        TestAssert.AreEqual(expectedImage.Content.Length, actualImage.Content.Length);
     }
 
     internal void LoginResponse_RoundTrip_PreservesSession()
     {
+        // Arrange
         LoginResponse response = new LoginResponse
         {
             ResultCode = LoginResultCode.Success,
@@ -54,18 +59,22 @@ internal sealed class ContractSerializationTests
             }
         };
 
+        // Act
         LoginResponse result = RoundTrip(response);
 
+        // Assert
         TestAssert.AreEqual(LoginResultCode.Success, result.ResultCode);
-        AssertNotNull(result.Session);
-        TestAssert.AreEqual(response.Session.AccountId, result.Session!.AccountId);
-        TestAssert.AreEqual(response.Session.SessionToken, result.Session.SessionToken);
-        TestAssert.AreEqual(response.Session.Username, result.Session.Username);
-        TestAssert.AreEqual(response.Session.EmailAddress, result.Session.EmailAddress);
+        AuthenticatedSessionDto expectedSession = TestAssert.IsNotNull(response.Session);
+        AuthenticatedSessionDto actualSession = TestAssert.IsNotNull(result.Session);
+        TestAssert.AreEqual(expectedSession.AccountId, actualSession.AccountId);
+        TestAssert.AreEqual(expectedSession.SessionToken, actualSession.SessionToken);
+        TestAssert.AreEqual(expectedSession.Username, actualSession.Username);
+        TestAssert.AreEqual(expectedSession.EmailAddress, actualSession.EmailAddress);
     }
 
     internal void PlayerProfileResponse_RoundTrip_PreservesStatistics()
     {
+        // Arrange
         PlayerProfileResponse response = new PlayerProfileResponse
         {
             ResultCode = PlayerProfileResultCode.Success,
@@ -85,23 +94,27 @@ internal sealed class ContractSerializationTests
             }
         };
 
+        // Act
         PlayerProfileResponse result = RoundTrip(response);
 
+        // Assert
         TestAssert.AreEqual(PlayerProfileResultCode.Success, result.ResultCode);
-        AssertNotNull(result.Profile);
-        TestAssert.AreEqual(response.Profile.AccountId, result.Profile!.AccountId);
-        TestAssert.AreEqual(response.Profile.ProfileImageUri, result.Profile.ProfileImageUri);
+        PlayerProfileDto expectedProfile = TestAssert.IsNotNull(response.Profile);
+        PlayerProfileDto actualProfile = TestAssert.IsNotNull(result.Profile);
+        TestAssert.AreEqual(expectedProfile.AccountId, actualProfile.AccountId);
+        TestAssert.AreEqual(expectedProfile.ProfileImageUri, actualProfile.ProfileImageUri);
         TestAssert.AreEqual(
-            response.Profile.Statistics.MatchesPlayed,
-            result.Profile.Statistics.MatchesPlayed);
-        TestAssert.AreEqual(response.Profile.Statistics.Wins, result.Profile.Statistics.Wins);
-        TestAssert.AreEqual(response.Profile.Statistics.Losses, result.Profile.Statistics.Losses);
-        TestAssert.AreEqual(response.Profile.Statistics.Draws, result.Profile.Statistics.Draws);
-        TestAssert.AreEqual(response.Profile.Statistics.WinRate, result.Profile.Statistics.WinRate);
+            expectedProfile.Statistics.MatchesPlayed,
+            actualProfile.Statistics.MatchesPlayed);
+        TestAssert.AreEqual(expectedProfile.Statistics.Wins, actualProfile.Statistics.Wins);
+        TestAssert.AreEqual(expectedProfile.Statistics.Losses, actualProfile.Statistics.Losses);
+        TestAssert.AreEqual(expectedProfile.Statistics.Draws, actualProfile.Statistics.Draws);
+        TestAssert.AreEqual(expectedProfile.Statistics.WinRate, actualProfile.Statistics.WinRate);
     }
 
     internal void LeaderboardResponse_RoundTrip_PreservesEntries()
     {
+        // Arrange
         LeaderboardResponse response = new LeaderboardResponse
         {
             ResultCode = LeaderboardResultCode.Success,
@@ -119,8 +132,10 @@ internal sealed class ContractSerializationTests
             }
         };
 
+        // Act
         LeaderboardResponse result = RoundTrip(response);
 
+        // Assert
         TestAssert.AreEqual(LeaderboardResultCode.Success, result.ResultCode);
         TestAssert.AreEqual(1, result.Entries.Length);
         TestAssert.AreEqual(response.Entries[0].Rank, result.Entries[0].Rank);
@@ -128,10 +143,28 @@ internal sealed class ContractSerializationTests
         TestAssert.AreEqual(response.Entries[0].Wins, result.Entries[0].Wins);
     }
 
-    internal void ServiceContracts_DeclareExpectedOperations()
+    internal void AccountServiceContract_DeclaredOperations_MatchesExpectedCount()
     {
-        AssertServiceContract(typeof(IAccountService), 2);
-        AssertServiceContract(typeof(IPlayerService), 2);
+        // Arrange
+        Type contractType = typeof(IAccountService);
+
+        // Act
+        bool isValid = HasExpectedOperations(contractType, 2);
+
+        // Assert
+        TestAssert.AreEqual(true, isValid);
+    }
+
+    internal void PlayerServiceContract_DeclaredOperations_MatchesExpectedCount()
+    {
+        // Arrange
+        Type contractType = typeof(IPlayerService);
+
+        // Act
+        bool isValid = HasExpectedOperations(contractType, 2);
+
+        // Assert
+        TestAssert.AreEqual(true, isValid);
     }
 
     private static TContract RoundTrip<TContract>(TContract value)
@@ -141,11 +174,11 @@ internal sealed class ContractSerializationTests
         serializer.WriteObject(stream, value);
         stream.Position = 0;
         object? result = serializer.ReadObject(stream);
-        AssertNotNull(result);
-        return (TContract)result!;
+        object nonNullResult = TestAssert.IsNotNull(result);
+        return (TContract)nonNullResult;
     }
 
-    private static void AssertServiceContract(Type contractType, int operationCount)
+    private static bool HasExpectedOperations(Type contractType, int operationCount)
     {
         bool hasServiceContract = contractType
             .GetCustomAttributes(typeof(ServiceContractAttribute), false)
@@ -156,15 +189,7 @@ internal sealed class ContractSerializationTests
                 .GetCustomAttributes(typeof(OperationContractAttribute), false)
                 .Any());
 
-        TestAssert.AreEqual(true, hasServiceContract);
-        TestAssert.AreEqual(operationCount, actualOperationCount);
+        return hasServiceContract && actualOperationCount == operationCount;
     }
 
-    private static void AssertNotNull(object? value)
-    {
-        if (value == null)
-        {
-            throw new InvalidOperationException("Expected a non-null value.");
-        }
-    }
 }

@@ -14,6 +14,7 @@ internal sealed class LocalRuntimeTests
 {
     internal void CreateAccountAsync_MapsRequestAndResponse()
     {
+        // Arrange
         RecordingHandlers handlers = new RecordingHandlers
         {
             CreateAccountResult = new CreateAccountResult(CreateAccountOutcome.Success, 42)
@@ -21,6 +22,7 @@ internal sealed class LocalRuntimeTests
         LocalRuntimeServices services = CreateServices(handlers);
         byte[] imageContent = { 1, 2, 3 };
 
+        // Act
         CreateAccountResponse response = services.AccountService.CreateAccountAsync(
             new CreateAccountRequest
             {
@@ -36,6 +38,7 @@ internal sealed class LocalRuntimeTests
             }).GetAwaiter().GetResult();
         imageContent[0] = 9;
 
+        // Assert
         TestAssert.AreEqual("PlayerOne", handlers.CreateAccountCommand?.Username);
         TestAssert.AreEqual("player@example.com", handlers.CreateAccountCommand?.EmailAddress);
         TestAssert.AreEqual("en-US", handlers.CreateAccountCommand?.PreferredLocaleCode);
@@ -47,6 +50,7 @@ internal sealed class LocalRuntimeTests
 
     internal void LoginAsync_MapsAuthenticatedSession()
     {
+        // Arrange
         RecordingHandlers handlers = new RecordingHandlers
         {
             LoginResult = new LoginResult(
@@ -55,6 +59,7 @@ internal sealed class LocalRuntimeTests
         };
         LocalRuntimeServices services = CreateServices(handlers);
 
+        // Act
         LoginResponse response = services.AccountService.LoginAsync(
             new LoginRequest
             {
@@ -62,6 +67,7 @@ internal sealed class LocalRuntimeTests
                 Password = "Password1!"
             }).GetAwaiter().GetResult();
 
+        // Assert
         TestAssert.AreEqual("PlayerOne", handlers.LoginCommand?.Login);
         TestAssert.AreEqual(LoginResultCode.Success, response.ResultCode);
         TestAssert.AreEqual("session-token", response.Session?.SessionToken);
@@ -71,6 +77,7 @@ internal sealed class LocalRuntimeTests
 
     internal void GetPlayerProfileAsync_MapsProfileStatistics()
     {
+        // Arrange
         RecordingHandlers handlers = new RecordingHandlers
         {
             PlayerProfileResult = new PlayerProfileResult(
@@ -83,6 +90,7 @@ internal sealed class LocalRuntimeTests
         };
         LocalRuntimeServices services = CreateServices(handlers);
 
+        // Act
         PlayerProfileResponse response = services.PlayerService.GetPlayerProfileAsync(
             new PlayerProfileRequest
             {
@@ -90,6 +98,7 @@ internal sealed class LocalRuntimeTests
                 AccountId = 42
             }).GetAwaiter().GetResult();
 
+        // Assert
         TestAssert.AreEqual("session-token", handlers.PlayerProfileQuery?.SessionToken);
         TestAssert.AreEqual<long?>(42, handlers.PlayerProfileQuery?.AccountId);
         TestAssert.AreEqual(PlayerProfileResultCode.Success, response.ResultCode);
@@ -101,6 +110,7 @@ internal sealed class LocalRuntimeTests
 
     internal void GetLeaderboardAsync_MapsRankedEntries()
     {
+        // Arrange
         RecordingHandlers handlers = new RecordingHandlers
         {
             LeaderboardResult = new LeaderboardResult(
@@ -112,9 +122,11 @@ internal sealed class LocalRuntimeTests
         };
         LocalRuntimeServices services = CreateServices(handlers);
 
+        // Act
         LeaderboardResponse response = services.PlayerService.GetLeaderboardAsync(
             new LeaderboardRequest { MaximumEntries = 10 }).GetAwaiter().GetResult();
 
+        // Assert
         TestAssert.AreEqual(10, handlers.LeaderboardQuery?.MaximumEntries);
         TestAssert.AreEqual(LeaderboardResultCode.Success, response.ResultCode);
         TestAssert.AreEqual(1, response.Entries.Length);
