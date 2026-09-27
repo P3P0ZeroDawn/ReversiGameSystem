@@ -39,6 +39,7 @@ internal static class ValidationPolicyTestRunner
         ChatServiceTests chatTests = new ChatServiceTests();
         ChatReadServiceTests chatReadTests = new ChatReadServiceTests();
         ContractSerializationTests contractTests = new ContractSerializationTests();
+        LocalRuntimeTests localRuntimeTests = new LocalRuntimeTests();
         Action[] tests =
         {
             emailTests.Validate_OrdinaryAddress_ReturnsNone,
@@ -172,7 +173,11 @@ internal static class ValidationPolicyTestRunner
             contractTests.LoginResponse_RoundTrip_PreservesSession,
             contractTests.PlayerProfileResponse_RoundTrip_PreservesStatistics,
             contractTests.LeaderboardResponse_RoundTrip_PreservesEntries,
-            contractTests.ServiceContracts_DeclareExpectedOperations
+            contractTests.ServiceContracts_DeclareExpectedOperations,
+            localRuntimeTests.CreateAccountAsync_MapsRequestAndResponse,
+            localRuntimeTests.LoginAsync_MapsAuthenticatedSession,
+            localRuntimeTests.GetPlayerProfileAsync_MapsProfileStatistics,
+            localRuntimeTests.GetLeaderboardAsync_MapsRankedEntries
         };
 
         try

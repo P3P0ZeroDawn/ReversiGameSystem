@@ -109,12 +109,21 @@
       <Link>ChatService.cs</Link>
     </Compile>
     <Compile Include="ContractSerializationTests.cs" />
+    <Compile Include="LocalRuntimeTests.cs" />
     <Compile Include="ValidationPolicyTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\ReversiGameSystem.Contracts\ReversiGameSystem.Contracts.csproj">
       <Project>{D9DC968B-C867-41A1-ABD1-1853A481AF4E}</Project>
       <Name>ReversiGameSystem.Contracts</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\src\ReversiGameSystem.LocalRuntime\ReversiGameSystem.LocalRuntime.csproj">
+      <Project>{45FF5368-B184-4489-8AD3-67FE234D941F}</Project>
+      <Name>ReversiGameSystem.LocalRuntime</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\src\ReversiGameSystem.Server.Application\ReversiGameSystem.Server.Application.csproj">
+      <Project>{FE67E273-7E6A-4640-B804-37DD43ACCB7A}</Project>
+      <Name>ReversiGameSystem.Server.Application</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
