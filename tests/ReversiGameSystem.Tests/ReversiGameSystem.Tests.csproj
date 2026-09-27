@@ -108,6 +108,7 @@
     </Compile>
     <Compile Include="ContractSerializationTests.cs" />
     <Compile Include="CreateAccountHandlerTests.cs" />
+    <Compile Include="LeaderboardHandlerTests.cs" />
     <Compile Include="LocalRuntimeTests.cs" />
     <Compile Include="LoginHandlerTests.cs" />
     <Compile Include="PersistenceModelTests.cs" />

@@ -41,6 +41,7 @@ internal static class ValidationPolicyTestRunner
         ChatReadServiceTests chatReadTests = new ChatReadServiceTests();
         ContractSerializationTests contractTests = new ContractSerializationTests();
         CreateAccountHandlerTests createAccountTests = new CreateAccountHandlerTests();
+        LeaderboardHandlerTests leaderboardTests = new LeaderboardHandlerTests();
         LoginHandlerTests loginTests = new LoginHandlerTests();
         LocalRuntimeTests localRuntimeTests = new LocalRuntimeTests();
         PersistenceModelTests persistenceModelTests = new PersistenceModelTests();
@@ -187,6 +188,10 @@ internal static class ValidationPolicyTestRunner
             createAccountTests.ExecuteAsync_UnsupportedLocale_ReturnsInvalidRequest,
             createAccountTests.PasswordHasher_HashAndVerify_UsesSaltedPbkdf2,
             createAccountTests.ProfileImageStore_SaveAndDelete_UsesRelativeUri,
+            leaderboardTests.ExecuteAsync_ValidRequest_ReturnsRankedEntries,
+            leaderboardTests.ExecuteAsync_InvalidMaximum_ReturnsInvalidRequest,
+            leaderboardTests.ExecuteAsync_UnavailableStore_ReturnsServiceUnavailable,
+            leaderboardTests.ExecuteAsync_StoreFailure_ReturnsServiceUnavailable,
             loginTests.ExecuteAsync_ValidCredentials_CreatesSession,
             loginTests.ExecuteAsync_MissingCredentials_ReturnsInvalidRequest,
             loginTests.ExecuteAsync_UnknownAccount_ReturnsInvalidCredentials,

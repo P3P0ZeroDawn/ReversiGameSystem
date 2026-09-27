@@ -1,9 +1,10 @@
 using System.Windows.Media.Imaging;
+using ReversiGameSystem.Contracts.Accounts;
 
 namespace ReversiGameSystem.Services;
 
 /// <summary>
-/// Holds account details known to the client while server sessions are pending.
+/// Holds the authenticated account details used by the client session.
 /// </summary>
 internal static class AccountPreviewState
 {
@@ -11,15 +12,20 @@ internal static class AccountPreviewState
 
     internal static string? Email { get; private set; }
 
+    internal static long? AccountId { get; private set; }
+
+    internal static string? SessionToken { get; private set; }
+
     internal static BitmapSource? ProfilePicture { get; private set; }
 
     internal static void Start(
-        string email,
-        string? username,
+        AuthenticatedSessionDto session,
         BitmapSource? profilePicture = null)
     {
-        Email = email;
-        Username = username;
+        Email = session.EmailAddress;
+        Username = session.Username;
+        AccountId = session.AccountId;
+        SessionToken = session.SessionToken;
         ProfilePicture = profilePicture;
         UserPreferencesState.Reset();
     }
@@ -38,6 +44,8 @@ internal static class AccountPreviewState
     {
         Email = null;
         Username = null;
+        AccountId = null;
+        SessionToken = null;
         ProfilePicture = null;
         UserPreferencesState.Reset();
         FriendshipPreviewState.Reset();

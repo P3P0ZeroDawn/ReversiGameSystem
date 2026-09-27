@@ -1,10 +1,11 @@
+using System;
 using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using ReversiGameSystem.Contracts.Players;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
-using ReversiGameSystem.Statistics;
 
 namespace ReversiGameSystem.Views;
 
@@ -14,8 +15,7 @@ namespace ReversiGameSystem.Views;
 public partial class PlayerStatisticsControl : UserControl
 {
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
-    private readonly IPlayerStatisticsService _statisticsService = new PlayerStatisticsService();
-    private PlayerStatistics? _statistics;
+    private PlayerStatisticsDto? _statistics;
     private string? _playerId;
 
     /// <summary>
@@ -64,20 +64,15 @@ public partial class PlayerStatisticsControl : UserControl
         }
     }
 
-    private void OnShowStatisticsClick(object sender, RoutedEventArgs e)
+    internal void SetStatistics(PlayerStatisticsDto statistics)
     {
-        ClearStatistics();
-        PlayerStatisticsQueryResult result = _statisticsService.GetCompletedMatches(PlayerId);
-        if (result.Status == PlayerStatisticsQueryStatus.ServerConnectionFailed)
-        {
-            _dialogService.ShowError(
-                this,
-                "PlayerStatistics_ServerConnectionFailedTitle",
-                "PlayerStatistics_ServerConnectionFailedMessage");
-            return;
-        }
+        _statistics = statistics ?? throw new ArgumentNullException(nameof(statistics));
+        ShowStatistics();
+    }
 
-        if (result.Status == PlayerStatisticsQueryStatus.RetrievalError)
+    private async void OnShowStatisticsClick(object sender, RoutedEventArgs e)
+    {
+        if (PlayerId != null)
         {
             _dialogService.ShowError(
                 this,
@@ -86,8 +81,47 @@ public partial class PlayerStatisticsControl : UserControl
             return;
         }
 
-        _statistics = PlayerStatistics.FromCompletedMatches(result.CompletedMatches);
-        ShowStatistics();
+        string? sessionToken = AccountPreviewState.SessionToken;
+        if (sessionToken == null || string.IsNullOrWhiteSpace(sessionToken))
+        {
+            _dialogService.ShowError(
+                this,
+                "PlayerStatistics_RetrievalErrorTitle",
+                "PlayerStatistics_RetrievalErrorMessage");
+            return;
+        }
+
+        ClearStatistics();
+        try
+        {
+            PlayerProfileResponse response = await ClientRuntime.Services.PlayerService
+                .GetPlayerProfileAsync(new PlayerProfileRequest
+                {
+                    SessionToken = sessionToken
+                });
+            if (response.ResultCode == PlayerProfileResultCode.Success
+                && response.Profile != null)
+            {
+                SetStatistics(response.Profile.Statistics);
+                return;
+            }
+
+            string resourcePrefix = response.ResultCode ==
+                PlayerProfileResultCode.ServiceUnavailable
+                    ? "PlayerStatistics_ServerConnectionFailed"
+                    : "PlayerStatistics_RetrievalError";
+            _dialogService.ShowError(
+                this,
+                resourcePrefix + "Title",
+                resourcePrefix + "Message");
+        }
+        catch (Exception)
+        {
+            _dialogService.ShowError(
+                this,
+                "PlayerStatistics_ServerConnectionFailedTitle",
+                "PlayerStatistics_ServerConnectionFailedMessage");
+        }
     }
 
     private void ClearStatistics()

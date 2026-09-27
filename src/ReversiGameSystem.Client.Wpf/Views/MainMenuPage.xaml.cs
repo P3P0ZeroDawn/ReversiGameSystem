@@ -1,6 +1,9 @@
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using ReversiGameSystem.Contracts.Leaderboards;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
 
@@ -17,6 +20,7 @@ public partial class MainMenuPage : Page
     private readonly InstructionsService _instructionsService =
         new InstructionsService(key => LocalizationManager.Instance[key]);
     private bool _friendsLoaded;
+    private bool _leaderboardLoaded;
 
     /// <summary>
     /// Initializes the main menu page.
@@ -42,12 +46,67 @@ public partial class MainMenuPage : Page
         settingsButton.Visibility = Visibility.Collapsed;
     }
 
-    private void OnLoaded(object sender, RoutedEventArgs e)
+    private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         if (_guestName == null && !_friendsLoaded)
         {
             LoadFriends();
         }
+
+        if (!_leaderboardLoaded)
+        {
+            await LoadLeaderboardAsync();
+        }
+    }
+
+    private async System.Threading.Tasks.Task LoadLeaderboardAsync()
+    {
+        _leaderboardLoaded = true;
+        try
+        {
+            LeaderboardResponse response = await ClientRuntime.Services.PlayerService
+                .GetLeaderboardAsync(new LeaderboardRequest { MaximumEntries = 10 });
+            if (response.ResultCode != LeaderboardResultCode.Success)
+            {
+                ShowLeaderboardError();
+                return;
+            }
+
+            CultureInfo culture = CultureInfo.GetCultureInfo(
+                LocalizationManager.Instance.CultureName);
+            List<LeaderboardItem> items = new List<LeaderboardItem>();
+            foreach (LeaderboardEntryDto entry in response.Entries)
+            {
+                items.Add(new LeaderboardItem
+                {
+                    Position = "#" + entry.Rank.ToString("N0", culture),
+                    Username = entry.Username,
+                    WinsText = string.Format(
+                        culture,
+                        LocalizationManager.Instance["MainMenu_TopWinnersWinsFormat"],
+                        entry.Wins)
+                });
+            }
+
+            topWinnersItemsControl.ItemsSource = items;
+            topWinnersEmptyTextBlock.Visibility = items.Count == 0
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+        catch (Exception)
+        {
+            ShowLeaderboardError();
+        }
+    }
+
+    private void ShowLeaderboardError()
+    {
+        topWinnersItemsControl.ItemsSource = null;
+        topWinnersEmptyTextBlock.Visibility = Visibility.Visible;
+        _dialogService.ShowError(
+            this,
+            "MainMenu_TopWinnersUnavailableTitle",
+            "MainMenu_TopWinnersUnavailableMessage");
     }
 
     private void LoadFriends()
@@ -219,13 +278,14 @@ public partial class MainMenuPage : Page
         _dialogService.ShowInformationText(this, content.Title, content.Message);
     }
 
-    private void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         string previousCulture = LocalizationManager.Instance.CultureName;
         LanguageChangeService.ConfirmSelection((ComboBox)sender);
         if (LocalizationManager.Instance.CultureName != previousCulture)
         {
             UpdateGuestIdentity();
+            await LoadLeaderboardAsync();
         }
     }
 
@@ -244,5 +304,14 @@ public partial class MainMenuPage : Page
     private sealed class FriendItem
     {
         public string Username { get; set; } = string.Empty;
+    }
+
+    private sealed class LeaderboardItem
+    {
+        public string Position { get; set; } = string.Empty;
+
+        public string Username { get; set; } = string.Empty;
+
+        public string WinsText { get; set; } = string.Empty;
     }
 }

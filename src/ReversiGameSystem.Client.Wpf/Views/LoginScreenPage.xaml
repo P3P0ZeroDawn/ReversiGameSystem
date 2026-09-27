@@ -46,9 +46,9 @@
                                Text="{Binding [LoginScreen_Title]}"
                                Style="{StaticResource AuthenticationTitleStyle}" />
 
-                    <Label x:Name="emailLabel" Content="{Binding [Common_EmailLabel]}"
+                    <Label x:Name="emailLabel" Content="{Binding [LoginScreen_LoginLabel]}"
                            Style="{StaticResource AuthenticationFieldLabelStyle}" />
-                    <TextBox x:Name="emailTextBox"
+                    <TextBox x:Name="loginTextBox"
                              Style="{StaticResource AuthenticationTextBoxStyle}" />
                     <Label x:Name="passwordLabel" Content="{Binding [Common_PasswordLabel]}"
                            Style="{StaticResource AuthenticationFieldLabelStyle}" />

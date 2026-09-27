@@ -261,6 +261,7 @@
     <Compile Include="Services\FriendsService.cs" />
     <Compile Include="Services\FriendRemovalService.cs" />
     <Compile Include="Services\ChatService.cs" />
+    <Compile Include="Services\ClientRuntime.cs" />
     <Compile Include="Services\ActionChoiceDialogOptions.cs" />
     <Compile Include="Services\AvailableMatchesService.cs" />
     <Compile Include="Services\ConfirmationDialogOptions.cs" />
@@ -329,6 +330,10 @@
     <ProjectReference Include="..\ReversiGameSystem.Domain\ReversiGameSystem.Domain.csproj">
       <Project>{26E704F1-4360-44FB-A725-C5FC02E03B2C}</Project>
       <Name>ReversiGameSystem.Domain</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ReversiGameSystem.LocalRuntime\ReversiGameSystem.LocalRuntime.csproj">
+      <Project>{45FF5368-B184-4489-8AD3-67FE234D941F}</Project>
+      <Name>ReversiGameSystem.LocalRuntime</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -69,8 +69,37 @@
                                       MaxHeight="500"
                                       CanContentScroll="False">
                             <StackPanel x:Name="topWinnersPanel">
-                                <TextBlock Text="{Binding [MainMenu_TopWinnersEmptyMessage]}"
+                                <TextBlock x:Name="topWinnersEmptyTextBlock"
+                                           Text="{Binding [MainMenu_TopWinnersEmptyMessage]}"
                                            Style="{StaticResource MainMenuEmptyTextStyle}" />
+                                <ItemsControl x:Name="topWinnersItemsControl">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#F7FAF8"
+                                                    BorderBrush="#D8E5DC"
+                                                    BorderThickness="1"
+                                                    CornerRadius="8"
+                                                    Padding="8" Margin="0,0,0,8">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="36" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Position}"
+                                                               FontWeight="Bold" />
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding Username}"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding Username}" />
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding WinsText}"
+                                                               Margin="8,0,0,0" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
                         </ScrollViewer>
                     </StackPanel>

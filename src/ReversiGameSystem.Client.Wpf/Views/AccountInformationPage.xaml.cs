@@ -1,6 +1,8 @@
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using ReversiGameSystem.Contracts.Players;
 using ReversiGameSystem.Domain.Accounts;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
@@ -52,6 +54,7 @@ public partial class AccountInformationPage : Page
         bool ownProfileRequested)
     {
         InitializeComponent();
+        Loaded += OnLoaded;
         _returnTarget = returnTarget;
         string currentUsername = AccountPreviewState.Username
             ?? LocalizationManager.Instance["Game_DefaultPlayerName"];
@@ -89,7 +92,73 @@ public partial class AccountInformationPage : Page
             };
         }
 
-        // TODO: Load the authenticated account details and statistics from the server.
+    }
+
+    private async void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        Loaded -= OnLoaded;
+        string? sessionToken = AccountPreviewState.SessionToken;
+        if (!_isOwnProfile
+            || sessionToken == null
+            || string.IsNullOrWhiteSpace(sessionToken))
+        {
+            return;
+        }
+
+        try
+        {
+            PlayerProfileResponse response = await ClientRuntime.Services.PlayerService
+                .GetPlayerProfileAsync(new PlayerProfileRequest
+                {
+                    SessionToken = sessionToken
+                });
+            if (response.ResultCode == PlayerProfileResultCode.Success
+                && response.Profile != null)
+            {
+                ApplyProfile(response.Profile);
+                return;
+            }
+
+            ShowProfileLoadError(response.ResultCode);
+        }
+        catch (Exception)
+        {
+            _dialogService.ShowError(
+                this,
+                "PlayerStatistics_ServerConnectionFailedTitle",
+                "PlayerStatistics_ServerConnectionFailedMessage");
+        }
+    }
+
+    private void ApplyProfile(PlayerProfileDto profile)
+    {
+        AccountPreviewState.UpdateUsername(profile.Username);
+        usernameTextBlock.Text = profile.Username;
+        playerStatisticsControl.SetStatistics(profile.Statistics);
+
+        System.Windows.Media.Imaging.BitmapSource? profileImage =
+            ClientRuntime.TryLoadProfileImage(profile.ProfileImageUri);
+        if (profileImage == null)
+        {
+            return;
+        }
+
+        AccountPreviewState.UpdateProfilePicture(profileImage);
+        profilePictureButton.Background = new ImageBrush(profileImage)
+        {
+            Stretch = Stretch.UniformToFill
+        };
+    }
+
+    private void ShowProfileLoadError(PlayerProfileResultCode resultCode)
+    {
+        string resourcePrefix = resultCode == PlayerProfileResultCode.ServiceUnavailable
+            ? "PlayerStatistics_ServerConnectionFailed"
+            : "PlayerStatistics_RetrievalError";
+        _dialogService.ShowError(
+            this,
+            resourcePrefix + "Title",
+            resourcePrefix + "Message");
     }
 
     private void ConfigurePublicProfile()

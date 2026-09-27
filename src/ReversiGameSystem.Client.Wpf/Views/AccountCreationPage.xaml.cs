@@ -1,7 +1,10 @@
 using System;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using ReversiGameSystem.Contracts.Accounts;
+using ReversiGameSystem.Contracts.Media;
 using ReversiGameSystem.Domain.Accounts;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
@@ -44,21 +47,47 @@ public partial class AccountCreationPage : Page
         };
     }
 
-    private void OnCreateAccountClick(object sender, RoutedEventArgs e)
+    private async void OnCreateAccountClick(object sender, RoutedEventArgs e)
     {
         string email = emailTextBox.Text.Trim();
 
-        if (!ValidateForm(email) || !ConfirmVerificationCode(email))
+        if (!ValidateForm(email))
         {
             return;
         }
 
-        // TODO: Upload _pendingProfileImage with the account creation request.
-        AccountPreviewState.Start(
-            email, usernameTextBox.Text.Trim(), _pendingProfileImage?.Preview);
-        _dialogService.ShowInformation(
-            this, "AccountCreation_SuccessTitle", "AccountCreation_SuccessMessage");
-        NavigationService?.Navigate(new MainMenuPage());
+        if (!TryCreateProfileImageUpload(out ProfileImageUploadDto? profileImage))
+        {
+            _dialogService.ShowWarning(
+                this,
+                "AccountCreation_ImageNotSupportedTitle",
+                "AccountCreation_ImageNotSupportedMessage");
+            return;
+        }
+
+        createAccountButton.IsEnabled = false;
+        try
+        {
+            CreateAccountResponse response = await ClientRuntime.Services.AccountService
+                .CreateAccountAsync(
+                    new CreateAccountRequest
+                    {
+                        Username = usernameTextBox.Text.Trim(),
+                        EmailAddress = email,
+                        Password = passwordBox.Password,
+                        PreferredLocaleCode = LocalizationManager.Instance.CultureName,
+                        ProfileImage = profileImage
+                    });
+            HandleCreateAccountResponse(response, email);
+        }
+        catch (Exception)
+        {
+            ShowServiceUnavailable();
+        }
+        finally
+        {
+            createAccountButton.IsEnabled = true;
+        }
     }
 
     private bool ValidateForm(string email)
@@ -101,19 +130,85 @@ public partial class AccountCreationPage : Page
         return true;
     }
 
-    private bool ConfirmVerificationCode(string email)
+    private bool TryCreateProfileImageUpload(out ProfileImageUploadDto? upload)
     {
-        TextInputDialogOptions options = new TextInputDialogOptions(
-            "AccountCreation_VerificationCodeDialogTitle",
-            "AccountCreation_VerificationCodeDialogMessage",
-            "AccountCreation_VerificationCodeDialogLabel")
+        upload = null;
+        if (_pendingProfileImage == null)
         {
-            RequireText = true,
-            ExactDigitCount = 6,
-            MessageArguments = new object[] { email }
-        };
+            return true;
+        }
 
-        return _dialogService.TryGetText(this, options, out _);
+        try
+        {
+            string extension = Path.GetExtension(_pendingProfileImage.FilePath);
+            upload = new ProfileImageUploadDto
+            {
+                Content = File.ReadAllBytes(_pendingProfileImage.FilePath),
+                MediaType = extension.Equals(".png", StringComparison.OrdinalIgnoreCase)
+                    ? "image/png"
+                    : "image/jpeg"
+            };
+            return true;
+        }
+        catch (Exception exception) when (
+            exception is IOException
+            || exception is UnauthorizedAccessException
+            || exception is NotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    private void HandleCreateAccountResponse(CreateAccountResponse response, string email)
+    {
+        switch (response.ResultCode)
+        {
+            case CreateAccountResultCode.Success:
+                _dialogService.ShowInformation(
+                    this,
+                    "AccountCreation_SuccessTitle",
+                    "AccountCreation_SuccessMessage");
+                NavigationService?.Navigate(new LoginScreenPage(email));
+                break;
+            case CreateAccountResultCode.UsernameAlreadyExists:
+                _dialogService.ShowWarning(
+                    this,
+                    "AccountCreation_UsernameAlreadyTakenTitle",
+                    "AccountCreation_UsernameAlreadyTakenMessage");
+                break;
+            case CreateAccountResultCode.EmailAddressAlreadyExists:
+                _dialogService.ShowWarning(
+                    this,
+                    "AccountCreation_EmailAlreadyTakenTitle",
+                    "AccountCreation_EmailAlreadyTakenMessage");
+                break;
+            case CreateAccountResultCode.InvalidUsername:
+                ShowValidationWarning("InvalidUsernameFormat");
+                break;
+            case CreateAccountResultCode.InvalidEmailAddress:
+                ShowEmailValidationWarning(EmailValidationError.InvalidStructure);
+                break;
+            case CreateAccountResultCode.InvalidPassword:
+                ShowPasswordValidationWarning(PasswordValidationError.UnsupportedCharacter);
+                break;
+            case CreateAccountResultCode.ServiceUnavailable:
+                ShowServiceUnavailable();
+                break;
+            default:
+                _dialogService.ShowError(
+                    this,
+                    "AccountCreation_PersistenceErrorTitle",
+                    "AccountCreation_PersistenceErrorMessage");
+                break;
+        }
+    }
+
+    private void ShowServiceUnavailable()
+    {
+        _dialogService.ShowError(
+            this,
+            "AccountCreation_ServerConnectionFailedTitle",
+            "AccountCreation_ServerConnectionFailedMessage");
     }
 
     private bool HasMissingRequiredInformation()

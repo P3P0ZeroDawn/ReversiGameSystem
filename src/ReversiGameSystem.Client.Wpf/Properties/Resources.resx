@@ -156,6 +156,9 @@
   <data name="LoginScreen_Title" xml:space="preserve">
     <value>Sign in</value>
   </data>
+  <data name="LoginScreen_LoginLabel" xml:space="preserve">
+    <value>Username or email</value>
+  </data>
   <data name="LoginScreen_ForgotPasswordText" xml:space="preserve">
     <value>Forgot your password?</value>
   </data>
@@ -166,7 +169,25 @@
     <value>Information missing</value>
   </data>
   <data name="LoginScreen_MissingCredentialsMessage" xml:space="preserve">
-    <value>Enter your email address and password to continue.</value>
+    <value>Enter your username or email address and password to continue.</value>
+  </data>
+  <data name="LoginScreen_InvalidCredentialsTitle" xml:space="preserve">
+    <value>Sign-in failed</value>
+  </data>
+  <data name="LoginScreen_InvalidCredentialsMessage" xml:space="preserve">
+    <value>The username, email address, or password is incorrect.</value>
+  </data>
+  <data name="LoginScreen_AccountInactiveTitle" xml:space="preserve">
+    <value>Account unavailable</value>
+  </data>
+  <data name="LoginScreen_AccountInactiveMessage" xml:space="preserve">
+    <value>This account is not active.</value>
+  </data>
+  <data name="LoginScreen_ServiceUnavailableTitle" xml:space="preserve">
+    <value>Sign-in unavailable</value>
+  </data>
+  <data name="LoginScreen_ServiceUnavailableMessage" xml:space="preserve">
+    <value>We could not reach the account service. Try again.</value>
   </data>
   <data name="LoginScreen_InvalidEmailTitle" xml:space="preserve">
     <value>Invalid email address</value>
@@ -369,6 +390,15 @@
   <data name="MainMenu_TopWinnersEmptyMessage" xml:space="preserve">
     <value>No players to show yet.</value>
   </data>
+  <data name="MainMenu_TopWinnersWinsFormat" xml:space="preserve">
+    <value>{0} wins</value>
+  </data>
+  <data name="MainMenu_TopWinnersUnavailableTitle" xml:space="preserve">
+    <value>Ranking unavailable</value>
+  </data>
+  <data name="MainMenu_TopWinnersUnavailableMessage" xml:space="preserve">
+    <value>We could not load the top winners. Try again later.</value>
+  </data>
   <data name="MainMenu_CreateGameButton" xml:space="preserve">
     <value>Create game</value>
   </data>
@@ -439,7 +469,7 @@
     <value>Account created</value>
   </data>
   <data name="AccountCreation_SuccessMessage" xml:space="preserve">
-    <value>Your account was created successfully. Welcome to Reversi.</value>
+    <value>Your account was created successfully. You can now sign in.</value>
   </data>
   <data name="PasswordReset_EmailDialogTitle" xml:space="preserve">
     <value>Reset password</value>

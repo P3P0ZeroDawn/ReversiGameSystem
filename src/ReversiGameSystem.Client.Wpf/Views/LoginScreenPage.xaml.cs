@@ -1,5 +1,7 @@
+using System;
 using System.Windows;
 using System.Windows.Controls;
+using ReversiGameSystem.Contracts.Accounts;
 using ReversiGameSystem.Domain.Accounts;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
@@ -22,15 +24,20 @@ public partial class LoginScreenPage : Page
         InitializeComponent();
     }
 
+    internal LoginScreenPage(string initialLogin) : this()
+    {
+        loginTextBox.Text = initialLogin;
+    }
+
     private void OnCreateAccountClick(object sender, RoutedEventArgs e)
     {
         NavigationService?.Navigate(new AccountCreationPage());
     }
 
-    private void OnLoginClick(object sender, RoutedEventArgs e)
+    private async void OnLoginClick(object sender, RoutedEventArgs e)
     {
-        string email = emailTextBox.Text.Trim();
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(passwordBox.Password))
+        string login = loginTextBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(passwordBox.Password))
         {
             _dialogService.ShowWarning(
                 this,
@@ -39,29 +46,64 @@ public partial class LoginScreenPage : Page
             return;
         }
 
-        if (EmailPolicy.Validate(email) != EmailValidationError.None)
+        loginButton.IsEnabled = false;
+        try
         {
-            _dialogService.ShowWarning(
-                this, "LoginScreen_InvalidEmailTitle", "LoginScreen_InvalidEmailMessage");
-            return;
+            LoginResponse response = await ClientRuntime.Services.AccountService.LoginAsync(
+                new LoginRequest
+                {
+                    Login = login,
+                    Password = passwordBox.Password
+                });
+            HandleLoginResponse(response);
         }
-
-        TextInputDialogOptions options = new TextInputDialogOptions(
-            "LoginScreen_VerificationCodeDialogTitle",
-            "LoginScreen_VerificationCodeDialogMessage",
-            "LoginScreen_VerificationCodeDialogLabel")
+        catch (Exception)
         {
-            RequireText = true,
-            ExactDigitCount = 6,
-            MessageArguments = new object[] { email }
-        };
-
-        if (_dialogService.TryGetText(this, options, out _))
-        {
-            // TODO: Send and verify the code on the server before granting account access.
-            AccountPreviewState.Start(email, null);
-            NavigationService?.Navigate(new MainMenuPage());
+            ShowLoginError(
+                "LoginScreen_ServiceUnavailableTitle",
+                "LoginScreen_ServiceUnavailableMessage");
         }
+        finally
+        {
+            loginButton.IsEnabled = true;
+        }
+    }
+
+    private void HandleLoginResponse(LoginResponse response)
+    {
+        switch (response.ResultCode)
+        {
+            case LoginResultCode.Success when response.Session != null:
+                AccountPreviewState.Start(response.Session);
+                NavigationService?.Navigate(new MainMenuPage());
+                break;
+            case LoginResultCode.InvalidCredentials:
+                ShowLoginError(
+                    "LoginScreen_InvalidCredentialsTitle",
+                    "LoginScreen_InvalidCredentialsMessage");
+                break;
+            case LoginResultCode.AccountInactive:
+                ShowLoginError(
+                    "LoginScreen_AccountInactiveTitle",
+                    "LoginScreen_AccountInactiveMessage");
+                break;
+            case LoginResultCode.InvalidRequest:
+                _dialogService.ShowWarning(
+                    this,
+                    "LoginScreen_MissingCredentialsTitle",
+                    "LoginScreen_MissingCredentialsMessage");
+                break;
+            default:
+                ShowLoginError(
+                    "LoginScreen_ServiceUnavailableTitle",
+                    "LoginScreen_ServiceUnavailableMessage");
+                break;
+        }
+    }
+
+    private void ShowLoginError(string titleKey, string messageKey)
+    {
+        _dialogService.ShowError(this, titleKey, messageKey);
     }
 
     private void OnContinueAsGuestClick(object sender, RoutedEventArgs e)
@@ -142,7 +184,7 @@ public partial class LoginScreenPage : Page
         // TODO: Verify the reset code and persist the new password on the server.
         _dialogService.ShowInformation(
             this, "PasswordReset_SuccessTitle", "PasswordReset_SuccessMessage");
-        emailTextBox.Text = email;
+        loginTextBox.Text = email;
         passwordBox.Clear();
     }
 
@@ -154,7 +196,7 @@ public partial class LoginScreenPage : Page
             "Common_EmailLabel")
         {
             ConfirmButtonKey = "PasswordReset_ContinueButton",
-            InitialText = emailTextBox.Text.Trim(),
+            InitialText = loginTextBox.Text.Trim(),
             RequireText = true,
             MaximumLength = 0
         };
