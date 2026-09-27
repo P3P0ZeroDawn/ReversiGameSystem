@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ReversiGameSystem.Domain.Accounts;
 using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Statistics;
@@ -39,6 +40,7 @@ internal static class ValidationPolicyTestRunner
         ChatServiceTests chatTests = new ChatServiceTests();
         ChatReadServiceTests chatReadTests = new ChatReadServiceTests();
         ContractSerializationTests contractTests = new ContractSerializationTests();
+        CreateAccountHandlerTests createAccountTests = new CreateAccountHandlerTests();
         LocalRuntimeTests localRuntimeTests = new LocalRuntimeTests();
         PersistenceModelTests persistenceModelTests = new PersistenceModelTests();
         Action[] tests =
@@ -175,6 +177,14 @@ internal static class ValidationPolicyTestRunner
             contractTests.PlayerProfileResponse_RoundTrip_PreservesStatistics,
             contractTests.LeaderboardResponse_RoundTrip_PreservesEntries,
             contractTests.ServiceContracts_DeclareExpectedOperations,
+            createAccountTests.ExecuteAsync_ValidRequest_StoresAccount,
+            createAccountTests.ExecuteAsync_MissingRequiredValue_ReturnsInvalidRequest,
+            createAccountTests.ExecuteAsync_InvalidFields_ReturnSpecificOutcomes,
+            createAccountTests.ExecuteAsync_InvalidProfileImage_ReturnsInvalidRequest,
+            createAccountTests.ExecuteAsync_DuplicateUsername_RemovesStoredImage,
+            createAccountTests.ExecuteAsync_UnsupportedLocale_ReturnsInvalidRequest,
+            createAccountTests.PasswordHasher_HashAndVerify_UsesSaltedPbkdf2,
+            createAccountTests.ProfileImageStore_SaveAndDelete_UsesRelativeUri,
             localRuntimeTests.CreateAccountAsync_MapsRequestAndResponse,
             localRuntimeTests.LoginAsync_MapsAuthenticatedSession,
             localRuntimeTests.GetPlayerProfileAsync_MapsProfileStatistics,

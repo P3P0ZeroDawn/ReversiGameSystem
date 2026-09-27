@@ -265,11 +265,8 @@
     <Compile Include="Services\AvailableMatchesService.cs" />
     <Compile Include="Services\ConfirmationDialogOptions.cs" />
     <Compile Include="Services\TextInputDialogOptions.cs" />
-    <Compile Include="Validation\EmailPolicy.cs" />
-    <Compile Include="Validation\PasswordPolicy.cs" />
     <Compile Include="Validation\ProfilePicturePolicy.cs" />
     <Compile Include="Validation\BoardBackgroundPolicy.cs" />
-    <Compile Include="Validation\UsernamePolicy.cs" />
     <Compile Include="Validation\GuestUsernamePolicy.cs" />
     <Compile Include="Statistics\PlayerStatistics.cs" />
     <Compile Include="Game\TurnTimePolicy.cs" />

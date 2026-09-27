@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Security;
 using System.Windows.Media.Imaging;
+using ReversiGameSystem.Domain.Accounts;
 
 namespace ReversiGameSystem.Validation;
 
@@ -10,8 +11,8 @@ namespace ReversiGameSystem.Validation;
 /// </summary>
 internal static class ProfilePicturePolicy
 {
-    internal const long MaximumFileBytes = 5 * 1024 * 1024;
-    internal const int MaximumDimension = 4096;
+    internal const long MaximumFileBytes = ProfileImagePolicy.MaximumFileBytes;
+    internal const int MaximumDimension = ProfileImagePolicy.MaximumDimension;
 
     internal static bool TryCreatePreview(
         string path,

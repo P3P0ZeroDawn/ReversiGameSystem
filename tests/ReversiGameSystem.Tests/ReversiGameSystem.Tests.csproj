@@ -25,15 +25,6 @@
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml" />
-    <Compile Include="$(ClientProjectDirectory)\Validation\EmailPolicy.cs">
-      <Link>EmailPolicy.cs</Link>
-    </Compile>
-    <Compile Include="$(ClientProjectDirectory)\Validation\PasswordPolicy.cs">
-      <Link>PasswordPolicy.cs</Link>
-    </Compile>
-    <Compile Include="$(ClientProjectDirectory)\Validation\UsernamePolicy.cs">
-      <Link>UsernamePolicy.cs</Link>
-    </Compile>
     <Compile Include="$(ClientProjectDirectory)\Validation\GuestUsernamePolicy.cs">
       <Link>GuestUsernamePolicy.cs</Link>
     </Compile>
@@ -116,6 +107,7 @@
       <Link>ChatService.cs</Link>
     </Compile>
     <Compile Include="ContractSerializationTests.cs" />
+    <Compile Include="CreateAccountHandlerTests.cs" />
     <Compile Include="LocalRuntimeTests.cs" />
     <Compile Include="PersistenceModelTests.cs" />
     <Compile Include="ValidationPolicyTests.cs" />
@@ -124,6 +116,10 @@
     <ProjectReference Include="..\..\src\ReversiGameSystem.Contracts\ReversiGameSystem.Contracts.csproj">
       <Project>{D9DC968B-C867-41A1-ABD1-1853A481AF4E}</Project>
       <Name>ReversiGameSystem.Contracts</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\src\ReversiGameSystem.Domain\ReversiGameSystem.Domain.csproj">
+      <Project>{26E704F1-4360-44FB-A725-C5FC02E03B2C}</Project>
+      <Name>ReversiGameSystem.Domain</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\src\ReversiGameSystem.LocalRuntime\ReversiGameSystem.LocalRuntime.csproj">
       <Project>{45FF5368-B184-4489-8AD3-67FE234D941F}</Project>

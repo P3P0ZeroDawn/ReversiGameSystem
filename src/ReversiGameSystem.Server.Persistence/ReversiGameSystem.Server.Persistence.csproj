@@ -17,6 +17,7 @@
     </Reference>
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ReversiGameSystem.Server.Application\ReversiGameSystem.Server.Application.csproj" />

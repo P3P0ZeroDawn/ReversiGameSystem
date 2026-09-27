@@ -1,12 +1,12 @@
 using System;
 using System.Globalization;
 
-namespace ReversiGameSystem.Validation;
+namespace ReversiGameSystem.Domain.Accounts;
 
 /// <summary>
-/// Checks the email address syntax accepted by the registration form.
+/// Defines the email address syntax accepted for account registration.
 /// </summary>
-internal static class EmailPolicy
+public static class EmailPolicy
 {
     private const int MaximumAddressLength = 254;
     private const int MaximumLocalPartLength = 64;
@@ -16,7 +16,7 @@ internal static class EmailPolicy
     private const int MinimumTopLevelDomainLength = 2;
     private const string AllowedLocalSymbols = "!#$%&'*+-/=?^_`{|}~";
 
-    internal static EmailValidationError Validate(string email)
+    public static EmailValidationError Validate(string email)
     {
         if (email.Length > MaximumAddressLength)
         {
@@ -139,7 +139,7 @@ internal static class EmailPolicy
     }
 }
 
-internal enum EmailValidationError
+public enum EmailValidationError
 {
     None,
     TooLong,

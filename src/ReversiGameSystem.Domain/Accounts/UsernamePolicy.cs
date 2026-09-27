@@ -1,14 +1,14 @@
-namespace ReversiGameSystem.Validation;
+namespace ReversiGameSystem.Domain.Accounts;
 
 /// <summary>
-/// Validates account usernames before they are submitted to the server.
+/// Defines the username rules shared by account clients and application services.
 /// </summary>
-internal static class UsernamePolicy
+public static class UsernamePolicy
 {
-    internal const int MinimumLength = 3;
-    internal const int MaximumLength = 32;
+    public const int MinimumLength = 3;
+    public const int MaximumLength = 32;
 
-    internal static UsernameValidationError Validate(string username)
+    public static UsernameValidationError Validate(string username)
     {
         if (string.IsNullOrWhiteSpace(username))
         {
@@ -37,7 +37,7 @@ internal static class UsernamePolicy
     }
 }
 
-internal enum UsernameValidationError
+public enum UsernameValidationError
 {
     None,
     Missing,

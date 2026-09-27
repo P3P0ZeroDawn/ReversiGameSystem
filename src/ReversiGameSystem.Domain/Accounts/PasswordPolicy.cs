@@ -1,17 +1,17 @@
 using System;
 using System.Globalization;
 
-namespace ReversiGameSystem.Validation;
+namespace ReversiGameSystem.Domain.Accounts;
 
 /// <summary>
-/// Checks the preliminary password policy before registration is sent to a server.
+/// Defines the password rules shared by account clients and application services.
 /// </summary>
-internal static class PasswordPolicy
+public static class PasswordPolicy
 {
-    internal const int MinimumLength = 8;
-    internal const int MaximumLength = 128;
+    public const int MinimumLength = 8;
+    public const int MaximumLength = 128;
 
-    internal static PasswordValidationError Validate(string password)
+    public static PasswordValidationError Validate(string password)
     {
         int characterCount = 0;
         PasswordCharacterClasses characterClasses = PasswordCharacterClasses.None;
@@ -123,7 +123,7 @@ internal static class PasswordPolicy
     }
 }
 
-internal enum PasswordValidationError
+public enum PasswordValidationError
 {
     None,
     TooShort,
