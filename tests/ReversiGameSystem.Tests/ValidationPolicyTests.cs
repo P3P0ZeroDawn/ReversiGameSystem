@@ -41,6 +41,7 @@ internal static class ValidationPolicyTestRunner
         ChatReadServiceTests chatReadTests = new ChatReadServiceTests();
         ContractSerializationTests contractTests = new ContractSerializationTests();
         CreateAccountHandlerTests createAccountTests = new CreateAccountHandlerTests();
+        LoginHandlerTests loginTests = new LoginHandlerTests();
         LocalRuntimeTests localRuntimeTests = new LocalRuntimeTests();
         PersistenceModelTests persistenceModelTests = new PersistenceModelTests();
         Action[] tests =
@@ -185,6 +186,13 @@ internal static class ValidationPolicyTestRunner
             createAccountTests.ExecuteAsync_UnsupportedLocale_ReturnsInvalidRequest,
             createAccountTests.PasswordHasher_HashAndVerify_UsesSaltedPbkdf2,
             createAccountTests.ProfileImageStore_SaveAndDelete_UsesRelativeUri,
+            loginTests.ExecuteAsync_ValidCredentials_CreatesSession,
+            loginTests.ExecuteAsync_MissingCredentials_ReturnsInvalidRequest,
+            loginTests.ExecuteAsync_UnknownAccount_ReturnsInvalidCredentials,
+            loginTests.ExecuteAsync_WrongPassword_ReturnsInvalidCredentials,
+            loginTests.ExecuteAsync_InactiveAccount_ReturnsAccountInactive,
+            loginTests.ExecuteAsync_UnavailableStore_ReturnsServiceUnavailable,
+            loginTests.SessionStore_CreateFindAndExpire_EnforcesLifetime,
             localRuntimeTests.CreateAccountAsync_MapsRequestAndResponse,
             localRuntimeTests.LoginAsync_MapsAuthenticatedSession,
             localRuntimeTests.GetPlayerProfileAsync_MapsProfileStatistics,
