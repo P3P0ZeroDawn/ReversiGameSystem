@@ -142,19 +142,18 @@ public sealed class CreateAccountHandler : ICreateAccountHandler
 
     private PasswordHashResult CreatePasswordHash(string password)
     {
+        PasswordHashResult result;
         try
         {
             string normalizedPassword = password.Normalize(NormalizationForm.FormC);
-            return PasswordHashResult.Success(_passwordHasher.Hash(normalizedPassword));
+            result = PasswordHashResult.Success(_passwordHasher.Hash(normalizedPassword));
         }
-        catch (ArgumentException)
+        catch (Exception exception) when (exception is ArgumentException or CryptographicException)
         {
-            return PasswordHashResult.Failure();
+            result = PasswordHashResult.Failure();
         }
-        catch (CryptographicException)
-        {
-            return PasswordHashResult.Failure();
-        }
+
+        return result;
     }
 
     private async Task<ProfileImageStorageResult> StoreProfileImageAsync(

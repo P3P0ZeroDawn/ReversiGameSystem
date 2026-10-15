@@ -77,26 +77,27 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
             return false;
         }
 
+        bool isExtracted;
         try
         {
             byte[] salt = Convert.FromBase64String(parts[2]);
             byte[] hash = Convert.FromBase64String(parts[3]);
             if (salt.Length != SaltSize || hash.Length != HashSize)
             {
-                return false;
+                isExtracted = false;
             }
+            else
+            {
+                components = new PasswordHashComponents(iterations, salt, hash);
+                isExtracted = true;
+            }
+        }
+        catch (Exception exception) when (exception is FormatException or ArgumentException)
+        {
+            isExtracted = false;
+        }
 
-            components = new PasswordHashComponents(iterations, salt, hash);
-            return true;
-        }
-        catch (FormatException)
-        {
-            return false;
-        }
-        catch (ArgumentException)
-        {
-            return false;
-        }
+        return isExtracted;
     }
 
     private static bool HasValidHeader(string[] parts, out int iterations)

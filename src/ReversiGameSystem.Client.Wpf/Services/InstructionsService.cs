@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Resources;
 
 namespace ReversiGameSystem.Services;
 
@@ -77,35 +79,22 @@ internal sealed class InstructionsService
 
     private bool TryGetResource(string key, out string value)
     {
+        bool isFound;
         try
         {
             value = _resourceLookup(key);
-            return !string.IsNullOrWhiteSpace(value);
+            isFound = !string.IsNullOrWhiteSpace(value);
         }
-        catch (InvalidOperationException)
+        catch (Exception exception) when (exception is InvalidOperationException
+                                            or MissingManifestResourceException
+                                            or MissingSatelliteAssemblyException
+                                            or IOException
+                                            or BadImageFormatException)
         {
             value = string.Empty;
-            return false;
+            isFound = false;
         }
-        catch (System.Resources.MissingManifestResourceException)
-        {
-            value = string.Empty;
-            return false;
-        }
-        catch (System.Resources.MissingSatelliteAssemblyException)
-        {
-            value = string.Empty;
-            return false;
-        }
-        catch (System.IO.IOException)
-        {
-            value = string.Empty;
-            return false;
-        }
-        catch (BadImageFormatException)
-        {
-            value = string.Empty;
-            return false;
-        }
+
+        return isFound;
     }
 }

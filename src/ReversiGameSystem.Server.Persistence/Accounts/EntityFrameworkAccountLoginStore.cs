@@ -25,6 +25,7 @@ public sealed class EntityFrameworkAccountLoginStore : IAccountLoginStore
             return new AccountLoginLookupResult(AccountLoginLookupOutcome.NotFound);
         }
 
+        AccountLoginLookupResult result;
         try
         {
             using (ReversiGameSystemEntities context = new ReversiGameSystemEntities())
@@ -34,30 +35,28 @@ public sealed class EntityFrameworkAccountLoginStore : IAccountLoginStore
                         || candidate.emailAddress == login);
                 if (account == null)
                 {
-                    return new AccountLoginLookupResult(AccountLoginLookupOutcome.NotFound);
+                    result = new AccountLoginLookupResult(AccountLoginLookupOutcome.NotFound);
                 }
-
-                return new AccountLoginLookupResult(
-                    AccountLoginLookupOutcome.Found,
-                    new LoginAccount(
-                        account.accountId,
-                        account.username,
-                        account.emailAddress,
-                        account.passwordHash,
-                        account.statusCode));
+                else
+                {
+                    result = new AccountLoginLookupResult(
+                        AccountLoginLookupOutcome.Found,
+                        new LoginAccount(
+                            account.accountId,
+                            account.username,
+                            account.emailAddress,
+                            account.passwordHash,
+                            account.statusCode));
+                }
             }
         }
-        catch (EntityException)
+        catch (Exception exception) when (exception is EntityException
+                                            or SqlException
+                                            or InvalidOperationException)
         {
-            return new AccountLoginLookupResult(AccountLoginLookupOutcome.Unavailable);
+            result = new AccountLoginLookupResult(AccountLoginLookupOutcome.Unavailable);
         }
-        catch (SqlException)
-        {
-            return new AccountLoginLookupResult(AccountLoginLookupOutcome.Unavailable);
-        }
-        catch (InvalidOperationException)
-        {
-            return new AccountLoginLookupResult(AccountLoginLookupOutcome.Unavailable);
-        }
+
+        return result;
     }
 }

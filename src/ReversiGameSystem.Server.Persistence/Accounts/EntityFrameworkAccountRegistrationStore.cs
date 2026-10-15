@@ -30,61 +30,63 @@ public sealed class EntityFrameworkAccountRegistrationStore : IAccountRegistrati
             throw new ArgumentNullException(nameof(registration));
         }
 
+        AccountRegistrationStoreResult result;
         try
         {
             using (ReversiGameSystemEntities context = new ReversiGameSystemEntities())
             {
-                if (await context.Account.AsNoTracking().AnyAsync(
-                    account => account.username == registration.Username))
-                {
-                    return new AccountRegistrationStoreResult(
-                        AccountRegistrationStoreOutcome.UsernameAlreadyExists);
-                }
-
-                if (await context.Account.AsNoTracking().AnyAsync(
-                    account => account.emailAddress == registration.EmailAddress))
-                {
-                    return new AccountRegistrationStoreResult(
-                        AccountRegistrationStoreOutcome.EmailAddressAlreadyExists);
-                }
-
-                bool localeIsSupported = await context.SupportedLocale.AsNoTracking().AnyAsync(
-                    locale => locale.localeCode == registration.PreferredLocaleCode
-                        && locale.isEnabled);
-                if (!localeIsSupported)
-                {
-                    return new AccountRegistrationStoreResult(
-                        AccountRegistrationStoreOutcome.UnsupportedLocale);
-                }
-
-                Account account = CreateAccount(registration);
-                context.Account.Add(account);
-                await context.SaveChangesAsync();
-
-                return new AccountRegistrationStoreResult(
-                    AccountRegistrationStoreOutcome.Success,
-                    account.accountId);
+                result = await SaveRegistrationAsync(context, registration);
             }
         }
         catch (DbUpdateException exception)
         {
-            return MapUpdateException(exception);
+            result = MapUpdateException(exception);
         }
-        catch (EntityException)
+        catch (Exception exception) when (exception is EntityException
+                                            or SqlException
+                                            or InvalidOperationException)
         {
-            return new AccountRegistrationStoreResult(
+            result = new AccountRegistrationStoreResult(
                 AccountRegistrationStoreOutcome.Unavailable);
         }
-        catch (SqlException)
+
+        return result;
+    }
+
+    private static async Task<AccountRegistrationStoreResult> SaveRegistrationAsync(
+        ReversiGameSystemEntities context,
+        AccountRegistrationData registration)
+    {
+        if (await context.Account.AsNoTracking().AnyAsync(
+            account => account.username == registration.Username))
         {
             return new AccountRegistrationStoreResult(
-                AccountRegistrationStoreOutcome.Unavailable);
+                AccountRegistrationStoreOutcome.UsernameAlreadyExists);
         }
-        catch (InvalidOperationException)
+
+        if (await context.Account.AsNoTracking().AnyAsync(
+            account => account.emailAddress == registration.EmailAddress))
         {
             return new AccountRegistrationStoreResult(
-                AccountRegistrationStoreOutcome.Unavailable);
+                AccountRegistrationStoreOutcome.EmailAddressAlreadyExists);
         }
+
+        bool localeIsSupported = await context.SupportedLocale.AsNoTracking().AnyAsync(
+            locale => locale.localeCode == registration.PreferredLocaleCode
+                && locale.isEnabled);
+        if (!localeIsSupported)
+        {
+            return new AccountRegistrationStoreResult(
+                AccountRegistrationStoreOutcome.UnsupportedLocale);
+        }
+
+        Account account = CreateAccount(registration);
+        context.Account.Add(account);
+        await context.SaveChangesAsync();
+
+        return new AccountRegistrationStoreResult(
+            AccountRegistrationStoreOutcome.Success,
+            account.accountId);
     }
 
     private static Account CreateAccount(AccountRegistrationData registration)

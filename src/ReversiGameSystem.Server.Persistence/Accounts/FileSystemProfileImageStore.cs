@@ -57,33 +57,27 @@ public sealed class FileSystemProfileImageStore : IProfileImageStore
         string finalPath = Path.Combine(_storageDirectory, fileName);
         string temporaryPath = finalPath + ".tmp";
 
+        Task<ProfileImageStorageResult> result;
         try
         {
             Directory.CreateDirectory(_storageDirectory);
             File.WriteAllBytes(temporaryPath, image.Content);
             File.Move(temporaryPath, finalPath);
 
-            return Task.FromResult(
+            result = Task.FromResult(
                 new ProfileImageStorageResult(
                     ProfileImageStorageOutcome.Success,
                     UriDirectory + "/" + fileName));
         }
-        catch (IOException)
+        catch (Exception exception) when (exception is IOException
+                                            or UnauthorizedAccessException
+                                            or SecurityException
+                                            or NotSupportedException)
         {
-            return CreateUnavailableResult(temporaryPath);
+            result = CreateUnavailableResult(temporaryPath);
         }
-        catch (UnauthorizedAccessException)
-        {
-            return CreateUnavailableResult(temporaryPath);
-        }
-        catch (SecurityException)
-        {
-            return CreateUnavailableResult(temporaryPath);
-        }
-        catch (NotSupportedException)
-        {
-            return CreateUnavailableResult(temporaryPath);
-        }
+
+        return result;
     }
 
     /// <summary>
@@ -113,6 +107,7 @@ public sealed class FileSystemProfileImageStore : IProfileImageStore
 
     private static bool HasSupportedDimensions(byte[] content)
     {
+        bool isSupported;
         try
         {
             using (MemoryStream stream = new MemoryStream(content, writable: false))
@@ -121,20 +116,18 @@ public sealed class FileSystemProfileImageStore : IProfileImageStore
                 useEmbeddedColorManagement: false,
                 validateImageData: true))
             {
-                return image.Width >= 1
+                isSupported = image.Width >= 1
                     && image.Height >= 1
                     && image.Width <= ProfileImagePolicy.MaximumDimension
                     && image.Height <= ProfileImagePolicy.MaximumDimension;
             }
         }
-        catch (ArgumentException)
+        catch (Exception exception) when (exception is ArgumentException or OutOfMemoryException)
         {
-            return false;
+            isSupported = false;
         }
-        catch (OutOfMemoryException)
-        {
-            return false;
-        }
+
+        return isSupported;
     }
 
     private static Task<ProfileImageStorageResult> CreateUnavailableResult(
@@ -147,6 +140,7 @@ public sealed class FileSystemProfileImageStore : IProfileImageStore
 
     private static bool TryDeleteFile(string path)
     {
+        bool isDeleted;
         try
         {
             if (File.Exists(path))
@@ -154,23 +148,16 @@ public sealed class FileSystemProfileImageStore : IProfileImageStore
                 File.Delete(path);
             }
 
-            return true;
+            isDeleted = true;
         }
-        catch (IOException)
+        catch (Exception exception) when (exception is IOException
+                                            or UnauthorizedAccessException
+                                            or SecurityException
+                                            or NotSupportedException)
         {
-            return false;
+            isDeleted = false;
         }
-        catch (UnauthorizedAccessException)
-        {
-            return false;
-        }
-        catch (SecurityException)
-        {
-            return false;
-        }
-        catch (NotSupportedException)
-        {
-            return false;
-        }
+
+        return isDeleted;
     }
 }

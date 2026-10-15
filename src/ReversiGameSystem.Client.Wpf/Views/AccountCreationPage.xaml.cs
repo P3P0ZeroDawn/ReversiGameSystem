@@ -134,6 +134,7 @@ public partial class AccountCreationPage : Page
             return true;
         }
 
+        bool isCreated;
         try
         {
             string extension = Path.GetExtension(_pendingProfileImage.FilePath);
@@ -144,20 +145,16 @@ public partial class AccountCreationPage : Page
                     ? "image/png"
                     : "image/jpeg"
             };
-            return true;
+            isCreated = true;
         }
-        catch (IOException)
+        catch (Exception exception) when (exception is IOException
+                                            or UnauthorizedAccessException
+                                            or NotSupportedException)
         {
-            return false;
+            isCreated = false;
         }
-        catch (UnauthorizedAccessException)
-        {
-            return false;
-        }
-        catch (NotSupportedException)
-        {
-            return false;
-        }
+
+        return isCreated;
     }
 
     private void HandleCreateAccountResponse(CreateAccountResponse response, string email)

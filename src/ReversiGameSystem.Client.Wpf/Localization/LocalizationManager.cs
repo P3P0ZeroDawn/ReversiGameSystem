@@ -101,6 +101,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
 
     private static bool HasCompleteResources(string cultureName)
     {
+        bool isComplete;
         try
         {
             ResourceManager manager = Resources.ResourceManager;
@@ -110,26 +111,19 @@ public sealed class LocalizationManager : INotifyPropertyChanged
                 ? CultureInfo.InvariantCulture
                 : CultureInfo.GetCultureInfo(cultureName);
             ResourceSet? target = manager.GetResourceSet(requestedCulture, true, false);
-            return source != null
+            isComplete = source != null
                 && target != null
                 && ContainsAllResources(source, target);
         }
-        catch (MissingManifestResourceException)
+        catch (Exception exception) when (exception is MissingManifestResourceException
+                                            or MissingSatelliteAssemblyException
+                                            or IOException
+                                            or BadImageFormatException)
         {
-            return false;
+            isComplete = false;
         }
-        catch (MissingSatelliteAssemblyException)
-        {
-            return false;
-        }
-        catch (IOException)
-        {
-            return false;
-        }
-        catch (BadImageFormatException)
-        {
-            return false;
-        }
+
+        return isComplete;
     }
 
     private static bool ContainsAllResources(ResourceSet source, ResourceSet target)

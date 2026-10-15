@@ -26,6 +26,7 @@ public sealed class EntityFrameworkLeaderboardStore : ILeaderboardStore
     /// <returns>The result of the operation.</returns>
     public async Task<LeaderboardStoreResult> GetAsync(int maximumEntries)
     {
+        LeaderboardStoreResult result;
         try
         {
             using (ReversiGameSystemEntities context = new ReversiGameSystemEntities())
@@ -37,25 +38,18 @@ public sealed class EntityFrameworkLeaderboardStore : ILeaderboardStore
                     counts,
                     maximumEntries);
                 List<LeaderboardEntry> entries = CreateEntries(rankedPlayers);
-                return new LeaderboardStoreResult(LeaderboardStoreOutcome.Success, entries);
+                result = new LeaderboardStoreResult(LeaderboardStoreOutcome.Success, entries);
             }
         }
-        catch (EntityException)
+        catch (Exception exception) when (exception is EntityException
+                                            or SqlException
+                                            or InvalidOperationException
+                                            or NotSupportedException)
         {
-            return new LeaderboardStoreResult(LeaderboardStoreOutcome.Unavailable);
+            result = new LeaderboardStoreResult(LeaderboardStoreOutcome.Unavailable);
         }
-        catch (SqlException)
-        {
-            return new LeaderboardStoreResult(LeaderboardStoreOutcome.Unavailable);
-        }
-        catch (InvalidOperationException)
-        {
-            return new LeaderboardStoreResult(LeaderboardStoreOutcome.Unavailable);
-        }
-        catch (NotSupportedException)
-        {
-            return new LeaderboardStoreResult(LeaderboardStoreOutcome.Unavailable);
-        }
+
+        return result;
     }
 
     private static Task<List<LeaderboardPlayer>> LoadPlayersAsync(

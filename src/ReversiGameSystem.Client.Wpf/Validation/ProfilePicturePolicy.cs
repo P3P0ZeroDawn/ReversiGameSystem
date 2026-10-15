@@ -38,56 +38,41 @@ internal static class ProfilePicturePolicy
     private static bool TryGetSupportedFile(string path, out FileInfo? file)
     {
         file = null;
+        bool isSuccessful;
         try
         {
             FileInfo candidate = new FileInfo(path);
             file = HasSupportedFileSize(candidate) ? candidate : null;
-            return file != null;
+            isSuccessful = file != null;
         }
-        catch (IOException)
+        catch (Exception exception) when (exception is IOException
+                                            or UnauthorizedAccessException
+                                            or SecurityException
+                                            or NotSupportedException
+                                            or ArgumentException)
         {
-            return false;
+            isSuccessful = false;
         }
-        catch (UnauthorizedAccessException)
-        {
-            return false;
-        }
-        catch (SecurityException)
-        {
-            return false;
-        }
-        catch (NotSupportedException)
-        {
-            return false;
-        }
-        catch (ArgumentException)
-        {
-            return false;
-        }
+
+        return isSuccessful;
     }
 
     private static bool TryValidateImageContent(FileInfo file)
     {
+        bool isValid;
         try
         {
-            return HasSupportedImageContent(file);
+            isValid = HasSupportedImageContent(file);
         }
-        catch (IOException)
+        catch (Exception exception) when (exception is IOException
+                                            or UnauthorizedAccessException
+                                            or NotSupportedException
+                                            or ArgumentException)
         {
-            return false;
+            isValid = false;
         }
-        catch (UnauthorizedAccessException)
-        {
-            return false;
-        }
-        catch (NotSupportedException)
-        {
-            return false;
-        }
-        catch (ArgumentException)
-        {
-            return false;
-        }
+
+        return isValid;
     }
 
     private static bool TryLoadPreview(
@@ -96,35 +81,23 @@ internal static class ProfilePicturePolicy
         out BitmapSource? preview)
     {
         preview = null;
+        bool isLoaded;
         try
         {
             preview = CreatePreview(path, previewWidth);
-            return true;
+            isLoaded = true;
         }
-        catch (IOException)
+        catch (Exception exception) when (exception is IOException
+                                            or UnauthorizedAccessException
+                                            or NotSupportedException
+                                            or ArgumentException
+                                            or FormatException
+                                            or InvalidOperationException)
         {
-            return false;
+            isLoaded = false;
         }
-        catch (UnauthorizedAccessException)
-        {
-            return false;
-        }
-        catch (NotSupportedException)
-        {
-            return false;
-        }
-        catch (ArgumentException)
-        {
-            return false;
-        }
-        catch (FormatException)
-        {
-            return false;
-        }
-        catch (InvalidOperationException)
-        {
-            return false;
-        }
+
+        return isLoaded;
     }
 
     private static bool HasSupportedExtension(string path)

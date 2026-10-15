@@ -33,29 +33,23 @@ public sealed class EntityFrameworkPlayerProfileStore : IPlayerProfileStore
             return new PlayerProfileStoreResult(PlayerProfileStoreOutcome.NotFound);
         }
 
+        PlayerProfileStoreResult result;
         try
         {
             using (ReversiGameSystemEntities context = new ReversiGameSystemEntities())
             {
-                return await LoadProfileAsync(context, accountId);
+                result = await LoadProfileAsync(context, accountId);
             }
         }
-        catch (EntityException)
+        catch (Exception exception) when (exception is EntityException
+                                            or SqlException
+                                            or InvalidOperationException
+                                            or NotSupportedException)
         {
-            return new PlayerProfileStoreResult(PlayerProfileStoreOutcome.Unavailable);
+            result = new PlayerProfileStoreResult(PlayerProfileStoreOutcome.Unavailable);
         }
-        catch (SqlException)
-        {
-            return new PlayerProfileStoreResult(PlayerProfileStoreOutcome.Unavailable);
-        }
-        catch (InvalidOperationException)
-        {
-            return new PlayerProfileStoreResult(PlayerProfileStoreOutcome.Unavailable);
-        }
-        catch (NotSupportedException)
-        {
-            return new PlayerProfileStoreResult(PlayerProfileStoreOutcome.Unavailable);
-        }
+
+        return result;
     }
 
     private static async Task<PlayerProfileStoreResult> LoadProfileAsync(

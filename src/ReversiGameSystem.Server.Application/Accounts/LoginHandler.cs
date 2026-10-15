@@ -95,27 +95,24 @@ public sealed class LoginHandler : ILoginHandler
         string password,
         string passwordHash)
     {
+        PasswordVerificationOutcome outcome;
         try
         {
             bool isValid = _passwordHasher.Verify(
                 password.Normalize(NormalizationForm.FormC),
                 passwordHash);
-            return isValid
+            outcome = isValid
                 ? PasswordVerificationOutcome.Valid
                 : PasswordVerificationOutcome.Invalid;
         }
-        catch (ArgumentException)
+        catch (Exception exception) when (exception is ArgumentException
+                                            or FormatException
+                                            or CryptographicException)
         {
-            return PasswordVerificationOutcome.Unavailable;
+            outcome = PasswordVerificationOutcome.Unavailable;
         }
-        catch (FormatException)
-        {
-            return PasswordVerificationOutcome.Unavailable;
-        }
-        catch (CryptographicException)
-        {
-            return PasswordVerificationOutcome.Unavailable;
-        }
+
+        return outcome;
     }
 
     private async Task<LoginResult> CreateSessionResultAsync(LoginAccount account)

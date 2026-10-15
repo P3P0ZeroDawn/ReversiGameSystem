@@ -22,7 +22,9 @@ internal static class ClientRuntime
             return false;
         }
 
-        return TryLoadBitmap(path, out profileImage);
+        bool isLoaded = TryLoadBitmap(path, out BitmapImage? loadedBitmap);
+        profileImage = loadedBitmap;
+        return isLoaded;
     }
 
     private static bool TryResolveProfileImagePath(
@@ -53,7 +55,7 @@ internal static class ClientRuntime
         return File.Exists(path);
     }
 
-    private static bool TryLoadBitmap(string? path, out BitmapSource? profileImage)
+    private static bool TryLoadBitmap(string? path, out BitmapImage? profileImage)
     {
         profileImage = null;
         if (path == null)
@@ -61,6 +63,7 @@ internal static class ClientRuntime
             return false;
         }
 
+        bool isLoaded;
         try
         {
             BitmapImage image = new BitmapImage();
@@ -70,23 +73,16 @@ internal static class ClientRuntime
             image.EndInit();
             image.Freeze();
             profileImage = image;
-            return true;
+            isLoaded = true;
         }
-        catch (IOException)
+        catch (Exception exception) when (exception is IOException
+                                            or UnauthorizedAccessException
+                                            or NotSupportedException
+                                            or ArgumentException)
         {
-            return false;
+            isLoaded = false;
         }
-        catch (UnauthorizedAccessException)
-        {
-            return false;
-        }
-        catch (NotSupportedException)
-        {
-            return false;
-        }
-        catch (ArgumentException)
-        {
-            return false;
-        }
+
+        return isLoaded;
     }
 }
