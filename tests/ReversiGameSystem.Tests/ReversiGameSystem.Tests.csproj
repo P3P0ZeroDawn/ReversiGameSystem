@@ -11,7 +11,7 @@
     <LangVersion>10.0</LangVersion>
     <Nullable>enable</Nullable>
     <OutputPath>bin\$(Configuration)\</OutputPath>
-    <ClientProjectDirectory>..\..\src\ReversiGameSystem.Client.Wpf</ClientProjectDirectory>
+    <ClientProjectDirectory>..\..\src\ReversiGameSystem.Client.Presentation</ClientProjectDirectory>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />

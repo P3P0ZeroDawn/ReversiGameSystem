@@ -4,7 +4,7 @@ using System.Resources;
 using System.Runtime.InteropServices;
 using System.Windows;
 
-[assembly: AssemblyTitle("ReversiGameSystem.Client.Wpf")]
+[assembly: AssemblyTitle("ReversiGameSystem.Client.Presentation")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]

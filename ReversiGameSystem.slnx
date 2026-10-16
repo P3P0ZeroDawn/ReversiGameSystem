@@ -1,5 +1,5 @@
 <Solution>
-  <Project Path="src/ReversiGameSystem.Client.Wpf/ReversiGameSystem.Client.Wpf.csproj" Id="cb6d4e9a-855b-41d1-ba1d-38330a1dd21c" />
+  <Project Path="src/ReversiGameSystem.Client.Presentation/ReversiGameSystem.Client.Presentation.csproj" Id="cb6d4e9a-855b-41d1-ba1d-38330a1dd21c" />
   <Project Path="src/ReversiGameSystem.Contracts/ReversiGameSystem.Contracts.csproj" Id="d9dc968b-c867-41a1-abd1-1853a481af4e" />
   <Project Path="src/ReversiGameSystem.Domain/ReversiGameSystem.Domain.csproj" Id="26e704f1-4360-44fb-a725-c5fc02e03b2c" />
   <Project Path="src/ReversiGameSystem.LocalRuntime/ReversiGameSystem.LocalRuntime.csproj" Id="45ff5368-b184-4489-8ad3-67fe234d941f" />

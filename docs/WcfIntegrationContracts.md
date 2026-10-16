@@ -2,8 +2,8 @@
 
 ## 1. Propósito
 
-Este documento define y mantiene la frontera de comunicación entre el cliente WPF y el
-servidor de Reversi. Su objetivo es fijar los servicios, operaciones, callbacks y objetos
+Este documento define y mantiene la frontera de comunicación entre el cliente de escritorio
+y el servidor de Reversi. Su objetivo es fijar los servicios, operaciones, callbacks y objetos
 serializados que forman o formarán la API WCF del sistema, y registrar el avance de su
 integración.
 
@@ -33,6 +33,9 @@ descritas ya estén implementadas.
 - La capa de entrada del servidor se denomina `ReversiGameSystem.Server.ServiceApi`. El
   nombre expresa su responsabilidad y no la tecnología de transporte; WCF es la
   implementación actual y permanece como detalle del adaptador y del host.
+- La capa de presentación del cliente se denomina
+  `ReversiGameSystem.Client.Presentation`. WPF es su implementación actual y no forma parte
+  del nombre de la capa.
 - `Task` y el sufijo `Async` se usan únicamente cuando existe espera real de red, base de
   datos u otro recurso con una API asíncrona. Las operaciones en memoria y las APIs de E/S
   implementadas de forma síncrona no fabrican tareas con `Task.FromResult` o
@@ -805,7 +808,7 @@ creación de cuenta continúa pendiente de migración.
 | Dirección local | `net.tcp://localhost:8090/ReversiGameSystem/AccountAccess` |
 | Binding | `netTcpBinding` |
 | Seguridad de transporte | Credenciales de Windows con `EncryptAndSign` |
-| Configuración | `ReversiGameSystem.Client.Wpf/App.config` |
+| Configuración | `ReversiGameSystem.Client.Presentation/App.config` |
 
 La dirección `localhost` corresponde al entorno local de desarrollo. La dirección de un
 servidor compartido deberá cambiarse por configuración, sin modificar el código del proxy.
@@ -813,7 +816,7 @@ servidor compartido deberá cambiarse por configuración, sin modificar el códi
 - La reutilización de tipos de ensamblados referenciados debe permanecer desactivada.
 - El namespace generado del cliente debe dejar claro que se trata de un proxy.
 - El código generado no se edita manualmente.
-- La dirección y el binding se guardan en `Client.Wpf/App.config`.
+- La dirección y el binding se guardan en `Client.Presentation/App.config`.
 - El código generado se marca como generado para los analizadores.
 - Cualquier cambio incompatible exige actualizar el contrato, sus pruebas de serialización y
   la referencia del cliente de forma coordinada.
