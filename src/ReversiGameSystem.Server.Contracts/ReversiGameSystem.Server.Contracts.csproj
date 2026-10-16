@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>10.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ReversiGameSystem.Server.Contracts</RootNamespace>
+    <AssemblyName>ReversiGameSystem.Server.Contracts</AssemblyName>
+    <ProjectGuid>{6F4D29A7-9D88-4D63-B105-8109BD78169A}</ProjectGuid>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
+  </ItemGroup>
+</Project>
