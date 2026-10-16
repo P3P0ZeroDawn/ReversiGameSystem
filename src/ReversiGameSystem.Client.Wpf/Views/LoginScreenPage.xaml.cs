@@ -1,7 +1,6 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
-using ReversiGameSystem.Contracts.Accounts;
 using ReversiGameSystem.Domain.Accounts;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
@@ -49,13 +48,10 @@ public partial class LoginScreenPage : Page
         loginButton.IsEnabled = false;
         try
         {
-            LoginResponse response = await ClientRuntime.Services.AccountService.LoginAsync(
-                new LoginRequest
-                {
-                    Login = login,
-                    Password = passwordBox.Password
-                });
-            HandleLoginResponse(response);
+            AuthenticationOutcome outcome = await ClientRuntime.AccountAccessService.LoginAsync(
+                login,
+                passwordBox.Password);
+            HandleLoginOutcome(outcome);
         }
         finally
         {
@@ -63,29 +59,23 @@ public partial class LoginScreenPage : Page
         }
     }
 
-    private void HandleLoginResponse(LoginResponse response)
+    private void HandleLoginOutcome(AuthenticationOutcome outcome)
     {
-        switch (response.ResultCode)
+        switch (outcome.Status)
         {
-            case LoginResultCode.Success when response.Session != null:
-                AccountPreviewState.Start(response.Session);
+            case AuthenticationStatus.Success when outcome.Session != null:
+                AccountPreviewState.Start(outcome.Session);
                 NavigationService?.Navigate(new MainMenuPage());
                 break;
-            case LoginResultCode.InvalidCredentials:
+            case AuthenticationStatus.InvalidCredentials:
                 ShowLoginError(
                     "LoginScreen_InvalidCredentialsTitle",
                     "LoginScreen_InvalidCredentialsMessage");
                 break;
-            case LoginResultCode.AccountInactive:
+            case AuthenticationStatus.InactiveAccount:
                 ShowLoginError(
                     "LoginScreen_AccountInactiveTitle",
                     "LoginScreen_AccountInactiveMessage");
-                break;
-            case LoginResultCode.InvalidRequest:
-                _dialogService.ShowWarning(
-                    this,
-                    "LoginScreen_MissingCredentialsTitle",
-                    "LoginScreen_MissingCredentialsMessage");
                 break;
             default:
                 ShowLoginError(

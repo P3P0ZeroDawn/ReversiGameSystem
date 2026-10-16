@@ -2,9 +2,10 @@
 
 ## 1. Propósito
 
-Este documento define la frontera de comunicación entre el cliente WPF y el servidor de
-Reversi. Su objetivo es fijar, antes de implementar o generar el proxy, los servicios,
-operaciones, callbacks y objetos serializados que formarán la API WCF del sistema.
+Este documento define y mantiene la frontera de comunicación entre el cliente WPF y el
+servidor de Reversi. Su objetivo es fijar los servicios, operaciones, callbacks y objetos
+serializados que forman o formarán la API WCF del sistema, y registrar el avance de su
+integración.
 
 El servidor es el propietario del código fuente de los contratos. El cliente no referencia
 el ensamblado `ReversiGameSystem.Server.Contracts`; consume una referencia de servicio
@@ -83,6 +84,23 @@ por una reorganización interna de namespaces de C#.
 | `Prototype migration` | Existe comportamiento local o prototipo que debe trasladarse al servidor. |
 | `Planned` | La operación es necesaria, pero aún no tiene implementación completa. |
 | `Deferred` | Se reserva en la arquitectura, pero no se implementará durante la separación inicial. |
+
+El estado de una operación en las tablas siguientes describe la disponibilidad del caso de
+uso en el servidor. No implica por sí mismo que ya exista un adaptador WCF, que el host lo
+publique o que la pantalla correspondiente del cliente use el proxy.
+
+### 5.1 Estado actual de integración
+
+| Flujo | Contrato | Adaptador WCF | Endpoint publicado | Proxy generado | Cliente integrado |
+| --- | --- | --- | --- | --- | --- |
+| Crear cuenta | Sí | Sí | Sí | Sí | No |
+| Iniciar sesión | Sí | Sí | Sí | Sí | Sí |
+| Consultar perfil | Sí | No | No | No | No |
+| Consultar clasificación | Sí | No | No | No | No |
+
+Esta matriz representa el estado actual del código. Debe actualizarse cuando un flujo avance
+de una etapa a otra. En particular, `Implemented` en una tabla de operaciones y `Sí` en la
+columna **Cliente integrado** expresan alcances diferentes.
 
 ## 6. Resumen de service contracts
 
@@ -685,12 +703,25 @@ Ejemplos contractuales apropiados incluyen `AccountReference`, `PlayerPreference
 
 ## 19. Generación del proxy
 
-La referencia de servicio se genera después de implementar y aprobar la primera versión de
-los contratos.
+La primera referencia de servicio ya fue generada a partir de los metadatos publicados por
+el host. Actualmente contiene las operaciones `RegisterAccountAsync` y `LoginAsync` de
+`IAccountAccessService`. La pantalla de inicio de sesión ya utiliza esta referencia; la
+creación de cuenta continúa pendiente de migración.
+
+| Elemento | Configuración actual |
+| --- | --- |
+| Namespace generado | `ReversiGameSystem.ServerProxy` |
+| Endpoint del cliente | `AccountAccessEndpoint` |
+| Dirección local | `net.tcp://localhost:8090/ReversiGameSystem/AccountAccess` |
+| Binding | `netTcpBinding` |
+| Seguridad de transporte | Credenciales de Windows con `EncryptAndSign` |
+| Configuración | `ReversiGameSystem.Client.Wpf/App.config` |
+
+La dirección `localhost` corresponde al entorno local de desarrollo. La dirección de un
+servidor compartido deberá cambiarse por configuración, sin modificar el código del proxy.
 
 - La reutilización de tipos de ensamblados referenciados debe permanecer desactivada.
-- El namespace generado del cliente debe dejar claro que se trata de un proxy, por ejemplo
-  `ReversiGameSystem.ServerProxy`.
+- El namespace generado del cliente debe dejar claro que se trata de un proxy.
 - El código generado no se edita manualmente.
 - La dirección y el binding se guardan en `Client.Wpf/App.config`.
 - El código generado se marca como generado para los analizadores.
@@ -710,12 +741,16 @@ los contratos.
 
 ## 21. Secuencia de implementación
 
-1. Aprobar este catálogo.
-2. Crear `ReversiGameSystem.Server.Contracts` y las pruebas de serialización.
-3. Implementar primero cuenta, autenticación, perfil y leaderboard.
-4. Crear el host WCF y publicar metadatos.
-5. Generar el proxy y migrar esos cuatro flujos del cliente.
-6. Migrar amistades, lobby, gameplay y chat por grupos funcionales.
-7. Eliminar `ReversiGameSystem.LocalRuntime` y los prototipos locales reemplazados.
-8. Actualizar el catálogo cuando una operación planeada cambie de estado.
+1. `Completed`: aprobar el catálogo inicial.
+2. `Completed`: crear `ReversiGameSystem.Server.Contracts` y las pruebas contractuales.
+3. `Completed`: crear el adaptador y el host WCF iniciales para acceso a cuentas.
+4. `Completed`: publicar metadatos y generar el proxy de `IAccountAccessService`.
+5. `In progress`: migrar los flujos del cliente; el inicio de sesión ya usa WCF y la creación
+   de cuenta es el siguiente flujo de acceso a cuentas.
+6. `Planned`: publicar y migrar las consultas de perfil y clasificación.
+7. `Planned`: migrar amistades, lobby, gameplay y chat por grupos funcionales.
+8. `Planned`: eliminar `ReversiGameSystem.LocalRuntime` y los prototipos locales cuando ya no
+   tengan consumidores.
+9. `Continuous`: actualizar el catálogo cuando una operación o etapa de integración cambie
+   de estado.
 

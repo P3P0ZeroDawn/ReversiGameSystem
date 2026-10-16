@@ -1,5 +1,4 @@
 using System.Windows.Media.Imaging;
-using ReversiGameSystem.Contracts.Accounts;
 
 namespace ReversiGameSystem.Services;
 
@@ -19,7 +18,7 @@ internal static class AccountPreviewState
     internal static BitmapSource? ProfilePicture { get; private set; }
 
     internal static void Start(
-        AuthenticatedSessionDto session,
+        AuthenticatedAccountSession session,
         BitmapSource? profilePicture = null)
     {
         Email = session.EmailAddress;

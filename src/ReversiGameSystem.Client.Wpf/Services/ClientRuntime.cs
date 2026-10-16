@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Windows.Media.Imaging;
+using Microsoft.Extensions.Logging;
 using ReversiGameSystem.LocalRuntime;
 
 namespace ReversiGameSystem.Services;
@@ -9,8 +10,23 @@ internal static class ClientRuntime
 {
     private static readonly Lazy<LocalRuntimeServices> Runtime =
         new Lazy<LocalRuntimeServices>(LocalRuntimeFactory.CreateDefault);
+    private static readonly Lazy<ILoggerFactory> Logging =
+        new Lazy<ILoggerFactory>(CreateLoggerFactory);
+    private static readonly Lazy<RemoteAccountAccessService> AccountAccess =
+        new Lazy<RemoteAccountAccessService>(CreateAccountAccessService);
 
     internal static LocalRuntimeServices Services => Runtime.Value;
+
+    internal static RemoteAccountAccessService AccountAccessService =>
+        AccountAccess.Value;
+
+    internal static void Dispose()
+    {
+        if (Logging.IsValueCreated)
+        {
+            Logging.Value.Dispose();
+        }
+    }
 
     internal static bool TryLoadProfileImage(
         string? profileImageUri,
@@ -84,5 +100,20 @@ internal static class ClientRuntime
         }
 
         return isLoaded;
+    }
+
+    private static ILoggerFactory CreateLoggerFactory()
+    {
+        return LoggerFactory.Create(
+            builder => builder
+                .SetMinimumLevel(LogLevel.Information)
+                .AddDebug());
+    }
+
+    private static RemoteAccountAccessService CreateAccountAccessService()
+    {
+        ILogger<RemoteAccountAccessService> logger =
+            Logging.Value.CreateLogger<RemoteAccountAccessService>();
+        return new RemoteAccountAccessService(logger);
     }
 }

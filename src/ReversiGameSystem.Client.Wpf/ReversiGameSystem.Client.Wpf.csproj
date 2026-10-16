@@ -43,6 +43,7 @@
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Data" />
     <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Security" />
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
@@ -262,6 +263,11 @@
     <Compile Include="Services\FriendRemovalService.cs" />
     <Compile Include="Services\ChatService.cs" />
     <Compile Include="Services\ClientRuntime.cs" />
+    <Compile Include="Services\AuthenticatedAccountSession.cs" />
+    <Compile Include="Services\AuthenticationOutcome.cs" />
+    <Compile Include="Services\AuthenticationOutcomeMapper.cs" />
+    <Compile Include="Services\AuthenticationStatus.cs" />
+    <Compile Include="Services\RemoteAccountAccessService.cs" />
     <Compile Include="Services\ActionChoiceDialogOptions.cs" />
     <Compile Include="Services\AvailableMatchesService.cs" />
     <Compile Include="Services\ConfirmationDialogOptions.cs" />
@@ -281,6 +287,10 @@
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Connected Services\AccountAccess\Reference.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
     </Compile>
   </ItemGroup>
   <ItemGroup>
@@ -335,6 +345,14 @@
       <Project>{45FF5368-B184-4489-8AD3-67FE234D941F}</Project>
       <Name>ReversiGameSystem.LocalRuntime</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services\" />
+    <WCFMetadataStorage Include="Connected Services\AccountAccess\" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug"
+                      Version="10.0.13" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
