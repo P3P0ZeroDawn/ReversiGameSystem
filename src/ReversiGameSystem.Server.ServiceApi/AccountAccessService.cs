@@ -8,7 +8,7 @@ using ReversiGameSystem.Server.Contracts.Accounts;
 using ReversiGameSystem.Server.Contracts.Common;
 using ReversiGameSystem.Server.Contracts.Services;
 
-namespace ReversiGameSystem.Server.ServiceApi.Wcf;
+namespace ReversiGameSystem.Server.ServiceApi;
 
 /// <summary>
 /// Exposes account access use cases through WCF.

@@ -4,7 +4,7 @@ using System.ServiceModel;
 using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Persistence.Accounts;
-using ReversiGameSystem.Server.ServiceApi.Wcf;
+using ReversiGameSystem.Server.ServiceApi;
 
 namespace ReversiGameSystem.Server.Host;
 

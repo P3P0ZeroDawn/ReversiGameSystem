@@ -3,8 +3,8 @@
     <TargetFramework>net472</TargetFramework>
     <LangVersion>10.0</LangVersion>
     <Nullable>enable</Nullable>
-    <RootNamespace>ReversiGameSystem.Server.ServiceApi.Wcf</RootNamespace>
-    <AssemblyName>ReversiGameSystem.Server.ServiceApi.Wcf</AssemblyName>
+    <RootNamespace>ReversiGameSystem.Server.ServiceApi</RootNamespace>
+    <AssemblyName>ReversiGameSystem.Server.ServiceApi</AssemblyName>
     <ProjectGuid>{B76B74F7-1B77-4B5D-A6F3-5F97E4B43D61}</ProjectGuid>
   </PropertyGroup>
   <ItemGroup>

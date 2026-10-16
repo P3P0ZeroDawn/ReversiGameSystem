@@ -4,7 +4,7 @@ using System.ServiceModel;
 using System.ServiceModel.Channels;
 using ReversiGameSystem.Server.Contracts;
 
-namespace ReversiGameSystem.Server.ServiceApi.Wcf;
+namespace ReversiGameSystem.Server.ServiceApi;
 
 internal static class CorrelationContext
 {

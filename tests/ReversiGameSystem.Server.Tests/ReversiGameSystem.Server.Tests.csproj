@@ -21,6 +21,6 @@
     <ProjectReference Include="..\..\src\ReversiGameSystem.Server.Application\ReversiGameSystem.Server.Application.csproj" />
     <ProjectReference Include="..\..\src\ReversiGameSystem.Server.Contracts\ReversiGameSystem.Server.Contracts.csproj" />
     <ProjectReference Include="..\..\src\ReversiGameSystem.Server.Persistence\ReversiGameSystem.Server.Persistence.csproj" />
-    <ProjectReference Include="..\..\src\ReversiGameSystem.Server.ServiceApi.Wcf\ReversiGameSystem.Server.ServiceApi.Wcf.csproj" />
+    <ProjectReference Include="..\..\src\ReversiGameSystem.Server.ServiceApi\ReversiGameSystem.Server.ServiceApi.csproj" />
   </ItemGroup>
 </Project>

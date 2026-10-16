@@ -7,7 +7,7 @@
   <Project Path="src/ReversiGameSystem.Server.Contracts/ReversiGameSystem.Server.Contracts.csproj" Id="6f4d29a7-9d88-4d63-b105-8109bd78169a" />
   <Project Path="src/ReversiGameSystem.Server.Host/ReversiGameSystem.Server.Host.csproj" Id="67af14c2-a7df-4b33-8300-56933c75d88c" />
   <Project Path="src/ReversiGameSystem.Server.Persistence/ReversiGameSystem.Server.Persistence.csproj" Id="c0d97a3d-3ca3-45b0-89f9-e92230fbecdf" />
-  <Project Path="src/ReversiGameSystem.Server.ServiceApi.Wcf/ReversiGameSystem.Server.ServiceApi.Wcf.csproj" Id="b76b74f7-1b77-4b5d-a6f3-5f97e4b43d61" />
+  <Project Path="src/ReversiGameSystem.Server.ServiceApi/ReversiGameSystem.Server.ServiceApi.csproj" Id="b76b74f7-1b77-4b5d-a6f3-5f97e4b43d61" />
   <Project Path="tests/ReversiGameSystem.Server.Tests/ReversiGameSystem.Server.Tests.csproj" Id="a1e6f4cc-0df2-4a8f-93c8-13777f8aa3e2" />
   <Project Path="tests/ReversiGameSystem.Tests/ReversiGameSystem.Tests.csproj" Id="17a3ab47-c517-4a5d-b857-948d297d8e25" />
 </Solution>

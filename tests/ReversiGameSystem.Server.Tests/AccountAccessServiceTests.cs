@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Contracts.Accounts;
 using ReversiGameSystem.Server.Contracts.Services;
-using ReversiGameSystem.Server.ServiceApi.Wcf;
+using ReversiGameSystem.Server.ServiceApi;
 using ApplicationSession =
     ReversiGameSystem.Server.Application.Accounts.AuthenticatedSession;
 using ContractSession = ReversiGameSystem.Server.Contracts.Accounts.AuthenticatedSession;

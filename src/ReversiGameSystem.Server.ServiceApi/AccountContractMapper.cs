@@ -6,7 +6,7 @@ using ApplicationSession =
     ReversiGameSystem.Server.Application.Accounts.AuthenticatedSession;
 using ContractSession = ReversiGameSystem.Server.Contracts.Accounts.AuthenticatedSession;
 
-namespace ReversiGameSystem.Server.ServiceApi.Wcf;
+namespace ReversiGameSystem.Server.ServiceApi;
 
 internal static class AccountContractMapper
 {

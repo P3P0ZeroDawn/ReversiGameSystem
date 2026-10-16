@@ -1,7 +1,7 @@
 using System.ServiceModel;
 using ReversiGameSystem.Server.Contracts.Common;
 
-namespace ReversiGameSystem.Server.ServiceApi.Wcf;
+namespace ReversiGameSystem.Server.ServiceApi;
 
 internal static class ServiceFaultFactory
 {

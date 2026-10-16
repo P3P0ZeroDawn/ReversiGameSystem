@@ -30,6 +30,9 @@ descritas ya estén implementadas.
 - El servidor vuelve a validar toda entrada aunque el cliente ya la haya validado.
 - Las direcciones, bindings y límites de WCF se configuran en los archivos `App.config` de
   los ejecutables y no se codifican directamente en C#.
+- La capa de entrada del servidor se denomina `ReversiGameSystem.Server.ServiceApi`. El
+  nombre expresa su responsabilidad y no la tecnología de transporte; WCF es la
+  implementación actual y permanece como detalle del adaptador y del host.
 
 ## 3. Tipos de contrato
 
@@ -605,7 +608,47 @@ esperados no se convierten en faults; se representan con el outcome específico.
 `ServiceFault` no contiene mensajes de excepciones, stack traces, rutas, consultas SQL,
 cadenas de conexión, nombres de clases internas ni datos personales.
 
-### 15.4 Responsabilidad de logging
+### 15.4 Excepciones relacionadas con los contratos
+
+Las excepciones .NET no forman parte de los data contracts ni se serializan directamente.
+Una condición esperada de negocio se representa mediante el `Status` del outcome específico.
+Una excepción inesperada que alcanza la frontera del servicio se registra en el servidor y
+se convierte en `FaultException<ServiceFault>`. De esta manera, el cliente no depende de
+tipos de excepción de las capas de aplicación, persistencia o infraestructura.
+
+| Contrato | Rechazos esperados | Falla técnica expuesta | Estado actual |
+| --- | --- | --- | --- |
+| `IAccountAccessService` | Estados de `AccountRegistrationOutcome`, `AuthenticationOutcome` y los outcomes de seguridad correspondientes. | `FaultException<ServiceFault>`. Los códigos implementados son `ACCOUNT_REGISTRATION_FAILURE` y `ACCOUNT_LOGIN_FAILURE`. | Implementado para registro e inicio de sesión. |
+| `IPlayerProfileService` | Estados de consulta, imagen, preferencias y modificación de perfil. | `FaultException<ServiceFault>` declarado para `GetPlayerProfileAsync`; los códigos estables se definirán al implementar el adaptador. | Contrato creado; adaptador pendiente. |
+| `ILeaderboardService` | `LeaderboardStatus`, incluidos criterios inválidos y persistencia no disponible. | `FaultException<ServiceFault>` declarado; el código estable se definirá al implementar el adaptador. | Contrato creado; adaptador pendiente. |
+| `IFriendshipService` | Outcomes específicos de canal, búsqueda, invitación, resolución y eliminación. | `FaultException<ServiceFault>` para operaciones request-reply. | Planeado. |
+| `IMatchLobbyService` | Outcomes específicos de canal, creación, unión, configuración, inicio y salida. | `FaultException<ServiceFault>` para operaciones request-reply. | Planeado. |
+| `IGameplayMatchService` | Outcomes específicos de conexión, estado, movimiento, pase, abandono y observación. | `FaultException<ServiceFault>` para operaciones request-reply. | Planeado. |
+| `IMatchChatService` | Outcomes específicos de canal, envío e historial. | `FaultException<ServiceFault>` para operaciones request-reply. | Planeado. |
+
+Desde el cliente, cualquier operación request-reply puede relacionarse además con estas
+excepciones locales de infraestructura:
+
+| Excepción | Significado | Tratamiento del cliente |
+| --- | --- | --- |
+| `FaultException<ServiceFault>` | El servidor recibió la operación, pero ocurrió una falla inesperada controlada. | Registrar `FailureCode` y `CorrelationId` sin datos sensibles; presentar indisponibilidad. |
+| `CommunicationException` | El canal o el transporte no pudo completar la comunicación. | Cerrar o abortar el canal y presentar indisponibilidad. |
+| `TimeoutException` | La operación excedió el tiempo configurado. | Abortar el canal y presentar indisponibilidad; no reintentar automáticamente una operación mutante. |
+| `SerializationException` | La respuesta no cumple el contrato que conoce el cliente. | Registrar como incompatibilidad contractual y presentar indisponibilidad. |
+| `InvalidOperationException` | El proxy, endpoint o canal se encuentra en un estado o configuración inválidos. | Registrar la configuración afectada sin secretos y presentar indisponibilidad. |
+
+Los callbacks `IFriendshipServiceCallback`, `IMatchLobbyServiceCallback`,
+`IGameplayMatchServiceCallback` e `IMatchChatServiceCallback` son operaciones one-way. No
+devuelven un fault contractual al servidor. Una excepción local al procesar el callback se
+registra en el cliente; una `CommunicationException` o un `TimeoutException` al enviarlo se
+registra en el servidor y el canal defectuoso deja de utilizarse.
+
+Las excepciones internas concretas, como errores de Entity Framework, SQL Server, archivos,
+criptografía o validación de argumentos, se traducen primero al outcome correspondiente
+cuando representan una condición prevista. Si no existe una traducción segura, se convierten
+en `ServiceFault`; nunca se exponen por su nombre, mensaje o stack trace.
+
+### 15.5 Responsabilidad de logging
 
 | Situación | Responsable |
 | --- | --- |
@@ -620,7 +663,7 @@ cadenas de conexión, nombres de clases internas ni datos personales.
 La misma excepción se registra una sola vez en la frontera con contexto suficiente para
 describir la falla final.
 
-### 15.5 Datos prohibidos en logs
+### 15.6 Datos prohibidos en logs
 
 - Contraseñas, hashes y salts.
 - Tokens de sesión.
@@ -632,7 +675,7 @@ describir la falla final.
 - Contenido completo del chat.
 - Expresiones internas detectadas por el moderador cuando revelen el mensaje original.
 
-### 15.6 Diagnóstico de callbacks
+### 15.7 Diagnóstico de callbacks
 
 Las notificaciones incluyen `EventId` y `OccurredAtUtc`. Cuando un evento proviene de una
 operación remota, también conserva su `CorrelationId`. Los estados de partida incluyen
