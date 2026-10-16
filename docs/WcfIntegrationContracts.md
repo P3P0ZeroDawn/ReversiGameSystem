@@ -33,6 +33,10 @@ descritas ya estén implementadas.
 - La capa de entrada del servidor se denomina `ReversiGameSystem.Server.ServiceApi`. El
   nombre expresa su responsabilidad y no la tecnología de transporte; WCF es la
   implementación actual y permanece como detalle del adaptador y del host.
+- `Task` y el sufijo `Async` se usan únicamente cuando existe espera real de red, base de
+  datos u otro recurso con una API asíncrona. Las operaciones en memoria y las APIs de E/S
+  implementadas de forma síncrona no fabrican tareas con `Task.FromResult` o
+  `Task.CompletedTask`.
 
 ## 3. Tipos de contrato
 
@@ -41,10 +45,14 @@ descritas ya estén implementadas.
 Una interfaz marcada con `[ServiceContract]` define operaciones que el cliente puede invocar
 en el servidor. Cada método remoto se marca con `[OperationContract]`.
 
-Las operaciones de este catálogo reciben un único data contract de entrada y devuelven
-`Task<TOutput>`. Este criterio mantiene firmas estables cuando una operación necesita agregar
-datos y evita publicar listas de parámetros primitivos. El nombre `Async` forma parte de la
-firma C#; el tipo indicado en la columna **Salida** corresponde a `TOutput`.
+Las operaciones de este catálogo reciben un único data contract de entrada. Este criterio
+mantiene firmas estables cuando una operación necesita agregar datos y evita publicar listas
+de parámetros primitivos.
+
+Una operación devuelve `Task<TOutput>` y usa el sufijo `Async` cuando su implementación
+espera trabajo asíncrono real. Una operación puramente síncrona devuelve `TOutput` y no usa
+ese sufijo. El tipo indicado en la columna **Salida** corresponde al resultado lógico y no
+obliga por sí mismo a envolverlo en `Task`.
 
 ### 3.2 Callback contract
 
@@ -636,6 +644,45 @@ excepciones locales de infraestructura:
 | `TimeoutException` | La operación excedió el tiempo configurado. | Abortar el canal y presentar indisponibilidad; no reintentar automáticamente una operación mutante. |
 | `SerializationException` | La respuesta no cumple el contrato que conoce el cliente. | Registrar como incompatibilidad contractual y presentar indisponibilidad. |
 | `InvalidOperationException` | El proxy, endpoint o canal se encuentra en un estado o configuración inválidos. | Registrar la configuración afectada sin secretos y presentar indisponibilidad. |
+
+#### 15.4.1 Mensajes visibles conservados durante la migración
+
+Los mensajes que ya existían en el cliente no se incorporan a `ServiceFault` ni a los
+outcomes. El servidor devuelve estados y el cliente selecciona recursos localizados. Esto
+conserva las respuestas visibles anteriores sin acoplar el contrato a un idioma.
+
+| Operación o condición | Estado o excepción | Recursos existentes | Respuesta visible actual en `es-MX` |
+| --- | --- | --- | --- |
+| Inicio de sesión con campos vacíos | Validación local | `LoginScreen_MissingCredentialsTitle` y `LoginScreen_MissingCredentialsMessage` | **Faltan datos.** Ingresa tu usuario o correo electrónico y contraseña para continuar. |
+| Inicio de sesión rechazado | `InvalidCredentials` | `LoginScreen_InvalidCredentialsTitle` y `LoginScreen_InvalidCredentialsMessage` | **No se pudo iniciar sesión.** El usuario, correo electrónico o contraseña son incorrectos. |
+| Cuenta inactiva | `InactiveAccount` | `LoginScreen_AccountInactiveTitle` y `LoginScreen_AccountInactiveMessage` | **Cuenta no disponible.** Esta cuenta no está activa. |
+| Inicio de sesión sin servicio | `PersistenceUnavailable`, `FaultException<ServiceFault>`, `CommunicationException`, `TimeoutException`, `SerializationException` o `InvalidOperationException` | `LoginScreen_ServiceUnavailableTitle` y `LoginScreen_ServiceUnavailableMessage` | **Inicio de sesión no disponible.** No pudimos comunicarnos con el servicio de cuentas. Inténtalo de nuevo. |
+| Registro exitoso | `Success` | `AccountCreation_SuccessTitle` y `AccountCreation_SuccessMessage` | **Cuenta creada.** Tu cuenta se creó correctamente. Ya puedes iniciar sesión. |
+| Username ocupado | `UsernameUnavailable` | `AccountCreation_UsernameAlreadyTakenTitle` y `AccountCreation_UsernameAlreadyTakenMessage` | **Nombre de usuario ocupado.** Ese nombre de usuario ya está en uso. Elige otro. |
+| Correo ocupado | `EmailUnavailable` | `AccountCreation_EmailAlreadyTakenTitle` y `AccountCreation_EmailAlreadyTakenMessage` | **Correo electrónico ya registrado.** Ese correo electrónico ya está asociado a una cuenta. Usa otro. |
+| Username inválido | `InvalidUsername` | `AccountCreation_InvalidUsernameFormatTitle` y `AccountCreation_InvalidUsernameFormatMessage` | **Nombre de usuario inválido.** Usa de 3 a 32 caracteres. Comienza con una letra o número y después usa solo letras, números o guiones bajos. |
+| Correo inválido | `InvalidEmail` | `AccountCreation_InvalidEmailFormatTitle` y el recurso específico de estructura, nombre, dominio o longitud | **Correo electrónico no válido.** El detalle indica si falló la estructura, el nombre, el dominio o la longitud. |
+| Contraseña inválida | `InvalidPassword` | `AccountCreation_InvalidPasswordFormatTitle` y el recurso específico de longitud, mayúscula, minúscula, dígito, símbolo o caracteres no permitidos | **La contraseña no cumple los requisitos.** El detalle indica el requisito específico incumplido. |
+| Imagen inválida | `InvalidProfileImage` | `AccountCreation_ImageNotSupportedTitle` y `AccountCreation_ImageNotSupportedMessage` | **Foto de perfil no compatible.** Elige una imagen PNG o JPEG de máximo 5 MiB y 4096 × 4096 píxeles. |
+| Registro sin servicio | `PersistenceUnavailable`, fallo técnico o transporte no disponible | `AccountCreation_ServerConnectionFailedTitle` y `AccountCreation_ServerConnectionFailedMessage` | **Conexión no disponible.** No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo. |
+| Respuesta de registro desconocida o incompatible | Estado no reconocido | `AccountCreation_PersistenceErrorTitle` y `AccountCreation_PersistenceErrorMessage` | **No se guardó la cuenta.** No pudimos crear tu cuenta. Inténtalo de nuevo más tarde. |
+
+`InvalidLocale` todavía no tiene un mensaje dedicado en los recursos existentes. Debe
+agregarse un recurso localizado antes de migrar la creación de cuenta al proxy; no debe
+reutilizarse silenciosamente un mensaje que describa otra causa.
+
+Los demás contratos conservarán los siguientes grupos de respuestas ya existentes cuando
+sean migrados. Cada operación seleccionará la pareja de recursos que corresponda a su
+contexto, sin transportar el texto desde el servidor.
+
+| Contrato | Familias de recursos existentes |
+| --- | --- |
+| `IPlayerProfileService` | `PlayerStatistics_ServerConnectionFailed`, `PlayerStatistics_RetrievalError`, `ProfileImageModification_ServerConnectionFailed` y `ProfileImageModification_PersistenceError` |
+| `ILeaderboardService` | `MainMenu_TopWinnersUnavailable` |
+| `IFriendshipService` | Recursos `FriendRequest_*`, `FriendRequests_*`, `FriendRequestResponse_*`, `Friends_*` y `FriendRemoval_*` para conexión, consulta y persistencia |
+| `IMatchLobbyService` | Recursos `MatchCreation_*`, `AvailableMatches_*`, `MatchSettings_*` y `JoinMatch_*` para conexión, validación y persistencia |
+| `IGameplayMatchService` | Recursos `Game_*`, `AbandonMatch_*`, `MatchHistory_*` y `MatchInformation_*` para conexión, movimiento, resultado y consulta |
+| `IMatchChatService` | Recursos `Chat_*` y `ChatRead_*` para conexión, autorización, moderación, persistencia y consulta |
 
 Los callbacks `IFriendshipServiceCallback`, `IMatchLobbyServiceCallback`,
 `IGameplayMatchServiceCallback` e `IMatchChatServiceCallback` son operaciones one-way. No

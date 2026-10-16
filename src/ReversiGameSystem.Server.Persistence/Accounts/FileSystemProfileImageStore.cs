@@ -2,7 +2,6 @@ using System;
 using System.Drawing;
 using System.IO;
 using System.Security;
-using System.Threading.Tasks;
 using ReversiGameSystem.Domain.Accounts;
 using ReversiGameSystem.Server.Application.Accounts;
 
@@ -33,18 +32,17 @@ public sealed class FileSystemProfileImageStore : IProfileImageStore
     }
 
     /// <summary>
-    /// Performs the save async operation.
+    /// Saves a profile image.
     /// </summary>
     /// <param name="image">The image.</param>
     /// <returns>The result of the operation.</returns>
-    public Task<ProfileImageStorageResult> SaveAsync(ProfileImageData image)
+    public ProfileImageStorageResult Save(ProfileImageData image)
     {
         if (image == null
             || !ProfileImagePolicy.IsSupported(image.Content, image.MediaType)
             || !HasSupportedDimensions(image.Content))
         {
-            return Task.FromResult(
-                new ProfileImageStorageResult(ProfileImageStorageOutcome.InvalidImage));
+            return new ProfileImageStorageResult(ProfileImageStorageOutcome.InvalidImage);
         }
 
         string extension = string.Equals(
@@ -57,17 +55,16 @@ public sealed class FileSystemProfileImageStore : IProfileImageStore
         string finalPath = Path.Combine(_storageDirectory, fileName);
         string temporaryPath = finalPath + ".tmp";
 
-        Task<ProfileImageStorageResult> result;
+        ProfileImageStorageResult result;
         try
         {
             Directory.CreateDirectory(_storageDirectory);
             File.WriteAllBytes(temporaryPath, image.Content);
             File.Move(temporaryPath, finalPath);
 
-            result = Task.FromResult(
-                new ProfileImageStorageResult(
-                    ProfileImageStorageOutcome.Success,
-                    UriDirectory + "/" + fileName));
+            result = new ProfileImageStorageResult(
+                ProfileImageStorageOutcome.Success,
+                UriDirectory + "/" + fileName);
         }
         catch (Exception exception) when (exception is IOException
                                             or UnauthorizedAccessException
@@ -81,15 +78,15 @@ public sealed class FileSystemProfileImageStore : IProfileImageStore
     }
 
     /// <summary>
-    /// Performs the delete async operation.
+    /// Deletes a profile image.
     /// </summary>
     /// <param name="imageUri">The image uri.</param>
     /// <returns>The result of the operation.</returns>
-    public Task DeleteAsync(string imageUri)
+    public void Delete(string imageUri)
     {
         if (string.IsNullOrWhiteSpace(imageUri))
         {
-            return Task.CompletedTask;
+            return;
         }
 
         string normalizedUri = imageUri.Replace('\\', '/');
@@ -97,12 +94,11 @@ public sealed class FileSystemProfileImageStore : IProfileImageStore
         if (!normalizedUri.StartsWith(expectedPrefix, StringComparison.Ordinal)
             || normalizedUri.IndexOf('/', expectedPrefix.Length) >= 0)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         string fileName = normalizedUri.Substring(expectedPrefix.Length);
         TryDeleteFile(Path.Combine(_storageDirectory, fileName));
-        return Task.CompletedTask;
     }
 
     private static bool HasSupportedDimensions(byte[] content)
@@ -130,12 +126,11 @@ public sealed class FileSystemProfileImageStore : IProfileImageStore
         return isSupported;
     }
 
-    private static Task<ProfileImageStorageResult> CreateUnavailableResult(
+    private static ProfileImageStorageResult CreateUnavailableResult(
         string temporaryPath)
     {
         TryDeleteFile(temporaryPath);
-        return Task.FromResult(
-            new ProfileImageStorageResult(ProfileImageStorageOutcome.Unavailable));
+        return new ProfileImageStorageResult(ProfileImageStorageOutcome.Unavailable);
     }
 
     private static bool TryDeleteFile(string path)

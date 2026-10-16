@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
-using System.Threading.Tasks;
 
 namespace ReversiGameSystem.Server.Application.Accounts;
 
@@ -44,7 +43,7 @@ public sealed class InMemoryAuthenticatedSessionStore : IAuthenticatedSessionSto
     }
 
     /// <inheritdoc />
-    public Task<AuthenticatedSessionRecord> CreateAsync(
+    public AuthenticatedSessionRecord Create(
         long accountId,
         string username,
         string emailAddress,
@@ -63,25 +62,25 @@ public sealed class InMemoryAuthenticatedSessionStore : IAuthenticatedSessionSto
         }
         while (!_sessions.TryAdd(session.SessionToken, session));
 
-        return Task.FromResult(session);
+        return session;
     }
 
     /// <inheritdoc />
-    public Task<AuthenticatedSessionRecord?> FindAsync(string sessionToken)
+    public AuthenticatedSessionRecord? Find(string sessionToken)
     {
         if (string.IsNullOrWhiteSpace(sessionToken)
             || !_sessions.TryGetValue(sessionToken, out AuthenticatedSessionRecord? session))
         {
-            return Task.FromResult<AuthenticatedSessionRecord?>(null);
+            return null;
         }
 
         if (session.ExpiresAtUtc <= _clock.UtcNow)
         {
             _sessions.TryRemove(sessionToken, out _);
-            return Task.FromResult<AuthenticatedSessionRecord?>(null);
+            return null;
         }
 
-        return Task.FromResult<AuthenticatedSessionRecord?>(session);
+        return session;
     }
 
     private static string CreateToken()

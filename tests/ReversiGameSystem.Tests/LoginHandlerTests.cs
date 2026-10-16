@@ -152,23 +152,19 @@ internal sealed class LoginHandlerTests
             TimeSpan.FromMinutes(30));
 
         // Act
-        AuthenticatedSessionRecord first = store.CreateAsync(
+        AuthenticatedSessionRecord first = store.Create(
             42,
             "PlayerOne",
             "player@example.com",
-            "en-US").GetAwaiter().GetResult();
-        AuthenticatedSessionRecord second = store.CreateAsync(
+            "en-US");
+        AuthenticatedSessionRecord second = store.Create(
             42,
             "PlayerOne",
             "player@example.com",
-            "en-US").GetAwaiter().GetResult();
-        AuthenticatedSessionRecord? active = store.FindAsync(first.SessionToken)
-            .GetAwaiter()
-            .GetResult();
+            "en-US");
+        AuthenticatedSessionRecord? active = store.Find(first.SessionToken);
         clock.UtcNow = clock.UtcNow.AddMinutes(31);
-        AuthenticatedSessionRecord? expired = store.FindAsync(first.SessionToken)
-            .GetAwaiter()
-            .GetResult();
+        AuthenticatedSessionRecord? expired = store.Find(first.SessionToken);
 
         // Assert
         TestAssert.AreEqual(false, first.SessionToken == second.SessionToken);
@@ -229,26 +225,25 @@ internal sealed class AuthenticatedSessionStoreStub : IAuthenticatedSessionStore
 {
     internal long? AccountId { get; private set; }
 
-    public Task<AuthenticatedSessionRecord> CreateAsync(
+    public AuthenticatedSessionRecord Create(
         long accountId,
         string username,
         string emailAddress,
         string preferredLocaleCode)
     {
         AccountId = accountId;
-        return Task.FromResult(
-            new AuthenticatedSessionRecord(
-                "session-token",
-                accountId,
-                username,
-                emailAddress,
-                preferredLocaleCode,
-                DateTime.UtcNow.AddHours(8)));
+        return new AuthenticatedSessionRecord(
+            "session-token",
+            accountId,
+            username,
+            emailAddress,
+            preferredLocaleCode,
+            DateTime.UtcNow.AddHours(8));
     }
 
-    public Task<AuthenticatedSessionRecord?> FindAsync(string sessionToken)
+    public AuthenticatedSessionRecord? Find(string sessionToken)
     {
-        return Task.FromResult<AuthenticatedSessionRecord?>(null);
+        return null;
     }
 }
 

@@ -167,7 +167,7 @@ internal sealed class PlayerProfileSessionStoreStub : IAuthenticatedSessionStore
 
     internal string? SessionToken { get; private set; }
 
-    public Task<AuthenticatedSessionRecord> CreateAsync(
+    public AuthenticatedSessionRecord Create(
         long accountId,
         string username,
         string emailAddress,
@@ -176,10 +176,10 @@ internal sealed class PlayerProfileSessionStoreStub : IAuthenticatedSessionStore
         throw new NotSupportedException();
     }
 
-    public Task<AuthenticatedSessionRecord?> FindAsync(string sessionToken)
+    public AuthenticatedSessionRecord? Find(string sessionToken)
     {
         SessionToken = sessionToken;
-        return Task.FromResult(Session);
+        return Session;
     }
 }
 

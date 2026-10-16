@@ -43,18 +43,18 @@ public interface IPasswordHasher
 public interface IProfileImageStore
 {
     /// <summary>
-    /// Performs the save async operation.
+    /// Saves a profile image.
     /// </summary>
     /// <param name="image">The image.</param>
     /// <returns>The result of the operation.</returns>
-    Task<ProfileImageStorageResult> SaveAsync(ProfileImageData image);
+    ProfileImageStorageResult Save(ProfileImageData image);
 
     /// <summary>
-    /// Performs the delete async operation.
+    /// Deletes a profile image.
     /// </summary>
     /// <param name="imageUri">The image uri.</param>
     /// <returns>The result of the operation.</returns>
-    Task DeleteAsync(string imageUri);
+    void Delete(string imageUri);
 }
 
 /// <summary>

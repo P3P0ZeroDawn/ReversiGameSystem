@@ -76,7 +76,7 @@ public sealed class LoginHandler : ILoginHandler
             return new LoginResult(LoginOutcome.AccountInactive);
         }
 
-        return await CreateSessionResultAsync(account);
+        return CreateSessionResult(account);
     }
 
     private static bool TryNormalize(
@@ -115,9 +115,9 @@ public sealed class LoginHandler : ILoginHandler
         return outcome;
     }
 
-    private async Task<LoginResult> CreateSessionResultAsync(LoginAccount account)
+    private LoginResult CreateSessionResult(LoginAccount account)
     {
-        AuthenticatedSessionRecord session = await _sessionStore.CreateAsync(
+        AuthenticatedSessionRecord session = _sessionStore.Create(
             account.AccountId,
             account.Username,
             account.EmailAddress,

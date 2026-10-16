@@ -271,19 +271,17 @@ internal sealed class ProfileImageStoreStub : IProfileImageStore
 
     internal string? DeletedImageUri { get; private set; }
 
-    public Task<ProfileImageStorageResult> SaveAsync(ProfileImageData image)
+    public ProfileImageStorageResult Save(ProfileImageData image)
     {
         SaveWasCalled = true;
-        return Task.FromResult(
-            new ProfileImageStorageResult(
-                ProfileImageStorageOutcome.Success,
-                "profile-images/test.png"));
+        return new ProfileImageStorageResult(
+            ProfileImageStorageOutcome.Success,
+            "profile-images/test.png");
     }
 
-    public Task DeleteAsync(string imageUri)
+    public void Delete(string imageUri)
     {
         DeletedImageUri = imageUri;
-        return Task.CompletedTask;
     }
 }
 

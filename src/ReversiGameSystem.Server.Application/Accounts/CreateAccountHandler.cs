@@ -63,7 +63,7 @@ public sealed class CreateAccountHandler : ICreateAccountHandler
             return new CreateAccountResult(CreateAccountOutcome.ServiceUnavailable);
         }
 
-        ProfileImageStorageResult imageResult = await StoreProfileImageAsync(input.ProfileImage);
+        ProfileImageStorageResult imageResult = StoreProfileImage(input.ProfileImage);
         if (imageResult.Outcome != ProfileImageStorageOutcome.Success)
         {
             return MapImageFailure(imageResult.Outcome);
@@ -75,7 +75,7 @@ public sealed class CreateAccountHandler : ICreateAccountHandler
             imageResult.ImageUri);
         if (storeResult.Outcome != AccountRegistrationStoreOutcome.Success)
         {
-            await DeleteProfileImageIfNecessaryAsync(imageResult.ImageUri);
+            DeleteProfileImageIfNecessary(imageResult.ImageUri);
         }
 
         return Map(storeResult);
@@ -156,7 +156,7 @@ public sealed class CreateAccountHandler : ICreateAccountHandler
         return result;
     }
 
-    private async Task<ProfileImageStorageResult> StoreProfileImageAsync(
+    private ProfileImageStorageResult StoreProfileImage(
         ProfileImageData? profileImage)
     {
         if (profileImage == null)
@@ -164,7 +164,7 @@ public sealed class CreateAccountHandler : ICreateAccountHandler
             return new ProfileImageStorageResult(ProfileImageStorageOutcome.Success);
         }
 
-        return await _profileImageStore.SaveAsync(profileImage);
+        return _profileImageStore.Save(profileImage);
     }
 
     private Task<AccountRegistrationStoreResult> RegisterAsync(
@@ -182,14 +182,14 @@ public sealed class CreateAccountHandler : ICreateAccountHandler
         return _accountStore.RegisterAsync(registration);
     }
 
-    private async Task DeleteProfileImageIfNecessaryAsync(string? imageUri)
+    private void DeleteProfileImageIfNecessary(string? imageUri)
     {
         if (imageUri == null || string.IsNullOrWhiteSpace(imageUri))
         {
             return;
         }
 
-        await _profileImageStore.DeleteAsync(imageUri);
+        _profileImageStore.Delete(imageUri);
     }
 
     private static CreateAccountResult MapImageFailure(

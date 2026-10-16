@@ -23,10 +23,8 @@ internal sealed class ProfileImageStoreIntegrationTests
                 "AAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
 
             // Act
-            ProfileImageStorageResult result = store.SaveAsync(
-                new ProfileImageData(imageContent, "image/png"))
-                .GetAwaiter()
-                .GetResult();
+            ProfileImageStorageResult result = store.Save(
+                new ProfileImageData(imageContent, "image/png"));
 
             // Assert
             TestAssert.AreEqual(ProfileImageStorageOutcome.Success, result.Outcome);
@@ -34,7 +32,7 @@ internal sealed class ProfileImageStoreIntegrationTests
             TestAssert.AreEqual(1, Directory.GetFiles(root).Length);
 
             string imageUri = TestAssert.IsNotNull(result.ImageUri);
-            store.DeleteAsync(imageUri).GetAwaiter().GetResult();
+            store.Delete(imageUri);
             TestAssert.AreEqual(0, Directory.GetFiles(root).Length);
         }
         finally

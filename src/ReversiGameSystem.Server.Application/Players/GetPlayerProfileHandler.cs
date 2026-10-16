@@ -39,8 +39,7 @@ public sealed class GetPlayerProfileHandler : IGetPlayerProfileHandler
             return new PlayerProfileResult(PlayerProfileOutcome.InvalidRequest);
         }
 
-        AuthenticatedSessionRecord? session = await _sessionStore.FindAsync(
-            query.SessionToken);
+        AuthenticatedSessionRecord? session = _sessionStore.Find(query.SessionToken);
         if (session == null)
         {
             return new PlayerProfileResult(PlayerProfileOutcome.InvalidSession);

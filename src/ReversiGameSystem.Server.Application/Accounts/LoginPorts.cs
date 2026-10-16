@@ -22,25 +22,25 @@ public interface IAccountLoginStore
 public interface IAuthenticatedSessionStore
 {
     /// <summary>
-    /// Performs the create async operation.
+    /// Creates an authenticated session.
     /// </summary>
     /// <param name="accountId">The account id.</param>
     /// <param name="username">The username.</param>
     /// <param name="emailAddress">The email address.</param>
     /// <param name="preferredLocaleCode">The preferred locale code.</param>
     /// <returns>The result of the operation.</returns>
-    Task<AuthenticatedSessionRecord> CreateAsync(
+    AuthenticatedSessionRecord Create(
         long accountId,
         string username,
         string emailAddress,
         string preferredLocaleCode);
 
     /// <summary>
-    /// Performs the find async operation.
+    /// Finds an active authenticated session.
     /// </summary>
     /// <param name="sessionToken">The session token.</param>
     /// <returns>The result of the operation.</returns>
-    Task<AuthenticatedSessionRecord?> FindAsync(string sessionToken);
+    AuthenticatedSessionRecord? Find(string sessionToken);
 }
 
 /// <summary>
