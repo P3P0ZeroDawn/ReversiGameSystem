@@ -12,7 +12,7 @@ public interface IPlayerProfileStore
     /// </summary>
     /// <param name="accountId">The account id.</param>
     /// <returns>The result of the operation.</returns>
-    Task<PlayerProfileStoreResult> GetAsync(long accountId);
+    public Task<PlayerProfileStoreResult> GetAsync(long accountId);
 }
 
 /// <summary>

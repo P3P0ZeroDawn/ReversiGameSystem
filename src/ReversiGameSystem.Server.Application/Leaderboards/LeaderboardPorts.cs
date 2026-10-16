@@ -13,7 +13,7 @@ public interface ILeaderboardStore
     /// </summary>
     /// <param name="maximumEntries">The maximum entries.</param>
     /// <returns>The result of the operation.</returns>
-    Task<LeaderboardStoreResult> GetAsync(int maximumEntries);
+    public Task<LeaderboardStoreResult> GetAsync(int maximumEntries);
 }
 
 /// <summary>

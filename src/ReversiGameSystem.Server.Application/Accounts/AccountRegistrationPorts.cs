@@ -13,7 +13,8 @@ public interface IAccountRegistrationStore
     /// </summary>
     /// <param name="registration">The registration.</param>
     /// <returns>The result of the operation.</returns>
-    Task<AccountRegistrationStoreResult> RegisterAsync(AccountRegistrationData registration);
+    public Task<AccountRegistrationStoreResult> RegisterAsync(
+        AccountRegistrationData registration);
 }
 
 /// <summary>
@@ -26,7 +27,7 @@ public interface IPasswordHasher
     /// </summary>
     /// <param name="password">The password.</param>
     /// <returns>The result of the operation.</returns>
-    string Hash(string password);
+    public string Hash(string password);
 
     /// <summary>
     /// Performs the verify operation.
@@ -34,7 +35,7 @@ public interface IPasswordHasher
     /// <param name="password">The password.</param>
     /// <param name="encodedHash">The encoded hash.</param>
     /// <returns>The result of the operation.</returns>
-    bool Verify(string password, string encodedHash);
+    public bool Verify(string password, string encodedHash);
 }
 
 /// <summary>
@@ -47,14 +48,14 @@ public interface IProfileImageStore
     /// </summary>
     /// <param name="image">The image.</param>
     /// <returns>The result of the operation.</returns>
-    ProfileImageStorageResult Save(ProfileImageData image);
+    public ProfileImageStorageResult Save(ProfileImageData image);
 
     /// <summary>
     /// Deletes a profile image.
     /// </summary>
     /// <param name="imageUri">The image uri.</param>
     /// <returns>The result of the operation.</returns>
-    void Delete(string imageUri);
+    public void Delete(string imageUri);
 }
 
 /// <summary>
@@ -65,7 +66,7 @@ public interface IUtcClock
     /// <summary>
     /// Gets the utc now.
     /// </summary>
-    DateTime UtcNow { get; }
+    public DateTime UtcNow { get; }
 }
 
 /// <summary>

@@ -14,7 +14,7 @@ public interface IGetLeaderboardHandler
     /// </summary>
     /// <param name="query">The query.</param>
     /// <returns>The result of the operation.</returns>
-    Task<LeaderboardResult> ExecuteAsync(LeaderboardQuery query);
+    public Task<LeaderboardResult> ExecuteAsync(LeaderboardQuery query);
 }
 
 /// <summary>

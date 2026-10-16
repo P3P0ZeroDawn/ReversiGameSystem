@@ -17,7 +17,7 @@ public interface IPlayerService
     /// <param name="request">The request.</param>
     /// <returns>The result of the operation.</returns>
     [OperationContract]
-    Task<PlayerProfileResponse> GetPlayerProfileAsync(PlayerProfileRequest request);
+    public Task<PlayerProfileResponse> GetPlayerProfileAsync(PlayerProfileRequest request);
 
     /// <summary>
     /// Performs the get leaderboard async operation.
@@ -25,5 +25,5 @@ public interface IPlayerService
     /// <param name="request">The request.</param>
     /// <returns>The result of the operation.</returns>
     [OperationContract]
-    Task<LeaderboardResponse> GetLeaderboardAsync(LeaderboardRequest request);
+    public Task<LeaderboardResponse> GetLeaderboardAsync(LeaderboardRequest request);
 }

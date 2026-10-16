@@ -18,7 +18,7 @@ public interface IAccountAccessService
     /// <returns>The expected registration outcome.</returns>
     [OperationContract]
     [FaultContract(typeof(ServiceFault), Namespace = ContractNamespaces.Diagnostics)]
-    Task<AccountRegistrationOutcome> RegisterAccountAsync(
+    public Task<AccountRegistrationOutcome> RegisterAccountAsync(
         AccountRegistrationCredentials credentials);
 
     /// <summary>
@@ -28,5 +28,5 @@ public interface IAccountAccessService
     /// <returns>The expected authentication outcome.</returns>
     [OperationContract]
     [FaultContract(typeof(ServiceFault), Namespace = ContractNamespaces.Diagnostics)]
-    Task<AuthenticationOutcome> LoginAsync(AuthenticationCredentials credentials);
+    public Task<AuthenticationOutcome> LoginAsync(AuthenticationCredentials credentials);
 }

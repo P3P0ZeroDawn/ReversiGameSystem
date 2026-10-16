@@ -8,7 +8,6 @@ using ReversiGameSystem.Contracts.Media;
 using ReversiGameSystem.Domain.Accounts;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
-using ReversiGameSystem.Validation;
 
 namespace ReversiGameSystem.Views;
 

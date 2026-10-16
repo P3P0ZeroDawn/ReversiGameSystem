@@ -13,7 +13,7 @@ public interface ILoginHandler
     /// </summary>
     /// <param name="command">The command.</param>
     /// <returns>The result of the operation.</returns>
-    Task<LoginResult> ExecuteAsync(LoginCommand command);
+    public Task<LoginResult> ExecuteAsync(LoginCommand command);
 }
 
 /// <summary>

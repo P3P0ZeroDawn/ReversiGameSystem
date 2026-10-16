@@ -14,7 +14,7 @@ internal enum PasswordModificationResult
 
 internal interface IPasswordModificationService
 {
-    PasswordModificationResult ChangePassword(string currentPassword, string newPassword);
+    public PasswordModificationResult ChangePassword(string currentPassword, string newPassword);
 }
 
 /// <summary>

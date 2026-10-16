@@ -28,7 +28,7 @@ internal sealed class PlayerStatisticsQueryResult
 
 internal interface IPlayerStatisticsService
 {
-    PlayerStatisticsQueryResult GetCompletedMatches(string? playerId);
+    public PlayerStatisticsQueryResult GetCompletedMatches(string? playerId);
 }
 
 /// <summary>

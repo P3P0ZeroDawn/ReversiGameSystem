@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Contracts.Accounts;
-using ReversiGameSystem.Server.Contracts.Common;
 using ReversiGameSystem.Server.Contracts.Services;
 
 namespace ReversiGameSystem.Server.ServiceApi;

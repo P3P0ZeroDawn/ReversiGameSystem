@@ -12,7 +12,7 @@ public interface IGetPlayerProfileHandler
     /// </summary>
     /// <param name="query">The query.</param>
     /// <returns>The result of the operation.</returns>
-    Task<PlayerProfileResult> ExecuteAsync(PlayerProfileQuery query);
+    public Task<PlayerProfileResult> ExecuteAsync(PlayerProfileQuery query);
 }
 
 /// <summary>

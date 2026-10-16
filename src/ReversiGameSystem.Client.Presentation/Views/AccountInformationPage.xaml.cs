@@ -1,4 +1,3 @@
-using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -6,7 +5,6 @@ using ReversiGameSystem.Contracts.Players;
 using ReversiGameSystem.Domain.Accounts;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
-using ReversiGameSystem.Validation;
 
 namespace ReversiGameSystem.Views;
 

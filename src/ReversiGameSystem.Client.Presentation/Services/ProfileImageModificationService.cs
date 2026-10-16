@@ -12,7 +12,7 @@ internal enum ProfileImageModificationResult
 
 internal interface IProfileImageModificationService
 {
-    ProfileImageModificationResult Save(string imagePath);
+    public ProfileImageModificationResult Save(string imagePath);
 }
 
 /// <summary>

@@ -18,5 +18,5 @@ public interface ILeaderboardService
     /// <returns>The generated leaderboard standings.</returns>
     [OperationContract]
     [FaultContract(typeof(ServiceFault), Namespace = ContractNamespaces.Diagnostics)]
-    Task<LeaderboardStandings> GetLeaderboardAsync(LeaderboardCriteria criteria);
+    public Task<LeaderboardStandings> GetLeaderboardAsync(LeaderboardCriteria criteria);
 }

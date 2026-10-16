@@ -1574,18 +1574,22 @@ internal sealed class MatchCodePolicyTests
     }
 
     internal void TryNormalize_IncorrectLength_ReturnsFalse()
-        // Act
-        // Arrange
     {
+        // Arrange
+
+        // Act
+
         // Assert
         TestAssert.AreEqual(false, MatchCodePolicy.TryNormalize("ABC12", out _));
         TestAssert.AreEqual(false, MatchCodePolicy.TryNormalize("ABC2345", out _));
     }
 
     internal void TryNormalize_AmbiguousCharacters_ReturnsFalse()
-        // Act
-        // Arrange
     {
+        // Arrange
+
+        // Act
+
         // Assert
         TestAssert.AreEqual(false, MatchCodePolicy.TryNormalize("ABCI01", out _));
     }
@@ -1788,27 +1792,33 @@ internal sealed class TurnTimePolicyTests
     }
 
     internal void TryParse_MinimumAndMaximum_ReturnTrue()
-        // Act
-        // Arrange
     {
+        // Arrange
+
+        // Act
+
         // Assert
         TestAssert.AreEqual(true, TurnTimePolicy.TryParse("10", out _));
         TestAssert.AreEqual(true, TurnTimePolicy.TryParse("120", out _));
     }
 
     internal void TryParse_OutsideRange_ReturnsFalse()
-        // Act
-        // Arrange
     {
+        // Arrange
+
+        // Act
+
         // Assert
         TestAssert.AreEqual(false, TurnTimePolicy.TryParse("9", out _));
         TestAssert.AreEqual(false, TurnTimePolicy.TryParse("121", out _));
     }
 
     internal void TryParse_NonInteger_ReturnsFalse()
-        // Act
-        // Arrange
     {
+        // Arrange
+
+        // Act
+
         // Assert
         TestAssert.AreEqual(false, TurnTimePolicy.TryParse("40.5", out _));
         TestAssert.AreEqual(false, TurnTimePolicy.TryParse("forty", out _));
@@ -2435,9 +2445,11 @@ internal sealed class UsernamePolicyTests
 internal sealed class GuestUsernamePolicyTests
 {
     internal void Validate_ValidName_ReturnsNone()
-        // Act
-        // Arrange
     {
+        // Arrange
+
+        // Act
+
         // Assert
         TestAssert.AreEqual(
             UsernameValidationError.None,
@@ -2445,9 +2457,11 @@ internal sealed class GuestUsernamePolicyTests
     }
 
     internal void Validate_WhitespaceOnly_ReturnsMissing()
-        // Act
-        // Arrange
     {
+        // Arrange
+
+        // Act
+
         // Assert
         TestAssert.AreEqual(
             UsernameValidationError.Missing,
@@ -2455,9 +2469,11 @@ internal sealed class GuestUsernamePolicyTests
     }
 
     internal void Normalize_NameWithOuterWhitespace_ReturnsBaseName()
-        // Act
-        // Arrange
     {
+        // Arrange
+
+        // Act
+
         // Assert
         TestAssert.AreEqual(
             "Pedro",

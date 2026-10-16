@@ -13,7 +13,7 @@ public interface IAccountLoginStore
     /// </summary>
     /// <param name="login">The login.</param>
     /// <returns>The result of the operation.</returns>
-    Task<AccountLoginLookupResult> FindByLoginAsync(string login);
+    public Task<AccountLoginLookupResult> FindByLoginAsync(string login);
 }
 
 /// <summary>
@@ -29,7 +29,7 @@ public interface IAuthenticatedSessionStore
     /// <param name="emailAddress">The email address.</param>
     /// <param name="preferredLocaleCode">The preferred locale code.</param>
     /// <returns>The result of the operation.</returns>
-    AuthenticatedSessionRecord Create(
+    public AuthenticatedSessionRecord Create(
         long accountId,
         string username,
         string emailAddress,
@@ -40,7 +40,7 @@ public interface IAuthenticatedSessionStore
     /// </summary>
     /// <param name="sessionToken">The session token.</param>
     /// <returns>The result of the operation.</returns>
-    AuthenticatedSessionRecord? Find(string sessionToken);
+    public AuthenticatedSessionRecord? Find(string sessionToken);
 }
 
 /// <summary>

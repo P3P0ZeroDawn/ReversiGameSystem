@@ -13,7 +13,7 @@ internal enum AccountDeactivationResult
 
 internal interface IAccountDeactivationService
 {
-    AccountDeactivationResult DeactivateOwnAccount();
+    public AccountDeactivationResult DeactivateOwnAccount();
 }
 
 /// <summary>

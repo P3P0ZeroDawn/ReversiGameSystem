@@ -9,7 +9,7 @@ internal enum BoardBackgroundSaveResult
 
 internal interface IBoardBackgroundService
 {
-    BoardBackgroundSaveResult SaveForCurrentPlayer(string imagePath);
+    public BoardBackgroundSaveResult SaveForCurrentPlayer(string imagePath);
 }
 
 /// <summary>

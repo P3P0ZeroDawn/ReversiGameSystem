@@ -12,7 +12,7 @@ public interface ICreateAccountHandler
     /// </summary>
     /// <param name="command">The command.</param>
     /// <returns>The result of the operation.</returns>
-    Task<CreateAccountResult> ExecuteAsync(CreateAccountCommand command);
+    public Task<CreateAccountResult> ExecuteAsync(CreateAccountCommand command);
 }
 
 /// <summary>

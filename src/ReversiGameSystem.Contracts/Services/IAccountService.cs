@@ -16,7 +16,7 @@ public interface IAccountService
     /// <param name="request">The request.</param>
     /// <returns>The result of the operation.</returns>
     [OperationContract]
-    Task<CreateAccountResponse> CreateAccountAsync(CreateAccountRequest request);
+    public Task<CreateAccountResponse> CreateAccountAsync(CreateAccountRequest request);
 
     /// <summary>
     /// Performs the login async operation.
@@ -24,5 +24,5 @@ public interface IAccountService
     /// <param name="request">The request.</param>
     /// <returns>The result of the operation.</returns>
     [OperationContract]
-    Task<LoginResponse> LoginAsync(LoginRequest request);
+    public Task<LoginResponse> LoginAsync(LoginRequest request);
 }

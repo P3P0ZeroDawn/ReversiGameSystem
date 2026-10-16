@@ -1,33 +1,87 @@
 root = true
 
-[*.cs]
+[*.{cs,xaml}]
 indent_style = space
 indent_size = 4
+tab_width = 4
 insert_final_newline = true
 trim_trailing_whitespace = true
+
+[*.cs]
 max_line_length = 100
 
+# Using directives
 dotnet_sort_system_directives_first = true
-csharp_using_directive_placement = outside_namespace
+csharp_using_directive_placement = outside_namespace:warning
+dotnet_diagnostic.IDE0005.severity = warning
+dotnet_diagnostic.IDE0065.severity = warning
+
+# Namespace declarations and control flow
 csharp_style_namespace_declarations = file_scoped:warning
 csharp_prefer_braces = true:warning
+dotnet_style_require_accessibility_modifiers = always:warning
+dotnet_diagnostic.IDE0011.severity = warning
+dotnet_diagnostic.IDE0161.severity = warning
+
+# Explicit local variable types
 csharp_style_var_for_built_in_types = false:suggestion
 csharp_style_var_when_type_is_apparent = false:suggestion
 csharp_style_var_elsewhere = false:suggestion
 dotnet_diagnostic.IDE0008.severity = warning
+
+# Immutability and complexity
 dotnet_diagnostic.IDE0044.severity = warning
 dotnet_diagnostic.CA1502.severity = warning
 dotnet_code_quality.CA1502.threshold = 10
+dotnet_diagnostic.CA1711.severity = warning
+dotnet_diagnostic.CA2000.severity = warning
+dotnet_diagnostic.CA2254.severity = warning
 
-dotnet_naming_rule.private_instance_fields_use_underscore.severity = warning
-dotnet_naming_rule.private_instance_fields_use_underscore.symbols = private_instance_fields
-dotnet_naming_rule.private_instance_fields_use_underscore.style = underscore_camel_case
+# Formatting
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_space_after_keywords_in_control_flow_statements = true
+csharp_space_around_binary_operators = before_and_after
+csharp_space_after_comma = true
+csharp_space_before_comma = false
+csharp_space_between_method_call_name_and_opening_parenthesis = false
+csharp_space_between_method_call_parameter_list_parentheses = false
+csharp_space_before_dot = false
+csharp_space_after_dot = false
+dotnet_diagnostic.IDE0055.severity = warning
 
-dotnet_naming_symbols.private_instance_fields.applicable_kinds = field
-dotnet_naming_symbols.private_instance_fields.applicable_accessibilities = private
+# Constants are excluded from the instance-field convention and use PascalCase.
+dotnet_naming_rule.constants_use_pascal_case.severity = warning
+dotnet_naming_rule.constants_use_pascal_case.symbols = constants
+dotnet_naming_rule.constants_use_pascal_case.style = pascal_case
+
+dotnet_naming_symbols.constants.applicable_kinds = field
+dotnet_naming_symbols.constants.applicable_accessibilities = *
+dotnet_naming_symbols.constants.required_modifiers = const
+
+# The naming analyzer cannot exclude static modifiers from a general field rule.
+# This more-specific entry prevents false positives for static readonly fields.
+dotnet_naming_rule.static_readonly_fields_are_not_enforced.severity = none
+dotnet_naming_rule.static_readonly_fields_are_not_enforced.symbols = static_readonly_fields
+dotnet_naming_rule.static_readonly_fields_are_not_enforced.style = pascal_case
+
+dotnet_naming_symbols.static_readonly_fields.applicable_kinds = field
+dotnet_naming_symbols.static_readonly_fields.applicable_accessibilities = private, internal
+dotnet_naming_symbols.static_readonly_fields.required_modifiers = static, readonly
+
+dotnet_naming_rule.private_internal_fields_use_underscore.severity = warning
+dotnet_naming_rule.private_internal_fields_use_underscore.symbols = private_internal_fields
+dotnet_naming_rule.private_internal_fields_use_underscore.style = underscore_camel_case
+
+dotnet_naming_symbols.private_internal_fields.applicable_kinds = field
+dotnet_naming_symbols.private_internal_fields.applicable_accessibilities = private, internal
 
 dotnet_naming_style.underscore_camel_case.required_prefix = _
 dotnet_naming_style.underscore_camel_case.capitalization = camel_case
+
+dotnet_naming_style.pascal_case.capitalization = pascal_case
 
 [*.Designer.cs]
 generated_code = true
@@ -36,8 +90,5 @@ generated_code = true
 generated_code = true
 dotnet_diagnostic.CS1591.severity = none
 
-[*.xaml]
-indent_style = space
-indent_size = 4
-insert_final_newline = true
-trim_trailing_whitespace = true
+[src/ReversiGameSystem.Client.Presentation/Connected Services/**/Reference.cs]
+generated_code = true

@@ -18,5 +18,5 @@ public interface IPlayerProfileService
     /// <returns>The expected profile lookup outcome.</returns>
     [OperationContract]
     [FaultContract(typeof(ServiceFault), Namespace = ContractNamespaces.Diagnostics)]
-    Task<PlayerProfileLookupOutcome> GetPlayerProfileAsync(PlayerProfileCriteria criteria);
+    public Task<PlayerProfileLookupOutcome> GetPlayerProfileAsync(PlayerProfileCriteria criteria);
 }
