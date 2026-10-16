@@ -1,7 +1,6 @@
 using System;
 using ReversiGameSystem.Contracts.Services;
 using ReversiGameSystem.LocalRuntime.Services;
-using ReversiGameSystem.LocalRuntime.Sessions;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Leaderboards;
 using ReversiGameSystem.Server.Application.Players;

@@ -156,6 +156,7 @@ internal sealed class PlayerProfileHandlerTests
             accountId,
             "PlayerOne",
             "player@example.com",
+            "en-US",
             DateTime.UtcNow.AddHours(8));
     }
 }
@@ -169,7 +170,8 @@ internal sealed class PlayerProfileSessionStoreStub : IAuthenticatedSessionStore
     public Task<AuthenticatedSessionRecord> CreateAsync(
         long accountId,
         string username,
-        string emailAddress)
+        string emailAddress,
+        string preferredLocaleCode)
     {
         throw new NotSupportedException();
     }

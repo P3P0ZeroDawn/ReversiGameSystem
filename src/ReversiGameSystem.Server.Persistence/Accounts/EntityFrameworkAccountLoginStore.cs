@@ -30,9 +30,12 @@ public sealed class EntityFrameworkAccountLoginStore : IAccountLoginStore
         {
             using (ReversiGameSystemEntities context = new ReversiGameSystemEntities())
             {
-                Account? account = await context.Account.AsNoTracking().FirstOrDefaultAsync(
-                    candidate => candidate.username == login
-                        || candidate.emailAddress == login);
+                Account? account = await context.Account
+                    .Include(candidate => candidate.AccountSettings)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        candidate => candidate.username == login
+                            || candidate.emailAddress == login);
                 if (account == null)
                 {
                     result = new AccountLoginLookupResult(AccountLoginLookupOutcome.NotFound);
@@ -46,7 +49,9 @@ public sealed class EntityFrameworkAccountLoginStore : IAccountLoginStore
                             account.username,
                             account.emailAddress,
                             account.passwordHash,
-                            account.statusCode));
+                            account.statusCode,
+                            account.AccountSettings?.preferredLocaleCode
+                                ?? string.Empty));
                 }
             }
         }

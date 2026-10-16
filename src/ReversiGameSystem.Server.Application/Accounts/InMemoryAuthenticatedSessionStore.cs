@@ -2,12 +2,11 @@ using System;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
-using ReversiGameSystem.Server.Application.Accounts;
 
-namespace ReversiGameSystem.LocalRuntime.Sessions;
+namespace ReversiGameSystem.Server.Application.Accounts;
 
 /// <summary>
-/// Represents in memory authenticated session store.
+/// Stores active authenticated sessions in server memory.
 /// </summary>
 public sealed class InMemoryAuthenticatedSessionStore : IAuthenticatedSessionStore
 {
@@ -18,18 +17,20 @@ public sealed class InMemoryAuthenticatedSessionStore : IAuthenticatedSessionSto
     private readonly TimeSpan _sessionLifetime;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="InMemoryAuthenticatedSessionStore"/> class.
+    /// Initializes a new instance of the
+    /// <see cref="InMemoryAuthenticatedSessionStore"/> class.
     /// </summary>
-    /// <param name="clock">The clock.</param>
+    /// <param name="clock">The UTC clock.</param>
     public InMemoryAuthenticatedSessionStore(IUtcClock clock)
         : this(clock, DefaultLifetime)
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="InMemoryAuthenticatedSessionStore"/> class.
+    /// Initializes a new instance of the
+    /// <see cref="InMemoryAuthenticatedSessionStore"/> class.
     /// </summary>
-    /// <param name="clock">The clock.</param>
+    /// <param name="clock">The UTC clock.</param>
     /// <param name="sessionLifetime">The session lifetime.</param>
     public InMemoryAuthenticatedSessionStore(IUtcClock clock, TimeSpan sessionLifetime)
     {
@@ -42,17 +43,12 @@ public sealed class InMemoryAuthenticatedSessionStore : IAuthenticatedSessionSto
         _sessionLifetime = sessionLifetime;
     }
 
-    /// <summary>
-    /// Performs the create async operation.
-    /// </summary>
-    /// <param name="accountId">The account id.</param>
-    /// <param name="username">The username.</param>
-    /// <param name="emailAddress">The email address.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <inheritdoc />
     public Task<AuthenticatedSessionRecord> CreateAsync(
         long accountId,
         string username,
-        string emailAddress)
+        string emailAddress,
+        string preferredLocaleCode)
     {
         AuthenticatedSessionRecord session;
         do
@@ -62,6 +58,7 @@ public sealed class InMemoryAuthenticatedSessionStore : IAuthenticatedSessionSto
                 accountId,
                 username,
                 emailAddress,
+                preferredLocaleCode,
                 _clock.UtcNow.Add(_sessionLifetime));
         }
         while (!_sessions.TryAdd(session.SessionToken, session));
@@ -69,11 +66,7 @@ public sealed class InMemoryAuthenticatedSessionStore : IAuthenticatedSessionSto
         return Task.FromResult(session);
     }
 
-    /// <summary>
-    /// Performs the find async operation.
-    /// </summary>
-    /// <param name="sessionToken">The session token.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <inheritdoc />
     public Task<AuthenticatedSessionRecord?> FindAsync(string sessionToken)
     {
         if (string.IsNullOrWhiteSpace(sessionToken)

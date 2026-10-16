@@ -120,7 +120,8 @@ public sealed class LoginHandler : ILoginHandler
         AuthenticatedSessionRecord session = await _sessionStore.CreateAsync(
             account.AccountId,
             account.Username,
-            account.EmailAddress);
+            account.EmailAddress,
+            account.PreferredLocaleCode);
 
         return new LoginResult(
             LoginOutcome.Success,
@@ -128,7 +129,9 @@ public sealed class LoginHandler : ILoginHandler
                 session.SessionToken,
                 session.AccountId,
                 session.Username,
-                session.EmailAddress));
+                session.EmailAddress,
+                session.PreferredLocaleCode,
+                session.ExpiresAtUtc));
     }
 
     private sealed class LoginCredentials

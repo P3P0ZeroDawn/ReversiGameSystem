@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using ReversiGameSystem.LocalRuntime.Sessions;
 using ReversiGameSystem.Server.Application.Accounts;
 
 namespace ReversiGameSystem.Tests;
@@ -156,11 +155,13 @@ internal sealed class LoginHandlerTests
         AuthenticatedSessionRecord first = store.CreateAsync(
             42,
             "PlayerOne",
-            "player@example.com").GetAwaiter().GetResult();
+            "player@example.com",
+            "en-US").GetAwaiter().GetResult();
         AuthenticatedSessionRecord second = store.CreateAsync(
             42,
             "PlayerOne",
-            "player@example.com").GetAwaiter().GetResult();
+            "player@example.com",
+            "en-US").GetAwaiter().GetResult();
         AuthenticatedSessionRecord? active = store.FindAsync(first.SessionToken)
             .GetAwaiter()
             .GetResult();
@@ -184,7 +185,8 @@ internal sealed class LoginHandlerTests
                 "PlayerOne",
                 "player@example.com",
                 "stored-hash",
-                statusCode));
+                statusCode,
+                "en-US"));
     }
 }
 
@@ -230,7 +232,8 @@ internal sealed class AuthenticatedSessionStoreStub : IAuthenticatedSessionStore
     public Task<AuthenticatedSessionRecord> CreateAsync(
         long accountId,
         string username,
-        string emailAddress)
+        string emailAddress,
+        string preferredLocaleCode)
     {
         AccountId = accountId;
         return Task.FromResult(
@@ -239,6 +242,7 @@ internal sealed class AuthenticatedSessionStoreStub : IAuthenticatedSessionStore
                 accountId,
                 username,
                 emailAddress,
+                preferredLocaleCode,
                 DateTime.UtcNow.AddHours(8)));
     }
 

@@ -7,11 +7,20 @@
     <RootNamespace>ReversiGameSystem.Server.Host</RootNamespace>
     <AssemblyName>ReversiGameSystem.Server.Host</AssemblyName>
     <ProjectGuid>{67AF14C2-A7DF-4B33-8300-56933C75D88C}</ProjectGuid>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ReversiGameSystem.Contracts\ReversiGameSystem.Contracts.csproj" />
     <ProjectReference Include="..\ReversiGameSystem.Server.Application\ReversiGameSystem.Server.Application.csproj" />
     <ProjectReference Include="..\ReversiGameSystem.Server.Contracts\ReversiGameSystem.Server.Contracts.csproj" />
     <ProjectReference Include="..\ReversiGameSystem.Server.Persistence\ReversiGameSystem.Server.Persistence.csproj" />
+    <ProjectReference Include="..\ReversiGameSystem.Server.ServiceApi.Wcf\ReversiGameSystem.Server.ServiceApi.Wcf.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Console"
+                      Version="10.0.13" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.ServiceModel" />
   </ItemGroup>
 </Project>

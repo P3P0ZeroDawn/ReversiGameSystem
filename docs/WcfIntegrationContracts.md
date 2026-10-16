@@ -61,8 +61,8 @@ Una clase o enumeración marcada con `[DataContract]` representa información se
 cruza la frontera WCF. Sus miembros públicos de comunicación se declaran explícitamente con
 `[DataMember]`.
 
-Los data contracts no son entidades de persistencia ni objetos de interfaz gráfica. El host
-del servidor se encarga de mapearlos a los modelos de aplicación y dominio.
+Los data contracts no son entidades de persistencia ni objetos de interfaz gráfica. La API
+de servicio del servidor se encarga de mapearlos a los modelos de aplicación y dominio.
 
 ## 4. Espacios de nombres contractuales
 

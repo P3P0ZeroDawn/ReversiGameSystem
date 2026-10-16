@@ -55,7 +55,20 @@ internal sealed class LocalRuntimeTests
         {
             LoginResult = new LoginResult(
                 LoginOutcome.Success,
-                new AuthenticatedSession("session-token", 42, "PlayerOne", "player@example.com"))
+                new AuthenticatedSession(
+                    "session-token",
+                    42,
+                    "PlayerOne",
+                    "player@example.com",
+                    "en-US",
+                    new System.DateTime(
+                        2026,
+                        9,
+                        26,
+                        20,
+                        0,
+                        0,
+                        System.DateTimeKind.Utc)))
         };
         LocalRuntimeServices services = CreateServices(handlers);
 

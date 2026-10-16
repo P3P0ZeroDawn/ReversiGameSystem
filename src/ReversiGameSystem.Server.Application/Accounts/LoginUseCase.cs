@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 
 namespace ReversiGameSystem.Server.Application.Accounts;
@@ -81,16 +82,22 @@ public sealed class AuthenticatedSession
     /// <param name="accountId">The account id.</param>
     /// <param name="username">The username.</param>
     /// <param name="emailAddress">The email address.</param>
+    /// <param name="preferredLocaleCode">The preferred locale code.</param>
+    /// <param name="expiresAtUtc">The UTC expiration time.</param>
     public AuthenticatedSession(
         string sessionToken,
         long accountId,
         string username,
-        string emailAddress)
+        string emailAddress,
+        string preferredLocaleCode,
+        DateTime expiresAtUtc)
     {
         SessionToken = sessionToken;
         AccountId = accountId;
         Username = username;
         EmailAddress = emailAddress;
+        PreferredLocaleCode = preferredLocaleCode;
+        ExpiresAtUtc = expiresAtUtc;
     }
 
     /// <summary>
@@ -112,6 +119,16 @@ public sealed class AuthenticatedSession
     /// Gets the email address.
     /// </summary>
     public string EmailAddress { get; }
+
+    /// <summary>
+    /// Gets the preferred locale code.
+    /// </summary>
+    public string PreferredLocaleCode { get; }
+
+    /// <summary>
+    /// Gets the UTC expiration time.
+    /// </summary>
+    public DateTime ExpiresAtUtc { get; }
 }
 
 /// <summary>

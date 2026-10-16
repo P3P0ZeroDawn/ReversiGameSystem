@@ -27,11 +27,13 @@ public interface IAuthenticatedSessionStore
     /// <param name="accountId">The account id.</param>
     /// <param name="username">The username.</param>
     /// <param name="emailAddress">The email address.</param>
+    /// <param name="preferredLocaleCode">The preferred locale code.</param>
     /// <returns>The result of the operation.</returns>
     Task<AuthenticatedSessionRecord> CreateAsync(
         long accountId,
         string username,
-        string emailAddress);
+        string emailAddress,
+        string preferredLocaleCode);
 
     /// <summary>
     /// Performs the find async operation.
@@ -102,18 +104,21 @@ public sealed class LoginAccount
     /// <param name="emailAddress">The email address.</param>
     /// <param name="passwordHash">The password hash.</param>
     /// <param name="statusCode">The status code.</param>
+    /// <param name="preferredLocaleCode">The preferred locale code.</param>
     public LoginAccount(
         long accountId,
         string username,
         string emailAddress,
         string passwordHash,
-        string statusCode)
+        string statusCode,
+        string preferredLocaleCode)
     {
         AccountId = accountId;
         Username = username;
         EmailAddress = emailAddress;
         PasswordHash = passwordHash;
         StatusCode = statusCode;
+        PreferredLocaleCode = preferredLocaleCode;
     }
 
     /// <summary>
@@ -140,6 +145,11 @@ public sealed class LoginAccount
     /// Gets the status code.
     /// </summary>
     public string StatusCode { get; }
+
+    /// <summary>
+    /// Gets the preferred locale code.
+    /// </summary>
+    public string PreferredLocaleCode { get; }
 }
 
 /// <summary>
@@ -154,18 +164,21 @@ public sealed class AuthenticatedSessionRecord
     /// <param name="accountId">The account id.</param>
     /// <param name="username">The username.</param>
     /// <param name="emailAddress">The email address.</param>
+    /// <param name="preferredLocaleCode">The preferred locale code.</param>
     /// <param name="expiresAtUtc">The expires at utc.</param>
     public AuthenticatedSessionRecord(
         string sessionToken,
         long accountId,
         string username,
         string emailAddress,
+        string preferredLocaleCode,
         DateTime expiresAtUtc)
     {
         SessionToken = sessionToken;
         AccountId = accountId;
         Username = username;
         EmailAddress = emailAddress;
+        PreferredLocaleCode = preferredLocaleCode;
         ExpiresAtUtc = expiresAtUtc;
     }
 
@@ -188,6 +201,11 @@ public sealed class AuthenticatedSessionRecord
     /// Gets the email address.
     /// </summary>
     public string EmailAddress { get; }
+
+    /// <summary>
+    /// Gets the preferred locale code.
+    /// </summary>
+    public string PreferredLocaleCode { get; }
 
     /// <summary>
     /// Gets the expires at utc.

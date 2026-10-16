@@ -14,6 +14,7 @@ internal static class Program
     {
         ContractSerializationTests serializationTests = new ContractSerializationTests();
         ContractArchitectureTests architectureTests = new ContractArchitectureTests();
+        AccountAccessServiceTests accountAccessTests = new AccountAccessServiceTests();
         return new Action[]
         {
             serializationTests.AuthenticationCredentials_RoundTrip_PreservesCredentials,
@@ -24,7 +25,10 @@ internal static class Program
             serializationTests.ServiceFault_RoundTrip_PreservesDiagnosticData,
             architectureTests.ServiceContracts_DeclaredOperations_UseControlledFaults,
             architectureTests.ContractTypes_PublicNames_AvoidProhibitedNames,
-            architectureTests.ContractAssembly_ReferencedAssemblies_ExcludePersistence
+            architectureTests.ContractAssembly_ReferencedAssemblies_ExcludePersistence,
+            accountAccessTests.LoginAsync_ValidCredentials_MapsAuthenticatedSession,
+            accountAccessTests.LoginAsync_MissingCredentials_ReturnsInvalidCredentials,
+            accountAccessTests.LoginAsync_ThroughWcfChannel_ReturnsAuthenticatedSession
         };
     }
 
