@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/ReversiGameSystem.Client.Wpf/ReversiGameSystem.Client.Wpf.csproj" Id="cb6d4e9a-855b-41d1-ba1d-38330a1dd21c" />
+  <Project Path="tests/ReversiGameSystem.Client.Tests/ReversiGameSystem.Client.Tests.csproj" Id="d4d27cb2-3b12-4c32-9058-2be953e01385" />
+</Solution>

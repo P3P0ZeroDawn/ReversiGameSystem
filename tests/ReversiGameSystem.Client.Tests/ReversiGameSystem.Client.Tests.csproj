@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>10.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ReversiGameSystem.Client.Tests</RootNamespace>
+    <AssemblyName>ReversiGameSystem.Client.Tests</AssemblyName>
+    <ProjectGuid>{D4D27CB2-3B12-4C32-9058-2BE953E01385}</ProjectGuid>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ReversiGameSystem.Client.Wpf\ReversiGameSystem.Client.Wpf.csproj" />
+  </ItemGroup>
+</Project>

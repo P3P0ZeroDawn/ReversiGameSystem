@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="src/ReversiGameSystem.Contracts/ReversiGameSystem.Contracts.csproj" Id="d9dc968b-c867-41a1-abd1-1853a481af4e" />
+  <Project Path="src/ReversiGameSystem.Domain/ReversiGameSystem.Domain.csproj" Id="26e704f1-4360-44fb-a725-c5fc02e03b2c" />
+  <Project Path="src/ReversiGameSystem.Server.Application/ReversiGameSystem.Server.Application.csproj" Id="fe67e273-7e6a-4640-b804-37dd43accb7a" />
+  <Project Path="src/ReversiGameSystem.Server.Host/ReversiGameSystem.Server.Host.csproj" Id="67af14c2-a7df-4b33-8300-56933c75d88c" />
+  <Project Path="src/ReversiGameSystem.Server.Persistence/ReversiGameSystem.Server.Persistence.csproj" Id="c0d97a3d-3ca3-45b0-89f9-e92230fbecdf" />
+  <Project Path="tests/ReversiGameSystem.Server.Tests/ReversiGameSystem.Server.Tests.csproj" Id="a1e6f4cc-0df2-4a8f-93c8-13777f8aa3e2" />
+</Solution>
