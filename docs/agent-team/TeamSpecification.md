@@ -134,7 +134,7 @@ repository, not permanent architectural truth or unlimited write permissions.
 | --- | --- |
 | Purpose | Implement server use cases, game and session behavior, and persistence interactions. |
 | Activate when | The task changes application or domain behavior, state ownership, repositories, or data operations. |
-| Sources | Applicable CU (CU-01 to CU-28) via index in `docs/Project Specs/PRIMERA ENTREGA PROYECTO.md`, `docs/ValidationRules.md`, relevant sections of `docs/Coding Standard/C# Video Game Development Standard.md` (via Table of Contents), target files in `src/ReversiGameSystem.Server.Domain/`, `src/ReversiGameSystem.Server.Application/`, `src/ReversiGameSystem.Server.Persistence/`, and associated tests in `tests/`. |
+| Sources | Applicable CU (CU-01 to CU-28) via index in `docs/Project Specs/PRIMERA ENTREGA PROYECTO.md`, `docs/ValidationRules.md`, relevant sections of `docs/Coding Standard/CSharp Video Game Development Standard.md` (via Table of Contents), target files in `src/ReversiGameSystem.Server.Domain/`, `src/ReversiGameSystem.Server.Application/`, `src/ReversiGameSystem.Server.Persistence/`, and associated tests in `tests/`. |
 | Capabilities | Inspect and edit assigned source and tests; run relevant checks in a suitable test environment. |
 | Ownership | Assigned files in Domain, Server.Application, Server.Persistence, and related tests; coordinate ServiceApi or Host changes with the WCF specialist. |
 | Procedure | Inspect indices before reading; invoke on-demand procedure; implement within boundaries; verify behavior; return minimal deltas. |
@@ -148,7 +148,7 @@ repository, not permanent architectural truth or unlimited write permissions.
 | --- | --- |
 | Purpose | Own communication compatibility across contracts, adapters, host, and generated client references. |
 | Activate when | Operations, data contracts, callbacks, fault behavior, bindings, endpoints, or proxy generation change. |
-| Sources | `docs/WcfIntegrationContracts.md` (WCF catalog), latest relevant entries in `docs/Academic Observations/Observaciones.md`, target files in `src/ReversiGameSystem.Server.Contracts/`, `src/ReversiGameSystem.Server.ServiceApi/`, `src/ReversiGameSystem.Server.Host/App.config`, client endpoint configuration in `src/ReversiGameSystem.Client.Presentation/`, and contract conventions in `docs/Coding Standard/C# Video Game Development Standard.md` (via index). |
+| Sources | `docs/WcfIntegrationContracts.md` (WCF catalog), latest relevant entries in `docs/Academic Observations/Observaciones.md`, target files in `src/ReversiGameSystem.Server.Contracts/`, `src/ReversiGameSystem.Server.ServiceApi/`, `src/ReversiGameSystem.Server.Host/App.config`, client endpoint configuration in `src/ReversiGameSystem.Client.Presentation/`, and contract conventions in `docs/Coding Standard/CSharp Video Game Development Standard.md` (via index). |
 | Capabilities | Inspect and edit assigned contract, transport, configuration, and test files; generate proxies and run integration checks when available and in scope. |
 | Ownership | Assigned Server.Contracts, Server.ServiceApi, Server.Host, client proxy/configuration files, and related tests; coordinate with server and WPF developers. |
 | Procedure | Inspect contract indices; invoke on-demand procedure; define communication change; coordinate consumers; verify serialization; return focused deltas. |
@@ -162,7 +162,7 @@ repository, not permanent architectural truth or unlimited write permissions.
 | --- | --- |
 | Purpose | Implement presentation and service consumption with understandable, localized user behavior. |
 | Activate when | Screens, navigation, dialogs, preventive validation, localization, or client service calls change. |
-| Sources | Applicable CU in `docs/Project Specs/PRIMERA ENTREGA PROYECTO.md` and UI progression in `SEGUNDA ENTREGA PROYECTO.md`, `docs/ValidationRules.md`, `docs/Project Specs/Internacionalización de Aplicaciones WPF con Acces.md`, target files in `src/ReversiGameSystem.Client.Presentation/` (XAML, ViewModels, Resources `.resx`), client proxy interfaces from `docs/WcfIntegrationContracts.md`, and relevant UI rules in `docs/Coding Standard/C# Video Game Development Standard.md` (via index). |
+| Sources | Applicable CU in `docs/Project Specs/PRIMERA ENTREGA PROYECTO.md` and UI progression in `SEGUNDA ENTREGA PROYECTO.md`, `docs/ValidationRules.md`, `docs/Project Specs/Internacionalización de Aplicaciones WPF con Acces.md`, target files in `src/ReversiGameSystem.Client.Presentation/` (XAML, ViewModels, Resources `.resx`), client proxy interfaces from `docs/WcfIntegrationContracts.md`, and relevant UI rules in `docs/Coding Standard/CSharp Video Game Development Standard.md` (via index). |
 | Capabilities | Inspect and edit assigned presentation code, resources, assets, and tests; use available UI inspection for verification. |
 | Ownership | Assigned Client.Presentation files and client tests; transfer proxy/contract changes to the WCF assignment. |
 | Procedure | Inspect CU and standard indices; invoke on-demand procedure; implement behavior and localization; verify affected paths; return minimal deltas. |
@@ -176,7 +176,7 @@ repository, not permanent architectural truth or unlimited write permissions.
 | --- | --- |
 | Purpose | Find correctness, regression, integration, and security risks and obtain repeatable evidence. |
 | Activate when | A material implementation change needs review or a task explicitly requests diagnosis, tests, integration, or performance verification. |
-| Sources | Task acceptance conditions, affected rules in `docs/ValidationRules.md`, testing and security rules in `docs/Coding Standard/C# Video Game Development Standard.md` (sections 3.14, 3.15, 6, 7 via index), target test files in `tests/`, and relevant observations in `docs/Academic Observations/Observaciones.md`. |
+| Sources | Task acceptance conditions, affected rules in `docs/ValidationRules.md`, testing and security rules in `docs/Coding Standard/CSharp Video Game Development Standard.md` (sections 3.14, 3.15, 6, 7 via index), target test files in `tests/`, and relevant observations in `docs/Academic Observations/Observaciones.md`. |
 | Capabilities | Inspect and run appropriate checks using disposable resources; write assigned tests when explicitly included in the assignment. |
 | Ownership | Read-only review by default; test edits require assigned file ownership and declared authorship. |
 | Procedure | Inspect test project structure; invoke on-demand procedure; execute targeted checks; return concise diagnostic report. |
@@ -190,7 +190,7 @@ repository, not permanent architectural truth or unlimited write permissions.
 | --- | --- |
 | Purpose | Check changes against applicable standard rules and academic sources while preserving the course's learning approach. |
 | Activate when | A substantive change needs compliance review or the team requests a standard proposal, edit, or academic assessment. |
-| Sources | `docs/Coding Standard/C# Video Game Development Standard.md` (MANDATORY: inspect Table of Contents first to locate specific sections), `docs/Coding Standard/StandardChangeProtocol.md`, relevant entries in `docs/Academic Observations/Observaciones.md`, `docs/CodingStandardCompliance.md`, and specific code deltas under review. |
+| Sources | `docs/Coding Standard/CSharp Video Game Development Standard.md` (MANDATORY: inspect Table of Contents first to locate specific sections), `docs/Coding Standard/StandardChangeProtocol.md`, relevant entries in `docs/Academic Observations/Observaciones.md`, `docs/CodingStandardCompliance.md`, and specific code deltas under review. |
 | Capabilities | Inspect and evaluate; research authoritative evidence when needed; edit only specifically requested documents. |
 | Ownership | Read-only by default. An explicit standard edit request allows the requested section and approved related reference updates. |
 | Procedure | MUST inspect standard Table of Contents before reading rules; invoke on-demand procedure; evaluate deltas; deliver structured feedback without verbatim copying. |

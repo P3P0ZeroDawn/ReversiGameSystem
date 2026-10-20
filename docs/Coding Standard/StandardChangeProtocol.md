@@ -3,7 +3,7 @@
 Status: team working agreement, confirmed on October 19, 2026.
 
 This procedure governs proposed additions and changes to the
-[C# Video Game Development Standard](C%23%20Video%20Game%20Development%20Standard.md).
+[C# Video Game Development Standard](./CSharp%20Video%20Game%20Development%20Standard.md).
 It applies regardless of the assistant, model, provider, editor, or execution environment.
 It is a separate working procedure, not a new section of the coding standard.
 

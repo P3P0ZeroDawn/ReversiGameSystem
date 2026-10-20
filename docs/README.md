@@ -13,7 +13,7 @@ que las funciones descritas estén implementadas.
 
 | Fuente | Uso | Precaución |
 | --- | --- | --- |
-| [Estándar de desarrollo](Coding%20Standard/C%23%20Video%20Game%20Development%20Standard.md) | Reglas de código, errores, logging, seguridad y pruebas. | Conciliar las excepciones existentes; las secciones 10 y 11 están vacías. |
+| [Estándar de desarrollo](./Coding%20Standard/CSharp%20Video%20Game%20Development%20Standard.md) | Reglas de código, errores, logging, seguridad y pruebas. | Conciliar las excepciones existentes; las secciones 10 y 11 están vacías. |
 | [Observaciones académicas](Academic%20Observations/Observaciones.md) | Notas de tres revisiones y acuerdos de alcance. | Distinguir comentarios, decisiones y puntos todavía por resolver. |
 | [Información general de diseño](Design%20Project/Proyecto%20Info%20General.md) | Interesados, requisitos, restricciones, escenarios y acuerdos. | Contiene supuestos históricos repetidos; los seis enlaces de navegación se repararon. |
 | [Documento de arquitectura SAD](Design%20Project/Documento-Entrega.md) | Síntesis arquitectónica, ASR, ADR, componentes, vistas y riesgos. | Es una entrega parcial v0.1; conserva apartados para la entrega final. |

@@ -131,7 +131,7 @@ No additional repository report file is required unless requested.
 
 **Use when:** assessing adherence to applicable academic or coding requirements.
 
-Consult the [full standard](../Coding%20Standard/C%23%20Video%20Game%20Development%20Standard.md),
+Consult the [full standard](../Coding%20Standard/CSharp%20Video%20Game%20Development%20Standard.md),
 [observations](../Academic%20Observations/Observaciones.md), relevant supplied materials,
 and actual code. For each material finding, identify the rule and section, applicability,
 observed evidence, and impact. Distinguish a language requirement from a project convention,

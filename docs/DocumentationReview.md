@@ -82,7 +82,7 @@ La revisión documental no determina por sí sola cuál interpretación es la co
 
 Fuentes: [observaciones](Academic%20Observations/Observaciones.md), revisiones 2 y 3;
 [catálogo WCF](WcfIntegrationContracts.md), secciones 14 y 15;
-[estándar](Coding%20Standard/C%23%20Video%20Game%20Development%20Standard.md), sección 6.
+[estándar](./Coding%20Standard/CSharp%20Video%20Game%20Development%20Standard.md), sección 6.
 
 Las notas piden revisar la representación de entradas y salidas por operación y cuándo
 comunicar fallos al cliente. El catálogo ya prescribe outcomes tipados y un `ServiceFault`
@@ -94,7 +94,7 @@ transferir excepciones internas o reemplazar automáticamente todos los outcomes
 
 ### DOC-05: estándar completo frente al registro de cumplimiento
 
-Fuentes: [estándar](Coding%20Standard/C%23%20Video%20Game%20Development%20Standard.md),
+Fuentes: [estándar](./Coding%20Standard/CSharp%20Video%20Game%20Development%20Standard.md),
 secciones 5.8 y 6; [registro de cumplimiento](CodingStandardCompliance.md).
 
 El estándar establece un máximo de tres parámetros, exige aprobación documentada para
@@ -108,7 +108,7 @@ en una exención permanente ni afirmar cumplimiento actual sin examinar el códi
 
 ### DOC-06: apartados todavía sin completar
 
-Fuentes: [estándar](Coding%20Standard/C%23%20Video%20Game%20Development%20Standard.md),
+Fuentes: [estándar](./Coding%20Standard/CSharp%20Video%20Game%20Development%20Standard.md),
 secciones 10 y 11; [SAD](Design%20Project/Documento-Entrega.md), secciones 4.3, 5 y 7;
 [información general](Design%20Project/Proyecto%20Info%20General.md), «Definition of Done».
 
