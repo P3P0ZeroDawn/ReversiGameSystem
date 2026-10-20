@@ -118,22 +118,23 @@ columna **Cliente integrado** expresan alcances diferentes.
 
 ## 6. Resumen de service contracts
 
-| Contrato | Responsabilidad | Callback |
-| --- | --- | --- |
-| `IAccountAccessService` | Registro, autenticación, sesiones y seguridad de la cuenta. | No |
-| `IPlayerProfileService` | Perfil, estadísticas, imágenes y preferencias persistentes. | No |
-| `ILeaderboardService` | Consulta de la clasificación global. | No |
-| `IFriendshipService` | Búsqueda, invitaciones, amistades y presencia. | Sí |
-| `IMatchLobbyService` | Creación, descubrimiento, configuración y unión a salas. | Sí |
-| `IGameplayMatchService` | Tablero, turnos, movimientos, finalización e historial. | Sí |
-| `IMatchChatService` | Mensajes de partida y notificaciones de moderación. | Sí |
+| Contrato                    | Responsabilidad                                          | Callback |
+| --------------------------- | -------------------------------------------------------- | -------- |
+| `ISessionService`           | Inicio de sesión, cerrar sesión, entrar como invitado    | No       |
+| `IAccountService`           | Registro, desactivación y seguridad de la cuenta         | No       |
+| `IPlayerProfileService`     | Perfil, estadísticas, imágenes                           | No       |
+| `IPlayerPreferencesService` | Preferencias persistentes                                | No       |
+| `ILeaderboardService`       | Consulta de la clasificación global.                     | No       |
+| `IFriendshipService`        | Búsqueda, invitaciones, amistades y presencia.           | Sí       |
+| `IMatchLobbyService`        | Creación, descubrimiento, configuración y unión a salas. | Sí       |
+| `IGameplayMatchService`     | Tablero, turnos, movimientos, finalización e historial.  | Sí       |
+| `IMatchChatService`         | Mensajes de partida y notificaciones de moderación.      | Sí       |
 
-## 7. `IAccountAccessService`
+## 7. `ISessionService`
 
 ### 7.1 Responsabilidad
 
-Administra el acceso al sistema, el ciclo de vida de las sesiones y las operaciones de
-seguridad que requieren comprobar las credenciales del propietario de una cuenta.
+Administra el ciclo de vida de la sesión: acceso al sistema, como usuario o como invitado y el cierre de sesión.
 
 No utiliza callback porque todas sus operaciones se originan en el cliente y producen una
 respuesta inmediata.
@@ -217,7 +218,57 @@ expiración. El servidor administra la disponibilidad del nombre y la vigencia d
 
 Las contraseñas y códigos nunca forman parte de logs, faults ni callbacks.
 
-## 8. `IPlayerProfileService`
+## 8. `IAccountService`
+
+### 8.1 Responsabilidad
+
+Administra el ciclo de vida de las cuentas y su seguridad: registro, cambio de contraseñas y códigos de verificación.
+
+No utiliza callback porque todas sus operaciones se originan en el cliente y producen una  
+respuesta inmediata.
+### 8.2 Operaciones
+
+| Operación                 | Entrada                    | Salida                        | Estado      |
+| ------------------------- | -------------------------- | ----------------------------- | ----------- |
+| `RequestRegistrationCode` | `CandidateAccount`         | `RegistrationDispatchOutcome` | `Prototype` |
+| `CompleteRegistration`    | `NewAccount`               | `AccountRegistrationOutcome`  | `Prototype` |
+| `ChangePassword`          | `NewPasswordCredentials`   | `PasswordUpdateOutcome`       | `Planned`   |
+| `ResetPassword`           | `PasswordResetCredentials` | `PasswordResetOutcome`        | `Deferred`  |
+| `DeactiveAccount`         | `DeactivationCredentials`  | `DeactivationResult`          | `Deferred`  |
+
+### Datos de entrada y salida
+
+#### `CandidateAccount`
+
+| Miembro        | Tipo     | Obligatorio | Propósito                                                                    |
+| -------------- | -------- | ----------- | ---------------------------------------------------------------------------- |
+| `Username`     | `string` | Sí          | Nombre de usuario pretendido; el servidor valida su disponibilidad y formato |
+| `EmailAddress` | `string` | Sí          | Correo electrónico de destino para la entrega del código de verificación.    |
+
+#### `AccountRegistrationOutcome`
+
+| **Miembro**    | **Tipo**                     | **Obligatorio** | **Propósito**                                                                           |
+| -------------- | ---------------------------- | --------------- | --------------------------------------------------------------------------------------- |
+| `Status`       | `RegistrationDispatchStatus` | Sí              | Resultado de la validación preliminar y del despacho del código.                        |
+| `ExpiresAtUtc` | `DateTime?`                  | No              | Marca temporal UTC en la que caducará el código emitido (presente solo si fue enviado). |
+
+#### `NewAccount`
+| Miembro               | Tipo                   | Obligatorio | Propósito                                                                   |
+| --------------------- | ---------------------- | ----------- | --------------------------------------------------------------------------- |
+| `VerificationCode`    | `string`               | Sí          | Código numérico temporal recibido por correo para autorizar el alta.        |
+| `Username`            | `string`               | Sí          | Nombre de usuario público definitivo.                                       |
+| `EmailAddress`        | `string`               | Sí          | Correo electrónico titular de la cuenta.                                    |
+| `Password`            | `string`               | Sí          | Contraseña en texto plano transmitida por canal cifrado para hash seguro.   |
+| `PreferredLocaleCode` | `string`               | Sí          | Código de localización inicial asignado a la cuenta (ej. `es-MX`, `en-US`). |
+| `ProfileImage`        | `ProfileImageContent?` | No          | Contenido binario y formato de la foto de perfil inicial opcional.          |
+
+#### `AccountRegistrationOutcome`
+| Miembro             | Tipo                        | Obligatorio | Propósito                                                                            |
+| ------------------- | --------------------------- | ----------- | ------------------------------------------------------------------------------------ |
+| `Status`            | `AccountRegistrationStatus` | Sí          | Veredicto del proceso de registro y persistencia.                                    |
+| `RegisteredAccount` | `AccountReference?`         | No          | Identidad pública asignada (`AccountId`, `Username`) cuando el registro tiene éxito. |
+
+## 9. `IPlayerProfileService`
 
 ### 8.1 Responsabilidad
 
