@@ -9,14 +9,14 @@ referencing it rather than maintaining a divergent copy. The
 
 **Use when:** starting a task or when a relevant source changes during work.
 
-1. Locate applicable documents using the [source index](../README.md).
+1. Locate applicable documents using the [source index](../README.md). If a document contains a table of contents or index, inspect it first to target specific sections or line ranges rather than loading entire files.
 2. Read relevant current sections and inspect the actual affected execution path.
 3. Identify the use case, standard rules, academic observations, and design decisions
    that influence this task. Historical sources inform construction without proving
    current implementation. Do not treat every earlier statement as equally current.
 4. Check any material conflict against explicit team directions and available evidence.
    Surface a decision that cannot be resolved safely from the information available.
-5. Return the relevant constraints and uncertainty in the assignment or conversation.
+5. Return the relevant constraints and uncertainty in a compact micro-context assignment or conversation.
 
 **Output:** focused context with source references. No source edits, new context logs,
 or academic deliverables are implied.
@@ -31,7 +31,7 @@ or academic deliverables are implied.
    contract, service, generated reference, UI, and tests when the same flow crosses them.
 4. Implement the authorized behavior under relevant standard and architecture constraints.
 5. Run targeted verification, integrate dependent changes, and check the complete outcome.
-6. Return results and limitations; propose documentation changes separately if useful.
+6. Return results as focused deltas, line numbers, and evidence; propose documentation changes separately if useful.
 
 **Output:** integrated change and evidence. Updating documentation, creating a SAD,
 removing all LocalRuntime consumers, or migrating unrelated flows requires task scope;

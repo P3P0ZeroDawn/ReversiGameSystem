@@ -31,7 +31,9 @@ absolute paths from the original author's computer.
 4. Express file inspection, assigned edits, builds, tests, and UI inspection as capabilities.
    Configure actual access according to the environment; role text alone is not enforcement.
    Keep reviewers read-only by default. Unavailable capabilities require a declared fallback.
-5. Have local skills reference the shared procedure entries. Keep any adapter metadata,
+5. Have local skills or adapters reference shared procedure entries on-demand. Keep prompts skeletal
+   using file pointers and line-range inspection; enforce index inspection whenever a document contains
+   a table of contents. Keep any adapter metadata,
    provider-specific settings, prompts, and installations project-local. Do not create
    global definitions or copy the entire historical source collection into prompts.
 6. Before writing executable adapters, establish local Git exclusions and verify their
@@ -76,6 +78,7 @@ created or tested. Assess observable behavior rather than matching exact wording
 | Review authorship | A verifier changes a test or implementation during review. | Declare authorship; obtain another review when possible or label the result as self-review. |
 | Missing rubric | Ask for complete academic certification without all evaluation sources. | Identify the limit of available evidence without inventing criteria or blocking unrelated work. |
 | Version-control separation | Inspect the local adaptation and shared files. | Shared Markdown remains versionable; executable agents, local skills, credentials, and personal settings are excluded locally. |
+| Context efficiency & index navigation | Ask an agent to consult a rule or requirement in a large document. | Inspects the table of contents or index first to target specific sections, loads minimal context, and delivers concise deltas without verbatim reproductions. |
 
 ## Validation result
 

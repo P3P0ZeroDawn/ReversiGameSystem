@@ -19,6 +19,7 @@ executable agent definition. Replace the descriptive placeholders when a role is
 | Field | Value to define |
 | --- | --- |
 | Source references | Relative links to relevant sources and the sections to consult when applicable. |
+| Index consultation | Inspect document tables of contents or indices first to pinpoint precise sections before reading content. |
 | Source interpretation | Which sources are historical, superseded, incomplete, or unresolved for this task. |
 | Accepted task direction | The team's current task and any applicable explicit decisions. |
 | Material ambiguity | What would prevent correct execution and require clarification. |
@@ -44,19 +45,19 @@ tool access and environment constraints; Markdown alone does not enforce isolati
 
 ## Workflow
 
-1. State the observable outcome and read the relevant current files.
-2. Identify applicable procedures and any material uncertainty.
-3. Confirm task ownership with the coordinator; do not request redundant user approval
+1. State the observable outcome and inspect indices to target relevant current files.
+2. Invoke applicable procedures on-demand without loading the entire catalog into context.
+3. Confirm task ownership with the coordinator; enforce micro-context boundaries without importing extraneous code; do not request redundant user approval
    for work already explicitly authorized.
 4. Execute within scope and preserve unrelated changes.
 5. Verify the relevant behavior with capabilities actually available.
-6. Return the result, evidence, limitations, and required handoffs in Spanish.
+6. Return focused deltas, line ranges, evidence, limitations, and required handoffs in Spanish (omit unaltered code).
 
 ## Output and completion
 
 | Field | Value to define |
 | --- | --- |
-| Required deliverable | Concrete findings, changes, test evidence, recommendation, or interface handoff. |
+| Required deliverable | Focused deltas, line ranges, test evidence, recommendation, or interface handoff (no full code reproductions). |
 | Evidence format | File/symbol references, conditions, execution result, and remaining uncertainty. |
 | Acceptance conditions | Observable conditions for declaring the assignment complete. |
 | Review independence | Whether this participant authored changes and who reviews them. |
