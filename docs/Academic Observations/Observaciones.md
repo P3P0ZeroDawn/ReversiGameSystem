@@ -80,3 +80,57 @@ Decisiones tomadas para el apartado del diseño:
 **Código:**
 - **Ejecución:**
 	- Correcto
+
+# Revisión del proyecto 4
+no agrupar codigos de retorno, si lo hacemos justificar y hacerlo BIEN
+
+definir servicios → hacer mas con menos, sobre todo en las interfaces de callback
+
+una interfaz con 10 metodos → violacion de responsabilidades
+
+callback → 2, 3 metodos max, 1 es lo mejor
+
+Receta para saber si estamos enfermos:
+
+Si la interfaz de callback tiene algo como OnNotifyPlayerRemove(…), OnNotifyPlayerAdded(…), OnNotifyPlayerDead(…) estamos enfermos porque muy seguramente son metodos redundantes, se pueden resolver con uno solo, ahi si podemos tener diferentes estados con ENUM
+
+revisar nombres de parametros para eliminar sufijos y prefijos innecesarios
+
+revisar capas en las dos soluciones
+
+cliente las normales eso ahi todo bien
+
+que las capas no tengan dependencias raras ahi
+
+logeo a bitacoras ya debemos tenerlo controlado y categorizado en el estandar
+
+revisar violaciones de codigo
+
+documentar si tenemos encadenamiento de excepciones
+
+optimizacion en transferencia de imagenes por ejemplo
+
+el ultimo dia vamos a tener una revision sin ia pero con acceso a internet para poder arreglar rapido algun problema en aprox 10 min por si tenemos algun error
+
+servidor:
+
+en un lugar solo los contratos
+
+en otro solo las implementaciones
+
+explicitar que estamos usando llamadas a procedimientos remotos 
+no ocultar excepciones
+por qué tantos void de retorno, revisar tipos de respuesta para saber si convienen los primitivos (boolean?)
+revisar que los parámetros sean entendibles a nivel de lectura
+cambios en la bd que se deriven de los contratos, preferencia de img personalizada en bd
+estandarizar descripciones de cada contrato
+documentar 3 parámetros máximo primitivos todo lo demás wrapped
+que revise el estándar y proponga updates
+refactorizar capa de persistencia hacia un repository mas puro con interfaces y luego implementaciones
+nuestras excepciones están bien, documentar como quedamos
+revisar en el contrato de leaderboards la excepción para mantener consistencia
+revisar en friendship service sobreingenieria en el nombrado de los objetos
+considerar reconexión
+accountsummary en findplayers poco semántico
+joinmatch y joinmatchbycode son el mismo
+onmatchsettingschanged es innecesario (revisar por que esta)
