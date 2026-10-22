@@ -8,6 +8,9 @@ using ReversiGameSystem.Server.Contracts.Players;
 
 namespace ReversiGameSystem.Server.Tests;
 
+/// <summary>
+/// Verifies retained account access contracts and the revised profile and leaderboard data.
+/// </summary>
 internal sealed class ContractSerializationTests
 {
     internal void AuthenticationCredentials_RoundTrip_PreservesCredentials()
@@ -62,39 +65,35 @@ internal sealed class ContractSerializationTests
         TestAssert.AreEqual(3, image.Content.Length);
     }
 
-    internal void PlayerProfileLookupOutcome_RoundTrip_PreservesStatistics()
+    internal void PlayerProfile_RoundTrip_PreservesStatistics()
     {
         // Arrange
-        PlayerProfileLookupOutcome outcome = CreatePlayerProfileOutcome();
+        PlayerProfile profile = CreatePlayerProfile();
 
         // Act
-        PlayerProfileLookupOutcome result = RoundTrip(outcome);
+        PlayerProfile result = RoundTrip(profile);
 
         // Assert
-        TestAssert.AreEqual(PlayerProfileStatus.Success, result.Status);
-        PlayerProfileSnapshot profile = TestAssert.IsNotNull(result.Profile);
-        TestAssert.AreEqual(42L, profile.Account.AccountId);
-        TestAssert.AreEqual(true, profile.HasProfileImage);
-        TestAssert.AreEqual(10, profile.Statistics.MatchesPlayed);
-        TestAssert.AreEqual(6, profile.Statistics.Wins);
-        TestAssert.AreEqual(0.6, profile.Statistics.WinRate);
+        TestAssert.AreEqual(42L, result.Account.AccountId);
+        TestAssert.AreEqual(true, result.HasProfileImage);
+        TestAssert.AreEqual(10, result.Statistics.MatchesPlayed);
+        TestAssert.AreEqual(6, result.Statistics.Wins);
+        TestAssert.AreEqual(0.6, result.Statistics.WinRate);
     }
 
-    internal void LeaderboardStandings_RoundTrip_PreservesPositions()
+    internal void LeaderboardEntry_RoundTrip_PreservesPositions()
     {
         // Arrange
-        LeaderboardStandings standings = CreateLeaderboardStandings();
+        LeaderboardEntry[] standings = CreateLeaderboardEntries();
 
         // Act
-        LeaderboardStandings result = RoundTrip(standings);
+        LeaderboardEntry[] result = RoundTrip(standings);
 
         // Assert
-        TestAssert.AreEqual(LeaderboardStatus.Success, result.Status);
-        TestAssert.AreEqual(standings.GeneratedAtUtc, result.GeneratedAtUtc);
-        TestAssert.AreEqual(1, result.Positions.Length);
-        TestAssert.AreEqual(1, result.Positions[0].Position);
-        TestAssert.AreEqual("player_one", result.Positions[0].Account.Username);
-        TestAssert.AreEqual(6, result.Positions[0].Wins);
+        TestAssert.AreEqual(1, result.Length);
+        TestAssert.AreEqual(1, result[0].Position);
+        TestAssert.AreEqual("player_one", result[0].Account.Username);
+        TestAssert.AreEqual(6, result[0].Wins);
     }
 
     internal void ServiceFault_RoundTrip_PreservesDiagnosticData()
@@ -148,44 +147,35 @@ internal sealed class ContractSerializationTests
         };
     }
 
-    private static PlayerProfileLookupOutcome CreatePlayerProfileOutcome()
+    private static PlayerProfile CreatePlayerProfile()
     {
-        return new PlayerProfileLookupOutcome
+        return new PlayerProfile
         {
-            Status = PlayerProfileStatus.Success,
-            Profile = new PlayerProfileSnapshot
+            Account = CreateAccountReference(),
+            HasProfileImage = true,
+            Statistics = new PlayerStatistics
             {
-                Account = CreateAccountReference(),
-                HasProfileImage = true,
-                Statistics = new PlayerStatistics
-                {
-                    MatchesPlayed = 10,
-                    Wins = 6,
-                    Losses = 3,
-                    Draws = 1,
-                    WinRate = 0.6
-                }
+                MatchesPlayed = 10,
+                Wins = 6,
+                Losses = 3,
+                Draws = 1,
+                WinRate = 0.6
             }
         };
     }
 
-    private static LeaderboardStandings CreateLeaderboardStandings()
+    private static LeaderboardEntry[] CreateLeaderboardEntries()
     {
-        return new LeaderboardStandings
+        return new[]
         {
-            Status = LeaderboardStatus.Success,
-            GeneratedAtUtc = new DateTime(2026, 10, 15, 12, 0, 0, DateTimeKind.Utc),
-            Positions = new[]
+            new LeaderboardEntry
             {
-                new LeaderboardPosition
-                {
-                    Position = 1,
-                    Account = CreateAccountReference(),
-                    HasProfileImage = true,
-                    MatchesPlayed = 10,
-                    Wins = 6,
-                    WinRate = 0.6
-                }
+                Position = 1,
+                Account = CreateAccountReference(),
+                HasProfileImage = true,
+                MatchesPlayed = 10,
+                Wins = 6,
+                WinRate = 0.6
             }
         };
     }
@@ -199,7 +189,7 @@ internal sealed class ContractSerializationTests
         };
     }
 
-    private static TContract RoundTrip<TContract>(TContract value)
+    internal static TContract RoundTrip<TContract>(TContract value)
     {
         DataContractSerializer serializer = new DataContractSerializer(typeof(TContract));
         using MemoryStream stream = new MemoryStream();
