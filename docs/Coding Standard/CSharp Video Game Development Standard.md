@@ -3454,7 +3454,7 @@ The comment indicates that a problem exists but does not explain what is incorre
 
 Data received from outside a component's trusted control must be validated before it is used to make decisions or change protected state.
 
-A trust boundary separates components or sources with different control over data and permissions. The client-to-server connection is a trust boundary because the server does not control the caller's program. Client-side checks can improve feedback, but callers can bypass them. OWASP recommends server-side validation even when the client validates the same input, and distinguishes input validation from authorization (OWASP Foundation, n.d.).
+A trust boundary separates components or sources with different control over data and permissions. The client-to-server connection is a trust boundary because the server does not control the caller's program. Client-side checks can improve feedback, but callers can bypass them. OWASP recommends server-side validation even when the client validates the same input, and distinguishes input validation from authorization (OWASP Foundation, n.d.-b).
 
 WCF transfer security protects communication through authentication, confidentiality, and integrity. Authorization determines access to resources and remains a separate requirement (Microsoft, 2023j). An encrypted connection does not establish that a proposed username, account identifier, or game action is acceptable to the application.
 
@@ -3505,17 +3505,169 @@ The caller is still authenticated, but the server omits its username validation 
 
 ### 8.2 Input Validation
 
+Input must satisfy the rules of the field and operation before it is processed. A value with the expected C# type is not necessarily a valid application value.
+
+Validation covers both structure, such as required fields and formats, and meaning, such as permitted quantities and consistency between related values. CWE-20 identifies missing checks of ranges, lengths, types, and domain rules as causes of improper input validation (The MITRE Corporation, n.d.). OWASP recommends defining accepted values rather than attempting to recognize every malicious input (OWASP Foundation, n.d.-b).
+
+For this project:
+
+- Required values must be checked for absence before they are dereferenced or processed. Optional values must have a defined meaning; they must not silently become required or acquire an unrelated default. Follow Sections 5.10 and 5.11 for nullability and return contracts.
+- Text fields must enforce their applicable length and format rules. Numeric values must enforce the complete accepted range, including both endpoints. Fixed choices must belong to the supported set; a value received from a selection control is still input.
+- Collection validation must cover the permitted count and the relevant rules for each element. Related values must also satisfy their combined constraints; individual validity does not establish that their combination is permitted.
+- Normalization must follow the field's agreed policy. For example, account names may be trimmed before validation, while passwords must not be trimmed. The representation used by the operation must preserve the properties checked during validation; later transformations must not invalidate those checks (OWASP Foundation, n.d.-b).
+- A syntactically valid value must still satisfy the operation's domain rules. For example, a valid username format does not establish availability. Checks that depend on current stored state must remain authoritative at the point of change; an earlier client check cannot guarantee them.
+- Existing policies and named limits should be reused within the responsible layer instead of copying literal limits into each caller. New validation classes or parameter objects should be introduced only when they represent a clear responsibility or meaningful group of data.
+- Invalid input must be rejected before the action that depends on it. Do not truncate, clamp, or substitute a value merely to make the operation succeed unless that behavior is explicitly part of the field's agreed policy. Use the existing internal rejection mechanism and map it to the declared fault at the WCF boundary, as established in Section 8.1.
+- Tests for new or changed validation rules must cover accepted boundaries, rejected values immediately outside them, and applicable missing or malformed inputs. Follow Section 9; a validation test should also verify that rejected input does not trigger the protected action.
+
+Validation does not replace authorization, safe database commands, or safe file handling. Apply Section 8.1 and the relevant storage rules as well. These rules establish review criteria; they do not require every operation to use the same validation framework.
+
+#### Correct
+
+```csharp
+public async Task<LeaderboardResult> ExecuteAsync(LeaderboardQuery query)
+{
+    if (query == null
+        || query.MaximumEntries < 1
+        || query.MaximumEntries > MaximumAllowedEntries)
+    {
+        return new LeaderboardResult(LeaderboardOutcome.InvalidRequest);
+    }
+
+    LeaderboardStoreResult result = await _leaderboardStore.GetAsync(
+        query.MaximumEntries);
+    return result.Outcome == LeaderboardStoreOutcome.Success
+        ? new LeaderboardResult(LeaderboardOutcome.Success, result.Entries)
+        : new LeaderboardResult(LeaderboardOutcome.ServiceUnavailable);
+}
+```
+
+This application-layer example follows `GetLeaderboardHandler.ExecuteAsync`. It rejects a missing query and quantities outside the inclusive range from 1 to `MaximumAllowedEntries` before calling the store. The class defines that upper limit as 100. An empty result within the accepted range remains a valid query outcome.
+
+#### Incorrect
+
+```csharp
+public async Task<LeaderboardResult> ExecuteAsync(LeaderboardQuery query)
+{
+    if (query == null || query.MaximumEntries < 1)
+    {
+        return new LeaderboardResult(LeaderboardOutcome.InvalidRequest);
+    }
+
+    LeaderboardStoreResult result = await _leaderboardStore.GetAsync(
+        query.MaximumEntries);
+    return result.Outcome == LeaderboardStoreOutcome.Success
+        ? new LeaderboardResult(LeaderboardOutcome.Success, result.Entries)
+        : new LeaderboardResult(LeaderboardOutcome.ServiceUnavailable);
+}
+```
+
+The method checks absence and the lower bound but omits the upper bound. It therefore sends unsupported quantities to persistence even though the input has the correct type and is positive. Validation must cover the full accepted range.
+
 ### 8.3 File System Access
 
-### 8.4 Save Data Security
+File operations must use locations controlled by the component that owns the files. Untrusted input must not determine an arbitrary path to read, overwrite, or delete.
 
-### 8.5 Network Input Validation
+`Path.Combine` builds a path; it does not establish that the result is inside an allowed directory. Microsoft documents that a rooted argument after the first argument causes earlier path components to be discarded (Microsoft, n.d.). OWASP recommends application-generated filenames, restricted storage permissions, and validation of uploaded content and size (OWASP Foundation, n.d.-a).
 
-### 8.6 Deserialization Security
+For this project:
 
-### 8.7 Credential and Secret Management
+- Profile images stored by the server must remain under its configured image directory. The WPF file picker selects a local source file; that selection must not become a server storage path. Service contracts exchange image content and media type, not physical paths.
+- New stored images must use a generated filename and an extension selected from the supported formats. Do not reuse a supplied filename as the storage name. Existing image references must be validated against the storage scheme before they are used for reading or deletion.
+- A reference used by the profile image repository must identify a single permitted filename, not a rooted path or a sequence of directories. Reject invalid references instead of removing suspicious fragments and continuing. Combining an unchecked value with the storage directory is insufficient.
+- File extensions and declared media types must not be the only content checks. Image processing must enforce the applicable encoded-size, decoded-format, and dimension limits before accepting the image. Reuse the corresponding policies and keep the client checks preventive, as established in Sections 8.1 and 8.2.
+- The image storage directory should permit access only to the operating-system accounts that need it. Normal profile operations must not require access to arbitrary user directories or permission to execute uploaded files.
+- File streams and decoded images must be disposed of according to Section 5.16. Temporary files must have a defined cleanup path. A failed write or association must not be reported as a successful image update; handle failures according to Section 6 and the operation's existing compensation rules.
+- Physical storage paths must not be returned in service data or player-facing error messages. Use the contract's image data and declared faults; internal diagnostics must follow Section 6.
 
-### 8.8 Sensitive Configuration
+These rules concern the application's existing image storage and local file selection. They do not require a general-purpose file management service.
+
+#### Correct
+
+```csharp
+private string ResolvePath(string reference)
+{
+    if (reference == null || !reference.StartsWith(ReferencePrefix, StringComparison.Ordinal))
+    {
+        throw new IOException("The stored profile image reference is invalid.");
+    }
+
+    string fileName = reference.Substring(ReferencePrefix.Length);
+    string extension = Path.GetExtension(fileName);
+    if ((extension != ".png" && extension != ".jpg")
+        || !Guid.TryParseExact(Path.GetFileNameWithoutExtension(fileName), "N", out _)
+        || fileName != Path.GetFileName(fileName))
+    {
+        throw new IOException("The stored profile image reference is invalid.");
+    }
+
+    return Path.Combine(_directory, fileName);
+}
+```
+
+This example follows `ProfileImageRepository.ResolvePath`. `ReferencePrefix` is `profile-images/`, and `_directory` is the absolute image directory supplied by server configuration. The method accepts only the established prefix, a GUID filename in `N` format, and a supported extension. It rejects directory components before combining the filename with the trusted root. This assumes that the storage directory itself remains under trusted operating-system control.
+
+#### Incorrect
+
+```csharp
+private string ResolvePath(string reference)
+{
+    return Path.Combine(_directory, reference);
+}
+```
+
+The method accepts an unchecked reference as a path component. A rooted path can replace the configured root, and relative directory components can lead outside it when the path is used. `Path.Combine` is not an authorization or path-containment check.
+
+### 8.4 Credential and Secret Management
+
+Credentials and secrets must be available only to the components that need them and must not be embedded in source code, committed configuration, or diagnostic output.
+
+OWASP recommends controlling access to secrets and managing their creation, rotation, revocation, and expiration (OWASP Foundation, n.d.-d). Player passwords require a different storage mechanism from provider credentials: passwords must be stored using a salted password-hashing algorithm, not plaintext or reversible encryption (OWASP Foundation, n.d.-c).
+
+For this project:
+
+- Database credentials, mail-provider credentials, and the verification secret must remain in server configuration. They must not be included in WPF resources, generated proxies, service data, or client deployment files. Player credentials may cross the service boundary only where the operation requires them and through the configured protected transport.
+- The server must obtain sensitive configuration through the existing configuration reader and inject the resulting settings or services into their consumers. Process environment variables are the project's current configuration convention; the local `.env` fallback must remain excluded from version control. `.env.example` must contain placeholders only.
+- Environment variables and ignored files are not encrypted secret stores. Access to the server process, local configuration files, and diagnostic dumps must be restricted. Missing or invalid required secrets must prevent the dependent service from starting; do not substitute a hardcoded or empty credential.
+- Account creation and password changes must use the server's password-hashing abstraction. Verification must use its matching verification method. The current adapter uses PBKDF2 with a random salt; its algorithm and work factor must be reviewed against current guidance and deployment requirements rather than treated as permanently sufficient. Password normalization must remain consistent with Section 8.2 and authentication.
+- The verification secret must be generated independently of the mail password, using a cryptographic random-number generator. The existing protector requires at least 32 decoded bytes; Base64 represents those bytes but does not encrypt them. Verification codes must be stored as purpose-bound keyed digests through the existing protector, not as plaintext. Plaintext is used only where necessary for delivery and verification.
+- Session tokens must be unpredictable, treated as credentials, and checked against server session state. The client must discard its local token after confirmed session closure. Possession of a string with the expected token format does not establish a valid session.
+- Passwords, provider credentials, verification codes, and session tokens must not appear in logs, exception messages, or player-facing diagnostics. Record the operation and its correlation identifier according to Section 6. Tests must use synthetic credentials and must not require real secrets to be committed.
+- A disclosed provider credential must be revoked or replaced through its provider. Rotation of the verification secret must account for the invalidation of pending codes; revoking a session must invalidate that session in server state. Changing a local configuration file or deleting a secret from the latest commit does not revoke an exposed credential.
+
+These rules use the existing configuration and injection boundaries. They do not require a new secrets-management service for the current implementation.
+
+#### Correct
+
+```csharp
+private static VerificationCodeProtector CreateCodeProtector()
+{
+    byte[] secret = Convert.FromBase64String(
+        EnvironmentSettings.ReadRequired("REVERSI_VERIFICATION_SECRET"));
+    try
+    {
+        return new VerificationCodeProtector(secret);
+    }
+    finally
+    {
+        Array.Clear(secret, 0, secret.Length);
+    }
+}
+```
+
+This example adapts the initialization in `Server.Host.Program`. The configuration reader rejects a missing value, and the protector rejects an undersized decoded key. The protector retains a private copy for its work; clearing the temporary byte array does not erase that copy or guarantee removal of every runtime representation. A malformed Base64 value also prevents initialization instead of activating a fallback key.
+
+#### Incorrect
+
+```csharp
+private static VerificationCodeProtector CreateCodeProtector()
+{
+    byte[] secret = new byte[32];
+    return new VerificationCodeProtector(secret);
+}
+```
+
+The array satisfies the minimum length but contains a publicly predictable all-zero key. A length check does not establish randomness or secrecy, and a hardcoded key cannot be managed independently of the application build.
 
 ---
 
@@ -3741,11 +3893,7 @@ The phases are not clearly separated and the test performs more than one Act ope
 
 ---
 
-## 11. Automated Enforcement and Compliance
-
----
-
-## 12. References
+## 11. References
 
 Ecma International. (2023, December). *ECMA-334: C# language specification* (7th ed.). [https://ecma-international.org/publications-and-standards/standards/ecma-334/](https://ecma-international.org/publications-and-standards/standards/ecma-334/)
 
@@ -3756,6 +3904,8 @@ GitLab. (n.d.). *JavaScript style guide*. GitLab Docs. Retrieved August 29, 2026
 Google. (n.d.). *C# at Google Style Guide*. Google Style Guides. Retrieved August 29, 2026, from [https://google.github.io/styleguide/csharp-style.html](https://google.github.io/styleguide/csharp-style.html)
 
 JetBrains. (2026, March 31). *Invert ‘if’ statement to reduce nesting*. Inspectopedia Documentation. [https://www.jetbrains.com/help/inspectopedia/InvertIf.html](https://www.jetbrains.com/help/inspectopedia/InvertIf.html)
+
+Microsoft. (n.d.). *Path.Combine method (System.IO)*. Microsoft Learn. Retrieved October 22, 2026, from [https://learn.microsoft.com/en-us/dotnet/api/system.io.path.combine](https://learn.microsoft.com/en-us/dotnet/api/system.io.path.combine)
 
 Microsoft. (2020a, October 14). *No-tracking queries*. Microsoft Learn. [https://learn.microsoft.com/en-us/ef/ef6/querying/no-tracking](https://learn.microsoft.com/en-us/ef/ef6/querying/no-tracking)
 
@@ -3863,9 +4013,17 @@ Microsoft. (2026p, March 23). *Handle and raise events*. Microsoft Learn. [https
 
 Microsoft. (2026q, January 20). *using statement - ensure the correct use of disposable objects*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/using](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/using)
 
-OWASP Foundation. (n.d.). *Input validation cheat sheet*. OWASP Cheat Sheet Series. Retrieved October 22, 2026, from [https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html)
+OWASP Foundation. (n.d.-a). *File upload cheat sheet*. OWASP Cheat Sheet Series. Retrieved October 22, 2026, from [https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html)
+
+OWASP Foundation. (n.d.-b). *Input validation cheat sheet*. OWASP Cheat Sheet Series. Retrieved October 22, 2026, from [https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html)
+
+OWASP Foundation. (n.d.-c). *Password storage cheat sheet*. OWASP Cheat Sheet Series. Retrieved October 22, 2026, from [https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
+
+OWASP Foundation. (n.d.-d). *Secrets management cheat sheet*. OWASP Cheat Sheet Series. Retrieved October 22, 2026, from [https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html)
 
 Reese, J. (2025, March 22). *Unit testing best practices for .NET*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices](https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices)
+
+The MITRE Corporation. (n.d.). *CWE-20: Improper input validation*. Common Weakness Enumeration. Retrieved October 22, 2026, from [https://cwe.mitre.org/data/definitions/20.html](https://cwe.mitre.org/data/definitions/20.html)
 
 Unity Technologies. (n.d.-a). *Cloud Diagnostics*. Unity Documentation. Retrieved August 29, 2026, from [https://docs.unity.com/en-us/cloud-diagnostics](https://docs.unity.com/en-us/cloud-diagnostics)
 
@@ -3879,7 +4037,7 @@ van der Til, J., Costello, M., & Calvarro Nelson, J. (2026, March 10). *Integrat
 
 ---
 
-## 13. AI Use Declaration
+## 12. AI Use Declaration
 
 Artificial Intelligence tools were used as a **support resource** during the creation of this development standard.
 
