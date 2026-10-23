@@ -267,7 +267,8 @@
     <Compile Include="Services\AuthenticationOutcome.cs" />
     <Compile Include="Services\AuthenticationOutcomeMapper.cs" />
     <Compile Include="Services\AuthenticationStatus.cs" />
-    <Compile Include="Services\RemoteAccountAccessService.cs" />
+    <Compile Include="Services\SessionClient.cs" />
+    <Compile Include="Services\SessionState.cs" />
     <Compile Include="Services\ActionChoiceDialogOptions.cs" />
     <Compile Include="Services\AvailableMatchesService.cs" />
     <Compile Include="Services\ConfirmationDialogOptions.cs" />

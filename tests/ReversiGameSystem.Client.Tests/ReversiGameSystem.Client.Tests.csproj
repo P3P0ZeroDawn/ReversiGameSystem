@@ -9,6 +9,7 @@
     <ProjectGuid>{D4D27CB2-3B12-4C32-9058-2BE953E01385}</ProjectGuid>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="System.ServiceModel" />
     <ProjectReference Include="..\..\src\ReversiGameSystem.Client.Presentation\ReversiGameSystem.Client.Presentation.csproj" />
   </ItemGroup>
 </Project>

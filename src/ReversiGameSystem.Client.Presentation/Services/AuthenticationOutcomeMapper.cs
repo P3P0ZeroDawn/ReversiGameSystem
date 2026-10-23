@@ -5,37 +5,16 @@ namespace ReversiGameSystem.Services;
 
 internal static class AuthenticationOutcomeMapper
 {
-    internal static AuthenticationOutcome Map(Proxy.AuthenticationOutcome? outcome)
+    internal static AuthenticationOutcome Map(Proxy.AuthenticatedSession? session)
     {
-        if (outcome == null)
+        if (session?.Account == null || session.Account.AccountId <= 0
+            || string.IsNullOrWhiteSpace(session.SessionToken)
+            || string.IsNullOrWhiteSpace(session.Account.Username)
+            || string.IsNullOrWhiteSpace(session.EmailAddress)
+            || session.ExpiresAtUtc <= System.DateTime.UtcNow)
         {
-            throw new SerializationException(
-                "The account service returned an empty authentication outcome.");
+            throw new SerializationException("The session service returned an invalid session.");
         }
-
-        return outcome.Status switch
-        {
-            Proxy.AuthenticationStatus.Success => MapSuccessfulOutcome(outcome.Session),
-            Proxy.AuthenticationStatus.InvalidCredentials =>
-                new AuthenticationOutcome(AuthenticationStatus.InvalidCredentials),
-            Proxy.AuthenticationStatus.InactiveAccount =>
-                new AuthenticationOutcome(AuthenticationStatus.InactiveAccount),
-            Proxy.AuthenticationStatus.PersistenceUnavailable =>
-                new AuthenticationOutcome(AuthenticationStatus.ServiceUnavailable),
-            _ => throw new SerializationException(
-                "The account service returned an unknown authentication status.")
-        };
-    }
-
-    private static AuthenticationOutcome MapSuccessfulOutcome(
-        Proxy.AuthenticatedSession? session)
-    {
-        if (session?.Account == null)
-        {
-            throw new SerializationException(
-                "A successful authentication outcome did not include a session.");
-        }
-
         AuthenticatedAccountSession mappedSession = new AuthenticatedAccountSession
         {
             SessionToken = session.SessionToken ?? string.Empty,

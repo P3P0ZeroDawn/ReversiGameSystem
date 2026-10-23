@@ -83,6 +83,15 @@ public sealed class InMemoryAuthenticatedSessionStore : IAuthenticatedSessionSto
         return session;
     }
 
+    /// <inheritdoc />
+    public void Revoke(string sessionToken)
+    {
+        if (!string.IsNullOrWhiteSpace(sessionToken))
+        {
+            _sessions.TryRemove(sessionToken, out _);
+        }
+    }
+
     private static string CreateToken()
     {
         byte[] tokenBytes = new byte[32];

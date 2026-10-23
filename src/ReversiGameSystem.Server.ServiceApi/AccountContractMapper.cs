@@ -2,9 +2,6 @@ using System;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Contracts.Accounts;
 using ReversiGameSystem.Server.Contracts.Common;
-using ApplicationSession =
-    ReversiGameSystem.Server.Application.Accounts.AuthenticatedSession;
-using ContractSession = ReversiGameSystem.Server.Contracts.Accounts.AuthenticatedSession;
 
 namespace ReversiGameSystem.Server.ServiceApi;
 
@@ -26,13 +23,6 @@ internal static class AccountContractMapper
             profileImage);
     }
 
-    internal static LoginCommand Map(AuthenticationCredentials? credentials)
-    {
-        return new LoginCommand(
-            credentials?.LoginIdentifier ?? string.Empty,
-            credentials?.Password ?? string.Empty);
-    }
-
     internal static AccountRegistrationOutcome Map(
         CreateAccountResult result,
         AccountRegistrationCredentials? credentials)
@@ -51,23 +41,6 @@ internal static class AccountContractMapper
                 AccountId = accountId,
                 Username = credentials?.Username ?? string.Empty
             };
-        }
-
-        return outcome;
-    }
-
-    internal static AuthenticationOutcome Map(LoginResult result)
-    {
-        AuthenticationOutcome outcome = new AuthenticationOutcome
-        {
-            Status = Map(result.Outcome)
-        };
-        if (result.Outcome == LoginOutcome.Success)
-        {
-            ApplicationSession session = result.Session
-                ?? throw new InvalidOperationException(
-                    "A successful authentication must include a session.");
-            outcome.Session = Map(session);
         }
 
         return outcome;
@@ -125,32 +98,5 @@ internal static class AccountContractMapper
         return AccountRegistrationStatus.InvalidLocale;
     }
 
-    private static AuthenticationStatus Map(LoginOutcome outcome)
-    {
-        return outcome switch
-        {
-            LoginOutcome.Success => AuthenticationStatus.Success,
-            LoginOutcome.InvalidRequest => AuthenticationStatus.InvalidCredentials,
-            LoginOutcome.InvalidCredentials => AuthenticationStatus.InvalidCredentials,
-            LoginOutcome.AccountInactive => AuthenticationStatus.InactiveAccount,
-            LoginOutcome.ServiceUnavailable => AuthenticationStatus.PersistenceUnavailable,
-            _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null)
-        };
-    }
 
-    private static ContractSession Map(ApplicationSession session)
-    {
-        return new ContractSession
-        {
-            SessionToken = session.SessionToken,
-            Account = new AccountReference
-            {
-                AccountId = session.AccountId,
-                Username = session.Username
-            },
-            EmailAddress = session.EmailAddress,
-            PreferredLocaleCode = session.PreferredLocaleCode,
-            ExpiresAtUtc = session.ExpiresAtUtc
-        };
-    }
 }

@@ -244,9 +244,29 @@ public partial class MainMenuPage : Page
         }
     }
 
-    private void OnLogoutClick(object sender, RoutedEventArgs e)
+    private async void OnLogoutClick(object sender, RoutedEventArgs e)
     {
-        GuestSessionPreviewState.EndCurrent();
+        IsEnabled = false;
+        try
+        {
+            string? token = AccountPreviewState.SessionToken ?? SessionState.GuestToken;
+            if (token != null && !string.IsNullOrWhiteSpace(token))
+            {
+                await ClientRuntime.SessionService.CloseSessionAsync(token);
+            }
+        }
+        catch (System.Exception exception) when (exception is System.ServiceModel.CommunicationException
+            or System.TimeoutException or System.InvalidOperationException)
+        {
+            _dialogService.ShowError(this, "Session_CloseFailedTitle", "Session_CloseFailedMessage");
+            return;
+        }
+        finally
+        {
+            IsEnabled = true;
+        }
+
+        SessionState.GuestToken = null;
         AccountPreviewState.Clear();
         NavigationService?.Navigate(new LoginScreenPage());
     }

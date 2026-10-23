@@ -1,3 +1,6 @@
+using System;
+using System.ServiceModel;
+using Proxy = ReversiGameSystem.ServerProxy;
 using System.Windows;
 using System.Windows.Controls;
 using ReversiGameSystem.Domain.Accounts;
@@ -44,17 +47,49 @@ public partial class LoginScreenPage : Page
             return;
         }
 
-        loginButton.IsEnabled = false;
+        SetSessionActionsEnabled(false);
         try
         {
-            AuthenticationOutcome outcome = await ClientRuntime.AccountAccessService.LoginAsync(
-                login,
-                passwordBox.Password);
-            HandleLoginOutcome(outcome);
+            await ClientRuntime.SessionService.RequestLoginCodeAsync(login, passwordBox.Password);
+            passwordBox.Clear();
+            TextInputDialogOptions options = new TextInputDialogOptions(
+                "LoginScreen_VerificationCodeDialogTitle",
+                "LoginScreen_VerificationCodeDialogMessage",
+                "LoginScreen_VerificationCodeDialogLabel")
+            {
+                RequireText = true,
+                ExactDigitCount = 6
+            };
+            while (_dialogService.TryGetText(this, options, out string code))
+            {
+                try
+                {
+                    Proxy.AuthenticatedSession session =
+                        await ClientRuntime.SessionService.CompleteLoginAsync(login, code);
+                    HandleLoginOutcome(AuthenticationOutcomeMapper.Map(session));
+                    return;
+                }
+                catch (FaultException<Proxy.SessionFault> fault) when (
+                    fault.Detail.Reason == Proxy.SessionFailure.InvalidVerificationCode)
+                {
+                    ShowLoginError("LoginScreen_InvalidCodeTitle",
+                        "LoginScreen_InvalidCodeMessage");
+                }
+            }
+        }
+        catch (FaultException<Proxy.SessionFault> fault)
+        {
+            ShowSessionRejection(fault.Detail.Reason);
+        }
+        catch (Exception exception) when (exception is CommunicationException or TimeoutException
+            or System.Runtime.Serialization.SerializationException or InvalidOperationException)
+        {
+            ShowLoginError("LoginScreen_ServiceUnavailableTitle",
+                "LoginScreen_ServiceUnavailableMessage");
         }
         finally
         {
-            loginButton.IsEnabled = true;
+            SetSessionActionsEnabled(true);
         }
     }
 
@@ -89,64 +124,85 @@ public partial class LoginScreenPage : Page
         _dialogService.ShowError(this, titleKey, messageKey);
     }
 
-    private void OnContinueAsGuestClick(object sender, RoutedEventArgs e)
+    private async void OnContinueAsGuestClick(object sender, RoutedEventArgs e)
     {
         TextInputDialogOptions options = new TextInputDialogOptions(
-            "LoginScreen_GuestDialogTitle",
-            "LoginScreen_GuestDialogMessage",
+            "LoginScreen_GuestDialogTitle", "LoginScreen_GuestDialogMessage",
             "LoginScreen_GuestDialogNameLabel")
         {
             ConfirmButtonKey = "LoginScreen_GuestDialogEnterButton",
-            RequireText = false,
+            RequireText = true,
             MaximumLength = UsernamePolicy.MaximumLength
         };
-
-        while (_dialogService.TryGetText(this, options, out string guestName))
+        SetSessionActionsEnabled(false);
+        try
         {
-            GuestSessionCreationResult result = GuestSessionPreviewState.TryStart(
-                guestName,
-                out GuestSession? session);
-            if (result == GuestSessionCreationResult.Success && session != null)
+            while (_dialogService.TryGetText(this, options, out string guestName))
             {
-                AccountPreviewState.Clear();
-                NavigationService?.Navigate(new MainMenuPage(session.Name));
-                return;
-            }
+                try
+                {
+                    Proxy.GuestSession session =
+                        await ClientRuntime.SessionService.OpenGuestSessionAsync(guestName.Trim());
+                    if (string.IsNullOrWhiteSpace(session.SessionToken)
+                        || string.IsNullOrWhiteSpace(session.DisplayName)
+                        || session.ExpiresAtUtc <= DateTime.UtcNow)
+                    {
+                        throw new System.Runtime.Serialization.SerializationException(
+                            "The guest session is invalid.");
+                    }
 
-            if (result == GuestSessionCreationResult.MissingName)
-            {
-                _dialogService.ShowWarning(
-                    this,
-                    "GuestAccess_MissingNameTitle",
-                    "GuestAccess_MissingNameMessage");
+                    SessionState.GuestToken = session.SessionToken;
+                    AccountPreviewState.Clear();
+                    NavigationService?.Navigate(new MainMenuPage(session.DisplayName));
+                    return;
+                }
+                catch (FaultException<Proxy.SessionFault> fault)
+                {
+                    ShowSessionRejection(fault.Detail.Reason);
+                    options.InitialText = guestName;
+                }
             }
-            else if (result == GuestSessionCreationResult.InvalidNameFormat)
-            {
-                _dialogService.ShowWarning(
-                    this,
-                    "GuestAccess_InvalidNameTitle",
-                    "GuestAccess_InvalidNameMessage");
-            }
-            else if (result == GuestSessionCreationResult.NameAlreadyInUse)
-            {
-                _dialogService.ShowWarning(
-                    this,
-                    "GuestAccess_NameAlreadyInUseTitle",
-                    "GuestAccess_NameAlreadyInUseMessage");
-            }
-            else
-            {
-                _dialogService.ShowError(
-                    this,
-                    "GuestAccess_SessionCreationErrorTitle",
-                    "GuestAccess_SessionCreationErrorMessage");
-                return;
-            }
-
-            options.InitialText = GuestUsernamePolicy.Normalize(guestName);
+        }
+        catch (Exception exception) when (exception is CommunicationException or TimeoutException
+            or System.Runtime.Serialization.SerializationException or InvalidOperationException)
+        {
+            ShowLoginError("GuestAccess_SessionCreationErrorTitle",
+                "GuestAccess_SessionCreationErrorMessage");
+        }
+        finally
+        {
+            SetSessionActionsEnabled(true);
         }
     }
 
+    private void SetSessionActionsEnabled(bool enabled)
+    {
+        loginButton.IsEnabled = enabled;
+        loginAsGuestButton.IsEnabled = enabled;
+        createAccountButton.IsEnabled = enabled;
+        forgotPasswordButton.IsEnabled = enabled;
+    }
+
+    private void ShowSessionRejection(Proxy.SessionFailure reason)
+    {
+        (string title, string message) = reason switch
+        {
+            Proxy.SessionFailure.InvalidCredentials =>
+                ("LoginScreen_InvalidCredentialsTitle", "LoginScreen_InvalidCredentialsMessage"),
+            Proxy.SessionFailure.InactiveAccount =>
+                ("LoginScreen_AccountInactiveTitle", "LoginScreen_AccountInactiveMessage"),
+            Proxy.SessionFailure.InvalidVerificationCode =>
+                ("LoginScreen_InvalidCodeTitle", "LoginScreen_InvalidCodeMessage"),
+            Proxy.SessionFailure.ExpiredVerificationCode =>
+                ("LoginScreen_ExpiredCodeTitle", "LoginScreen_ExpiredCodeMessage"),
+            Proxy.SessionFailure.InvalidGuestName =>
+                ("GuestAccess_InvalidNameTitle", "GuestAccess_InvalidNameMessage"),
+            Proxy.SessionFailure.GuestNameUnavailable =>
+                ("GuestAccess_NameAlreadyInUseTitle", "GuestAccess_NameAlreadyInUseMessage"),
+            _ => ("LoginScreen_ServiceUnavailableTitle", "LoginScreen_ServiceUnavailableMessage")
+        };
+        ShowLoginError(title, message);
+    }
     private void OnForgotPasswordClick(object sender, RoutedEventArgs e)
     {
         if (!TryGetPasswordResetEmail(out string email))

@@ -4,16 +4,35 @@ namespace ReversiGameSystem.Client.Tests;
 
 internal static class Program
 {
-    private static int Main()
+    private static int Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--session-integration")
+        {
+            return Run(new Action[]
+            {
+                SessionConnectionTests.GuestLifecycle_ThroughGeneratedProxy
+            });
+        }
+        if (args.Length != 0)
+        {
+            Console.Error.WriteLine("Usage: Client.Tests.exe [--session-integration]");
+            return 2;
+        }
         AuthenticationOutcomeMapperTests mapperTests =
             new AuthenticationOutcomeMapperTests();
         Action[] tests =
         {
             mapperTests.Map_SuccessfulOutcome_PreservesSession,
-            mapperTests.Map_PersistenceUnavailable_ReturnsServiceUnavailable
+            mapperTests.Map_ExpiredSession_RejectsResponse,
+            mapperTests.Map_MissingToken_RejectsResponse,
+            mapperTests.SessionMessages_SupportedCultures_AreAvailable
         };
 
+        return Run(tests);
+    }
+
+    private static int Run(Action[] tests)
+    {
         try
         {
             foreach (Action test in tests)

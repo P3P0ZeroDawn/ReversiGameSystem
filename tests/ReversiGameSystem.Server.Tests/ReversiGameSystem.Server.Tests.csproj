@@ -9,6 +9,7 @@
     <ProjectGuid>{A1E6F4CC-0DF2-4A8F-93C8-13777F8AA3E2}</ProjectGuid>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="System.Data" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.ServiceModel" />
   </ItemGroup>
@@ -22,5 +23,10 @@
     <ProjectReference Include="..\..\src\ReversiGameSystem.Server.Contracts\ReversiGameSystem.Server.Contracts.csproj" />
     <ProjectReference Include="..\..\src\ReversiGameSystem.Server.Persistence\ReversiGameSystem.Server.Persistence.csproj" />
     <ProjectReference Include="..\..\src\ReversiGameSystem.Server.ServiceApi\ReversiGameSystem.Server.ServiceApi.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\database\migrations\20261022_VerificationCodeAttempts.sql"
+          Link="migrations\20261022_VerificationCodeAttempts.sql"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

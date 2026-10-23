@@ -78,7 +78,7 @@ internal sealed class ContractArchitectureTests
         }
     }
 
-    internal void ServiceFault_LegacyLogin_PreservesRequiredTransientMember()
+    internal void ServiceFault_RetainedRegistration_PreservesRequiredTransientMember()
     {
         // Arrange
         Type type = typeof(ServiceFault);
@@ -98,7 +98,7 @@ internal sealed class ContractArchitectureTests
     internal void ContractAssembly_ReferencedAssemblies_ExcludePersistence()
     {
         // Arrange
-        AssemblyName[] references = typeof(AuthenticationCredentials)
+        AssemblyName[] references = typeof(AuthenticatedSession)
             .Assembly.GetReferencedAssemblies();
 
         // Act

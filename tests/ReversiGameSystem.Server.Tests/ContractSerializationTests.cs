@@ -13,39 +13,20 @@ namespace ReversiGameSystem.Server.Tests;
 /// </summary>
 internal sealed class ContractSerializationTests
 {
-    internal void AuthenticationCredentials_RoundTrip_PreservesCredentials()
+    internal void AuthenticatedSession_RoundTrip_PreservesAccountAndExpiry()
     {
         // Arrange
-        AuthenticationCredentials credentials = new AuthenticationCredentials
-        {
-            LoginIdentifier = "player@example.com",
-            Password = "ValidPassword1!"
-        };
+        AuthenticatedSession original = CreateAuthenticatedSession();
 
         // Act
-        AuthenticationCredentials result = RoundTrip(credentials);
+        AuthenticatedSession session = RoundTrip(original);
 
         // Assert
-        TestAssert.AreEqual(credentials.LoginIdentifier, result.LoginIdentifier);
-        TestAssert.AreEqual(credentials.Password, result.Password);
-    }
-
-    internal void AuthenticationOutcome_RoundTrip_PreservesSession()
-    {
-        // Arrange
-        AuthenticationOutcome outcome = CreateAuthenticationOutcome();
-
-        // Act
-        AuthenticationOutcome result = RoundTrip(outcome);
-
-        // Assert
-        TestAssert.AreEqual(AuthenticationStatus.Success, result.Status);
-        AuthenticatedSession session = TestAssert.IsNotNull(result.Session);
         TestAssert.AreEqual(42L, session.Account.AccountId);
         TestAssert.AreEqual("player_one", session.Account.Username);
         TestAssert.AreEqual("session-token", session.SessionToken);
         TestAssert.AreEqual("en-US", session.PreferredLocaleCode);
-        TestAssert.AreEqual(outcome.Session?.ExpiresAtUtc, session.ExpiresAtUtc);
+        TestAssert.AreEqual(original.ExpiresAtUtc, session.ExpiresAtUtc);
     }
 
     internal void AccountRegistrationCredentials_RoundTrip_PreservesProfileImage()
@@ -115,19 +96,15 @@ internal sealed class ContractSerializationTests
         TestAssert.AreEqual(fault.IsTransient, result.IsTransient);
     }
 
-    private static AuthenticationOutcome CreateAuthenticationOutcome()
+    private static AuthenticatedSession CreateAuthenticatedSession()
     {
-        return new AuthenticationOutcome
+        return new AuthenticatedSession
         {
-            Status = AuthenticationStatus.Success,
-            Session = new AuthenticatedSession
-            {
-                SessionToken = "session-token",
-                Account = CreateAccountReference(),
-                EmailAddress = "player@example.com",
-                PreferredLocaleCode = "en-US",
-                ExpiresAtUtc = new DateTime(2026, 10, 15, 18, 0, 0, DateTimeKind.Utc)
-            }
+            SessionToken = "session-token",
+            Account = CreateAccountReference(),
+            EmailAddress = "player@example.com",
+            PreferredLocaleCode = "en-US",
+            ExpiresAtUtc = new DateTime(2026, 10, 15, 18, 0, 0, DateTimeKind.Utc)
         };
     }
 

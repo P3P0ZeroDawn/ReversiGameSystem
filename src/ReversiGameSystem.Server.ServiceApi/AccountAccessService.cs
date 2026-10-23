@@ -19,23 +19,19 @@ namespace ReversiGameSystem.Server.ServiceApi;
 public sealed class AccountAccessService : IAccountAccessService
 {
     private readonly ICreateAccountHandler _createAccountHandler;
-    private readonly ILoginHandler _loginHandler;
     private readonly ILogger<AccountAccessService> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AccountAccessService"/> class.
     /// </summary>
     /// <param name="createAccountHandler">The account registration use case.</param>
-    /// <param name="loginHandler">The authentication use case.</param>
     /// <param name="logger">The local service logger.</param>
     public AccountAccessService(
         ICreateAccountHandler createAccountHandler,
-        ILoginHandler loginHandler,
         ILogger<AccountAccessService> logger)
     {
         _createAccountHandler = createAccountHandler
             ?? throw new ArgumentNullException(nameof(createAccountHandler));
-        _loginHandler = loginHandler ?? throw new ArgumentNullException(nameof(loginHandler));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -50,19 +46,6 @@ public sealed class AccountAccessService : IAccountAccessService
                 CreateAccountCommand command = AccountContractMapper.Map(credentials);
                 CreateAccountResult result = await _createAccountHandler.ExecuteAsync(command);
                 return AccountContractMapper.Map(result, credentials);
-            });
-    }
-
-    /// <inheritdoc />
-    public Task<AuthenticationOutcome> LoginAsync(AuthenticationCredentials credentials)
-    {
-        return ExecuteAsync(
-            nameof(LoginAsync),
-            async () =>
-            {
-                LoginCommand command = AccountContractMapper.Map(credentials);
-                LoginResult result = await _loginHandler.ExecuteAsync(command);
-                return AccountContractMapper.Map(result);
             });
     }
 

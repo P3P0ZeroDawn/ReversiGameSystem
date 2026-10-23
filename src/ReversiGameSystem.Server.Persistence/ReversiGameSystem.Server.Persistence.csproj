@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\packages\EntityFramework.6.5.2\build\EntityFramework.props" Condition="Exists('..\..\packages\EntityFramework.6.5.2\build\EntityFramework.props')" />
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
     <LangVersion>10.0</LangVersion>
@@ -18,6 +17,9 @@
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="MailKit" Version="4.17.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ReversiGameSystem.Server.Application\ReversiGameSystem.Server.Application.csproj" />
@@ -41,11 +43,10 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Database_model.edmx</DependentUpon>
     </Compile>
-    <None Remove="Model\Database_model.edmx" />
-    <EntityDeploy Include="Model\Database_model.edmx">
+    <None Update="Model\Database_model.edmx">
       <Generator>EntityModelCodeGenerator</Generator>
       <LastGenOutput>Database_model.Designer.cs</LastGenOutput>
-    </EntityDeploy>
+    </None>
     <None Update="Model\Database_model.edmx.diagram">
       <DependentUpon>Database_model.edmx</DependentUpon>
     </None>
@@ -68,12 +69,43 @@
   <ItemGroup>
     <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
   </ItemGroup>
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Restore NuGet packages to continue. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('..\..\packages\EntityFramework.6.5.2\build\EntityFramework.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\EntityFramework.6.5.2\build\EntityFramework.props'))" />
-    <Error Condition="!Exists('..\..\packages\EntityFramework.6.5.2\build\EntityFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\EntityFramework.6.5.2\build\EntityFramework.targets'))" />
+  <!-- Extract from the authoritative model with portable tasks, before resource discovery. -->
+  <Target Name="ExtractModelResources"
+          Inputs="Model\Database_model.edmx"
+          Outputs="$(IntermediateOutputPath)ModelMetadata\Database_model.csdl;$(IntermediateOutputPath)ModelMetadata\Database_model.ssdl;$(IntermediateOutputPath)ModelMetadata\Database_model.msl">
+    <MakeDir Directories="$(IntermediateOutputPath)ModelMetadata" />
+    <XmlPeek XmlInputPath="Model\Database_model.edmx"
+             Namespaces="&lt;Namespace Prefix='edmx' Uri='http://schemas.microsoft.com/ado/2009/11/edmx' /&gt;"
+             Query="/edmx:Edmx/edmx:Runtime/edmx:ConceptualModels/*">
+      <Output TaskParameter="Result" ItemName="ConceptualModelResource" />
+    </XmlPeek>
+    <XmlPeek XmlInputPath="Model\Database_model.edmx"
+             Namespaces="&lt;Namespace Prefix='edmx' Uri='http://schemas.microsoft.com/ado/2009/11/edmx' /&gt;"
+             Query="/edmx:Edmx/edmx:Runtime/edmx:StorageModels/*">
+      <Output TaskParameter="Result" ItemName="StorageModelResource" />
+    </XmlPeek>
+    <XmlPeek XmlInputPath="Model\Database_model.edmx"
+             Namespaces="&lt;Namespace Prefix='edmx' Uri='http://schemas.microsoft.com/ado/2009/11/edmx' /&gt;"
+             Query="/edmx:Edmx/edmx:Runtime/edmx:Mappings/*">
+      <Output TaskParameter="Result" ItemName="MappingModelResource" />
+    </XmlPeek>
+    <WriteLinesToFile File="$(IntermediateOutputPath)ModelMetadata\Database_model.csdl"
+                      Lines="@(ConceptualModelResource)" Overwrite="true" Encoding="UTF-8" />
+    <WriteLinesToFile File="$(IntermediateOutputPath)ModelMetadata\Database_model.ssdl"
+                      Lines="@(StorageModelResource)" Overwrite="true" Encoding="UTF-8" />
+    <WriteLinesToFile File="$(IntermediateOutputPath)ModelMetadata\Database_model.msl"
+                      Lines="@(MappingModelResource)" Overwrite="true" Encoding="UTF-8" />
   </Target>
-  <Import Project="..\..\packages\EntityFramework.6.5.2\build\EntityFramework.targets" Condition="Exists('..\..\packages\EntityFramework.6.5.2\build\EntityFramework.targets')" />
+  <Target Name="IncludeModelResources" BeforeTargets="AssignTargetPaths"
+          DependsOnTargets="ExtractModelResources">
+    <ItemGroup>
+      <EmbeddedResource Include="$(IntermediateOutputPath)ModelMetadata\Database_model.csdl"
+                        LogicalName="Model.Database_model.csdl" />
+      <EmbeddedResource Include="$(IntermediateOutputPath)ModelMetadata\Database_model.ssdl"
+                        LogicalName="Model.Database_model.ssdl" />
+      <EmbeddedResource Include="$(IntermediateOutputPath)ModelMetadata\Database_model.msl"
+                        LogicalName="Model.Database_model.msl" />
+      <FileWrites Include="$(IntermediateOutputPath)ModelMetadata\Database_model.*" />
+    </ItemGroup>
+  </Target>
 </Project>

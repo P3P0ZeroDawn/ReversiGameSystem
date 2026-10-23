@@ -12,13 +12,13 @@ internal static class ClientRuntime
         new Lazy<LocalRuntimeServices>(LocalRuntimeFactory.CreateDefault);
     private static readonly Lazy<ILoggerFactory> Logging =
         new Lazy<ILoggerFactory>(CreateLoggerFactory);
-    private static readonly Lazy<RemoteAccountAccessService> AccountAccess =
-        new Lazy<RemoteAccountAccessService>(CreateAccountAccessService);
+    private static readonly Lazy<SessionClient> Session =
+        new Lazy<SessionClient>(CreateSessionService);
 
     internal static LocalRuntimeServices Services => Runtime.Value;
 
-    internal static RemoteAccountAccessService AccountAccessService =>
-        AccountAccess.Value;
+    internal static SessionClient SessionService =>
+        Session.Value;
 
     internal static void Dispose()
     {
@@ -110,10 +110,10 @@ internal static class ClientRuntime
                 .AddDebug());
     }
 
-    private static RemoteAccountAccessService CreateAccountAccessService()
+    private static SessionClient CreateSessionService()
     {
-        ILogger<RemoteAccountAccessService> logger =
-            Logging.Value.CreateLogger<RemoteAccountAccessService>();
-        return new RemoteAccountAccessService(logger);
+        ILogger<SessionClient> logger =
+            Logging.Value.CreateLogger<SessionClient>();
+        return new SessionClient(logger);
     }
 }

@@ -1,5 +1,7 @@
 using System;
+using System.Runtime.Serialization;
 using ReversiGameSystem.Services;
+using ReversiGameSystem.Localization;
 using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Client.Tests;
@@ -8,58 +10,71 @@ internal sealed class AuthenticationOutcomeMapperTests
 {
     internal void Map_SuccessfulOutcome_PreservesSession()
     {
-        // Arrange
-        DateTime expiration = new DateTime(
-            2026,
-            10,
-            17,
-            2,
-            0,
-            0,
-            DateTimeKind.Utc);
-        Proxy.AuthenticationOutcome remoteOutcome = new Proxy.AuthenticationOutcome
-        {
-            Status = Proxy.AuthenticationStatus.Success,
-            Session = new Proxy.AuthenticatedSession
-            {
-                SessionToken = "session-token",
-                Account = new Proxy.AccountReference
-                {
-                    AccountId = 42,
-                    Username = "PlayerOne"
-                },
-                EmailAddress = "player@example.com",
-                PreferredLocaleCode = "en-US",
-                ExpiresAtUtc = expiration
-            }
-        };
-
-        // Act
-        AuthenticationOutcome outcome = AuthenticationOutcomeMapper.Map(remoteOutcome);
-
-        // Assert
+        Proxy.AuthenticatedSession remote = CreateSession();
+        AuthenticationOutcome outcome = AuthenticationOutcomeMapper.Map(remote);
         TestAssert.AreEqual(AuthenticationStatus.Success, outcome.Status);
         AuthenticatedAccountSession session = TestAssert.IsNotNull(outcome.Session);
-        TestAssert.AreEqual("session-token", session.SessionToken);
+        TestAssert.AreEqual(remote.SessionToken, session.SessionToken);
         TestAssert.AreEqual<long>(42, session.AccountId);
         TestAssert.AreEqual("PlayerOne", session.Username);
         TestAssert.AreEqual("en-US", session.PreferredLocaleCode);
-        TestAssert.AreEqual(expiration, session.ExpiresAtUtc);
+        TestAssert.AreEqual(remote.ExpiresAtUtc, session.ExpiresAtUtc);
     }
 
-    internal void Map_PersistenceUnavailable_ReturnsServiceUnavailable()
+    internal void Map_ExpiredSession_RejectsResponse()
     {
-        // Arrange
-        Proxy.AuthenticationOutcome remoteOutcome = new Proxy.AuthenticationOutcome
+        Proxy.AuthenticatedSession remote = CreateSession();
+        remote.ExpiresAtUtc = DateTime.UtcNow.AddSeconds(-1);
+        AssertRejected(remote);
+    }
+
+    internal void Map_MissingToken_RejectsResponse()
+    {
+        Proxy.AuthenticatedSession remote = CreateSession();
+        remote.SessionToken = string.Empty;
+        AssertRejected(remote);
+    }
+
+    internal void SessionMessages_SupportedCultures_AreAvailable()
+    {
+        foreach (string culture in new[] { "en-US", "es-MX" })
         {
-            Status = Proxy.AuthenticationStatus.PersistenceUnavailable
-        };
+            LocalizationManager.Instance.CultureName = culture;
+            foreach (string key in new[]
+            {
+                "LoginScreen_InvalidCodeTitle", "LoginScreen_InvalidCodeMessage",
+                "LoginScreen_ExpiredCodeTitle", "LoginScreen_ExpiredCodeMessage",
+                "Session_CloseFailedTitle",
+                "Session_CloseFailedMessage", "LoginScreen_VerificationCodeDialogMessage"
+            })
+            {
+                TestAssert.AreEqual(false,
+                    string.IsNullOrWhiteSpace(LocalizationManager.Instance[key]));
+            }
+            TestAssert.AreEqual(false, LocalizationManager.Instance[
+                "LoginScreen_VerificationCodeDialogMessage"].Contains("{0}"));
+            TestAssert.AreEqual("Guest-Player", GuestNameFormatter.Format("Guest-Player"));
+        }
+    }
 
-        // Act
-        AuthenticationOutcome outcome = AuthenticationOutcomeMapper.Map(remoteOutcome);
+    private static Proxy.AuthenticatedSession CreateSession() => new Proxy.AuthenticatedSession
+    {
+        SessionToken = "disposable-session-token",
+        Account = new Proxy.AccountReference { AccountId = 42, Username = "PlayerOne" },
+        EmailAddress = "player@example.com", PreferredLocaleCode = "en-US",
+        ExpiresAtUtc = DateTime.UtcNow.AddMinutes(10)
+    };
 
-        // Assert
-        TestAssert.AreEqual(AuthenticationStatus.ServiceUnavailable, outcome.Status);
-        TestAssert.AreEqual<AuthenticatedAccountSession?>(null, outcome.Session);
+    private static void AssertRejected(Proxy.AuthenticatedSession remote)
+    {
+        try
+        {
+            AuthenticationOutcomeMapper.Map(remote);
+        }
+        catch (SerializationException)
+        {
+            return;
+        }
+        throw new InvalidOperationException("An invalid session was accepted.");
     }
 }

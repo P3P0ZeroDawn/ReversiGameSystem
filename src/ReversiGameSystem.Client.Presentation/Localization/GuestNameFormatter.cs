@@ -7,6 +7,11 @@ internal static class GuestNameFormatter
 {
     internal static string Format(string guestName)
     {
+        if (guestName.StartsWith("Guest-", System.StringComparison.Ordinal))
+        {
+            return guestName;
+        }
+
         return string.Format(
             LocalizationManager.Instance["GuestAccess_DisplayNameFormat"],
             guestName);

@@ -11,9 +11,9 @@ internal static class ServiceFaultFactory
         string operationName,
         string correlationId)
     {
-        string failureCode = operationName == nameof(AccountAccessService.LoginAsync)
-            ? "ACCOUNT_LOGIN_FAILURE"
-            : "ACCOUNT_REGISTRATION_FAILURE";
+        string failureCode = operationName == nameof(AccountAccessService.RegisterAccountAsync)
+            ? "ACCOUNT_REGISTRATION_FAILURE"
+            : "SESSION_OPERATION_FAILURE";
         ServiceFault detail = new ServiceFault
         {
             FailureCode = failureCode,

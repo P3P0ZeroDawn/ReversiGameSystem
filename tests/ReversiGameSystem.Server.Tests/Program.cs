@@ -4,8 +4,17 @@ namespace ReversiGameSystem.Server.Tests;
 
 internal static class Program
 {
-    private static int Main()
+    private static int Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--database")
+        {
+            return RunTests(new Action[] { VerificationDatabaseTests.RunDisposableDatabaseChecks });
+        }
+        if (args.Length != 0)
+        {
+            Console.Error.WriteLine("Usage: ReversiGameSystem.Server.Tests.exe [--database]");
+            return 2;
+        }
         Action[] tests = CreateTests();
         return RunTests(tests);
     }
@@ -16,11 +25,12 @@ internal static class Program
         ContractArchitectureTests architectureTests = new ContractArchitectureTests();
         MatchSerializationTests matchTests = new MatchSerializationTests();
         CommunicationSerializationTests communicationTests = new CommunicationSerializationTests();
-        AccountAccessServiceTests accountAccessTests = new AccountAccessServiceTests();
+        SessionServiceTests sessionTests = new SessionServiceTests();
+        VerificationCodeServiceTests codeTests = new VerificationCodeServiceTests();
+        VerificationEmailSenderTests mailTests = new VerificationEmailSenderTests();
         return new Action[]
         {
-            serializationTests.AuthenticationCredentials_RoundTrip_PreservesCredentials,
-            serializationTests.AuthenticationOutcome_RoundTrip_PreservesSession,
+            serializationTests.AuthenticatedSession_RoundTrip_PreservesAccountAndExpiry,
             serializationTests.AccountRegistrationCredentials_RoundTrip_PreservesProfileImage,
             serializationTests.PlayerProfile_RoundTrip_PreservesStatistics,
             serializationTests.LeaderboardEntry_RoundTrip_PreservesPositions,
@@ -28,7 +38,7 @@ internal static class Program
             architectureTests.ServiceContracts_CatalogSignatures_PreserveWireBoundary,
             architectureTests.DataContracts_CatalogMembers_PreserveRequiredShape,
             architectureTests.Enums_CatalogValues_PreserveSerializedVocabulary,
-            architectureTests.ServiceFault_LegacyLogin_PreservesRequiredTransientMember,
+            architectureTests.ServiceFault_RetainedRegistration_PreservesRequiredTransientMember,
             architectureTests.ContractAssembly_ReferencedAssemblies_ExcludePersistence,
             matchTests.MatchStateSnapshot_ActiveTurn_PreservesBoardAndVersion,
             matchTests.MatchStateSnapshot_FinishedDraw_PreservesConclusionAndAbsentTurn,
@@ -45,9 +55,25 @@ internal static class Program
             communicationTests.ChatFault_MutedAndBlocked_PreservesOptionalMuteExpiry,
             communicationTests.ChatMuteNotification_RoundTrip_PreservesAccountSanctionWindow,
             communicationTests.BusinessFaults_EveryCatalogReason_RoundTripsTypedReason,
-            accountAccessTests.LoginAsync_ValidCredentials_MapsAuthenticatedSession,
-            accountAccessTests.LoginAsync_MissingCredentials_ReturnsInvalidCredentials,
-            accountAccessTests.LoginAsync_ThroughWcfChannel_ReturnsAuthenticatedSession
+            sessionTests.RequestLoginCode_ThroughWcfChannel_ReturnsExpiryWithoutCreatingSession,
+            sessionTests.CompleteLogin_ThroughWcfChannel_CreatesMappedSessionAndRevokesIt,
+            sessionTests.RequestLoginCode_InvalidCredentialsThroughWcf_ReturnsTypedSessionFault,
+            sessionTests.RequestLoginCode_DeliveryTimeoutThroughWcf_ReturnsSanitizedServiceFault,
+            sessionTests.CompleteLogin_ExpiredCodeThroughWcf_ReturnsTypedExpiryFault,
+            sessionTests.CompleteLogin_InactiveAccount_RejectsSessionCreation,
+            sessionTests.CompleteLogin_RepositoryRejectsConsumedCode_DoesNotCreateSession,
+            sessionTests.OpenGuestSession_ExpiredGuest_ReleasesReservedName,
+            sessionTests.OpenGuestSession_ThroughWcfChannel_ReservesAndReleasesName,
+            sessionTests.OpenGuestSession_ConcurrentSameName_CreatesOnlyOneGuest,
+            sessionTests.CloseSession_EmptyTokenThroughWcf_ReturnsTypedFault,
+            codeTests.Request_ValidIdentity_DeliversSixDigitsWithFiveMinuteExpiry,
+            codeTests.Request_DeliveryTimeout_DoesNotReplacePendingCode,
+            codeTests.Consume_ExpiredRepositoryResult_PreservesRejectionAndServerTime,
+            codeTests.Protect_DifferentIdentity_BindsCodeToAccountAndPurpose,
+            mailTests.Load_ProcessConfiguration_ValidatesPortAndRequiresEncryption,
+            mailTests.Send_LocalServerWithheldBanner_CancelsWithinDeliveryBudget,
+            FailureDiagnosticsTests.Describe_NestedProviderFailure_ExcludesMessagesAndPrivateData,
+            ModelResourcesTests.Assembly_RequiredRuntimeModel_IsEmbedded
         };
     }
 

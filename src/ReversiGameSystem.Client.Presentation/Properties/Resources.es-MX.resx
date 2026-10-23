@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -199,7 +199,7 @@
     <value>Verificar inicio de sesión</value>
   </data>
   <data name="LoginScreen_VerificationCodeDialogMessage" xml:space="preserve">
-    <value>Ingresa el código de verificación de seis dígitos enviado a {0}.</value>
+    <value>Escribe el código de seis dígitos enviado al correo de tu cuenta.</value>
   </data>
   <data name="LoginScreen_VerificationCodeDialogLabel" xml:space="preserve">
     <value>Código de verificación</value>
@@ -1288,4 +1288,10 @@
   <data name="ChatRead_ServerConnectionFailedMessage" xml:space="preserve"><value>No fue posible conectar con el servicio de chat para recuperar los mensajes de la conversación.</value></data>
   <data name="ChatRead_RetrievalErrorTitle" xml:space="preserve"><value>No se pudieron recuperar los mensajes</value></data>
   <data name="ChatRead_RetrievalErrorMessage" xml:space="preserve"><value>No fue posible recuperar los mensajes de la conversación. No se mostrará un historial parcial.</value></data>
+  <data name="LoginScreen_InvalidCodeTitle" xml:space="preserve"><value>Código de verificación inválido</value></data>
+  <data name="LoginScreen_InvalidCodeMessage" xml:space="preserve"><value>Revisa el código e intenta de nuevo.</value></data>
+  <data name="LoginScreen_ExpiredCodeTitle" xml:space="preserve"><value>Código de verificación caducado</value></data>
+  <data name="LoginScreen_ExpiredCodeMessage" xml:space="preserve"><value>Inicia sesión otra vez para solicitar un nuevo código.</value></data>
+  <data name="Session_CloseFailedTitle" xml:space="preserve"><value>Cierre de sesión sin confirmar</value></data>
+  <data name="Session_CloseFailedMessage" xml:space="preserve"><value>El servidor no pudo confirmar el cierre de sesión. Intenta de nuevo.</value></data>
 </root>

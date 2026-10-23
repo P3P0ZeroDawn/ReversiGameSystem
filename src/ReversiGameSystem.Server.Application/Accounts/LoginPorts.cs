@@ -21,6 +21,10 @@ public interface IAccountLoginStore
 /// </summary>
 public interface IAuthenticatedSessionStore
 {
+    /// <summary>Revokes a token idempotently.</summary>
+    /// <param name="sessionToken">The opaque token to revoke.</param>
+    public void Revoke(string sessionToken);
+
     /// <summary>
     /// Creates an authenticated session.
     /// </summary>
