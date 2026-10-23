@@ -1,6 +1,92 @@
 # C# Video Game Development Standard
 
-Table of contents
+## Table of Contents
+
+- [[#1. Introduction|1. Introduction]]
+  - [[#1.1 Problem Statement|1.1 Problem Statement]]
+  - [[#1.2 Purpose|1.2 Purpose]]
+- [[#2. Language|2. Language]]
+  - [[#2.1 Source Code Language|2.1 Source Code Language]]
+  - [[#2.2 User-Facing Language and Localization|2.2 User-Facing Language and Localization]]
+- [[#3. Naming Conventions|3. Naming Conventions]]
+  - [[#3.1 General Identifier Rules|3.1 General Identifier Rules]]
+  - [[#3.2 Namespaces|3.2 Namespaces]]
+  - [[#3.3 Classes|3.3 Classes]]
+  - [[#3.4 Interfaces|3.4 Interfaces]]
+  - [[#3.5 Enumerations|3.5 Enumerations]]
+  - [[#3.6 Enumeration Members|3.6 Enumeration Members]]
+  - [[#3.7 Fields|3.7 Fields]]
+  - [[#3.8 Properties|3.8 Properties]]
+  - [[#3.9 Local Variables|3.9 Local Variables]]
+  - [[#3.10 Parameters|3.10 Parameters]]
+  - [[#3.11 Constants|3.11 Constants]]
+  - [[#3.12 Methods|3.12 Methods]]
+  - [[#3.13 Events|3.13 Events]]
+  - [[#3.14 Test Classes|3.14 Test Classes]]
+  - [[#3.15 Test Methods|3.15 Test Methods]]
+  - [[#3.16 Prefixes and Suffixes|3.16 Prefixes and Suffixes]]
+- [[#4. Code Style and Formatting|4. Code Style and Formatting]]
+  - [[#4.1 General Formatting|4.1 General Formatting]]
+  - [[#4.2 Indentation|4.2 Indentation]]
+  - [[#4.3 Braces|4.3 Braces]]
+  - [[#4.4 Line Length|4.4 Line Length]]
+  - [[#4.5 Line Wrapping|4.5 Line Wrapping]]
+  - [[#4.6 Horizontal Whitespace|4.6 Horizontal Whitespace]]
+  - [[#4.7 Vertical Whitespace|4.7 Vertical Whitespace]]
+  - [[#4.8 Using Directives|4.8 Using Directives]]
+  - [[#4.9 Namespace Declarations|4.9 Namespace Declarations]]
+  - [[#4.10 Early Returns|4.10 Early Returns]]
+- [[#5. C# Programming Practices|5. C# Programming Practices]]
+  - [[#5.1 Access Modifiers|5.1 Access Modifiers]]
+  - [[#5.2 Auto-Implemented Properties and Property Accessors|5.2 Auto-Implemented Properties and Property Accessors]]
+  - [[#5.3 Immutability and `readonly` Usage|5.3 Immutability and `readonly` Usage]]
+  - [[#5.4 Constants and Magic Values|5.4 Constants and Magic Values]]
+  - [[#5.5 Method Responsibility|5.5 Method Responsibility]]
+  - [[#5.6 Avoid Duplicate Code|5.6 Avoid Duplicate Code]]
+  - [[#5.7 Method Size|5.7 Method Size]]
+  - [[#5.8 Parameter Count|5.8 Parameter Count]]
+  - [[#5.9 Cyclomatic Complexity|5.9 Cyclomatic Complexity]]
+  - [[#5.10 Nullable Reference Types|5.10 Nullable Reference Types]]
+  - [[#5.11 Null Handling|5.11 Null Handling]]
+  - [[#5.12 Pattern Matching|5.12 Pattern Matching]]
+  - [[#5.13 LINQ Usage|5.13 LINQ Usage]]
+  - [[#5.14 Lambda Expressions|5.14 Lambda Expressions]]
+  - [[#5.15 Events and Delegates|5.15 Events and Delegates]]
+  - [[#5.16 Resource Disposal|5.16 Resource Disposal]]
+  - [[#5.17 Serialization|5.17 Serialization]]
+  - [[#5.18 Explicit Local Variable Types|5.18 Explicit Local Variable Types]]
+  - [[#5.19 Conditional Operator|5.19 Conditional Operator]]
+- [[#6. Error Handling, Logging, and Diagnostics|6. Error Handling, Logging, and Diagnostics]]
+  - [[#6.1 Exception Handling|6.1 Exception Handling]]
+  - [[#6.2 Custom Exceptions|6.2 Custom Exceptions]]
+  - [[#6.3 Logging|6.3 Logging]]
+  - [[#6.4 Log Levels|6.4 Log Levels]]
+  - [[#6.5 Log Message Conventions|6.5 Log Message Conventions]]
+  - [[#6.6 Assertions|6.6 Assertions]]
+  - [[#6.7 Player-Facing Error Messages|6.7 Player-Facing Error Messages]]
+  - [[#6.8 Unhandled Exceptions and Diagnostic Reporting|6.8 Unhandled Exceptions and Diagnostic Reporting]]
+- [[#7. Comments and Documentation|7. Comments and Documentation]]
+  - [[#7.1 General Comment Rules|7.1 General Comment Rules]]
+  - [[#7.2 Implementation Comments|7.2 Implementation Comments]]
+  - [[#7.3 XML Documentation Comments|7.3 XML Documentation Comments]]
+  - [[#7.4 Public API Documentation|7.4 Public API Documentation]]
+  - [[#7.5 `TODO` Comments|7.5 `TODO` Comments]]
+  - [[#7.6 `FIXME` Comments|7.6 `FIXME` Comments]]
+- [[#8. Input Validation and Security|8. Input Validation and Security]]
+  - [[#8.1 Trust Boundaries|8.1 Trust Boundaries]]
+  - [[#8.2 Input Validation|8.2 Input Validation]]
+  - [[#8.3 File System Access|8.3 File System Access]]
+  - [[#8.4 Credential and Secret Management|8.4 Credential and Secret Management]]
+- [[#9. Testing and Quality Assurance|9. Testing and Quality Assurance]]
+  - [[#9.1 Testing Strategy|9.1 Testing Strategy]]
+  - [[#9.2 Unit Testing|9.2 Unit Testing]]
+  - [[#9.3 Integration Testing|9.3 Integration Testing]]
+  - [[#9.4 Arrange-Act-Assert Structure|9.4 Arrange-Act-Assert Structure]]
+- [[#10. Version Control and Collaboration|10. Version Control and Collaboration]]
+  - [[#10.1 Commit Messages and Atomicity|10.1 Commit Messages and Atomicity]]
+  - [[#10.2 Repository Hygiene and Sensitive Data|10.2 Repository Hygiene and Sensitive Data]]
+- [[#11. References|11. References]]
+- [[#12. AI Use Declaration|12. AI Use Declaration]]
 
 ---
 
@@ -1646,7 +1732,7 @@ The method contains three clearly related parameters and remains within the proj
 
 #### Correct — Cross-Cutting Logger Exception
 
-```cpp
+```csharp
 public sealed class LoginHandler
 {
     private readonly ILogger<LoginHandler> _logger;
@@ -3030,7 +3116,7 @@ The class depends directly on a Windows-specific destination, constructs an unst
 
 ### 6.4 Log Levels
 
-Every log message must use the severity level that corresponds to the importance and effect of the event. The project adopts the standard `Microsoft.Extensions.Logging.LogLevel` categories documented by Microsoft. These categories are provided by the .NET logging infrastructure; their project-specific usage is defined by this standard (Microsoft, 2026g)..
+Every log message must use the severity level that corresponds to the importance and effect of the event. The project adopts the standard `Microsoft.Extensions.Logging.LogLevel` categories documented by Microsoft. These categories are provided by the .NET logging infrastructure; their project-specific usage is defined by this standard (Microsoft, 2026g).
 
 | Level | Project Usage |
 | --- | --- |
@@ -3056,18 +3142,39 @@ For this project:
 #### Correct
 
 ```csharp
+// Trace: Detailed algorithm execution steps
+_logger.LogTrace(
+    "Evaluating board cell ({Row}, {Column}) during diagonal flip calculation.",
+    row,
+    column);
+
+// Debug: Diagnostic state useful during development
+_logger.LogDebug(
+    "Player {PlayerId} session attached from endpoint {RemoteEndpoint}.",
+    playerId,
+    remoteEndpoint);
+
+// Information: Normal lifecycle milestone
 _logger.LogInformation(
     "Match {MatchId} completed successfully.",
     matchId);
 
+// Warning: Recoverable anomaly that allowed execution to proceed
 _logger.LogWarning(
-    "Preferred asset {AssetName} was unavailable. The default asset will be used.",
-    assetName);
+    "Player {PlayerId} missed heartbeat ({ElapsedMs} ms); retrying connection.",
+    playerId,
+    elapsedMs);
 
+// Error: An isolated operation failed, but the service remains running
 _logger.LogError(
     exception,
-    "Unable to persist match {MatchId}.",
+    "Unable to persist score for match {MatchId}.",
     matchId);
+
+// Critical: Fatal failure threatening data integrity or service availability
+_logger.LogCritical(
+    exception,
+    "Database connection pool exhausted; cannot continue processing transactions.");
 ```
 
 The normal completion, recoverable fallback, and failed persistence operation use levels that correspond to their technical effects.
@@ -3192,7 +3299,7 @@ Deserialization failed at offset 0x000014A2.
 
 The message exposes internal implementation details and does not explain the problem from the player’s perspective or provide a useful action.
 
-### 6.8 **Unhandled Exceptions and Diagnostic Reporting**
+### 6.8 Unhandled Exceptions and Diagnostic Reporting
 
 Each executable process must configure a centralized last-chance mechanism for reporting exceptions that reach an application or service boundary without being handled. Its purpose is to preserve diagnostic information before the process terminates or before a controlled failure response is produced.
 
@@ -3891,13 +3998,98 @@ The phases are not clearly separated and the test performs more than one Act ope
 
 ## 10. Version Control and Collaboration
 
+### 10.1 Commit Messages and Atomicity
+
+Source control commits must be **atomic, cohesive, and clearly documented in English**. A commit represents a single logical change set—such as a specific feature, bug fix, test addition, or refactoring task. Commits must avoid bundling unrelated modifications together so that individual changes can be easily reviewed, tested, bisected, or reverted if a regression is introduced (Chacon & Straub, 2014).
+
+Commit messages must provide a concise summary that explains what changed and why. Using the imperative mood and standard intent categories—such as Conventional Commits—ensures consistency across team members and allows tools and reviewers to navigate repository history efficiently (Conventional Commits, 2020).
+
+For this project:
+
+- All commit messages must be written in **English**, consistent with Section 2.1.
+- Commits must be **atomic**: they should contain only changes that belong to one cohesive task. Refactoring unrelated classes or reformatting distinct views must not be mixed into the same commit with a game logic fix.
+- Commit messages must use the **imperative mood** in the summary line (e.g., `Add`, `Fix`, `Refactor`, `Update`, avoiding past tense such as `Added` or `Fixed`).
+- Commit messages should follow the **Conventional Commits** structure: `type(optional-scope): description`.
+  - Common types include `feat` (new gameplay/system feature), `fix` (bug resolution), `docs` (documentation), `refactor` (code restructuring without behavioral change), `test` (test additions or updates), and `chore` (build or repository maintenance).
+  - The optional scope should identify the affected subsystem (e.g., `wcf`, `gameplay`, `ui`, `data`).
+- The summary line must not exceed 72 characters.
+- Temporary, incomplete, or meaningless messages (such as `wip`, `temp`, `fixes`, or `asdf`) must not be pushed to the shared repository.
+
+#### Correct
+
+```text
+feat(gameplay): calculate valid moves for diagonal captures
+
+Implement diagonal raycasting to detect flippable opponent disks when
+evaluating playable coordinates on the Reversi board. Includes boundary
+validation against board edges.
+```
+
+The commit represents an atomic logical addition, uses the imperative mood in English, identifies the subsystem scope with Conventional Commits notation, and provides a clear description.
+
+#### Incorrect
+
+```text
+cambios de la partida y arreglos visuales
+
+Arregle el chat que se desbordaba, puse los turnos del reversi y
+cambie el diseño de tres ventanas que no compilaban bien.
+```
+
+The commit mixes multiple unrelated responsibilities (UI chat formatting, Reversi turn logic, and window layout corrections), violates the English source language requirement, and uses past-tense Spanish prose instead of a structured imperative summary.
+
+---
+### 10.2 Repository Hygiene and Sensitive Data
+
+The version control repository must contain only **tracked source code, documentation, and explicit project assets**. Ephemeral build outputs, user-specific IDE configuration, test execution results, and runtime caches must remain excluded via `.gitignore` (Chacon & Straub, 2014).
+
+In strict accordance with Section 8.4, credentials, passwords, cryptographic keys, and local environment files containing connection strings must never be tracked or committed to version control. Sanitized template configuration files must be used to communicate configuration requirements without exposing real secrets (Microsoft, 2023j).
+
+For this project:
+
+- The root `.gitignore` file must be kept up to date and strictly enforced to exclude:
+  - Build outputs and intermediate files (`bin/`, `obj/`, `Debug/`, `Release/`).
+  - Visual Studio and user-specific caches (`.vs/`, `*.user`, `*.suo`, `*.rsuser`).
+  - Test result outputs (`TestResults/`).
+- Local environment files containing actual credentials (`.env`) must never be committed. Instead, a checked-in template (`.env.example`) containing dummy placeholder values must be provided.
+- Third-party dependencies must be declared through standard package management (such as NuGet PackageReferences in `.csproj`) rather than committing compiled binary libraries (`.dll`) directly into repository folders.
+- If a secret or sensitive connection string is accidentally committed, removing it in a subsequent commit is insufficient; the credential must be immediately revoked and rotated according to Section 8.4.
+
+#### Correct
+
+```text
+Repository tracked items:
+- src/ReversiGame.Server/Services/GameSessionService.cs
+- .gitignore (explicitly ignoring .env, bin/, obj/, .vs/)
+- .env.example (containing: DB_HOST=localhost;DB_USER=sample_user;DB_PASSWORD=YOUR_PASSWORD_HERE)
+```
+
+Only source files and a sanitized environment template are tracked. The `.gitignore` file prevents local build outputs and real environment secrets from leaking.
+
+#### Incorrect
+
+```text
+Repository tracked items:
+- src/ReversiGame.Server/bin/Debug/ReversiGame.Server.dll
+- .vs/ReversiGameSystem/v17/.suo
+- .env (containing real plaintext database credentials: DB_PASSWORD=SecretProdPass2026!)
+```
+
+The repository tracks binary build outputs, user-specific IDE binary blobs, and unencrypted production database credentials in plain text.
+
 ---
 
 ## 11. References
 
+Chacon, S., & Straub, B. (2014). *Pro Git* (2nd ed.). Apress. [https://git-scm.com/book/en/v2](https://git-scm.com/book/en/v2)
+
+Conventional Commits. (2020, February 28). *Conventional Commits 1.0.0*. [https://www.conventionalcommits.org/en/v1.0.0/](https://www.conventionalcommits.org/en/v1.0.0/)
+
 Ecma International. (2023, December). *ECMA-334: C# language specification* (7th ed.). [https://ecma-international.org/publications-and-standards/standards/ecma-334/](https://ecma-international.org/publications-and-standards/standards/ecma-334/)
 
 Esposito, D. (2014, October). Cutting edge: Source code readability tips. *MSDN Magazine, 29*(10). Microsoft. [https://learn.microsoft.com/en-us/archive/msdn-magazine/2014/october/cutting-edge-source-code-readability-tips](https://learn.microsoft.com/en-us/archive/msdn-magazine/2014/october/cutting-edge-source-code-readability-tips)
+
+GitHub. (n.d.). *GitHub flow*. GitHub Docs. Retrieved October 22, 2026, from [https://docs.github.com/en/get-started/using-github/github-flow](https://docs.github.com/en/get-started/using-github/github-flow)
 
 GitLab. (n.d.). *JavaScript style guide*. GitLab Docs. Retrieved August 29, 2026, from [https://docs.gitlab.com/development/fe_guide/style/javascript/](https://docs.gitlab.com/development/fe_guide/style/javascript/)
 
@@ -3949,6 +4141,8 @@ Microsoft. (2023j, March 30). *Securing services*. Microsoft Learn. [https://lea
 
 Microsoft. (2023k, July 27). *IDE0019: Use pattern matching to avoid 'as' followed by a 'null' check*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0019](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0019)
 
+Microsoft. (2023l, November 28). *Git version control in Visual Studio*. Microsoft Learn. [https://learn.microsoft.com/en-us/visualstudio/version-control/git-with-visual-studio](https://learn.microsoft.com/en-us/visualstudio/version-control/git-with-visual-studio)
+
 Microsoft. (2024, January 18). *Use pattern matching to avoid 'is' check followed by a cast (IDE0020 and IDE0038)*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0020-ide0038](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0020-ide0038)
 
 Microsoft. (2025a, October 30). *Assertions in managed code*. Microsoft Learn. [https://learn.microsoft.com/en-us/visualstudio/debugger/assertions-in-managed-code](https://learn.microsoft.com/en-us/visualstudio/debugger/assertions-in-managed-code)
@@ -3997,7 +4191,7 @@ Microsoft. (2026h, May 27). *Namespaces and using directives*. Microsoft Learn. 
 
 Microsoft. (2026i, May 26). *Nullable reference types*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/null-safety/nullable-reference-types](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/null-safety/nullable-reference-types)
 
-Microsoft. (2026j, January 26). `*readonly` (C# reference)*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/readonly](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/readonly)
+Microsoft. (2026j, January 26). *`readonly` (C# reference)*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/readonly](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/readonly)
 
 Microsoft. (2026k, June 22). *Recommended XML tags for C# documentation comments*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/xmldoc/recommended-tags](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/xmldoc/recommended-tags)
 
