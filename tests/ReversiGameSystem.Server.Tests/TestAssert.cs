@@ -32,4 +32,28 @@ internal static class TestAssert
             throw new InvalidOperationException(message);
         }
     }
+
+    internal static TValue HasValue<TValue>(TValue? value)
+        where TValue : struct
+    {
+        if (!value.HasValue)
+        {
+            throw new InvalidOperationException("Expected a value.");
+        }
+        return value.Value;
+    }
+
+    internal static TException Throws<TException>(Action action)
+        where TException : Exception
+    {
+        try
+        {
+            action();
+        }
+        catch (TException exception)
+        {
+            return exception;
+        }
+        throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
+    }
 }

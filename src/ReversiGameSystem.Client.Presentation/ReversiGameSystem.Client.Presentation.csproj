@@ -268,6 +268,10 @@
     <Compile Include="Services\AuthenticationOutcomeMapper.cs" />
     <Compile Include="Services\AuthenticationStatus.cs" />
     <Compile Include="Services\SessionClient.cs" />
+    <Compile Include="Services\AccountClient.cs" />
+    <Compile Include="Services\PlayerProfileClient.cs" />
+    <Compile Include="Services\LeaderboardClient.cs" />
+    <Compile Include="Services\RemoteCall.cs" />
     <Compile Include="Services\SessionState.cs" />
     <Compile Include="Services\ActionChoiceDialogOptions.cs" />
     <Compile Include="Services\AvailableMatchesService.cs" />
@@ -276,6 +280,10 @@
     <Compile Include="Validation\ProfilePicturePolicy.cs" />
     <Compile Include="Validation\BoardBackgroundPolicy.cs" />
     <Compile Include="Validation\GuestUsernamePolicy.cs" />
+    <Compile Include="Validation\UsernamePolicy.cs" />
+    <Compile Include="Validation\EmailPolicy.cs" />
+    <Compile Include="Validation\PasswordPolicy.cs" />
+    <Compile Include="Validation\ProfileImagePolicy.cs" />
     <Compile Include="Statistics\PlayerStatistics.cs" />
     <Compile Include="Game\TurnTimePolicy.cs" />
     <Compile Include="Game\ReversiBoard.cs" />
@@ -289,7 +297,7 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Connected Services\AccountAccess\Reference.cs">
+    <Compile Include="Connected Services\Server\Reference.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
     </Compile>
@@ -334,22 +342,8 @@
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ReversiGameSystem.Contracts\ReversiGameSystem.Contracts.csproj">
-      <Project>{D9DC968B-C867-41A1-ABD1-1853A481AF4E}</Project>
-      <Name>ReversiGameSystem.Contracts</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\ReversiGameSystem.Domain\ReversiGameSystem.Domain.csproj">
-      <Project>{26E704F1-4360-44FB-A725-C5FC02E03B2C}</Project>
-      <Name>ReversiGameSystem.Domain</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\ReversiGameSystem.LocalRuntime\ReversiGameSystem.LocalRuntime.csproj">
-      <Project>{45FF5368-B184-4489-8AD3-67FE234D941F}</Project>
-      <Name>ReversiGameSystem.LocalRuntime</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <WCFMetadata Include="Connected Services\" />
-    <WCFMetadataStorage Include="Connected Services\AccountAccess\" />
+    <WCFMetadataStorage Include="Connected Services\Server\" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Debug"

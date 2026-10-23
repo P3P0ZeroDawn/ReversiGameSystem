@@ -15,8 +15,10 @@ internal static class Program
             Console.Error.WriteLine("Usage: ReversiGameSystem.Server.Tests.exe [--database]");
             return 2;
         }
-        Action[] tests = CreateTests();
-        return RunTests(tests);
+        System.Collections.Generic.List<Action> tests =
+            new System.Collections.Generic.List<Action>(CreateTests());
+        tests.AddRange(LegacyTestSuite.CreateTests());
+        return RunTests(tests.ToArray());
     }
 
     private static Action[] CreateTests()
@@ -73,6 +75,18 @@ internal static class Program
             mailTests.Load_ProcessConfiguration_ValidatesPortAndRequiresEncryption,
             mailTests.Send_LocalServerWithheldBanner_CancelsWithinDeliveryBudget,
             FailureDiagnosticsTests.Describe_NestedProviderFailure_ExcludesMessagesAndPrivateData,
+            PlayerBoundaryTests.RegisterAccount_ThroughWcf_MapsCredentialsAndOutcome,
+            PlayerBoundaryTests.GetProfile_ThroughWcf_MapsIdentityAndStatistics,
+            PlayerBoundaryTests.GetProfile_MissingAndInvalidSessionThroughWcf_ReturnsTypedFaults,
+            PlayerBoundaryTests.GetProfile_InactiveCallerRequestingAnotherAccount_RejectsThroughWcf,
+            PlayerBoundaryTests.GetProfile_InvalidTargetThroughWcf_ReturnsTypedFault,
+            PlayerBoundaryTests.GetImage_AbsentImageThroughWcf_ReturnsNull,
+            PlayerBoundaryTests.GetImage_ReadFailureThroughWcf_ReturnsServiceFault,
+            PlayerBoundaryTests.ChangeUsername_ThroughWcf_NormalizesAndUpdatesOnlyCaller,
+            PlayerBoundaryTests.UpdateImage_AssociationFailureThroughWcf_RemovesNewImage,
+            PlayerBoundaryTests.GetLeaderboard_ThroughWcf_MapsOrderedEntries,
+            PlayerBoundaryTests.GetLeaderboard_InvalidLimitThroughWcf_ReturnsTypedFault,
+            PlayerBoundaryTests.GetLeaderboard_UnavailableThroughWcf_ReturnsServiceFault,
             ModelResourcesTests.Assembly_RequiredRuntimeModel_IsEmbedded
         };
     }

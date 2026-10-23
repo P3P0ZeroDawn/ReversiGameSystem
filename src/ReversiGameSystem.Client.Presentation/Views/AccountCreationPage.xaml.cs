@@ -3,11 +3,10 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using ReversiGameSystem.Contracts.Accounts;
-using ReversiGameSystem.Contracts.Media;
-using ReversiGameSystem.Domain.Accounts;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
+using ReversiGameSystem.Validation;
+using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Views;
 
@@ -55,29 +54,34 @@ public partial class AccountCreationPage : Page
             return;
         }
 
-        if (!TryCreateProfileImageUpload(out ProfileImageUploadDto? profileImage))
+        Proxy.AccountRegistrationCredentials credentials = new Proxy.AccountRegistrationCredentials
         {
-            _dialogService.ShowWarning(
-                this,
-                "AccountCreation_ImageNotSupportedTitle",
-                "AccountCreation_ImageNotSupportedMessage");
-            return;
-        }
-
+            Username = usernameTextBox.Text.Trim(),
+            EmailAddress = email,
+            Password = passwordBox.Password,
+            PreferredLocaleCode = LocalizationManager.Instance.CultureName
+        };
         createAccountButton.IsEnabled = false;
         try
         {
-            CreateAccountResponse response = await ClientRuntime.Services.AccountService
-                .CreateAccountAsync(
-                    new CreateAccountRequest
-                    {
-                        Username = usernameTextBox.Text.Trim(),
-                        EmailAddress = email,
-                        Password = passwordBox.Password,
-                        PreferredLocaleCode = LocalizationManager.Instance.CultureName,
-                        ProfileImage = profileImage
-                    });
+            credentials.ProfileImage = await CreateProfileImageUploadAsync();
+            Proxy.AccountRegistrationOutcome response = await ClientRuntime.AccountService
+                .RegisterAccountAsync(credentials);
             HandleCreateAccountResponse(response, email);
+        }
+        catch (Exception exception) when (exception is IOException
+            or UnauthorizedAccessException or NotSupportedException)
+        {
+            _dialogService.ShowWarning(
+                this, "AccountCreation_ImageNotSupportedTitle", "AccountCreation_ImageNotSupportedMessage");
+        }
+        catch (System.ServiceModel.FaultException<Proxy.ServiceFault>)
+        {
+            _dialogService.ShowError(this, "AccountCreation_PersistenceErrorTitle", "AccountCreation_PersistenceErrorMessage");
+        }
+        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        {
+            ShowServiceUnavailable();
         }
         finally
         {
@@ -125,71 +129,57 @@ public partial class AccountCreationPage : Page
         return true;
     }
 
-    private bool TryCreateProfileImageUpload(out ProfileImageUploadDto? upload)
+    private async System.Threading.Tasks.Task<Proxy.ProfileImageContent?> CreateProfileImageUploadAsync()
     {
-        upload = null;
-        if (_pendingProfileImage == null)
+        string? imagePath = _pendingProfileImage?.FilePath;
+        if (imagePath == null)
         {
-            return true;
+            return null;
         }
 
-        bool isCreated;
-        try
+        Proxy.ImageContent upload = await System.Threading.Tasks.Task.Run(
+            () => ProfileImageModificationService.ReadUpload(imagePath));
+        return new Proxy.ProfileImageContent
         {
-            string extension = Path.GetExtension(_pendingProfileImage.FilePath);
-            upload = new ProfileImageUploadDto
-            {
-                Content = File.ReadAllBytes(_pendingProfileImage.FilePath),
-                MediaType = extension.Equals(".png", StringComparison.OrdinalIgnoreCase)
-                    ? "image/png"
-                    : "image/jpeg"
-            };
-            isCreated = true;
-        }
-        catch (Exception exception) when (exception is IOException
-                                            or UnauthorizedAccessException
-                                            or NotSupportedException)
-        {
-            isCreated = false;
-        }
-
-        return isCreated;
+            Content = upload.Content,
+            MediaType = upload.MediaType
+        };
     }
 
-    private void HandleCreateAccountResponse(CreateAccountResponse response, string email)
+    private void HandleCreateAccountResponse(Proxy.AccountRegistrationOutcome response, string email)
     {
-        switch (response.ResultCode)
+        switch (response.Status)
         {
-            case CreateAccountResultCode.Success:
+            case Proxy.AccountRegistrationStatus.Success:
                 _dialogService.ShowInformation(
                     this,
                     "AccountCreation_SuccessTitle",
                     "AccountCreation_SuccessMessage");
                 NavigationService?.Navigate(new LoginScreenPage(email));
                 break;
-            case CreateAccountResultCode.UsernameAlreadyExists:
+            case Proxy.AccountRegistrationStatus.UsernameUnavailable:
                 _dialogService.ShowWarning(
                     this,
                     "AccountCreation_UsernameAlreadyTakenTitle",
                     "AccountCreation_UsernameAlreadyTakenMessage");
                 break;
-            case CreateAccountResultCode.EmailAddressAlreadyExists:
+            case Proxy.AccountRegistrationStatus.EmailUnavailable:
                 _dialogService.ShowWarning(
                     this,
                     "AccountCreation_EmailAlreadyTakenTitle",
                     "AccountCreation_EmailAlreadyTakenMessage");
                 break;
-            case CreateAccountResultCode.InvalidUsername:
+            case Proxy.AccountRegistrationStatus.InvalidUsername:
                 ShowValidationWarning("InvalidUsernameFormat");
                 break;
-            case CreateAccountResultCode.InvalidEmailAddress:
+            case Proxy.AccountRegistrationStatus.InvalidEmail:
                 ShowEmailValidationWarning(EmailValidationError.InvalidStructure);
                 break;
-            case CreateAccountResultCode.InvalidPassword:
-                ShowPasswordValidationWarning(PasswordValidationError.UnsupportedCharacter);
+            case Proxy.AccountRegistrationStatus.InvalidProfileImage:
+                _dialogService.ShowWarning(this, "AccountCreation_ImageNotSupportedTitle", "AccountCreation_ImageNotSupportedMessage");
                 break;
-            case CreateAccountResultCode.ServiceUnavailable:
-                ShowServiceUnavailable();
+            case Proxy.AccountRegistrationStatus.InvalidPassword:
+                ShowPasswordValidationWarning(PasswordValidationError.UnsupportedCharacter);
                 break;
             default:
                 _dialogService.ShowError(

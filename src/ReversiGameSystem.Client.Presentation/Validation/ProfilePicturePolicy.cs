@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Security;
 using System.Windows.Media.Imaging;
-using ReversiGameSystem.Domain.Accounts;
 
 namespace ReversiGameSystem.Validation;
 

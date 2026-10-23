@@ -22,13 +22,22 @@ internal static class Program
             new AuthenticationOutcomeMapperTests();
         Action[] tests =
         {
+            ClientArchitectureTests.Assemblies_RuntimeReferences_ExcludeServerAndPersistence,
             mapperTests.Map_SuccessfulOutcome_PreservesSession,
             mapperTests.Map_ExpiredSession_RejectsResponse,
             mapperTests.Map_MissingToken_RejectsResponse,
             mapperTests.SessionMessages_SupportedCultures_AreAvailable
         };
 
-        return Run(tests);
+        return Run(CombineTests(tests));
+    }
+
+    private static Action[] CombineTests(Action[] currentTests)
+    {
+        System.Collections.Generic.List<Action> tests =
+            new System.Collections.Generic.List<Action>(currentTests);
+        tests.AddRange(LegacyTestSuite.CreateTests());
+        return tests.ToArray();
     }
 
     private static int Run(Action[] tests)

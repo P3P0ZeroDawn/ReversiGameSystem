@@ -1,10 +1,12 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.ServiceModel;
 using System.Windows;
 using System.Windows.Controls;
-using ReversiGameSystem.Contracts.Leaderboards;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
+using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Views;
 
@@ -61,10 +63,14 @@ public partial class MainMenuPage : Page
     private async System.Threading.Tasks.Task LoadLeaderboardAsync()
     {
         _leaderboardLoaded = true;
-        LeaderboardResponse response = await ClientRuntime.Services.PlayerService
-            .GetLeaderboardAsync(new LeaderboardRequest { MaximumEntries = 10 });
-        if (response.ResultCode != LeaderboardResultCode.Success)
+        Proxy.LeaderboardEntry[] entries;
+        try
         {
+            entries = await ClientRuntime.LeaderboardService.GetLeaderboardAsync(10);
+        }
+        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        {
+            _leaderboardLoaded = false;
             ShowLeaderboardError();
             return;
         }
@@ -72,7 +78,7 @@ public partial class MainMenuPage : Page
         CultureInfo culture = CultureInfo.GetCultureInfo(
             LocalizationManager.Instance.CultureName);
         List<LeaderboardItem> items = new List<LeaderboardItem>();
-        foreach (LeaderboardEntryDto entry in response.Entries)
+        foreach (Proxy.LeaderboardEntry entry in entries)
         {
             items.Add(CreateLeaderboardItem(entry, culture));
         }
@@ -84,13 +90,13 @@ public partial class MainMenuPage : Page
     }
 
     private static LeaderboardItem CreateLeaderboardItem(
-        LeaderboardEntryDto entry,
+        Proxy.LeaderboardEntry entry,
         CultureInfo culture)
     {
         return new LeaderboardItem
         {
-            Position = "#" + entry.Rank.ToString("N0", culture),
-            Username = entry.Username,
+            Position = "#" + entry.Position.ToString("N0", culture),
+            Username = entry.Account.Username,
             WinsText = string.Format(
                 culture,
                 LocalizationManager.Instance["MainMenu_TopWinnersWinsFormat"],
@@ -101,7 +107,7 @@ public partial class MainMenuPage : Page
     private void ShowLeaderboardError()
     {
         topWinnersItemsControl.ItemsSource = null;
-        topWinnersEmptyTextBlock.Visibility = Visibility.Visible;
+        topWinnersEmptyTextBlock.Visibility = Visibility.Collapsed;
         _dialogService.ShowError(
             this,
             "MainMenu_TopWinnersUnavailableTitle",

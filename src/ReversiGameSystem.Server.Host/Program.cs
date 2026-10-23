@@ -4,7 +4,11 @@ using System.ServiceModel;
 using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Verification;
+using ReversiGameSystem.Server.Application.Players;
+using ReversiGameSystem.Server.Application.Leaderboards;
 using ReversiGameSystem.Server.Persistence.Accounts;
+using ReversiGameSystem.Server.Persistence.Players;
+using ReversiGameSystem.Server.Persistence.Leaderboards;
 using ReversiGameSystem.Server.Persistence.Configuration;
 using ReversiGameSystem.Server.Persistence.Mail;
 using ReversiGameSystem.Server.Persistence.Verification;
@@ -27,15 +31,21 @@ internal static class Program
                 loggerFactory.CreateLogger<ServerHostLogCategory>();
             try
             {
-                AccountAccessService accountAccessService =
-                    CreateAccountAccessService(serviceLogger);
-                SessionService sessionService =
-                    CreateSessionService(loggerFactory.CreateLogger<SessionService>());
-                using (ServiceHost serviceHost = new ServiceHost(accountAccessService))
-                using (ServiceHost sessionHost = new ServiceHost(sessionService))
+                SystemUtcClock clock = new SystemUtcClock();
+                InMemoryAuthenticatedSessionStore sessions =
+                    new InMemoryAuthenticatedSessionStore(clock);
+                ServiceHost[] hosts =
                 {
-                    return Run(serviceHost, sessionHost, hostLogger);
-                }
+                    new ServiceHost(CreateAccountAccessService(serviceLogger)),
+                    new ServiceHost(CreateSessionService(
+                        loggerFactory.CreateLogger<SessionService>(), sessions, clock)),
+                    new ServiceHost(CreatePlayerProfileService(
+                        loggerFactory.CreateLogger<PlayerProfileService>(), sessions)),
+                    new ServiceHost(new LeaderboardService(new GetLeaderboardHandler(
+                        new EntityFrameworkLeaderboardStore()),
+                        loggerFactory.CreateLogger<LeaderboardService>()))
+                };
+                return Run(hosts, hostLogger);
             }
             catch (Exception exception)
             {
@@ -51,10 +61,7 @@ internal static class Program
     {
         SystemUtcClock clock = new SystemUtcClock();
         Pbkdf2PasswordHasher passwordHasher = new Pbkdf2PasswordHasher();
-        string imageDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "ReversiGameSystem.Server",
-            "profile-images");
+        string imageDirectory = GetProfileImageDirectory();
 
         CreateAccountHandler createAccountHandler = new CreateAccountHandler(
             new EntityFrameworkAccountRegistrationStore(),
@@ -64,9 +71,9 @@ internal static class Program
         return new AccountAccessService(createAccountHandler, logger);
     }
 
-    private static SessionService CreateSessionService(ILogger<SessionService> logger)
+    private static SessionService CreateSessionService(ILogger<SessionService> logger,
+        IAuthenticatedSessionStore sessionStore, IUtcClock clock)
     {
-        SystemUtcClock clock = new SystemUtcClock();
         byte[] secret = Convert.FromBase64String(
             EnvironmentSettings.ReadRequired("REVERSI_VERIFICATION_SECRET"));
         VerificationCodeProtector protector;
@@ -84,33 +91,60 @@ internal static class Program
         VerificationCodeService verification = new VerificationCodeService(
             issuer, new VerificationCodeRepository(), clock);
         SessionRegistry sessions = new SessionRegistry(
-            new InMemoryAuthenticatedSessionStore(clock), clock);
+            sessionStore, clock);
         SessionHandler handler = new SessionHandler(new VerifiedLoginService(
             new EntityFrameworkAccountLoginStore(), new Pbkdf2PasswordHasher()),
             verification, sessions);
         return new SessionService(handler, logger);
     }
 
-    private static int Run(ServiceHost serviceHost, ServiceHost sessionHost, ILogger logger)
+    private static PlayerProfileService CreatePlayerProfileService(
+        ILogger<PlayerProfileService> logger, IAuthenticatedSessionStore sessions)
+    {
+        ProfileImageRepository images = new ProfileImageRepository(GetProfileImageDirectory());
+        PlayerProfileReader reader = new PlayerProfileReader(sessions,
+            new EntityFrameworkPlayerProfileStore(), images);
+        PlayerProfileEditor editor = new PlayerProfileEditor(sessions,
+            new ProfileRepository(), images);
+        return new PlayerProfileService(reader, editor, logger);
+    }
+
+    private static string GetProfileImageDirectory()
+    {
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "ReversiGameSystem.Server", "profile-images");
+    }
+
+    private static int Run(ServiceHost[] hosts, ILogger logger)
     {
         try
         {
-            serviceHost.Open();
-            sessionHost.Open();
+            foreach (ServiceHost host in hosts)
+            {
+                host.Open();
+            }
             logger.LogInformation(
                 "The Reversi server is listening. Press Enter to stop it.");
             Console.ReadLine();
-            sessionHost.Close();
-            serviceHost.Close();
+            for (int index = hosts.Length - 1; index >= 0; index--)
+            {
+                hosts[index].Close();
+            }
             return 0;
         }
         catch (Exception exception)
         {
             logger.LogCritical("The Reversi server stopped unexpectedly. {Diagnostics}",
                 FailureDiagnostics.Describe(exception));
-            sessionHost.Abort();
-            serviceHost.Abort();
             return 1;
+        }
+        finally
+        {
+            foreach (ServiceHost host in hosts)
+            {
+                host.Abort();
+            }
         }
     }
 }

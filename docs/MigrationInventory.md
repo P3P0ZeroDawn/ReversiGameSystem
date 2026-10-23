@@ -10,6 +10,33 @@ No sustituye el catálogo WCF ni actualiza automáticamente los entregables de d
 - **Pendiente:** falta ejecutar, implementar o documentar el cambio descrito.
 - **En curso:** trabajo iniciado, todavía sin aceptación final.
 
+## 0. Estructura definitiva de las soluciones
+
+La estructura queda en dos soluciones independientes y nueve proyectos:
+
+| Solución | Proyectos y responsabilidad |
+| --- | --- |
+| `ReversiGameSystem.Client.slnx` | `Client.Presentation`: WPF, validación preventiva y consumo del proxy generado. `Client.Tests`: pruebas del ensamblado cliente real. |
+| `ReversiGameSystem.Server.slnx` | `Domain`: reglas autorizadas; `Server.Application`: casos de uso y puertos; `Server.Contracts`: frontera WCF; `Server.Persistence`: datos, archivos y correo; `Server.ServiceApi`: adaptadores WCF; `Server.Host`: composición y publicación; `Server.Tests`: pruebas del servidor. |
+
+Se retiraron la solución agregada, los proyectos `Contracts` y `LocalRuntime`, y el proyecto
+mixto `ReversiGameSystem.Tests`. Su cobertura vigente se trasladó a las dos suites finales.
+El cliente no referencia proyectos del servidor, Domain ni EF, y las pruebas no compilan
+copias enlazadas de fuentes de producción. Las políticas preventivas del cliente son
+independientes de las validaciones autorizadas del servidor.
+
+La referencia de servicio queda en `Connected Services/Server/Reference.cs`. El script
+`tools/UpdateServiceReference.ps1` compila los contratos, exporta un conjunto de metadatos
+y regenera el proxy con svcutil, sin necesitar un servidor en ejecución. Evita los esquemas
+duplicados de combinar varios MEX; el código generado conserva el formato de la herramienta.
+
+EF se restaura mediante `PackageReference`, sin depender de una carpeta raíz `packages`.
+Se excluyen sus targets heredados de compilación: la extracción portable del EDMX del proyecto
+mantiene explícitos los recursos CSDL/SSDL/MSL.
+
+El cierre de estructura no acredita la implementación de todos los servicios del catálogo.
+Las funciones pendientes se conservan identificadas más abajo; el estándar todavía no se modifica.
+
 ## 1. Contratos WCF
 
 | Elemento | Estado | Seguimiento |
@@ -84,35 +111,54 @@ procesos emisores requeriría coordinar además el orden de emisión entre proce
 | Elemento | Estado | Trabajo y criterio de cierre |
 | --- | --- | --- |
 | Servidor y endpoint de `ISessionService` | Implementado | Solicitud, confirmación, invitado y revocación; `net.tcp` en puerto 8091 con transporte Windows cifrado. Registro heredado conserva puerto 8090. |
-| Consumo desde WPF | Implementado | `SessionClient`, referencia regenerada con svcutil desde ambos endpoints reales y diálogos de código. Cerrar sesión conserva estado local si el servidor no confirma revocación. |
+| Consumo desde WPF | Implementado | `SessionClient`, proxy regenerado desde el ensamblado de contratos y diálogos de código. Cerrar sesión conserva estado local si el servidor no confirma revocación. |
 | Login anterior | Implementado | `LoginAsync` retirado del contrato publicado y del adaptador; eliminado `RemoteAccountAccessService`. Se retiraron también `AuthenticationCredentials`, `AuthenticationOutcome`, `AuthenticationStatus` de Server.Contracts y sus mapeos sin consumidores. El contrato heredado conserva únicamente registro. |
-| Dependencia de `LocalRuntime` | En curso | Inicio y cierre pasan por WCF. Registro, perfil, clasificación y estadísticas continúan hasta sus pasos correspondientes. Revisar al final los handlers internos y pruebas del prototipo que aún dependen del acceso local. |
+| Dependencia de `LocalRuntime` | Implementado | Proyecto retirado. Registro, perfil propio, imagen, nombre, estadísticas y clasificación pasan por WCF. La cobertura vigente se trasladó; se retiraron `LoginHandler` y `LoginUseCase`, cuyo acceso directo había quedado sin consumidores de producción. |
 | Comprobación completa | En curso | Ambas soluciones compilaron y se verificaron SQL temporal, WCF y proxy real de invitado. Para aceptación de entorno final faltan BD real y proveedor de correo configurados, con login completo desde WPF. |
 
 ### Limpieza y diagnóstico por conciliar
 
 - `GuestSessionService` del prototipo y su política local permanecen referenciados por las
-  pruebas antiguas; trasladar esa cobertura antes de retirarlos. No son el mecanismo usado
+  pruebas cliente ya trasladadas; revisar su retiro junto con el prototipo. No son el mecanismo usado
   ahora por la pantalla de acceso.
 - Los handlers de autenticación locales y los modelos internos del cliente permanecen donde
   aún tienen consumidores. `ServiceFault.IsTransient` se conserva por compatibilidad con el
   registro heredado; no extender ese patrón a servicios nuevos.
-- El proxy se generó con svcutil; conserva el formato de la herramienta, incluidos espacios
-  en blanco. No se editaron manualmente sus operaciones o tipos. La combinación de ambos MEX
-  produjo avisos de esquemas repetidos; revisar la configuración de regeneración al retirar
-  el endpoint heredado.
+- El proxy se genera con svcutil desde un único conjunto de metadatos, sin avisos de esquemas
+  repetidos. No se editan manualmente sus operaciones o tipos.
 - Los fallos técnicos registran CorrelationId y una cadena acotada de tipos, HResult y
   ubicaciones de pila; se excluyen Message y Data del proveedor para evitar secretos.
 - Las observaciones independientes sobre diagnóstico, documentación XML y tolerancia del
   timeout dieron lugar a correcciones. Las verificaciones y correcciones finales del
   coordinador son autoinspección; no equivalen a otra revisión independiente completa.
 
-## 4. Cierre global pendiente
+## 4. Perfil, clasificación y pendientes funcionales
 
-- Migrar los demás consumidores activos de `LocalRuntime` antes de eliminarlo.
-- Trasladar la cobertura exclusiva de las pruebas antiguas antes de retirar proyectos residuales.
-- Dejar únicamente las dos soluciones finales y comprobar sus dependencias transitivas.
+`PlayerProfileService` publica las cuatro operaciones del catálogo y `LeaderboardService`
+publica la consulta de clasificación. Comparten con sesiones el almacén autenticado del host.
+Los endpoints usan transporte Windows cifrado: registro 8090, sesiones 8091, perfil 8092 y
+clasificación 8093. Los repositorios, imágenes y credenciales permanecen en el servidor.
+
+La imagen viaja como contenido, sin rutas físicas. La escritura valida formato y tamaño,
+genera un nombre interno y compensa el archivo nuevo si falla su asociación en BD. Los
+archivos anteriores se conservan tras reemplazos exitosos; falta definir su recolección
+para evitar acumulación sin interrumpir lecturas concurrentes.
+
+- Registro todavía consume `IAccountAccessService.RegisterAccountAsync`, el contrato
+  temporal preexistente. Falta completar el flujo por código de `IAccountService` y retirar
+  ese endpoint y `ServiceFault.IsTransient`; los contratos nuevos mantienen firmas síncronas.
+- Falta conectar navegación y consulta de perfiles ajenos mediante identificador de cuenta:
+  el prototipo de amigos todavía navega con nombre. El perfil propio ya usa el servicio real.
+- Las funciones de partidas, amistad, chat y preferencias que siguen como prototipos requieren
+  sus implementaciones remotas. La presencia de sus contratos en el proxy no las publica.
+- Las pruebas WCF de perfil y clasificación usan sustitutos de persistencia. Falta validar
+  esos repositorios contra el esquema y datos del entorno final.
+
+## 5. Conciliación pendiente
+
 - Conciliar documentación de diseño, contratos y operación con el inventario realmente entregado.
+  Los diagramas y documentos históricos conservan su carácter de guía de construcción;
+  su actualización requiere el alcance que indique el equipo.
 - Revisar y estabilizar el estándar al terminar todos los pasos, por instrucción del equipo;
   no modificarlo durante este paso.
 - Conciliar la firma heredada de cuatro parámetros de `IAuthenticatedSessionStore.Create`
@@ -154,3 +200,26 @@ El script no está aplicado en la BD del proyecto. No se han usado credenciales 
 correo ni se ha acreditado entrega externa o login completo contra BD/proveedor reales.
 La prueba SMTP cubre espera del saludo; faltan escenarios específicos de DNS, TLS y
 autenticación que agoten el presupuesto de entrega. El estándar queda sin modificar.
+
+## Evidencia del cierre de estructura
+
+- Ambas soluciones finales compilaron con MSBuild de Visual Studio, sin errores ni
+  advertencias del compilador. Se verificaron dos soluciones y nueve proyectos.
+- **121 pruebas del servidor y 132 del cliente aprobadas**. La cobertura trasladada usa
+  los ensamblados reales; se sustituyeron pruebas de DTO y runtime retirados por las del
+  catálogo vigente y doce escenarios WCF de registro, perfil y clasificación.
+- Ocho comprobaciones SQL aprobadas en una base LocalDB desechable tras pasar EF a
+  `PackageReference`; no se modificó la BD del proyecto.
+- Ciclo de invitado aprobado mediante el proxy generado contra el host real temporal,
+  con transporte Windows cifrado. El host se detuvo al terminar.
+- La prueba de dependencias y la inspección de la salida del cliente no encontraron
+  ensamblados Server, Domain, LocalRuntime, EF ni MailKit.
+- La regeneración offline del proxy terminó sin errores ni avisos de esquemas duplicados.
+- Se eliminaron fuentes y proyectos retirados, además de sus residuos de compilación.
+  Se preservaron preferencias locales del IDE y respaldos locales fuera de la entrega.
+- Hubo revisión independiente de las fronteras y correcciones posteriores; la integración
+  y comprobación finales del coordinador son autoinspección.
+
+Este cierre habilita trabajar sobre el estándar con la estructura definida. No acredita
+correo externo, login completo con proveedores reales ni la terminación funcional de los
+servicios pendientes indicados en este inventario.

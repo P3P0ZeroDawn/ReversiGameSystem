@@ -1,4 +1,3 @@
-using ReversiGameSystem.Domain.Accounts;
 
 namespace ReversiGameSystem.Validation;
 

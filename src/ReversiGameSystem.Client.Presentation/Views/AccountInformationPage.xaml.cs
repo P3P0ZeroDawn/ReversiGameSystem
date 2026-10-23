@@ -1,10 +1,13 @@
+using System;
+using System.IO;
+using System.ServiceModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using ReversiGameSystem.Contracts.Players;
-using ReversiGameSystem.Domain.Accounts;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
+using ReversiGameSystem.Validation;
+using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Views;
 
@@ -22,7 +25,7 @@ public partial class AccountInformationPage : Page
 {
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
     private readonly ProfileImageSelectionService _profileImageSelectionService;
-    private readonly IProfileImageModificationService _profileImageService =
+    private readonly ProfileImageModificationService _profileImageService =
         new ProfileImageModificationService();
     private readonly IAccountDeactivationService _accountDeactivationService =
         new AccountDeactivationService();
@@ -103,51 +106,40 @@ public partial class AccountInformationPage : Page
             return;
         }
 
-        PlayerProfileResponse response = await ClientRuntime.Services.PlayerService
-            .GetPlayerProfileAsync(new PlayerProfileRequest
+        try
+        {
+            Proxy.PlayerProfile profile = await ClientRuntime.ProfileService.GetPlayerProfileAsync(sessionToken);
+            ApplyProfile(profile);
+            if (profile.HasProfileImage)
             {
-                SessionToken = sessionToken
-            });
-        if (response.ResultCode == PlayerProfileResultCode.Success
-            && response.Profile != null)
-        {
-            ApplyProfile(response.Profile);
-            return;
+                Proxy.ImageContent? image = await ClientRuntime.ProfileService.GetProfileImageAsync(sessionToken);
+                System.Windows.Media.Imaging.BitmapSource? bitmap = ProfileImageModificationService.Decode(image);
+                if (bitmap != null)
+                {
+                    AccountPreviewState.UpdateProfilePicture(bitmap);
+                    profilePictureButton.Background = new ImageBrush(bitmap) { Stretch = Stretch.UniformToFill };
+                }
+            }
         }
-
-        ShowProfileLoadError(response.ResultCode);
+        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception)
+            || exception is IOException or NotSupportedException or ArgumentException or FormatException)
+        {
+            ShowProfileLoadError(exception is not FaultException && (exception is CommunicationException or TimeoutException));
+        }
     }
 
-    private void ApplyProfile(PlayerProfileDto profile)
+    private void ApplyProfile(Proxy.PlayerProfile profile)
     {
-        AccountPreviewState.UpdateUsername(profile.Username);
-        usernameTextBlock.Text = profile.Username;
+        AccountPreviewState.UpdateUsername(profile.Account.Username);
+        usernameTextBlock.Text = profile.Account.Username;
         playerStatisticsControl.SetStatistics(profile.Statistics);
-
-        if (!ClientRuntime.TryLoadProfileImage(
-            profile.ProfileImageUri,
-            out System.Windows.Media.Imaging.BitmapSource? profileImage)
-            || profileImage == null)
-        {
-            return;
-        }
-
-        AccountPreviewState.UpdateProfilePicture(profileImage);
-        profilePictureButton.Background = new ImageBrush(profileImage)
-        {
-            Stretch = Stretch.UniformToFill
-        };
     }
 
-    private void ShowProfileLoadError(PlayerProfileResultCode resultCode)
+    private void ShowProfileLoadError(bool connectionFailed)
     {
-        string resourcePrefix = resultCode == PlayerProfileResultCode.ServiceUnavailable
-            ? "PlayerStatistics_ServerConnectionFailed"
-            : "PlayerStatistics_RetrievalError";
-        _dialogService.ShowError(
-            this,
-            resourcePrefix + "Title",
-            resourcePrefix + "Message");
+        string resourcePrefix = connectionFailed
+            ? "PlayerStatistics_ServerConnectionFailed" : "PlayerStatistics_RetrievalError";
+        _dialogService.ShowError(this, resourcePrefix + "Title", resourcePrefix + "Message");
     }
 
     private void ConfigurePublicProfile()
@@ -179,7 +171,7 @@ public partial class AccountInformationPage : Page
         }
     }
 
-    private void OnModifyUsernameClick(object sender, RoutedEventArgs e)
+    private async void OnModifyUsernameClick(object sender, RoutedEventArgs e)
     {
         string currentUsername = AccountPreviewState.Username
             ?? LocalizationManager.Instance["AccountInformation_UnavailableValue"];
@@ -204,7 +196,36 @@ public partial class AccountInformationPage : Page
                 continue;
             }
 
-            // TODO: Check uniqueness and save the username on the server before confirming.
+            try
+            {
+                modifyUsernameButton.IsEnabled = false;
+                await ClientRuntime.ProfileService.ChangeUsernameAsync(
+                    AccountPreviewState.SessionToken ?? string.Empty, username);
+            }
+            catch (FaultException<Proxy.ProfileFault> fault)
+            {
+                if (fault.Detail.Reason == Proxy.ProfileFailure.UsernameUnavailable
+                    || fault.Detail.Reason == Proxy.ProfileFailure.InvalidUsername)
+                {
+                    string prefix = fault.Detail.Reason == Proxy.ProfileFailure.UsernameUnavailable
+                        ? "AccountCreation_UsernameAlreadyTaken" : "UsernameModification_InvalidFormat";
+                    _dialogService.ShowWarning(this, prefix + "Title", prefix + "Message");
+                }
+                else
+                {
+                    ShowProfileLoadError(false);
+                }
+                return;
+            }
+            catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+            {
+                ShowProfileLoadError(exception is not FaultException && (exception is CommunicationException or TimeoutException));
+                return;
+            }
+            finally
+            {
+                modifyUsernameButton.IsEnabled = true;
+            }
             AccountPreviewState.UpdateUsername(username);
             usernameTextBlock.Text = username;
             _dialogService.ShowInformation(
@@ -237,7 +258,7 @@ public partial class AccountInformationPage : Page
         }
     }
 
-    private void OnProfilePictureClick(object sender, RoutedEventArgs e)
+    private async void OnProfilePictureClick(object sender, RoutedEventArgs e)
     {
         if (!_profileImageSelectionService.TrySelect(
             this, "AccountInformation", out ProfileImageSelection? selection)
@@ -246,23 +267,22 @@ public partial class AccountInformationPage : Page
             return;
         }
 
-        ProfileImageModificationResult result = _profileImageService.Save(selection.FilePath);
-        if (result == ProfileImageModificationResult.ServerConnectionFailed)
+        try
         {
-            _dialogService.ShowError(
-                this,
-                "ProfileImageModification_ServerConnectionFailedTitle",
-                "ProfileImageModification_ServerConnectionFailedMessage");
+            profilePictureButton.IsEnabled = false;
+            await _profileImageService.SaveAsync(AccountPreviewState.SessionToken ?? string.Empty, selection.FilePath);
+        }
+        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception)
+            || exception is IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            string prefix = exception is not FaultException && (exception is CommunicationException or TimeoutException)
+                ? "ProfileImageModification_ServerConnectionFailed" : "ProfileImageModification_PersistenceError";
+            _dialogService.ShowError(this, prefix + "Title", prefix + "Message");
             return;
         }
-
-        if (result == ProfileImageModificationResult.PersistenceError)
+        finally
         {
-            _dialogService.ShowError(
-                this,
-                "ProfileImageModification_PersistenceErrorTitle",
-                "ProfileImageModification_PersistenceErrorMessage");
-            return;
+            profilePictureButton.IsEnabled = true;
         }
 
         AccountPreviewState.UpdateProfilePicture(selection.Preview);
