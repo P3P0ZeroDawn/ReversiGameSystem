@@ -1920,7 +1920,7 @@ For this project, declaration patterns such as `value is Type variable` and nega
 
 C# pattern matching allows an expression to be tested against a pattern using constructs such as the `is` operator and `switch`. A declaration pattern can test whether a value is compatible with a specified type and, when the match succeeds, introduce a variable of that type without requiring a separate cast (Ecma International, 2023).
 
-Microsoft's code-style rules `IDE0019`, `IDE0020`, and `IDE0038` explicitly support preferring pattern matching over `as` followed by a null check or an `is` check followed by an explicit cast (Microsoft, 2023j; Microsoft, 2024).
+Microsoft's code-style rules `IDE0019`, `IDE0020`, and `IDE0038` explicitly support preferring pattern matching over `as` followed by a null check or an `is` check followed by an explicit cast (Microsoft, 2023k; Microsoft, 2024).
 
 For this project:
 
@@ -2000,7 +2000,7 @@ private void OnJoinMatchClick(
 
 The code is valid C#, but it performs separate `as` conversions and null checks for values that can be tested and captured directly with declaration patterns. It also introduces additional nesting that makes the successful execution path less visible.
 
-Microsoft's `IDE0019` rule specifically identifies this `as`-followed-by-null-check structure as a case where pattern matching can be preferred (Microsoft, 2023j).
+Microsoft's `IDE0019` rule specifically identifies this `as`-followed-by-null-check structure as a case where pattern matching can be preferred (Microsoft, 2023k).
 
 #### Incorrect — Repeated Type Test and Cast
 
@@ -3452,6 +3452,57 @@ The comment indicates that a problem exists but does not explain what is incorre
 
 ### 8.1 Trust Boundaries
 
+Data received from outside a component's trusted control must be validated before it is used to make decisions or change protected state.
+
+A trust boundary separates components or sources with different control over data and permissions. The client-to-server connection is a trust boundary because the server does not control the caller's program. Client-side checks can improve feedback, but callers can bypass them. OWASP recommends server-side validation even when the client validates the same input, and distinguishes input validation from authorization (OWASP Foundation, n.d.).
+
+WCF transfer security protects communication through authentication, confidentiality, and integrity. Authorization determines access to resources and remains a separate requirement (Microsoft, 2023j). An encrypted connection does not establish that a proposed username, account identifier, or game action is acceptable to the application.
+
+For this project:
+
+- The WPF client may perform preventive checks, such as detecting an invalid username or calculating available moves for display. The server must independently enforce the applicable rules before accepting an operation or changing authoritative state.
+- Operations that require an authenticated player must resolve the caller from a server-validated session token. A client-supplied account identifier, display name, or validation flag must not establish the caller's identity or permissions. Operations explicitly available to guests or unauthenticated callers must enforce their own access rules.
+- The server must check the caller's permission for the requested operation and target. A correctly formatted identifier or an existing account is not sufficient authorization. For changes to the caller's own profile, the affected account must come from the validated session.
+- WCF adapters must pass received values to the appropriate server use case. Application and domain rules must be enforced before the protected action, even when the official client normally checks those values. A service method must not bypass these rules by writing directly to persistence.
+- Successful deserialization must not establish trust in received values. Service data must follow Section 5.17, Serialization, and the applicable validation rules before use.
+- Stored data and file metadata must not be assumed valid solely because they come from server storage. When their origin or integrity is outside the receiving component's control, validate the assumptions needed for the intended use. This does not require repeating every validation between internal methods that operate on already validated data.
+- Rejected operations must leave the protected action unperformed and use the declared service fault where applicable. Error handling and diagnostics must follow Section 6 without exposing credentials, session tokens, or internal storage details.
+
+These responsibilities do not require a shared validation engine or an additional wrapper for each operation. Existing domain policies and use cases should enforce the rules where the decision belongs.
+
+#### Correct
+
+```csharp
+public void ChangeUsername(string sessionToken, string username)
+{
+    long accountId = RequireActiveCaller(sessionToken);
+    string normalized = username?.Trim() ?? string.Empty;
+    if (UsernamePolicy.Validate(normalized) != UsernameValidationError.None)
+    {
+        throw new ProfileRejectedException(ProfileRejection.InvalidUsername);
+    }
+
+    _profiles.ChangeUsername(accountId, normalized);
+}
+```
+
+This example follows `PlayerProfileEditor.ChangeUsername`. `RequireActiveCaller` resolves the session on the server and checks that the account is active. The method then applies the server's username policy before asking persistence to change that account's name. The store checks availability; client validation is not a precondition for the server checks.
+
+#### Incorrect
+
+```csharp
+public void ChangeUsername(string sessionToken, string username)
+{
+    long accountId = RequireActiveCaller(sessionToken);
+    string normalized = username?.Trim() ?? string.Empty;
+
+    // The client already checked the username.
+    _profiles.ChangeUsername(accountId, normalized);
+}
+```
+
+The caller is still authenticated, but the server omits its username validation because it assumes that the official client performed it. Another caller can invoke the same operation with a value that the client would reject. Authentication does not replace input validation.
+
 ### 8.2 Input Validation
 
 ### 8.3 File System Access
@@ -3744,7 +3795,9 @@ Microsoft. (2023h, July 25). *.NET formatting options*. Microsoft Learn. [https:
 
 Microsoft. (2023i, December 16). *Remove unnecessary using directives (IDE0005)*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0005](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0005)
 
-Microsoft. (2023j, July 27). *IDE0019: Use pattern matching to avoid 'as' followed by a 'null' check*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0019](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0019)
+Microsoft. (2023j, March 30). *Securing services*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/framework/wcf/securing-services](https://learn.microsoft.com/en-us/dotnet/framework/wcf/securing-services)
+
+Microsoft. (2023k, July 27). *IDE0019: Use pattern matching to avoid 'as' followed by a 'null' check*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0019](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0019)
 
 Microsoft. (2024, January 18). *Use pattern matching to avoid 'is' check followed by a cast (IDE0020 and IDE0038)*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0020-ide0038](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0020-ide0038)
 
@@ -3809,6 +3862,8 @@ Microsoft. (2026o, June 24). *Write tests with MSTest*. Microsoft Learn. [https:
 Microsoft. (2026p, March 23). *Handle and raise events*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/standard/events/](https://learn.microsoft.com/en-us/dotnet/standard/events/)
 
 Microsoft. (2026q, January 20). *using statement - ensure the correct use of disposable objects*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/using](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/using)
+
+OWASP Foundation. (n.d.). *Input validation cheat sheet*. OWASP Cheat Sheet Series. Retrieved October 22, 2026, from [https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html)
 
 Reese, J. (2025, March 22). *Unit testing best practices for .NET*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices](https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices)
 

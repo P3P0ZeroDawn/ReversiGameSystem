@@ -23,6 +23,7 @@ que las funciones descritas estén implementadas.
 | [Internacionalización y acceso a datos](Project%20Specs/Internacionalizaci%C3%B3n%20de%20Aplicaciones%20WPF%20con%20Acces.md) | Registro del avance de localización e integración con Entity Framework. | Describe una etapa con ejecución local; no usar como estado actual de WCF. |
 | [Catálogo de integración WCF](WcfIntegrationContracts.md) | Contratos, callbacks, límites, errores y matriz de integración. | Conciliar la revisión académica más reciente antes de cambiar contratos. |
 | [Inventario de migración](MigrationInventory.md) | Implementación, base de datos, configuración, pruebas y documentación pendientes por paso. | Distingue código preparado, evidencia obtenida y cambios aplicados en el entorno real. |
+| [Inventario de migración](MigrationInventory.md) | Implementación, base de datos, configuración, pruebas y documentación pendientes por paso. | Distingue código preparado, evidencia obtenida y cambios aplicados en el entorno real. |
 | [Registro de cumplimiento](CodingStandardCompliance.md) | Reglas aplicadas, excepciones y un aplazamiento de logging. | Es un registro de una corrección anterior, no el estándar completo. |
 | [Reglas de validación](../ValidationRules.md) | Políticas de entrada y comportamiento de los flujos. | Conserva descripciones del prototipo que deben contrastarse con el código actual. |
 
