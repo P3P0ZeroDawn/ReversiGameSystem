@@ -364,3 +364,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Structurizr cache and indexes
+.structurizr/
+
+# Structurizr compiled output (the source of truth is workspace.dsl)
+architecture/structurizr/workspace.json
