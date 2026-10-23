@@ -41,6 +41,12 @@ internal sealed class VerificationDatabaseTests
             Execute(DatabaseName, migration);
             Execute(DatabaseName, migration);
             Environment.SetEnvironmentVariable(ConnectionVariable, ConnectionString(DatabaseName));
+            Migration_OriginalPurposeConstraint_RejectsLogin();
+            string purposeMigration = File.ReadAllText(Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "migrations", "20261023_VerificationCodeLoginPurpose.sql"));
+            Execute(DatabaseName, purposeMigration);
+            Execute(DatabaseName, purposeMigration);
             Action[] checks =
             {
                 Consume_ValidCode_AcceptsOnlyOnce,
@@ -50,10 +56,12 @@ internal sealed class VerificationDatabaseTests
                 Replace_NewCode_InvalidatesPreviousDigest,
                 Consume_DifferentAccountAndPurpose_RejectsCodeTransfer,
                 Consume_ConcurrentRequests_AcceptsExactlyOne,
-                Migration_RepeatedApplication_PreservesLegacyRows
+                Migration_RepeatedApplication_PreservesLegacyRows,
+                Replace_LoginAndRegistration_UseDatabasePurposeCodes,
+                Migration_UnknownPurpose_RemainsRejected
             };
             foreach (Action check in checks) { check(); }
-            Console.WriteLine($"Passed {checks.Length} real SQL verification checks "
+            Console.WriteLine($"Passed {checks.Length + 1} real SQL verification checks "
                 + "in a disposable LocalDB database.");
         }
         finally
@@ -158,7 +166,36 @@ internal sealed class VerificationDatabaseTests
         TestAssert.AreEqual(2, Convert.ToInt32(Scalar(
             "SELECT COUNT(*) FROM dbo.VerificationCode "
             + "WHERE identityKey IS NULL AND failedAttempts = 0 "
-            + "AND codeHash = 'legacy-digest' AND emailAddress = 'legacy@example.invalid'", null)));
+            + "AND codeHash = 'legacy-digest' AND emailAddress = 'legacy@example.invalid' "
+            + "AND purposeCode IN ('ACCOUNT_CREATION', 'PASSWORD_RESET')", null)));
+    }
+
+    private void Migration_OriginalPurposeConstraint_RejectsLogin()
+    {
+        SqlException failure = TestAssert.Throws<SqlException>(() => Replace(Identity(9), "000012"));
+        TestAssert.AreEqual(547, failure.Number);
+    }
+
+    private void Replace_LoginAndRegistration_UseDatabasePurposeCodes()
+    {
+        VerificationIdentity login = Identity(10);
+        VerificationIdentity registration = VerificationIdentity.ForRegistration(
+            "PlayerTen", login.RecipientAddress);
+        Replace(login, "000013");
+        Replace(registration, "000014");
+        const string Query = "SELECT purposeCode FROM dbo.VerificationCode "
+            + "WHERE identityKey = @identity";
+        TestAssert.AreEqual("LOGIN", (string)Scalar(Query, login.Key));
+        TestAssert.AreEqual("ACCOUNT_CREATION", (string)Scalar(Query, registration.Key));
+    }
+
+    private void Migration_UnknownPurpose_RemainsRejected()
+    {
+        SqlException failure = TestAssert.Throws<SqlException>(() => Execute(DatabaseName, @"
+INSERT dbo.VerificationCode(emailAddress,purposeCode,codeHash,createdAtUtc,expiresAtUtc)
+VALUES ('invalid@example.invalid','UNKNOWN','test-digest',
+    SYSUTCDATETIME(),DATEADD(MINUTE,5,SYSUTCDATETIME()));"));
+        TestAssert.AreEqual(547, failure.Number);
     }
 
     private void Replace(VerificationIdentity identity, string code)
@@ -189,11 +226,15 @@ CREATE TABLE dbo.VerificationCode (
     emailAddress nvarchar(254) NOT NULL, purposeCode varchar(30) NOT NULL,
     codeHash varchar(255) NOT NULL, createdAtUtc datetime2(3) NOT NULL,
     expiresAtUtc datetime2(3) NOT NULL, usedAtUtc datetime2(3) NULL,
-    invalidatedAtUtc datetime2(3) NULL);
+    invalidatedAtUtc datetime2(3) NULL,
+    CONSTRAINT CK_VerificationCode_Purpose
+        CHECK (purposeCode IN ('ACCOUNT_CREATION', 'PASSWORD_RESET')),
+    CONSTRAINT CK_VerificationCode_Expiration CHECK (expiresAtUtc > createdAtUtc));
 INSERT dbo.VerificationCode(emailAddress,purposeCode,codeHash,createdAtUtc,expiresAtUtc)
-VALUES ('legacy@example.invalid','REGISTRATION','legacy-digest',SYSUTCDATETIME(),SYSUTCDATETIME()),
-       ('legacy@example.invalid','REGISTRATION','legacy-digest',
-        SYSUTCDATETIME(),SYSUTCDATETIME());");
+VALUES ('legacy@example.invalid','ACCOUNT_CREATION','legacy-digest',
+        SYSUTCDATETIME(),DATEADD(MINUTE,5,SYSUTCDATETIME())),
+       ('legacy@example.invalid','PASSWORD_RESET','legacy-digest',
+        SYSUTCDATETIME(),DATEADD(MINUTE,5,SYSUTCDATETIME()));");
     }
 
     private object Scalar(string sql, string? identity)

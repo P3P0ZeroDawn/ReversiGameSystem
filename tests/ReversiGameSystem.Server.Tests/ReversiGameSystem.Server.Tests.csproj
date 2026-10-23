@@ -29,5 +29,8 @@
     <None Include="..\..\database\migrations\20261022_VerificationCodeAttempts.sql"
           Link="migrations\20261022_VerificationCodeAttempts.sql"
           CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\database\migrations\20261023_VerificationCodeLoginPurpose.sql"
+          Link="migrations\20261023_VerificationCodeLoginPurpose.sql"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

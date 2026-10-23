@@ -173,6 +173,30 @@ para evitar acumulación sin interrumpir lecturas concurrentes.
 - [Reglas de validación](../ValidationRules.md), códigos de verificación.
 - Código actual de composición del servidor, configuración y persistencia.
 
+## Compatibilidad de propósitos de verificación
+
+La prueba manual del 23 de octubre de 2026 identificó un rechazo al guardar el código de
+login. La restricción real `CK_VerificationCode_Purpose` solo admitía `ACCOUNT_CREATION`
+y `PASSWORD_RESET`; convertir el nombre del enum directamente producía `LOGIN` o
+`REGISTRATION`, que no pertenecían a ese vocabulario.
+
+- El repositorio mapea explícitamente registro a `ACCOUNT_CREATION` y login a `LOGIN`.
+- `database/migrations/20261023_VerificationCodeLoginPurpose.sql` amplía la restricción
+  con `LOGIN` y conserva los dos valores anteriores. Se aplica después del script de
+  intentos, con una cuenta autorizada para modificar el esquema. No elimina registros
+  ni cambia el modelo generado; si existen datos incompatibles, la transacción falla.
+- Las pruebas SQL ahora reproducen también las restricciones reales de propósito y
+  vencimiento. El esquema anterior de las pruebas no incluía esas restricciones, por
+  lo que sus resultados previos no acreditaban esa compatibilidad.
+- La aplicación del script del 22 de octubre fue informada por el equipo y sus columnas
+  se observaron en la consulta de diagnóstico. La nueva migración del 23 de octubre queda
+  preparada para aplicación manual; no se ha ejecutado sobre la BD del proyecto.
+- Verificación de la corrección: compilación sin errores ni advertencias, 121 pruebas del
+  servidor y 11 comprobaciones SQL aprobadas en una BD LocalDB desechable. Estas últimas
+  incluyen el rechazo SQL 547 antes de ampliar la restricción, ambas migraciones aplicadas
+  dos veces, conservación histórica y rechazo de propósitos desconocidos. Revisión
+  independiente de solo lectura sin hallazgos materiales; no acredita el entorno final.
+
 ## Evidencia del paso de sesión y correo
 
 - Compilación del servidor con el SDK y del cliente con MSBuild de Visual Studio.

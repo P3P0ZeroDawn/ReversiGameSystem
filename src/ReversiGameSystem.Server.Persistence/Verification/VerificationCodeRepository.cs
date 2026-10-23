@@ -70,7 +70,7 @@ SELECT @result;";
                 },
                 new SqlParameter("@purpose", SqlDbType.VarChar, 30)
                 {
-                    Value = code.Purpose.ToString().ToUpperInvariant()
+                    Value = GetPurposeCode(code.Purpose)
                 });
             transaction.Commit();
         }
@@ -95,6 +95,13 @@ SELECT @result;";
             return (VerificationResult)result;
         }
     }
+
+    private static string GetPurposeCode(VerificationPurpose purpose) => purpose switch
+    {
+        VerificationPurpose.Login => "LOGIN",
+        VerificationPurpose.Registration => "ACCOUNT_CREATION",
+        _ => throw new ArgumentOutOfRangeException(nameof(purpose))
+    };
 
     private static SqlParameter IdentityParameter(string key)
     {
