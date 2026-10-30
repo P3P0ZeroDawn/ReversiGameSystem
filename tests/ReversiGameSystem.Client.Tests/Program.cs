@@ -23,6 +23,7 @@ internal static class Program
         Action[] tests =
         {
             ClientArchitectureTests.Assemblies_RuntimeReferences_ExcludeServerAndPersistence,
+            FailureDiagnosticsTests.ForLogging_ThrownFailure_PreservesOnlySafeDiagnostics,
             mapperTests.Map_SuccessfulOutcome_PreservesSession,
             mapperTests.Map_ExpiredSession_RejectsResponse,
             mapperTests.Map_MissingToken_RejectsResponse,

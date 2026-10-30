@@ -84,9 +84,9 @@ public sealed class SessionService : ISessionService
         catch (Exception exception)
         {
             // Exception messages from external providers may contain private request data.
-            _logger.LogError("The {Operation} operation failed. "
-                + "CorrelationId: {CorrelationId}. {Diagnostics}",
-                operation, correlationId, FailureDiagnostics.Describe(exception));
+            _logger.LogError(FailureDiagnostics.ForLogging(exception),
+                "The {Operation} operation failed. CorrelationId: {CorrelationId}",
+                operation, correlationId);
             throw ServiceFaultFactory.Create(operation, correlationId);
         }
     }

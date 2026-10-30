@@ -75,6 +75,7 @@ internal static class Program
             mailTests.Load_ProcessConfiguration_ValidatesPortAndRequiresEncryption,
             mailTests.Send_LocalServerWithheldBanner_CancelsWithinDeliveryBudget,
             FailureDiagnosticsTests.Describe_NestedProviderFailure_ExcludesMessagesAndPrivateData,
+            FailureDiagnosticsTests.ForLogging_ThrownFailure_PreservesOnlySafeDiagnostics,
             PlayerBoundaryTests.RegisterAccount_ThroughWcf_MapsCredentialsAndOutcome,
             PlayerBoundaryTests.GetProfile_ThroughWcf_MapsIdentityAndStatistics,
             PlayerBoundaryTests.GetProfile_MissingAndInvalidSessionThroughWcf_ReturnsTypedFaults,

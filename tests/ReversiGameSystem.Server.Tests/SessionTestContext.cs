@@ -66,12 +66,12 @@ internal sealed class RecordingSessionStore : IAuthenticatedSessionStore
     internal RecordingSessionStore(IUtcClock clock) =>
         _inner = new InMemoryAuthenticatedSessionStore(clock);
     internal int CreatedCount { get; private set; }
-    public AuthenticatedSessionRecord Create(long accountId, string username,
-        string emailAddress, string preferredLocaleCode)
+    public AuthenticatedSessionRecord Create(LoginAccount account)
     {
         CreatedCount++;
-        return _inner.Create(accountId, username, emailAddress, preferredLocaleCode);
+        return _inner.Create(account);
     }
-    public AuthenticatedSessionRecord? Find(string token) => _inner.Find(token);
+    public bool TryGet(string token, out AuthenticatedSessionRecord? session) =>
+        _inner.TryGet(token, out session);
     public void Revoke(string token) => _inner.Revoke(token);
 }

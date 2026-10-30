@@ -28,8 +28,7 @@ public sealed class SessionRegistry
     /// <returns>The authenticated session.</returns>
     public AuthenticatedSessionRecord CreateAuthenticated(LoginAccount account)
     {
-        return _authenticated.Create(account.AccountId, account.Username,
-            account.EmailAddress, account.PreferredLocaleCode);
+        return _authenticated.Create(account);
     }
 
     /// <summary>Validates and atomically reserves a guest display name.</summary>
@@ -63,17 +62,18 @@ public sealed class SessionRegistry
         }
     }
 
-    /// <summary>Finds a guest session that has not expired or been revoked.</summary>
+    /// <summary>Tries to retrieve a guest session that has not expired or been revoked.</summary>
     /// <param name="token">The opaque server token.</param>
-    /// <returns>The active guest session, or null.</returns>
-    public GuestSessionRecord? FindGuest(string token)
+    /// <param name="session">The active guest session, or null when absent.</param>
+    /// <returns>True when an active guest session exists.</returns>
+    public bool TryGetGuest(string token, out GuestSessionRecord? session)
     {
         lock (_gate)
         {
             RemoveExpiredGuests();
+            session = null;
             return !string.IsNullOrWhiteSpace(token)
-                && _guests.TryGetValue(token, out GuestSessionRecord? session)
-                ? session : null;
+                && _guests.TryGetValue(token, out session);
         }
     }
 

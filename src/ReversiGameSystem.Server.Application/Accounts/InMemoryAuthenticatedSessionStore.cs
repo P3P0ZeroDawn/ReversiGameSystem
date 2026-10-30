@@ -43,21 +43,22 @@ public sealed class InMemoryAuthenticatedSessionStore : IAuthenticatedSessionSto
     }
 
     /// <inheritdoc />
-    public AuthenticatedSessionRecord Create(
-        long accountId,
-        string username,
-        string emailAddress,
-        string preferredLocaleCode)
+    public AuthenticatedSessionRecord Create(LoginAccount account)
     {
+        if (account == null)
+        {
+            throw new ArgumentNullException(nameof(account));
+        }
+
         AuthenticatedSessionRecord session;
         do
         {
             session = new AuthenticatedSessionRecord(
                 CreateToken(),
-                accountId,
-                username,
-                emailAddress,
-                preferredLocaleCode,
+                account.AccountId,
+                account.Username,
+                account.EmailAddress,
+                account.PreferredLocaleCode,
                 _clock.UtcNow.Add(_sessionLifetime));
         }
         while (!_sessions.TryAdd(session.SessionToken, session));
@@ -66,21 +67,23 @@ public sealed class InMemoryAuthenticatedSessionStore : IAuthenticatedSessionSto
     }
 
     /// <inheritdoc />
-    public AuthenticatedSessionRecord? Find(string sessionToken)
+    public bool TryGet(string sessionToken, out AuthenticatedSessionRecord? session)
     {
+        session = null;
         if (string.IsNullOrWhiteSpace(sessionToken)
-            || !_sessions.TryGetValue(sessionToken, out AuthenticatedSessionRecord? session))
+            || !_sessions.TryGetValue(sessionToken, out AuthenticatedSessionRecord? active))
         {
-            return null;
+            return false;
         }
 
-        if (session.ExpiresAtUtc <= _clock.UtcNow)
+        if (active.ExpiresAtUtc <= _clock.UtcNow)
         {
             _sessions.TryRemove(sessionToken, out _);
-            return null;
+            return false;
         }
 
-        return session;
+        session = active;
+        return true;
     }
 
     /// <inheritdoc />

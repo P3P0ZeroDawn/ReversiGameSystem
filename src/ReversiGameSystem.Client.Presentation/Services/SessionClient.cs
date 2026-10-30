@@ -49,27 +49,8 @@ internal sealed class SessionClient
         string correlationId = Guid.NewGuid().ToString("D");
         try
         {
-            Task<TResult> pending;
-            using (OperationContextScope scope = new OperationContextScope(client.InnerChannel))
-            {
-                OperationContext.Current.OutgoingMessageHeaders.Add(MessageHeader.CreateHeader(
-                    "CorrelationId", "urn:reversi:diagnostics:v1", correlationId));
-                pending = operation(client);
-            }
-
-            TResult result = await pending;
-            try
-            {
-                client.Close();
-            }
-            catch (Exception exception) when (
-                exception is CommunicationException or TimeoutException)
-            {
-                _logger.LogWarning("The acknowledged session channel could not close. "
-                    + "CorrelationId: {CorrelationId}",
-                    correlationId);
-            }
-
+            TResult result = await InvokeAsync(client, operation, correlationId);
+            CloseAcknowledgedChannel(client, correlationId);
             return result;
         }
         catch (FaultException<Proxy.SessionFault> fault)
@@ -89,14 +70,38 @@ internal sealed class SessionClient
         catch (Exception exception) when (exception is CommunicationException or TimeoutException
             or SerializationException or InvalidOperationException)
         {
-            _logger.LogWarning("The session request failed with {ExceptionType}. "
-                + "CorrelationId: {CorrelationId}",
-                exception.GetType().FullName, correlationId);
+            _logger.LogWarning(FailureDiagnostics.ForLogging(exception),
+                "The session request failed. CorrelationId: {CorrelationId}", correlationId);
             throw;
         }
         finally
         {
             client.Abort();
+        }
+    }
+
+    private static Task<TResult> InvokeAsync<TResult>(Proxy.SessionServiceClient client,
+        Func<Proxy.SessionServiceClient, Task<TResult>> operation, string correlationId)
+    {
+        using (OperationContextScope scope = new OperationContextScope(client.InnerChannel))
+        {
+            OperationContext.Current.OutgoingMessageHeaders.Add(MessageHeader.CreateHeader(
+                "CorrelationId", "urn:reversi:diagnostics:v1", correlationId));
+            return operation(client);
+        }
+    }
+
+    private void CloseAcknowledgedChannel(Proxy.SessionServiceClient client, string correlationId)
+    {
+        try
+        {
+            client.Close();
+        }
+        catch (Exception exception) when (exception is CommunicationException or TimeoutException)
+        {
+            _logger.LogWarning(FailureDiagnostics.ForLogging(exception),
+                "The acknowledged session channel could not close. "
+                + "CorrelationId: {CorrelationId}", correlationId);
         }
     }
 }

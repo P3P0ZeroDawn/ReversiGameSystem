@@ -28,23 +28,17 @@ public interface IAuthenticatedSessionStore
     /// <summary>
     /// Creates an authenticated session.
     /// </summary>
-    /// <param name="accountId">The account id.</param>
-    /// <param name="username">The username.</param>
-    /// <param name="emailAddress">The email address.</param>
-    /// <param name="preferredLocaleCode">The preferred locale code.</param>
+    /// <param name="account">The verified account whose public identity is copied.</param>
     /// <returns>The result of the operation.</returns>
-    public AuthenticatedSessionRecord Create(
-        long accountId,
-        string username,
-        string emailAddress,
-        string preferredLocaleCode);
+    public AuthenticatedSessionRecord Create(LoginAccount account);
 
     /// <summary>
-    /// Finds an active authenticated session.
+    /// Tries to retrieve an active authenticated session.
     /// </summary>
     /// <param name="sessionToken">The session token.</param>
-    /// <returns>The result of the operation.</returns>
-    public AuthenticatedSessionRecord? Find(string sessionToken);
+    /// <param name="session">The active session, or null when absent.</param>
+    /// <returns>True when an active session exists.</returns>
+    public bool TryGet(string sessionToken, out AuthenticatedSessionRecord? session);
 }
 
 /// <summary>

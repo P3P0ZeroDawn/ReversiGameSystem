@@ -268,6 +268,7 @@
     <Compile Include="Services\AuthenticationOutcomeMapper.cs" />
     <Compile Include="Services\AuthenticationStatus.cs" />
     <Compile Include="Services\SessionClient.cs" />
+    <Compile Include="Services\FailureDiagnostics.cs" />
     <Compile Include="Services\AccountClient.cs" />
     <Compile Include="Services\PlayerProfileClient.cs" />
     <Compile Include="Services\LeaderboardClient.cs" />

@@ -161,9 +161,18 @@ para evitar acumulación sin interrumpir lecturas concurrentes.
   su actualización requiere el alcance que indique el equipo.
 - Revisar y estabilizar el estándar al terminar todos los pasos, por instrucción del equipo;
   no modificarlo durante este paso.
-- Conciliar la firma heredada de cuatro parámetros de `IAuthenticatedSessionStore.Create`
-  con el límite actual del estándar y los tipos inmutables existentes, sin agrupar dependencias
-  artificialmente. Los nuevos consumidores conservan por ahora esa firma ya publicada internamente.
+- La corrección del 30 de octubre sustituyó la firma de cuatro parámetros de
+  `IAuthenticatedSessionStore.Create` por `Create(LoginAccount)`, reutilizando la cuenta
+  verificada. Las búsquedas de sesiones autenticadas y de invitados usan `TryGet` y
+  `TryGetGuest`, con consumidores y pruebas adaptados.
+- El diagnóstico del login utiliza el overload `Exception` del logger con una copia segura
+  de la descripción. Conserva tipos originales, HRESULT, ubicaciones y cadena de causas
+  como texto; no conserva el objeto original, sus mensajes ni su `Data`. El objeto de log
+  tiene tipo `Exception` y no representa una nueva excepción lanzada por la aplicación.
+- Se separaron la confirmación del código en WPF y las tareas de invocación y cierre del
+  canal para reducir el tamaño de los métodos. Compilaron ambas soluciones y pasaron
+  122 pruebas del servidor y 133 del cliente; revisión independiente sin hallazgos
+  bloqueantes en ese alcance. No se modificaron contratos WCF ni el estándar.
 
 ## Fuentes de referencia
 

@@ -125,24 +125,35 @@ internal sealed class AccountAccessValidationTests
             TimeSpan.FromMinutes(30));
 
         // Act
-        AuthenticatedSessionRecord first = store.Create(
-            42,
-            "PlayerOne",
-            "player@example.com",
-            "en-US");
-        AuthenticatedSessionRecord second = store.Create(
-            42,
-            "PlayerOne",
-            "player@example.com",
-            "en-US");
-        AuthenticatedSessionRecord? active = store.Find(first.SessionToken);
-        clock.UtcNow = clock.UtcNow.AddMinutes(31);
-        AuthenticatedSessionRecord? expired = store.Find(first.SessionToken);
+        LoginAccount account = TestAssert.IsNotNull(FoundAccount("ACTIVE").Account);
+        AuthenticatedSessionRecord first = store.Create(account);
+        AuthenticatedSessionRecord second = store.Create(account);
+        bool found = store.TryGet(first.SessionToken, out AuthenticatedSessionRecord? active);
+        bool missing = store.TryGet("unknown", out AuthenticatedSessionRecord? absent);
+        bool empty = store.TryGet(string.Empty, out AuthenticatedSessionRecord? emptySession);
+        store.Revoke(second.SessionToken);
+        bool revoked = store.TryGet(second.SessionToken, out AuthenticatedSessionRecord? closed);
+        clock.UtcNow = first.ExpiresAtUtc;
+        bool expired = store.TryGet(first.SessionToken, out AuthenticatedSessionRecord? stale);
+        clock.UtcNow = clock.UtcNow.AddMinutes(-1);
+        bool removed = store.TryGet(first.SessionToken, out _);
 
         // Assert
         TestAssert.AreEqual(false, first.SessionToken == second.SessionToken);
+        TestAssert.AreEqual(true, found);
         TestAssert.AreEqual<long?>(42, active?.AccountId);
-        TestAssert.AreEqual<AuthenticatedSessionRecord?>(null, expired);
+        TestAssert.AreEqual(account.Username, first.Username);
+        TestAssert.AreEqual(account.EmailAddress, first.EmailAddress);
+        TestAssert.AreEqual(account.PreferredLocaleCode, first.PreferredLocaleCode);
+        TestAssert.AreEqual(false, missing);
+        TestAssert.AreEqual<AuthenticatedSessionRecord?>(null, absent);
+        TestAssert.AreEqual(false, empty);
+        TestAssert.AreEqual<AuthenticatedSessionRecord?>(null, emptySession);
+        TestAssert.AreEqual(false, revoked);
+        TestAssert.AreEqual<AuthenticatedSessionRecord?>(null, closed);
+        TestAssert.AreEqual(false, expired);
+        TestAssert.AreEqual<AuthenticatedSessionRecord?>(null, stale);
+        TestAssert.AreEqual(false, removed);
     }
 
     private static AccountLoginLookupResult FoundAccount(string statusCode)

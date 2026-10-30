@@ -44,11 +44,10 @@ internal sealed class SessionServiceTests
             // Assert
             TestAssert.AreEqual<long>(42, session.Account.AccountId);
             TestAssert.AreEqual("en-US", session.PreferredLocaleCode);
-            TestAssert.IsNotNull(context.Sessions.Find(session.SessionToken));
+            TestAssert.AreEqual(true, context.Sessions.TryGet(session.SessionToken, out _));
             TestAssert.AreEqual(1, context.Sessions.CreatedCount);
             channel.CloseSession(session.SessionToken);
-            TestAssert.AreEqual<AuthenticatedSessionRecord?>(null,
-                context.Sessions.Find(session.SessionToken));
+            TestAssert.AreEqual(false, context.Sessions.TryGet(session.SessionToken, out _));
             channel.CloseSession(session.SessionToken);
             return true;
         });
@@ -152,13 +151,23 @@ internal sealed class SessionServiceTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
+        TestAssert.AreEqual(false,
+            context.Registry.TryGetGuest("unknown", out GuestSessionRecord? absent));
+        TestAssert.AreEqual<GuestSessionRecord?>(null, absent);
+        TestAssert.AreEqual(false,
+            context.Registry.TryGetGuest(string.Empty, out GuestSessionRecord? empty));
+        TestAssert.AreEqual<GuestSessionRecord?>(null, empty);
         GuestSessionRecord previous = context.Registry.CreateGuest("Visitor");
+        TestAssert.AreEqual(true,
+            context.Registry.TryGetGuest(previous.SessionToken, out GuestSessionRecord? active));
+        TestAssert.AreEqual(previous, active);
         context.UtcNow = previous.ExpiresAtUtc;
         // Act
         GuestSessionRecord current = context.Registry.CreateGuest("Visitor");
         // Assert
-        TestAssert.AreEqual<GuestSessionRecord?>(null,
-            context.Registry.FindGuest(previous.SessionToken));
+        TestAssert.AreEqual(false,
+            context.Registry.TryGetGuest(previous.SessionToken, out GuestSessionRecord? expired));
+        TestAssert.AreEqual<GuestSessionRecord?>(null, expired);
         TestAssert.AreEqual("Guest-Visitor", current.DisplayName);
         TestAssert.IsTrue(previous.SessionToken != current.SessionToken,
             "A new guest must receive a new token.");
@@ -175,14 +184,15 @@ internal sealed class SessionServiceTests
                 channel.OpenGuestSession("Visitor");
             // Assert
             TestAssert.AreEqual("Guest-Visitor", guest.DisplayName);
-            TestAssert.IsNotNull(context.Registry.FindGuest(guest.SessionToken));
+            TestAssert.AreEqual(true, context.Registry.TryGetGuest(guest.SessionToken, out _));
             try { channel.OpenGuestSession("visitor"); }
             catch (FaultException<SessionFault> fault)
             {
                 TestAssert.AreEqual(SessionFailure.GuestNameUnavailable, fault.Detail.Reason);
                 channel.CloseSession(guest.SessionToken);
-                TestAssert.AreEqual<GuestSessionRecord?>(null,
-                    context.Registry.FindGuest(guest.SessionToken));
+                TestAssert.AreEqual(false,
+                    context.Registry.TryGetGuest(guest.SessionToken, out GuestSessionRecord? revoked));
+                TestAssert.AreEqual<GuestSessionRecord?>(null, revoked);
                 TestAssert.AreEqual("Guest-Visitor",
                     channel.OpenGuestSession("Visitor").DisplayName);
                 return true;

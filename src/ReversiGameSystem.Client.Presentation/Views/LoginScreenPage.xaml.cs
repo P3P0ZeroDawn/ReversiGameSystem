@@ -1,5 +1,6 @@
 using System;
 using System.ServiceModel;
+using System.Threading.Tasks;
 using Proxy = ReversiGameSystem.ServerProxy;
 using System.Windows;
 using System.Windows.Controls;
@@ -51,30 +52,7 @@ public partial class LoginScreenPage : Page
         {
             await ClientRuntime.SessionService.RequestLoginCodeAsync(login, passwordBox.Password);
             passwordBox.Clear();
-            TextInputDialogOptions options = new TextInputDialogOptions(
-                "LoginScreen_VerificationCodeDialogTitle",
-                "LoginScreen_VerificationCodeDialogMessage",
-                "LoginScreen_VerificationCodeDialogLabel")
-            {
-                RequireText = true,
-                ExactDigitCount = 6
-            };
-            while (_dialogService.TryGetText(this, options, out string code))
-            {
-                try
-                {
-                    Proxy.AuthenticatedSession session =
-                        await ClientRuntime.SessionService.CompleteLoginAsync(login, code);
-                    HandleLoginOutcome(AuthenticationOutcomeMapper.Map(session));
-                    return;
-                }
-                catch (FaultException<Proxy.SessionFault> fault) when (
-                    fault.Detail.Reason == Proxy.SessionFailure.InvalidVerificationCode)
-                {
-                    ShowLoginError("LoginScreen_InvalidCodeTitle",
-                        "LoginScreen_InvalidCodeMessage");
-                }
-            }
+            await ConfirmLoginAsync(login);
         }
         catch (FaultException<Proxy.SessionFault> fault)
         {
@@ -89,6 +67,33 @@ public partial class LoginScreenPage : Page
         finally
         {
             SetSessionActionsEnabled(true);
+        }
+    }
+
+    private async Task ConfirmLoginAsync(string login)
+    {
+        TextInputDialogOptions options = new TextInputDialogOptions(
+            "LoginScreen_VerificationCodeDialogTitle",
+            "LoginScreen_VerificationCodeDialogMessage",
+            "LoginScreen_VerificationCodeDialogLabel")
+        {
+            RequireText = true,
+            ExactDigitCount = 6
+        };
+        while (_dialogService.TryGetText(this, options, out string code))
+        {
+            try
+            {
+                Proxy.AuthenticatedSession session =
+                    await ClientRuntime.SessionService.CompleteLoginAsync(login, code);
+                HandleLoginOutcome(AuthenticationOutcomeMapper.Map(session));
+                return;
+            }
+            catch (FaultException<Proxy.SessionFault> fault) when (
+                fault.Detail.Reason == Proxy.SessionFailure.InvalidVerificationCode)
+            {
+                ShowLoginError("LoginScreen_InvalidCodeTitle", "LoginScreen_InvalidCodeMessage");
+            }
         }
     }
 

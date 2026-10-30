@@ -167,19 +167,16 @@ internal sealed class PlayerProfileSessionStoreStub : IAuthenticatedSessionStore
 
     internal string? SessionToken { get; private set; }
 
-    public AuthenticatedSessionRecord Create(
-        long accountId,
-        string username,
-        string emailAddress,
-        string preferredLocaleCode)
+    public AuthenticatedSessionRecord Create(LoginAccount account)
     {
         throw new NotSupportedException();
     }
 
-    public AuthenticatedSessionRecord? Find(string sessionToken)
+    public bool TryGet(string sessionToken, out AuthenticatedSessionRecord? session)
     {
         SessionToken = sessionToken;
-        return Session?.SessionToken == sessionToken ? Session : null;
+        session = Session?.SessionToken == sessionToken ? Session : null;
+        return session != null;
     }
 
     public void Revoke(string sessionToken)

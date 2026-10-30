@@ -77,8 +77,11 @@ public sealed class PlayerProfileReader
             throw new ProfileRejectedException(ProfileRejection.MissingSessionToken);
         }
 
-        AuthenticatedSessionRecord session = _sessions.Find(sessionToken)
-            ?? throw new ProfileRejectedException(ProfileRejection.InvalidSession);
+        if (!_sessions.TryGet(sessionToken, out AuthenticatedSessionRecord? session)
+            || session == null)
+        {
+            throw new ProfileRejectedException(ProfileRejection.InvalidSession);
+        }
         PlayerProfileStoreResult result = _profiles.GetAsync(session.AccountId)
             .GetAwaiter().GetResult();
         if (result.Outcome == PlayerProfileStoreOutcome.Unavailable)

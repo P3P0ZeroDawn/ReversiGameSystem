@@ -83,8 +83,11 @@ public sealed class PlayerProfileEditor
             throw new ProfileRejectedException(ProfileRejection.MissingSessionToken);
         }
 
-        AuthenticatedSessionRecord session = _sessions.Find(sessionToken)
-            ?? throw new ProfileRejectedException(ProfileRejection.InvalidSession);
+        if (!_sessions.TryGet(sessionToken, out AuthenticatedSessionRecord? session)
+            || session == null)
+        {
+            throw new ProfileRejectedException(ProfileRejection.InvalidSession);
+        }
         if (!_profiles.IsActive(session.AccountId))
         {
             throw new ProfileRejectedException(ProfileRejection.InactiveAccount);
