@@ -16,6 +16,13 @@ internal static class ServiceFaultFactory
         {
             nameof(IAccountAccessService.RegisterAccountAsync) => "ACCOUNT_REGISTRATION_FAILURE",
             nameof(ILeaderboardService.GetLeaderboard) => "LEADERBOARD_OPERATION_FAILURE",
+            nameof(IFriendshipService.OpenFriendshipChannel)
+                or nameof(IFriendshipService.GetFriends)
+                or nameof(IFriendshipService.FindPlayers)
+                or nameof(IFriendshipService.SendFriendRequest)
+                or nameof(IFriendshipService.GetPendingFriendRequests)
+                or nameof(IFriendshipService.RespondToFriendRequest)
+                or nameof(IFriendshipService.RemoveFriend) => "FRIENDSHIP_OPERATION_FAILURE",
             nameof(IPlayerProfileService.GetPlayerProfile)
                 or nameof(IPlayerProfileService.GetProfileImage)
                 or nameof(IPlayerProfileService.ChangeUsername)

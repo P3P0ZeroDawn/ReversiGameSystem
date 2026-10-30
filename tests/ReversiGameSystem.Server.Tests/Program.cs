@@ -6,13 +6,21 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--friendship-host")
+        {
+            return RunTests(new Action[] { ReviewPresenceHost.Run });
+        }
+        if (args.Length == 1 && args[0] == "--review-accounts")
+        {
+            return RunTests(new Action[] { ReviewAccountDatabaseTests.RunDisposableDatabaseChecks });
+        }
         if (args.Length == 1 && args[0] == "--database")
         {
             return RunTests(new Action[] { VerificationDatabaseTests.RunDisposableDatabaseChecks });
         }
         if (args.Length != 0)
         {
-            Console.Error.WriteLine("Usage: ReversiGameSystem.Server.Tests.exe [--database]");
+            Console.Error.WriteLine("Usage: Server.Tests.exe [--database|--review-accounts|--friendship-host]");
             return 2;
         }
         System.Collections.Generic.List<Action> tests =
@@ -30,6 +38,7 @@ internal static class Program
         SessionServiceTests sessionTests = new SessionServiceTests();
         VerificationCodeServiceTests codeTests = new VerificationCodeServiceTests();
         VerificationEmailSenderTests mailTests = new VerificationEmailSenderTests();
+        FriendshipPresenceTests presenceTests = new FriendshipPresenceTests();
         return new Action[]
         {
             serializationTests.AuthenticatedSession_RoundTrip_PreservesAccountAndExpiry,
@@ -76,6 +85,15 @@ internal static class Program
             mailTests.Send_LocalServerWithheldBanner_CancelsWithinDeliveryBudget,
             FailureDiagnosticsTests.Describe_NestedProviderFailure_ExcludesMessagesAndPrivateData,
             FailureDiagnosticsTests.ForLogging_ThrownFailure_PreservesOnlySafeDiagnostics,
+            presenceTests.DuplexChannels_PublishPresenceAndOwnFriendSnapshot,
+            presenceTests.MultipleSessions_StayOnlineUntilLastRevocation,
+            presenceTests.ClosedAndReplacementChannels_PreservePresence,
+            presenceTests.RelationshipFailure_ClosesChannelAndAllowsPresenceRecovery,
+            presenceTests.InvalidInactiveAndExpiredSessions_ReturnTypedFaults,
+            presenceTests.UnsupportedOperations_ReturnDeclaredServiceFaultWithoutRepositoryAccess,
+            presenceTests.ExpiredReceiver_ReceivesNoCallbacks,
+            presenceTests.ExpirySweep_PublishesDisconnection,
+            presenceTests.EndedFriendship_ReceivesNoPresenceCallbacks,
             PlayerBoundaryTests.RegisterAccount_ThroughWcf_MapsCredentialsAndOutcome,
             PlayerBoundaryTests.GetProfile_ThroughWcf_MapsIdentityAndStatistics,
             PlayerBoundaryTests.GetProfile_MissingAndInvalidSessionThroughWcf_ReturnsTypedFaults,

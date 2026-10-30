@@ -263,6 +263,10 @@
     <Compile Include="Services\FriendRemovalService.cs" />
     <Compile Include="Services\ChatService.cs" />
     <Compile Include="Services\ClientRuntime.cs" />
+    <Compile Include="Services\FriendshipClient.cs" />
+    <Compile Include="Services\FriendshipCallback.cs" />
+    <Compile Include="Services\FriendshipSnapshot.cs" />
+    <Compile Include="Views\FriendItem.cs" />
     <Compile Include="Services\AuthenticatedAccountSession.cs" />
     <Compile Include="Services\AuthenticationOutcome.cs" />
     <Compile Include="Services\AuthenticationOutcomeMapper.cs" />

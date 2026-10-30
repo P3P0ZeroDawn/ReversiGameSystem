@@ -26,6 +26,10 @@
     <ProjectReference Include="..\..\src\ReversiGameSystem.Server.ServiceApi\ReversiGameSystem.Server.ServiceApi.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="Fixtures\ReviewAccountSchema.sql" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\database\test-data\PrepareReviewFriendship.sql"
+          Link="test-data\PrepareReviewFriendship.sql"
+          CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\database\migrations\20261022_VerificationCodeAttempts.sql"
           Link="migrations\20261022_VerificationCodeAttempts.sql"
           CopyToOutputDirectory="PreserveNewest" />

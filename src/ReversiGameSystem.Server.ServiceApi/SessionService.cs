@@ -18,6 +18,9 @@ public sealed class SessionService : ISessionService
     private readonly ISessionHandler _handler;
     private readonly ILogger<SessionService> _logger;
 
+    /// <summary>Notifies server observers after a session has been revoked.</summary>
+    public event Action<string>? SessionClosed;
+
     /// <summary>Initializes the session boundary.</summary>
     /// <param name="handler">The server session use cases.</param>
     /// <param name="logger">The boundary logger.</param>
@@ -54,8 +57,23 @@ public sealed class SessionService : ISessionService
     public void CloseSession(string sessionToken) => Execute(nameof(CloseSession), () =>
     {
         _handler.CloseSession(sessionToken);
+        NotifySessionClosed(sessionToken);
         return true;
     });
+
+    private void NotifySessionClosed(string sessionToken)
+    {
+        try
+        {
+            SessionClosed?.Invoke(sessionToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(FailureDiagnostics.ForLogging(exception),
+                "A server observer could not process a confirmed session closure. "
+                + "CorrelationId: {CorrelationId}", CorrelationContext.GetOrCreate());
+        }
+    }
 
     private TResult Execute<TResult>(string operation, Func<TResult> action)
     {

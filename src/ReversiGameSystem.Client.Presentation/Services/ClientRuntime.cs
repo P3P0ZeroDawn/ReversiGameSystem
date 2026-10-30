@@ -10,6 +10,11 @@ internal static class ClientRuntime
     private static readonly Lazy<SessionClient> Session =
         new Lazy<SessionClient>(CreateSessionService);
 
+    private static readonly Lazy<FriendshipClient> Friendship =
+        new Lazy<FriendshipClient>(() => new FriendshipClient(Logging.Value.CreateLogger<FriendshipClient>()));
+
+    internal static FriendshipClient FriendshipService => Friendship.Value;
+
     internal static AccountClient AccountService { get; } =
         new AccountClient(Logging.Value.CreateLogger<AccountClient>());
     internal static PlayerProfileClient ProfileService { get; } =
@@ -22,6 +27,10 @@ internal static class ClientRuntime
 
     internal static void Dispose()
     {
+        if (Friendship.IsValueCreated)
+        {
+            Friendship.Value.Dispose();
+        }
         if (Logging.IsValueCreated)
         {
             Logging.Value.Dispose();

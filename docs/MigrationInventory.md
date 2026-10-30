@@ -147,10 +147,12 @@ para evitar acumulación sin interrumpir lecturas concurrentes.
 - Registro todavía consume `IAccountAccessService.RegisterAccountAsync`, el contrato
   temporal preexistente. Falta completar el flujo por código de `IAccountService` y retirar
   ese endpoint y `ServiceFault.IsTransient`; los contratos nuevos mantienen firmas síncronas.
-- Falta conectar navegación y consulta de perfiles ajenos mediante identificador de cuenta:
-  el prototipo de amigos todavía navega con nombre. El perfil propio ya usa el servicio real.
-- Las funciones de partidas, amistad, chat y preferencias que siguen como prototipos requieren
-  sus implementaciones remotas. La presencia de sus contratos en el proxy no las publica.
+- Falta conectar navegación y consulta de perfiles ajenos mediante identificador de cuenta.
+  La lista de amigos ahora utiliza identificadores reales y oculta acciones todavía pendientes.
+  El perfil propio ya usa el servicio real.
+- Las funciones de partidas, gestión de amistades, chat y preferencias que siguen como
+  prototipos requieren sus implementaciones remotas. La consulta de amigos y su presencia
+  ya están publicadas; disponer de los demás contratos en el proxy no los implementa.
 - Las pruebas WCF de perfil y clasificación usan sustitutos de persistencia. Falta validar
   esos repositorios contra el esquema y datos del entorno final.
 
@@ -181,6 +183,67 @@ para evitar acumulación sin interrumpir lecturas concurrentes.
 - [Diseño](Design%20Project/Documento-Entrega.md), componente C-11 y separación de responsabilidades.
 - [Reglas de validación](../ValidationRules.md), códigos de verificación.
 - Código actual de composición del servidor, configuración y persistencia.
+
+## Preparación de cuentas para la revisión
+
+El primer paso de la revisión de presencia y lobby conserva el registro remoto temporal
+y el login por código existentes. No incorpora invitaciones ni migra todavía el registro
+al contrato definitivo de cuenta.
+
+- `database/test-data/PrepareReviewFriendship.sql` prepara exclusivamente la amistad de
+  `p3p0` y `cesardoc`. Las cuentas deben existir, estar activas y ser distintas.
+  Con `@Apply = 0` solo muestra la pareja; con `@Apply = 1` inserta o acepta esa amistad,
+  sin modificar otras relaciones. No es una migración del esquema ni un flujo del producto.
+- La pareja de prueba se ajustó por indicación del equipo a `p3p0` y `cesardoc`.
+  Su existencia y estado deben comprobarse con la consulta del script antes de aplicar
+  la amistad. No se generaron contraseñas ni cuentas automáticamente y no se modificó
+  la BD del proyecto.
+- El modo explícito `ReversiGameSystem.Server.Tests.exe --review-accounts` comprobó diez
+  escenarios en una BD LocalDB desechable: registro y persistencia de dos cuentas y sus
+  preferencias, hash con sal, rechazo de contraseña/código incorrectos, dos sesiones
+  distintas, consulta sin escritura, preparación acotada, repetición y rechazo de pareja
+  ausente o idéntica. La variable de conexión se restaura y la BD temporal se elimina.
+- Las pruebas usan los repositorios EF reales y el flujo de sesión real. El envío de correo
+  se sustituye por una captura en memoria y no se prueba la interfaz WPF. El esquema de
+  prueba reproduce el modelo y las restricciones relevantes; no certifica todas las
+  restricciones, triggers o permisos del entorno final.
+
+## Presencia de amigos para la revisión
+
+- `IFriendshipService` publica `OpenFriendshipChannel` y `GetFriends` en
+  `net.tcp://localhost:8094/ReversiGameSystem/Friendship`. Conserva las firmas síncronas
+  del catálogo y los callbacks existentes; el consumidor WPF utiliza el proxy asíncrono.
+- El repositorio EF consulta únicamente amistades aceptadas, vigentes y entre cuentas
+  activas. No publica una lista general de usuarios conectados ni datos privados de cuenta.
+- Una cuenta aparece conectada mientras conserve al menos un canal válido. Cerrar una
+  instancia no desconecta las demás sesiones de esa cuenta. El cierre de sesión revoca su
+  canal; también se comprueban vencimiento, cierre y fallo de comunicación.
+- El cliente conserva el canal al navegar, integra callbacks con la consulta inicial y
+  presenta disponibilidad, error y reintento en la lista de amigos. Oculta las acciones de
+  amistad, perfil ajeno, invitación y chat que este paso no implementa.
+- La consulta de mantenimiento se ejecuta cada diez segundos sin solaparse. El binding de
+  amistad utiliza recepción de 45 segundos y envío de cinco segundos, con transporte
+  Windows cifrado. La detección de una pérdida de red depende de los tiempos de comunicación;
+  no es instantánea. La recuperación después de un fallo se solicita desde la interfaz.
+- Las demás operaciones de amistad devuelven el `ServiceFault` declarado; no simulan éxito.
+  No se necesitan cambios nuevos de esquema para esta consulta y presencia.
+- Verificación: **131 pruebas del servidor y 139 del cliente aprobadas**, además de las
+  diez comprobaciones de cuentas en LocalDB. La regresión cubre el cierre del canal tras
+  un fallo al consultar la relación y su recuperación, así como el cierre durante una
+  consulta de mantenimiento pendiente. Compilaron los proyectos de pruebas y el host;
+  este último usó una salida separada para respetar los archivos del servidor en ejecución.
+- `Server.Tests.exe --friendship-host` y `Client.Tests.exe --friendship-end-to-end`
+  comprobaron dos consumidores reales con el proxy generado, EF y una BD desechable,
+  mediante `net.tcp` protegido en 18091/18094: login de ambas cuentas sintéticas,
+  presencia mutua, callback de desconexión y rechazo de sesión inválida. No se envió correo
+  externo. El host temporal se detuvo y su base se eliminó al terminar.
+- Hubo revisión independiente de producción y corrección del coordinador; las pruebas
+  añadidas y los cambios finales tuvieron autoinspección. No se acredita inspección visual
+  de WPF ni comunicación entre dos computadoras. Para la prueba manual hay que cerrar los
+  procesos anteriores, recompilar y reiniciar. La configuración actual utiliza `localhost`;
+  queda preparar dirección, seguridad y acceso de red para el escenario entre equipos.
+- El siguiente paso sigue siendo el lobby compartido con participantes visibles, sin
+  comenzar partida, invitaciones ni chat.
 
 ## Compatibilidad de propósitos de verificación
 

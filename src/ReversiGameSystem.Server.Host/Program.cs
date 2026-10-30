@@ -7,6 +7,7 @@ using ReversiGameSystem.Server.Application.Verification;
 using ReversiGameSystem.Server.Application.Players;
 using ReversiGameSystem.Server.Application.Leaderboards;
 using ReversiGameSystem.Server.Persistence.Accounts;
+using ReversiGameSystem.Server.Persistence.Friendships;
 using ReversiGameSystem.Server.Persistence.Players;
 using ReversiGameSystem.Server.Persistence.Leaderboards;
 using ReversiGameSystem.Server.Persistence.Configuration;
@@ -34,18 +35,25 @@ internal static class Program
                 SystemUtcClock clock = new SystemUtcClock();
                 InMemoryAuthenticatedSessionStore sessions =
                     new InMemoryAuthenticatedSessionStore(clock);
-                ServiceHost[] hosts =
+                using (FriendshipService friendship = new FriendshipService(sessions,
+                    new FriendRepository(), loggerFactory.CreateLogger<FriendshipService>()))
                 {
-                    new ServiceHost(CreateAccountAccessService(serviceLogger)),
-                    new ServiceHost(CreateSessionService(
-                        loggerFactory.CreateLogger<SessionService>(), sessions, clock)),
-                    new ServiceHost(CreatePlayerProfileService(
-                        loggerFactory.CreateLogger<PlayerProfileService>(), sessions)),
-                    new ServiceHost(new LeaderboardService(new GetLeaderboardHandler(
-                        new EntityFrameworkLeaderboardStore()),
-                        loggerFactory.CreateLogger<LeaderboardService>()))
-                };
-                return Run(hosts, hostLogger);
+                    SessionService session = CreateSessionService(
+                        loggerFactory.CreateLogger<SessionService>(), sessions, clock);
+                    session.SessionClosed += friendship.RemoveSession;
+                    ServiceHost[] hosts =
+                    {
+                        new ServiceHost(CreateAccountAccessService(serviceLogger)),
+                        new ServiceHost(session),
+                        new ServiceHost(CreatePlayerProfileService(
+                            loggerFactory.CreateLogger<PlayerProfileService>(), sessions)),
+                        new ServiceHost(new LeaderboardService(new GetLeaderboardHandler(
+                            new EntityFrameworkLeaderboardStore()),
+                            loggerFactory.CreateLogger<LeaderboardService>())),
+                        new ServiceHost(friendship)
+                    };
+                    return Run(hosts, hostLogger);
+                }
             }
             catch (Exception exception)
             {

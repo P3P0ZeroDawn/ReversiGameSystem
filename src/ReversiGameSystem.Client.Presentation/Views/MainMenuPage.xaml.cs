@@ -11,7 +11,7 @@ using Proxy = ReversiGameSystem.ServerProxy;
 namespace ReversiGameSystem.Views;
 
 /// <summary>
-/// Displays the main navigation and placeholders for player lists.
+/// Displays main navigation and server-provided player lists.
 /// </summary>
 public partial class MainMenuPage : Page
 {
@@ -20,7 +20,8 @@ public partial class MainMenuPage : Page
         new DialogService(LocalizationManager.Instance);
     private readonly InstructionsService _instructionsService =
         new InstructionsService(key => LocalizationManager.Instance[key]);
-    private bool _friendsLoaded;
+    private bool _friendsLoading;
+    private bool _friendsSubscribed;
     private bool _leaderboardLoaded;
 
     /// <summary>
@@ -41,7 +42,6 @@ public partial class MainMenuPage : Page
         UpdateGuestIdentity();
         guestIdentityPanel.Visibility = Visibility.Visible;
         friendsCardBorder.Visibility = Visibility.Collapsed;
-        addFriendButton.IsEnabled = false;
         matchHistoryButton.Visibility = Visibility.Collapsed;
         myProfileButton.Visibility = Visibility.Collapsed;
         settingsButton.Visibility = Visibility.Collapsed;
@@ -49,9 +49,10 @@ public partial class MainMenuPage : Page
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        if (_guestName == null && !_friendsLoaded)
+        if (_guestName == null)
         {
-            LoadFriends();
+            SubscribeFriends();
+            await LoadFriendsAsync();
         }
 
         if (!_leaderboardLoaded)
@@ -114,37 +115,101 @@ public partial class MainMenuPage : Page
             "MainMenu_TopWinnersUnavailableMessage");
     }
 
-    private void LoadFriends()
+    private void SubscribeFriends()
     {
-        _friendsLoaded = true;
-        string username = AccountPreviewState.Username
-            ?? LocalizationManager.Instance["Game_DefaultPlayerName"];
-        FriendsService service = new FriendsService(
-            username,
-            FriendshipPreviewState.GetStore(username));
-        FriendsRetrievalResult result = service.TryGetFriends(
-            out IReadOnlyList<FriendCandidate> friends);
-        if (result != FriendsRetrievalResult.Success)
+        if (_friendsSubscribed)
         {
-            friendsItemsControl.ItemsSource = null;
-            friendsEmptyTextBlock.Visibility = Visibility.Collapsed;
-            string prefix = result == FriendsRetrievalResult.ServerConnectionFailed
-                ? "Friends_ServerConnectionFailed"
-                : "Friends_RetrievalError";
-            _dialogService.ShowError(this, prefix + "Title", prefix + "Message");
             return;
         }
+        ClientRuntime.FriendshipService.FriendsChanged += OnFriendsChanged;
+        ClientRuntime.FriendshipService.ConnectionLost += OnFriendshipConnectionLost;
+        _friendsSubscribed = true;
+    }
 
-        List<FriendItem> items = new List<FriendItem>();
-        foreach (FriendCandidate friend in friends)
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        if (_friendsSubscribed)
         {
-            items.Add(new FriendItem { Username = friend.Username });
+            ClientRuntime.FriendshipService.FriendsChanged -= OnFriendsChanged;
+            ClientRuntime.FriendshipService.ConnectionLost -= OnFriendshipConnectionLost;
+            _friendsSubscribed = false;
         }
+    }
 
+    private async System.Threading.Tasks.Task LoadFriendsAsync()
+    {
+        if (_friendsLoading)
+        {
+            return;
+        }
+        _friendsLoading = true;
+        refreshFriendsButton.IsEnabled = false;
+        friendsStatusTextBlock.Text = LocalizationManager.Instance["Friends_Loading"];
+        try
+        {
+            await ClientRuntime.FriendshipService.GetFriendsAsync(
+                AccountPreviewState.SessionToken ?? string.Empty);
+            if (IsLoaded)
+            {
+                RenderFriends();
+            }
+        }
+        catch (FaultException<Proxy.SessionFault>)
+        {
+            ShowFriendsUnavailable("Friends_SessionUnavailable");
+        }
+        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception)
+            || exception is ArgumentException)
+        {
+            ShowFriendsUnavailable("Friends_PresenceUnavailable");
+        }
+        finally
+        {
+            _friendsLoading = false;
+            refreshFriendsButton.IsEnabled = true;
+        }
+    }
+
+    private async void OnRefreshFriendsClick(object sender, RoutedEventArgs e) => await LoadFriendsAsync();
+
+    private void OnFriendsChanged() => Dispatcher.BeginInvoke(new Action(() =>
+    {
+        if (_friendsSubscribed && !_friendsLoading)
+        {
+            RenderFriends();
+        }
+    }));
+
+    private void OnFriendshipConnectionLost() => Dispatcher.BeginInvoke(new Action(() =>
+    {
+        if (_friendsSubscribed)
+        {
+            ShowFriendsUnavailable("Friends_PresenceUnavailable");
+        }
+    }));
+
+    private void ShowFriendsUnavailable(string key)
+    {
+        friendsItemsControl.ItemsSource = null;
+        friendsEmptyTextBlock.Visibility = Visibility.Collapsed;
+        friendsStatusTextBlock.Text = LocalizationManager.Instance[key];
+    }
+
+    private void RenderFriends()
+    {
+        if (!ClientRuntime.FriendshipService.IsConnected)
+        {
+            ShowFriendsUnavailable("Friends_PresenceUnavailable");
+            return;
+        }
+        List<FriendItem> items = new List<FriendItem>();
+        foreach (Proxy.FriendSummary friend in ClientRuntime.FriendshipService.GetSnapshot())
+        {
+            items.Add(new FriendItem(friend));
+        }
         friendsItemsControl.ItemsSource = items;
-        friendsEmptyTextBlock.Visibility = items.Count == 0
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        friendsEmptyTextBlock.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        friendsStatusTextBlock.Text = string.Empty;
     }
 
     private void OnCreateGameClick(object sender, RoutedEventArgs e)
@@ -164,90 +229,6 @@ public partial class MainMenuPage : Page
     private void OnMatchHistoryClick(object sender, RoutedEventArgs e)
     {
         NavigationService?.Navigate(new MatchHistoryPage());
-    }
-
-    private void OnAddFriendClick(object sender, RoutedEventArgs e)
-    {
-        NavigationService?.Navigate(new AddFriendsPage());
-    }
-
-    private void OnViewFriendRequestsClick(object sender, RoutedEventArgs e)
-    {
-        NavigationService?.Navigate(new FriendRequestsPage());
-    }
-
-    private void OnFriendProfileClick(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button button && button.Tag is string username)
-        {
-            NavigationService?.Navigate(new AccountInformationPage(
-                username,
-                AccountInformationReturnTarget.Friends));
-        }
-    }
-
-    private void OnRemoveFriendClick(object sender, RoutedEventArgs e)
-    {
-        if (sender is not Button button || button.Tag is not string friendUsername)
-        {
-            return;
-        }
-
-        ConfirmationDialogOptions options = new ConfirmationDialogOptions(
-            "FriendRemoval_ConfirmationTitle",
-            "FriendRemoval_ConfirmationMessage",
-            "FriendRemoval_ConfirmButton",
-            "Common_CancelButton")
-        {
-            MessageArguments = new object[] { friendUsername }
-        };
-        if (!_dialogService.Confirm(this, options))
-        {
-            return;
-        }
-
-        string username = AccountPreviewState.Username
-            ?? LocalizationManager.Instance["Game_DefaultPlayerName"];
-        FriendRemovalService service = new FriendRemovalService(
-            username,
-            FriendshipPreviewState.GetStore(username));
-        HandleFriendRemoval(service.Remove(friendUsername), friendUsername);
-    }
-
-    private void HandleFriendRemoval(
-        FriendRemovalResult result,
-        string friendUsername)
-    {
-        switch (result)
-        {
-            case FriendRemovalResult.Success:
-                _dialogService.ShowInformation(
-                    this,
-                    "FriendRemoval_SuccessTitle",
-                    "FriendRemoval_SuccessMessage",
-                    friendUsername);
-                LoadFriends();
-                break;
-            case FriendRemovalResult.NotFound:
-                _dialogService.ShowInformation(
-                    this,
-                    "FriendRemoval_NotFoundTitle",
-                    "FriendRemoval_NotFoundMessage");
-                LoadFriends();
-                break;
-            case FriendRemovalResult.ServerConnectionFailed:
-                _dialogService.ShowError(
-                    this,
-                    "FriendRemoval_ServerConnectionFailedTitle",
-                    "FriendRemoval_ServerConnectionFailedMessage");
-                break;
-            case FriendRemovalResult.PersistenceError:
-                _dialogService.ShowError(
-                    this,
-                    "FriendRemoval_PersistenceErrorTitle",
-                    "FriendRemoval_PersistenceErrorMessage");
-                break;
-        }
     }
 
     private async void OnLogoutClick(object sender, RoutedEventArgs e)
@@ -272,6 +253,7 @@ public partial class MainMenuPage : Page
             IsEnabled = true;
         }
 
+        ClientRuntime.FriendshipService.Close();
         SessionState.GuestToken = null;
         AccountPreviewState.Clear();
         NavigationService?.Navigate(new LoginScreenPage());
@@ -310,6 +292,10 @@ public partial class MainMenuPage : Page
         if (LocalizationManager.Instance.CultureName != previousCulture)
         {
             UpdateGuestIdentity();
+            if (_guestName == null)
+            {
+                RenderFriends();
+            }
             await LoadLeaderboardAsync();
         }
     }
@@ -324,11 +310,6 @@ public partial class MainMenuPage : Page
         string displayName = GuestNameFormatter.Format(_guestName);
         guestNameTextBlock.Text = displayName;
         guestNameTextBlock.ToolTip = displayName;
-    }
-
-    private sealed class FriendItem
-    {
-        public string Username { get; set; } = string.Empty;
     }
 
     private sealed class LeaderboardItem

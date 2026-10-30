@@ -1294,4 +1294,10 @@
   <data name="LoginScreen_ExpiredCodeMessage" xml:space="preserve"><value>Inicia sesión otra vez para solicitar un nuevo código.</value></data>
   <data name="Session_CloseFailedTitle" xml:space="preserve"><value>Cierre de sesión sin confirmar</value></data>
   <data name="Session_CloseFailedMessage" xml:space="preserve"><value>El servidor no pudo confirmar el cierre de sesión. Intenta de nuevo.</value></data>
+  <data name="Friends_Refresh" xml:space="preserve"><value>Actualizar amigos</value></data>
+  <data name="Friends_Loading" xml:space="preserve"><value>Cargando amigos…</value></data>
+  <data name="Friends_Online" xml:space="preserve"><value>En línea</value></data>
+  <data name="Friends_Offline" xml:space="preserve"><value>Desconectado</value></data>
+  <data name="Friends_PresenceUnavailable" xml:space="preserve"><value>Los amigos y su presencia no están disponibles. Selecciona Actualizar amigos para reconectar.</value></data>
+  <data name="Friends_SessionUnavailable" xml:space="preserve"><value>Tu sesión no permite consultar amigos. Inicia sesión de nuevo.</value></data>
 </root>

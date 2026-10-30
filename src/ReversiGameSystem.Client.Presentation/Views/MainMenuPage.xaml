@@ -9,6 +9,7 @@
       Title="{Binding [MainMenu_Title]}"
       Style="{StaticResource AuthenticationPageStyle}"
       Loaded="OnLoaded"
+      Unloaded="OnUnloaded"
       DataContext="{x:Static localization:LocalizationManager.Instance}">
     <Viewbox Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <Grid Width="1280" Height="800" Margin="32,24">
@@ -152,10 +153,12 @@
                         <TextBlock x:Name="friendsTitleTextBlock"
                                    Text="{Binding [MainMenu_FriendsTitle]}"
                                    Style="{StaticResource MainMenuSectionTitleStyle}" />
-                        <Button x:Name="addFriendButton"
-                                Content="{Binding [MainMenu_AddFriendButton]}"
-                                Click="OnAddFriendClick"
-                                Style="{StaticResource AuthenticationPrimaryButtonStyle}" />
+                        <Button x:Name="refreshFriendsButton"
+                                Content="{Binding [Friends_Refresh]}"
+                                Click="OnRefreshFriendsClick"
+                                Style="{StaticResource AuthenticationSecondaryButtonStyle}" />
+                        <TextBlock x:Name="friendsStatusTextBlock" TextWrapping="Wrap"
+                                   Style="{StaticResource MainMenuEmptyTextStyle}" />
                         <StackPanel x:Name="friendsListPanel" Margin="0,4,0,0">
                             <TextBlock x:Name="friendsEmptyTextBlock"
                                        Text="{Binding [MainMenu_FriendsEmptyMessage]}"
@@ -197,44 +200,17 @@
                                                                TextTrimming="CharacterEllipsis"
                                                                ToolTip="{Binding Username}"
                                                                Margin="8,0,0,0" />
-                                                    <Grid Grid.Row="1" Grid.ColumnSpan="2"
-                                                          Margin="0,8,0,0">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*" />
-                                                            <ColumnDefinition Width="8" />
-                                                            <ColumnDefinition Width="*" />
-                                                        </Grid.ColumnDefinitions>
-                                                        <Button Grid.Column="0"
-                                                                Content="{Binding DataContext[MainMenu_ViewFriendProfileButton], RelativeSource={RelativeSource AncestorType=Page}}"
-                                                                Tag="{Binding Username}"
-                                                                Click="OnFriendProfileClick"
-                                                                Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                                                                Padding="8,4" Margin="0" />
-                                                        <Button Grid.Column="2"
-                                                                Content="{Binding DataContext[MainMenu_RemoveFriendButton], RelativeSource={RelativeSource AncestorType=Page}}"
-                                                                Tag="{Binding Username}"
-                                                                Click="OnRemoveFriendClick"
-                                                                Style="{StaticResource MainMenuLogoutButtonStyle}"
-                                                                Padding="8,4" Margin="0" />
-                                                    </Grid>
+                                                    <StackPanel Grid.Row="1" Grid.ColumnSpan="2"
+                                                                Orientation="Horizontal" Margin="0,8,0,0">
+                                                        <Ellipse Width="10" Height="10" Fill="{Binding PresenceBrush}" Margin="0,0,6,0" />
+                                                        <TextBlock Text="{Binding PresenceText}" />
+                                                    </StackPanel>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </ScrollViewer>
-                        </StackPanel>
-                        <Separator Margin="0,14,0,14" />
-                        <TextBlock x:Name="friendRequestsTitleTextBlock"
-                                   Text="{Binding [MainMenu_FriendRequestsTitle]}"
-                                   Style="{StaticResource MainMenuSectionTitleStyle}" />
-                        <StackPanel x:Name="friendRequestsPanel">
-                            <TextBlock Text="{Binding [MainMenu_FriendRequestsSummary]}"
-                                       Style="{StaticResource MainMenuEmptyTextStyle}" />
-                            <Button Content="{Binding [MainMenu_ViewFriendRequestsButton]}"
-                                    Click="OnViewFriendRequestsClick"
-                                    Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                                    Margin="0,10,0,0" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
