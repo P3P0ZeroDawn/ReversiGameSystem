@@ -131,13 +131,18 @@
                     <views:ReversiBoardControl x:Name="gameBoardControl" />
                 </Viewbox>
 
-                <Button x:Name="leaveMatchButton"
-                        Grid.Row="2"
-                        Content="{Binding [Game_LeaveMatchButton]}"
-                        Style="{StaticResource MainMenuLogoutButtonStyle}"
-                        Click="OnLeaveMatchClick"
-                        MinWidth="180" HorizontalAlignment="Center"
-                        Padding="14,8" Margin="0,10,0,0" />
+                <StackPanel Grid.Row="2" HorizontalAlignment="Center">
+                    <Button x:Name="refreshRemoteMatchButton"
+                            Content="{Binding [AvailableMatches_RefreshButton]}"
+                            Style="{StaticResource AuthenticationSecondaryButtonStyle}"
+                            Visibility="Collapsed" Click="OnRefreshRemoteMatchClick" />
+                    <Button x:Name="leaveMatchButton"
+                            Content="{Binding [Game_LeaveMatchButton]}"
+                            Style="{StaticResource MainMenuLogoutButtonStyle}"
+                            Click="OnLeaveMatchClick"
+                            MinWidth="180" HorizontalAlignment="Center"
+                            Padding="14,8" Margin="0,10,0,0" />
+                </StackPanel>
             </Grid>
 
             <Border x:Name="chatPanel" Grid.Column="4"

@@ -194,7 +194,8 @@ public partial class ReversiBoardControl : UserControl
 
     private static BitmapImage CreateImageSource(string path)
     {
-        return new BitmapImage(new Uri(path, UriKind.Relative));
+        return new BitmapImage(new Uri(
+            "/ReversiGameSystem.Client.Presentation;component" + path, UriKind.Relative));
     }
 }
 

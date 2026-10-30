@@ -27,6 +27,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Update="Fixtures\ReviewAccountSchema.sql" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\ReviewMatchSchema.sql" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\database\test-data\PrepareReviewFriendship.sql"
           Link="test-data\PrepareReviewFriendship.sql"
           CopyToOutputDirectory="PreserveNewest" />

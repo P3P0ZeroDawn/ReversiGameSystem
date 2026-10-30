@@ -1300,4 +1300,14 @@
   <data name="Friends_Offline" xml:space="preserve"><value>Offline</value></data>
   <data name="Friends_PresenceUnavailable" xml:space="preserve"><value>Friends and presence are unavailable. Select Refresh friends to reconnect.</value></data>
   <data name="Friends_SessionUnavailable" xml:space="preserve"><value>Your session cannot access friends. Sign in again.</value></data>
+  <data name="RemoteMatch_SessionExpired" xml:space="preserve"><value>Your session is no longer valid. Sign in again.</value></data>
+  <data name="RemoteMatch_AccessRejected" xml:space="preserve"><value>You cannot access this match in its current state.</value></data>
+  <data name="RemoteMatch_ServerFailure" xml:space="preserve"><value>The server could not complete this operation. Try again later.</value></data>
+  <data name="RemoteMatch_ConnectionFailed" xml:space="preserve"><value>Connection interrupted. The operation could not be confirmed. Refresh before trying again.</value></data>
+  <data name="RemoteMatch_NotAvailable" xml:space="preserve"><value>This option is not available yet.</value></data>
+  <data name="RemoteMatch_MovesUnavailable" xml:space="preserve"><value>Match started. Piece placement and the turn clock are not available yet.</value></data>
+  <data name="RemoteMatch_StateFormat" xml:space="preserve"><value>Black: {0}   White: {1}   Your seat: {2}   Turn duration: {3} s</value></data>
+  <data name="RemoteMatch_Send" xml:space="preserve"><value>Send</value></data>
+  <data name="RemoteMatch_CloseView" xml:space="preserve"><value>Return to menu (the match remains active)</value></data>
+  <data name="RemoteMatch_GuestUnavailable" xml:space="preserve"><value>Guest sessions cannot use remote matches yet. Sign in with a registered account.</value></data>
 </root>

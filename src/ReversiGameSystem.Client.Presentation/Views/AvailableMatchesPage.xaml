@@ -203,7 +203,7 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </ScrollViewer>
-                        <TextBlock Text="{Binding [AvailableMatches_NoSpectatableMessage]}"
+                        <TextBlock Text="{Binding [RemoteMatch_NotAvailable]}"
                                    TextAlignment="Center" TextWrapping="Wrap"
                                    VerticalAlignment="Center" HorizontalAlignment="Center">
                             <TextBlock.Style>

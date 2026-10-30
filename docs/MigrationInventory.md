@@ -150,9 +150,10 @@ para evitar acumulación sin interrumpir lecturas concurrentes.
 - Falta conectar navegación y consulta de perfiles ajenos mediante identificador de cuenta.
   La lista de amigos ahora utiliza identificadores reales y oculta acciones todavía pendientes.
   El perfil propio ya usa el servicio real.
-- Las funciones de partidas, gestión de amistades, chat y preferencias que siguen como
-  prototipos requieren sus implementaciones remotas. La consulta de amigos y su presencia
-  ya están publicadas; disponer de los demás contratos en el proxy no los implementa.
+- Las jugadas, la gestión de amistades y las preferencias que siguen como prototipos
+  requieren sus implementaciones remotas. La consulta de amigos, su presencia, el inicio
+  de partida humana y el chat ya están publicados; disponer de los demás contratos en el
+  proxy no los implementa.
 - Las pruebas WCF de perfil y clasificación usan sustitutos de persistencia. Falta validar
   esos repositorios contra el esquema y datos del entorno final.
 
@@ -242,8 +243,8 @@ al contrato definitivo de cuenta.
   de WPF ni comunicación entre dos computadoras. Para la prueba manual hay que cerrar los
   procesos anteriores, recompilar y reiniciar. La configuración actual utiliza `localhost`;
   queda preparar dirección, seguridad y acceso de red para el escenario entre equipos.
-- El siguiente paso sigue siendo el lobby compartido con participantes visibles, sin
-  comenzar partida, invitaciones ni chat.
+- El alcance siguiente se ajustó posteriormente por decisión del equipo: la unión del
+  segundo jugador inicia la partida y habilita el chat, como se detalla al final del inventario.
 
 ## Compatibilidad de propósitos de verificación
 
@@ -319,3 +320,64 @@ autenticación que agoten el presupuesto de entrega. El estándar queda sin modi
 Este cierre habilita trabajar sobre el estándar con la estructura definida. No acredita
 correo externo, login completo con proveedores reales ni la terminación funcional de los
 servicios pendientes indicados en este inventario.
+
+## Inicio remoto de partida humana y chat
+
+- Se conectaron creación, listado y unión a `IMatchLobbyService`. El segundo jugador
+  ocupa el asiento blanco e inicia la partida en la misma transacción; el código deja
+  de admitir uniones. No se agrega otra fase de espera para ambos jugadores.
+- Los endpoints nuevos son `MatchLobby` en 8095, `GameplayMatch` en 8096 y `MatchChat`
+  en 8097, bajo `/ReversiGameSystem`, con transporte Windows cifrado. Se conservan los
+  contratos y el proxy existentes. Las credenciales y entidades EF permanecen en el servidor.
+- Se utilizan las tablas existentes `GameMatch`, `MatchParticipant`, `GameMove`,
+  `ChatMessage`, `ModerationRule`, `ModerationPattern`, `ChatViolation` y `ChatMute`.
+  No se modificaron entidades generadas ni se necesita una migración nueva para este paso.
+  Falta comprobar las restricciones y permisos de estas tablas en el entorno del equipo;
+  el EDMX no contiene las restricciones CHECK del servidor SQL real.
+- La unión y la creación usan transacciones serializables con coordinación SQL. Los
+  mensajes tienen numeración única por partida y se publican después de confirmar su
+  almacenamiento. La moderación reconoce palabras y expresiones completas sin distinguir
+  mayúsculas ni acentos, conserva infracciones por cuenta y aplica diez minutos de silencio
+  tras tres infracciones en 24 horas. Requiere reglas y patrones habilitados en la BD;
+  no se cargó automáticamente una lista de expresiones en la BD del proyecto.
+- El creador puede cancelar durante la espera. Los canales cerrados y sesiones vencidas
+  provocan limpieza; los fallos transitorios de cancelación conservan el seguimiento para
+  reintentar. Como las sesiones son de proceso, el host cancela las partidas `WAITING`
+  anteriores antes de escuchar al reiniciar. Este comportamiento presupone un único host
+  autoritativo sobre la BD; no implementa varios servidores activos simultáneamente.
+- La interfaz carga participantes, asiento, configuración y tablero inicial confirmados.
+  La integración reutiliza `GamePage.xaml`, sus tarjetas, el control de tablero y el
+  panel de chat originales; se retiró la pantalla alternativa creada durante el paso.
+  Concilia callbacks con consultas, conserva la versión más reciente del estado y evita
+  duplicar mensajes recibidos como retorno, callback e historial. Consulta el inicio para
+  recuperarse si se pierde su callback. No reenvía escrituras automáticamente tras un timeout.
+- Alcance actual: cuentas registradas, oponente humano y estadísticas deshabilitadas.
+  Se muestran ambos participantes y el chat. Las jugadas, reloj operativo, abandono remoto,
+  observación e historial de partida quedan pendientes. La vista informa que las jugadas
+  todavía no están disponibles y que volver al menú no abandona la partida. Las operaciones
+  pendientes devuelven el fault técnico declarado; no simulan movimientos locales exitosos.
+- Las pruebas SQL y el host `--match-host` utilizan exclusivamente bases LocalDB
+  desechables y cuentas sintéticas. `--match-database` comprueba unión concurrente,
+  autorización, orden del chat, moderación, cancelación, revocación y limpieza al reiniciar.
+  No se usó correo externo ni se modificó la BD del proyecto. La comunicación entre
+  computadoras requiere todavía comprobación manual.
+- Verificación final de este paso: **142 pruebas del servidor y 141 del cliente
+  aprobadas**, compilación correcta del host y los proyectos de pruebas. El modo
+  `Client.Tests.exe --match-end-to-end` comprobó con el proxy real y transporte Windows
+  dos participantes, inicio por unión, información/asientos/tablero, mensajes en ambos
+  sentidos, historial sin duplicados, moderación, código cancelado y rechazo de terceros
+  registrados e invitados. El host temporal se detuvo y la base desechable se eliminó.
+  Hubo revisión independiente de producción; las correcciones finales del coordinador
+  y sus regresiones tuvieron autoinspección.
+- Corrección de interfaz: se retiró la pantalla alternativa y la ejecución local de
+  jugadas, reloj y abandono de `GamePage`; el flujo remoto utiliza su XAML y control de
+  tablero originales. `Client.Tests.exe --match-screen` comprobó nombres, fichas,
+  tablero sin interacción local, envío desde el compositor y recepción por callback,
+  con el servidor y EF reales en una base desechable. Se renderizó e inspeccionó la
+  pantalla a 1280 × 850 en `en-US` y `es-MX`, incluida la actualización de sus textos
+  dinámicos al cambiar idioma. No acredita todas las resoluciones ni una revisión
+  completa de interacción manual. La prueba y las correcciones finales de recursos
+  y localización fueron autoinspeccionadas por el coordinador.
+- La invitación privada por correo constituye el siguiente paso autorizado. Requiere
+  documentar y agregar `InviteToMatch`, reservar el destinatario, excluir esa partida del
+  listado público y mantener el código válido únicamente durante la espera del creador.

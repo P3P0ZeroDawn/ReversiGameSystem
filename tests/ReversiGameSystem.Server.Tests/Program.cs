@@ -6,6 +6,14 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--match-database")
+        {
+            return RunTests(new Action[] { ReviewMatchDatabaseTests.Run });
+        }
+        if (args.Length == 1 && args[0] == "--match-host")
+        {
+            return RunTests(new Action[] { ReviewMatchHost.Run });
+        }
         if (args.Length == 1 && args[0] == "--friendship-host")
         {
             return RunTests(new Action[] { ReviewPresenceHost.Run });
@@ -20,7 +28,8 @@ internal static class Program
         }
         if (args.Length != 0)
         {
-            Console.Error.WriteLine("Usage: Server.Tests.exe [--database|--review-accounts|--friendship-host]");
+            Console.Error.WriteLine("Usage: Server.Tests.exe "
+                + "[--database|--review-accounts|--friendship-host|--match-host|--match-database]");
             return 2;
         }
         System.Collections.Generic.List<Action> tests =
@@ -39,8 +48,22 @@ internal static class Program
         VerificationCodeServiceTests codeTests = new VerificationCodeServiceTests();
         VerificationEmailSenderTests mailTests = new VerificationEmailSenderTests();
         FriendshipPresenceTests presenceTests = new FriendshipPresenceTests();
+        ChatContentPolicyTests chatPolicyTests = new ChatContentPolicyTests();
+        MatchBoundaryTests matchBoundaryTests = new MatchBoundaryTests();
+        MatchHandlerLifecycleTests lifecycleTests = new MatchHandlerLifecycleTests();
         return new Action[]
         {
+            chatPolicyTests.Matches_AccentsCaseAndPunctuation_MatchesCompletePhrase,
+            chatPolicyTests.Matches_WordInsideAnotherWord_DoesNotMatch,
+            chatPolicyTests.Matches_EmptyPattern_DoesNotBlockEveryMessage,
+            matchBoundaryTests.Gameplay_UnauthorizedParticipant_PreservesDeclaredRejection,
+            matchBoundaryTests.Gameplay_InitialState_UsesApplicationSnapshot,
+            matchBoundaryTests.Gameplay_UnsupportedWrite_ReturnsDeclaredServiceFault,
+            matchBoundaryTests.Lobby_StoreFailure_ReturnsSanitizedServiceFault,
+            lifecycleTests.CancelWaitingForSession_TransientFailure_RetainsLobbyForRetry,
+            lifecycleTests.CancelExpiredWaitingSessions_ChannelCleanupFailure_RetriesWhileSessionIsValid,
+            lifecycleTests.CancelWaitingForSession_JoinAlreadyStarted_PreservesStartedMatch,
+            lifecycleTests.Create_ExpiredSession_DoesNotCreateLobby,
             serializationTests.AuthenticatedSession_RoundTrip_PreservesAccountAndExpiry,
             serializationTests.AccountRegistrationCredentials_RoundTrip_PreservesProfileImage,
             serializationTests.PlayerProfile_RoundTrip_PreservesStatistics,

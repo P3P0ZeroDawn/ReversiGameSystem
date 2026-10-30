@@ -1300,4 +1300,14 @@
   <data name="Friends_Offline" xml:space="preserve"><value>Desconectado</value></data>
   <data name="Friends_PresenceUnavailable" xml:space="preserve"><value>Los amigos y su presencia no están disponibles. Selecciona Actualizar amigos para reconectar.</value></data>
   <data name="Friends_SessionUnavailable" xml:space="preserve"><value>Tu sesión no permite consultar amigos. Inicia sesión de nuevo.</value></data>
+  <data name="RemoteMatch_SessionExpired" xml:space="preserve"><value>Tu sesión ya no es válida. Inicia sesión nuevamente.</value></data>
+  <data name="RemoteMatch_AccessRejected" xml:space="preserve"><value>No puedes acceder a la partida en su estado actual.</value></data>
+  <data name="RemoteMatch_ServerFailure" xml:space="preserve"><value>El servidor no pudo completar la operación. Inténtalo más tarde.</value></data>
+  <data name="RemoteMatch_ConnectionFailed" xml:space="preserve"><value>Conexión interrumpida. No se pudo confirmar la operación. Actualiza antes de intentarlo de nuevo.</value></data>
+  <data name="RemoteMatch_NotAvailable" xml:space="preserve"><value>Esta opción aún no está disponible.</value></data>
+  <data name="RemoteMatch_MovesUnavailable" xml:space="preserve"><value>Partida iniciada. La colocación de fichas y el reloj de turno aún no están disponibles.</value></data>
+  <data name="RemoteMatch_StateFormat" xml:space="preserve"><value>Negras: {0}   Blancas: {1}   Tu asiento: {2}   Duración del turno: {3} s</value></data>
+  <data name="RemoteMatch_Send" xml:space="preserve"><value>Enviar</value></data>
+  <data name="RemoteMatch_CloseView" xml:space="preserve"><value>Volver al menú (la partida continúa activa)</value></data>
+  <data name="RemoteMatch_GuestUnavailable" xml:space="preserve"><value>Las sesiones de invitado aún no pueden usar las partidas remotas. Inicia sesión con una cuenta registrada.</value></data>
 </root>

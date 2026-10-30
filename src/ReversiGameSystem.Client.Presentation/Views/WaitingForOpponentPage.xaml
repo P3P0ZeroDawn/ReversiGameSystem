@@ -70,7 +70,7 @@
                     <Button x:Name="modifySettingsButton"
                             Content="{Binding [WaitingForOpponent_ModifySettingsButton]}"
                             Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                            Click="OnModifySettingsClick" Margin="0,0,0,14" />
+                            Margin="0,0,0,14" />
 
                     <TextBlock Text="{Binding [WaitingForOpponent_SystemPrompt]}"
                                Style="{StaticResource AuthenticationSupportingTextStyle}"
@@ -80,7 +80,11 @@
                     <Button x:Name="playAgainstSystemButton"
                             Content="{Binding [WaitingForOpponent_PlayAgainstSystemButton]}"
                             Style="{StaticResource AuthenticationPrimaryButtonStyle}"
-                            Click="OnPlayAgainstSystemClick" Margin="0,0,0,10" />
+                            Margin="0,0,0,10" />
+
+                    <Button Content="{Binding [AvailableMatches_RefreshButton]}"
+                            Style="{StaticResource AuthenticationSecondaryButtonStyle}"
+                            Click="OnRefreshClick" Margin="0,0,0,10" />
 
                     <Button x:Name="cancelButton"
                             Content="{Binding [Common_CancelButton]}"

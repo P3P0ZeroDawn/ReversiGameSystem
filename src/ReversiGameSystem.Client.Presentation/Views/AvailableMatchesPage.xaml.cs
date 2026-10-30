@@ -1,6 +1,9 @@
+using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using ReversiGameSystem.Game;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
@@ -14,9 +17,8 @@ public partial class AvailableMatchesPage : Page
 {
     private readonly string? _guestName;
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
-    private readonly MatchInformationService _matchService;
-    private readonly AvailableMatchesService _availableMatchesService;
-    private readonly JoinMatchService _joinMatchService;
+
+    private bool _loading;
 
     internal string? SelectedMatchId { get; private set; }
 
@@ -26,12 +28,7 @@ public partial class AvailableMatchesPage : Page
     public AvailableMatchesPage()
     {
         InitializeComponent();
-        string playerName = AccountPreviewState.Username
-            ?? LocalizationManager.Instance["Game_DefaultPlayerName"];
-        _matchService = new MatchInformationService(playerName);
-        _availableMatchesService = new AvailableMatchesService(playerName);
-        _joinMatchService = new JoinMatchService(playerName, null);
-        LoadMatches();
+        Loaded += async (_, _) => await LoadMatchesAsync();
     }
 
     /// <summary>
@@ -41,11 +38,8 @@ public partial class AvailableMatchesPage : Page
     public AvailableMatchesPage(string guestName) : this()
     {
         _guestName = guestName;
-        _availableMatchesService = new AvailableMatchesService(guestName);
-        _joinMatchService = new JoinMatchService(guestName, guestName);
         UpdateGuestIdentity();
         guestIdentityPanel.Visibility = Visibility.Visible;
-        LoadMatches();
     }
 
     private void OnBackToMenuClick(object sender, RoutedEventArgs e)
@@ -55,7 +49,7 @@ public partial class AvailableMatchesPage : Page
             : new MainMenuPage(_guestName));
     }
 
-    private void OnJoinWithCodeClick(object sender, RoutedEventArgs e)
+    private async void OnJoinWithCodeClick(object sender, RoutedEventArgs e)
     {
         string initialText = string.Empty;
         while (true)
@@ -77,81 +71,71 @@ public partial class AvailableMatchesPage : Page
             }
 
             initialText = enteredCode;
-            JoinMatchResult result = _joinMatchService.TryJoinByCode(
-                enteredCode,
-                out MatchSession? session);
-            if (result == JoinMatchResult.InvalidMatchCode)
+            if (!MatchCodePolicy.TryNormalize(enteredCode, out string code))
             {
                 ShowJoinWarning("InvalidMatchCode");
                 continue;
             }
-
-            if (result == JoinMatchResult.MatchCodeNotAvailable)
-            {
-                ShowJoinWarning("MatchCodeNotAvailable");
-                continue;
-            }
-
-            HandleJoinResult(result, session);
+            await JoinRemoteAsync(code);
             return;
         }
     }
 
-    private void LoadMatches()
+    private async Task LoadMatchesAsync()
     {
-        LocalizationManager localization = LocalizationManager.Instance;
-        List<AvailableMatchItem> items = new List<AvailableMatchItem>();
-        AvailableMatchesRetrievalResult retrievalResult =
-            _availableMatchesService.TryGetAvailableMatches(
-                out IReadOnlyList<AvailableMatch> matches);
-        if (retrievalResult != AvailableMatchesRetrievalResult.Success)
+        if (_loading)
         {
-            availableMatchesItemsControl.ItemsSource = null;
-            string prefix = retrievalResult
-                == AvailableMatchesRetrievalResult.ServerConnectionFailed
-                ? "AvailableMatches_ServerConnectionFailed"
-                : "AvailableMatches_RetrievalError";
-            _dialogService.ShowError(this, prefix + "Title", prefix + "Message");
             return;
         }
+        _loading = true;
+        IsEnabled = false;
+        LocalizationManager localization = LocalizationManager.Instance;
+        List<AvailableMatchItem> items = new List<AvailableMatchItem>();
+        ServerProxy.AvailableMatch[] matches;
+        try
+        {
+            matches = await ClientRuntime.GetMatchClient(_guestName != null).ListAsync();
+        }
+        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        {
+            availableMatchesItemsControl.ItemsSource = null;
+            emptyMatchesTextBlock.SetBinding(TextBlock.TextProperty, new Binding("[" + RemoteMatchMessages.Key(exception, _guestName != null) + "]")
+            { Source = localization });
+            _dialogService.ShowError(this, "AvailableMatches_RetrievalErrorTitle",
+                RemoteMatchMessages.Key(exception, _guestName != null));
+            return;
+        }
+        finally
+        {
+            _loading = false;
+            IsEnabled = true;
+        }
 
-        foreach (AvailableMatch match in matches)
+        emptyMatchesTextBlock.SetBinding(TextBlock.TextProperty, new Binding("[AvailableMatches_EmptyMessage]")
+        { Source = localization });
+        foreach (ServerProxy.AvailableMatch match in matches)
         {
             items.Add(new AvailableMatchItem
             {
-                MatchId = match.Id,
-                HostName = match.HostName,
+                MatchId = match.MatchCode,
+                HostName = match.CreatorDisplayName,
                 CreatedAgoText = string.Format(
                     localization["AvailableMatches_TurnTimeFormat"],
-                    match.TurnTimeSeconds),
+                    match.TurnDurationSeconds),
                 StateText = localization["AvailableMatches_WaitingState"]
             });
         }
 
         availableMatchesItemsControl.ItemsSource = items;
-        List<AvailableMatchItem> spectatableItems = new List<AvailableMatchItem>();
-        foreach (MatchInformation match in _matchService.GetSpectatableMatches())
-        {
-            spectatableItems.Add(new AvailableMatchItem
-            {
-                MatchId = match.Id,
-                HostName = match.BlackPlayerName,
-                StateText = localization["MatchInformation_InProgressState"],
-                SpectateVisibility = _guestName == null
-                    ? Visibility.Visible
-                    : Visibility.Collapsed
-            });
-        }
-
-        spectatableMatchesItemsControl.ItemsSource = spectatableItems;
+        spectatableMatchesItemsControl.ItemsSource = Array.Empty<AvailableMatchItem>();
     }
 
     private void OnRefreshMatchesClick(object sender, RoutedEventArgs e)
     {
-        LoadMatches();
+        _ = LoadMatchesAsync();
     }
 
-    private void OnJoinMatchClick(object sender, RoutedEventArgs e)
+    private async void OnJoinMatchClick(object sender, RoutedEventArgs e)
     {
         if (sender is not Button button
             || button.Tag is not string matchId
@@ -174,33 +158,27 @@ public partial class AvailableMatchesPage : Page
             return;
         }
 
-        JoinMatchResult result = _joinMatchService.TryJoinById(
-            matchId,
-            out MatchSession? session);
-        HandleJoinResult(result, session);
+        await JoinRemoteAsync(matchId);
     }
 
-    private void HandleJoinResult(JoinMatchResult result, MatchSession? session)
+    private async Task JoinRemoteAsync(string code)
     {
-        switch (result)
+        IsEnabled = false;
+        try
         {
-            case JoinMatchResult.Success when session != null:
-                NavigationService?.Navigate(new GamePage(session));
-                break;
-            case JoinMatchResult.NoLongerAvailable:
-                ShowJoinWarning("NoLongerAvailable");
-                LoadMatches();
-                break;
-            case JoinMatchResult.CannotJoinOwnMatch:
-                ShowJoinWarning("CannotJoinOwnMatch");
-                LoadMatches();
-                break;
-            case JoinMatchResult.PersistenceError:
-                ShowJoinError("PersistenceError");
-                break;
-            default:
-                ShowJoinError("ServerConnectionFailed");
-                break;
+            RemoteMatchClient client = ClientRuntime.GetMatchClient(_guestName != null);
+            ServerProxy.LobbySnapshot lobby = await client.JoinAsync(code);
+            NavigationService?.Navigate(new GamePage(client, lobby.MatchId, _guestName));
+        }
+        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        {
+            _dialogService.ShowError(this, "JoinMatch_PersistenceErrorTitle",
+                RemoteMatchMessages.Key(exception, _guestName != null));
+            await LoadMatchesAsync();
+        }
+        finally
+        {
+            IsEnabled = true;
         }
     }
 
@@ -222,29 +200,7 @@ public partial class AvailableMatchesPage : Page
 
     private void OnSpectateMatchClick(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button button || button.Tag is not string matchId)
-        {
-            return;
-        }
-
-        MatchInformationRetrievalResult result = _matchService.TryGet(
-            matchId, out MatchInformation? match);
-        if (result != MatchInformationRetrievalResult.Success || match == null)
-        {
-            string prefix = result == MatchInformationRetrievalResult.NotFound
-                ? "MatchInformation_NotFound"
-                : result == MatchInformationRetrievalResult.ServerConnectionFailed
-                    ? "MatchInformation_ServerConnectionFailed"
-                    : "MatchInformation_RetrievalError";
-            _dialogService.ShowError(this, prefix + "Title", prefix + "Message");
-            return;
-        }
-
-        NavigationService?.Navigate(new MatchInformationPage(
-            match,
-            MatchInformationMode.Spectator,
-            MatchInformationReturnTarget.AvailableMatches,
-            _guestName));
+        _dialogService.ShowWarning(this, "AvailableMatches_RetrievalErrorTitle", "RemoteMatch_NotAvailable");
     }
 
     private void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -254,7 +210,7 @@ public partial class AvailableMatchesPage : Page
         if (LocalizationManager.Instance.CultureName != previousCulture)
         {
             UpdateGuestIdentity();
-            LoadMatches();
+            _ = LoadMatchesAsync();
         }
     }
 

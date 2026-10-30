@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -15,7 +16,6 @@ public partial class MatchCreationPage : Page
 {
     private readonly string? _guestName;
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
-    private readonly MatchCreationService _matchCreationService = new MatchCreationService();
 
     /// <summary>
     /// Initializes match creation for an authenticated player.
@@ -42,7 +42,7 @@ public partial class MatchCreationPage : Page
         e.Handled = e.Text.Any(character => character < '0' || character > '9');
     }
 
-    private void OnCreateMatchClick(object sender, RoutedEventArgs e)
+    private async void OnCreateMatchClick(object sender, RoutedEventArgs e)
     {
         if (!TurnTimePolicy.TryParse(turnTimeTextBox.Text, out int turnTimeSeconds))
         {
@@ -55,34 +55,22 @@ public partial class MatchCreationPage : Page
             return;
         }
 
-        string creatorName = _guestName
-            ?? AccountPreviewState.Username
-            ?? LocalizationManager.Instance["Game_DefaultPlayerName"];
-        MatchCreationResult result = _matchCreationService.TryCreate(
-            turnTimeSeconds,
-            creatorName,
-            _guestName,
-            out MatchSession? session);
-
-        if (result == MatchCreationResult.ServerConnectionFailed)
+        IsEnabled = false;
+        try
         {
-            _dialogService.ShowError(
-                this,
-                "MatchCreation_ServerConnectionFailedTitle",
-                "MatchCreation_ServerConnectionFailedMessage");
-            return;
+            RemoteMatchClient client = ClientRuntime.GetMatchClient(_guestName != null);
+            ServerProxy.LobbySnapshot lobby = await client.CreateAsync(turnTimeSeconds);
+            NavigationService?.Navigate(new WaitingForOpponentPage(client, lobby, _guestName));
         }
-
-        if (result == MatchCreationResult.PersistenceError || session == null)
+        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
         {
-            _dialogService.ShowError(
-                this,
-                "MatchCreation_PersistenceErrorTitle",
-                "MatchCreation_PersistenceErrorMessage");
-            return;
+            _dialogService.ShowError(this, "MatchCreation_PersistenceErrorTitle",
+                RemoteMatchMessages.Key(exception, _guestName != null));
         }
-
-        NavigationService?.Navigate(new WaitingForOpponentPage(session));
+        finally
+        {
+            IsEnabled = true;
+        }
     }
 
     private void OnCancelClick(object sender, RoutedEventArgs e)

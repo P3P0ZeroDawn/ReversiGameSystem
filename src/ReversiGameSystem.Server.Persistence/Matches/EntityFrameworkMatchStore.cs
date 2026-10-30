@@ -1,0 +1,171 @@
+using System;
+using System.Data;
+using System.Data.Entity;
+using System.Linq;
+using System.Security.Cryptography;
+using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Matches;
+using ReversiGameSystem.Server.Persistence.Model;
+
+namespace ReversiGameSystem.Server.Persistence.Matches;
+
+/// <summary>Persists atomic human lobby transitions using transaction-owned database locks.</summary>
+public sealed class EntityFrameworkMatchStore : IMatchStore
+{
+    private const string Alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+    /// <summary>Cancels orphaned waiting lobbies before the single authoritative host accepts callers.</summary>
+    /// <returns>The number of waiting lobbies closed during startup.</returns>
+    /// <remarks>Startup cannot recover the creating sessions, which exist only in server memory.</remarks>
+    public int CancelAbandonedWaitingMatches()
+    {
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
+        MatchDatabase.Lock(context, "lobby");
+        int cancelled = context.Database.ExecuteSqlCommand(
+            "UPDATE dbo.GameMatch SET statusCode = 'CANCELLED', endedAtUtc = SYSUTCDATETIME() "
+            + "WHERE statusCode = 'WAITING';");
+        transaction.Commit();
+        return cancelled;
+    }
+
+    /// <summary>Creates the waiting lobby and its creator seat atomically.</summary>
+    public MatchRecord Create(AuthenticatedSessionRecord player, MatchSettings settings, DateTime now)
+    {
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
+        MatchDatabase.Lock(context, "lobby");
+        MatchDatabase.RequireActive(context, player.AccountId);
+        string code;
+        do
+        {
+            code = CreateCode();
+        }
+        while (context.GameMatch.Any(match => match.matchCode == code));
+        GameMatch match = new GameMatch
+        {
+            matchCode = code, statusCode = "WAITING", turnDurationSeconds = (short)settings.TurnDurationSeconds,
+            countsTowardStatistics = settings.CountsTowardStatistics, createdAtUtc = now
+        };
+        match.MatchParticipant1.Add(CreateParticipant(player, 1, now));
+        context.GameMatch.Add(match);
+        context.SaveChanges();
+        MatchRecord result = MatchDatabase.Map(match);
+        transaction.Commit();
+        return result;
+    }
+
+    /// <summary>Lists joinable waiting lobbies belonging to other players.</summary>
+    public MatchRecord[] Available(long accountId)
+    {
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        MatchDatabase.RequireActive(context, accountId);
+        return context.GameMatch.Include(match => match.MatchParticipant1)
+            .Where(match => match.statusCode == "WAITING" && match.MatchParticipant1.Count == 1
+                && match.MatchParticipant1.All(player => player.Account.statusCode == "ACTIVE")
+                && !match.MatchParticipant1.Any(player => player.accountId == accountId))
+            .OrderBy(match => match.matchId).ToArray().Select(MatchDatabase.Map).ToArray();
+    }
+
+    /// <summary>Occupies the second seat and starts the waiting match atomically.</summary>
+    public MatchRecord Join(AuthenticatedSessionRecord player, string code, DateTime now)
+    {
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
+        MatchDatabase.Lock(context, "lobby");
+        MatchDatabase.RequireActive(context, player.AccountId);
+        GameMatch? match = context.GameMatch.Include(candidate => candidate.MatchParticipant1)
+            .SingleOrDefault(candidate => candidate.matchCode == code && candidate.statusCode == "WAITING");
+        if (match == null || match.MatchParticipant1.Count != 1)
+        {
+            throw new MatchRejectedException(MatchRejection.MatchCodeUnavailable);
+        }
+        if (match.MatchParticipant1.Any(participant => participant.accountId == player.AccountId))
+        {
+            throw new MatchRejectedException(MatchRejection.CannotJoinOwnMatch);
+        }
+        MatchParticipant creator = match.MatchParticipant1.Single();
+        MatchDatabase.RequireActive(context, creator.accountId ?? 0);
+        match.MatchParticipant1.Add(CreateParticipant(player, 2, now));
+        match.statusCode = "IN_PROGRESS";
+        match.startedAtUtc = now;
+        match.currentTurnSeatNumber = 1;
+        match.turnStartedAtUtc = now;
+        context.SaveChanges();
+        MatchRecord result = MatchDatabase.Map(match);
+        transaction.Commit();
+        return result;
+    }
+
+    /// <summary>Loads confirmed match data for an authorized participant.</summary>
+    public MatchRecord Get(long accountId, long matchId)
+    {
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        MatchDatabase.RequireParticipant(context, accountId, matchId);
+        return MatchDatabase.Map(MatchDatabase.RequireMatch(context, matchId));
+    }
+
+    /// <summary>Changes the duration only while the creator still owns a waiting lobby.</summary>
+    public MatchRecord ChangeTurnDuration(long accountId, long matchId, int seconds)
+    {
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
+        MatchDatabase.Lock(context, "lobby");
+        GameMatch match = RequireCreator(context, accountId, matchId);
+        if (match.statusCode != "WAITING")
+        {
+            throw new MatchRejectedException(MatchRejection.MatchNotWaiting);
+        }
+        match.turnDurationSeconds = (short)seconds;
+        context.SaveChanges();
+        MatchRecord result = MatchDatabase.Map(match);
+        transaction.Commit();
+        return result;
+    }
+
+    /// <summary>Cancels a waiting lobby owned by the requesting account.</summary>
+    public void Cancel(long accountId, long matchId)
+    {
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
+        MatchDatabase.Lock(context, "lobby");
+        GameMatch match = RequireCreator(context, accountId, matchId);
+        if (match.statusCode != "WAITING" && match.statusCode != "CANCELLED")
+        {
+            throw new MatchRejectedException(MatchRejection.MatchNotWaiting);
+        }
+        match.statusCode = "CANCELLED";
+        context.SaveChanges();
+        transaction.Commit();
+    }
+
+    private static GameMatch RequireCreator(ReversiGameSystemEntities context, long accountId, long matchId)
+    {
+        MatchParticipant player = MatchDatabase.RequireParticipant(context, accountId, matchId);
+        if (!player.isCreator)
+        {
+            throw new MatchRejectedException(MatchRejection.Unauthorized);
+        }
+        return MatchDatabase.RequireMatch(context, matchId);
+    }
+
+    private static MatchParticipant CreateParticipant(AuthenticatedSessionRecord player, byte seat, DateTime now)
+    {
+        return new MatchParticipant
+        {
+            seatNumber = seat, accountId = player.AccountId, participantTypeCode = "REGISTERED",
+            displayNameSnapshot = player.Username, pieceColorCode = seat == 1 ? "BLACK" : "WHITE",
+            joinedAtUtc = now, isCreator = seat == 1
+        };
+    }
+
+    private static string CreateCode()
+    {
+        byte[] random = new byte[6];
+        using (RandomNumberGenerator generator = RandomNumberGenerator.Create())
+        {
+            generator.GetBytes(random);
+        }
+        return new string(random.Select(value => Alphabet[value % Alphabet.Length]).ToArray());
+    }
+}

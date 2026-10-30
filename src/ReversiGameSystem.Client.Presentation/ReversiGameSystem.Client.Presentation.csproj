@@ -263,6 +263,9 @@
     <Compile Include="Services\FriendRemovalService.cs" />
     <Compile Include="Services\ChatService.cs" />
     <Compile Include="Services\ClientRuntime.cs" />
+    <Compile Include="Services\RemoteMatchClient.cs" />
+    <Compile Include="Services\RemoteMatchMessages.cs" />
+    <Compile Include="Views\GamePage.Remote.cs" />
     <Compile Include="Services\FriendshipClient.cs" />
     <Compile Include="Services\FriendshipCallback.cs" />
     <Compile Include="Services\FriendshipSnapshot.cs" />

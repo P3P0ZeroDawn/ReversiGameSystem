@@ -3,10 +3,14 @@ using System.IO;
 using System.ServiceModel;
 using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Matches;
+using ReversiGameSystem.Server.Application.Chat;
 using ReversiGameSystem.Server.Application.Verification;
 using ReversiGameSystem.Server.Application.Players;
 using ReversiGameSystem.Server.Application.Leaderboards;
 using ReversiGameSystem.Server.Persistence.Accounts;
+using ReversiGameSystem.Server.Persistence.Matches;
+using ReversiGameSystem.Server.Persistence.Chat;
 using ReversiGameSystem.Server.Persistence.Friendships;
 using ReversiGameSystem.Server.Persistence.Players;
 using ReversiGameSystem.Server.Persistence.Leaderboards;
@@ -38,9 +42,22 @@ internal static class Program
                 using (FriendshipService friendship = new FriendshipService(sessions,
                     new FriendRepository(), loggerFactory.CreateLogger<FriendshipService>()))
                 {
+                    EntityFrameworkMatchStore matchStore = new EntityFrameworkMatchStore();
+                    matchStore.CancelAbandonedWaitingMatches();
+                    MatchHandler matches = new MatchHandler(sessions, matchStore, clock);
+                    using MatchLobbyService lobby = new MatchLobbyService(matches,
+                        loggerFactory.CreateLogger<MatchLobbyService>());
+                    using GameplayMatchService gameplay = new GameplayMatchService(matches, sessions,
+                        loggerFactory.CreateLogger<GameplayMatchService>());
+                    using MatchChatService chat = new MatchChatService(
+                        new ChatHandler(sessions, new EntityFrameworkChatStore(), clock), sessions,
+                        loggerFactory.CreateLogger<MatchChatService>());
                     SessionService session = CreateSessionService(
                         loggerFactory.CreateLogger<SessionService>(), sessions, clock);
                     session.SessionClosed += friendship.RemoveSession;
+                    session.SessionClosed += lobby.RemoveSession;
+                    session.SessionClosed += gameplay.RemoveSession;
+                    session.SessionClosed += chat.RemoveSession;
                     ServiceHost[] hosts =
                     {
                         new ServiceHost(CreateAccountAccessService(serviceLogger)),
@@ -50,7 +67,10 @@ internal static class Program
                         new ServiceHost(new LeaderboardService(new GetLeaderboardHandler(
                             new EntityFrameworkLeaderboardStore()),
                             loggerFactory.CreateLogger<LeaderboardService>())),
-                        new ServiceHost(friendship)
+                        new ServiceHost(friendship),
+                        new ServiceHost(lobby),
+                        new ServiceHost(gameplay),
+                        new ServiceHost(chat)
                     };
                     return Run(hosts, hostLogger);
                 }

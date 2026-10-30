@@ -6,6 +6,17 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--match-screen")
+        {
+            return Run(new Action[]
+            {
+                MatchScreenTests.ExistingGamePage_RealMatch_RendersPlayersBoardAndChat
+            });
+        }
+        if (args.Length == 1 && args[0] == "--match-end-to-end")
+        {
+            return Run(new Action[] { MatchEndToEndTests.TwoPlayers_RealServer_StartsConfirmedBoardAndExchangesChat });
+        }
         if (args.Length == 1 && args[0] == "--friendship-end-to-end")
         {
             return Run(new Action[]
@@ -22,13 +33,16 @@ internal static class Program
         }
         if (args.Length != 0)
         {
-            Console.Error.WriteLine("Usage: Client.Tests.exe [--session-integration|--friendship-end-to-end]");
+            Console.Error.WriteLine("Usage: Client.Tests.exe "
+                + "[--session-integration|--friendship-end-to-end|--match-end-to-end|--match-screen]");
             return 2;
         }
         AuthenticationOutcomeMapperTests mapperTests =
             new AuthenticationOutcomeMapperTests();
         Action[] tests =
         {
+            RemoteMatchClientTests.Callbacks_StaleVersionsAndDuplicateMessages_PreserveConfirmedState,
+            RemoteMatchClientTests.Faults_SupportedCultures_ResolveLocalizedRecoveryAndRejectionMessages,
             ClientArchitectureTests.Assemblies_RuntimeReferences_ExcludeServerAndPersistence,
             FailureDiagnosticsTests.ForLogging_ThrownFailure_PreservesOnlySafeDiagnostics,
             FriendshipSnapshotTests.Refresh_ConcurrentConnection_PreservesLatestPresence,

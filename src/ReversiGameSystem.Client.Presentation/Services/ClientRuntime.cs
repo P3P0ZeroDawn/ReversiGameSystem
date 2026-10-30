@@ -5,6 +5,25 @@ namespace ReversiGameSystem.Services;
 
 internal static class ClientRuntime
 {
+    private static RemoteMatchClient? _match;
+    private static string? _matchToken;
+
+    internal static RemoteMatchClient GetMatchClient(bool guest)
+    {
+        string? token = guest ? SessionState.GuestToken : AccountPreviewState.SessionToken;
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            throw new InvalidOperationException("A valid player session is required.");
+        }
+        if (_match == null || _matchToken != token)
+        {
+            _match?.Dispose();
+            _match = new RemoteMatchClient(token!, Logging.Value.CreateLogger<RemoteMatchClient>());
+            _matchToken = token;
+        }
+        return _match;
+    }
+
     private static readonly Lazy<ILoggerFactory> Logging =
         new Lazy<ILoggerFactory>(CreateLoggerFactory);
     private static readonly Lazy<SessionClient> Session =
@@ -27,6 +46,7 @@ internal static class ClientRuntime
 
     internal static void Dispose()
     {
+        _match?.Dispose();
         if (Friendship.IsValueCreated)
         {
             Friendship.Value.Dispose();

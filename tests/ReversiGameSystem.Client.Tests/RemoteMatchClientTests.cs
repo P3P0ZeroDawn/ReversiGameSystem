@@ -1,0 +1,62 @@
+using System;
+using System.Globalization;
+using System.Resources;
+using System.ServiceModel;
+using Microsoft.Extensions.Logging.Abstractions;
+using ReversiGameSystem.Services;
+using Proxy = ReversiGameSystem.ServerProxy;
+
+namespace ReversiGameSystem.Client.Tests;
+
+internal static class RemoteMatchClientTests
+{
+    internal static void Callbacks_StaleVersionsAndDuplicateMessages_PreserveConfirmedState()
+    {
+        using RemoteMatchClient client = Create("unused");
+        int stateChanges = 0;
+        int messageChanges = 0;
+        client.StateChanged += _ => stateChanges++;
+        client.MessagesChanged += _ => messageChanges++;
+        client.OnMatchStarted(new Proxy.MatchStateSnapshot { MatchId = 7, MatchStateVersion = 3 });
+        client.OnMatchStateChanged(new Proxy.MatchStateSnapshot { MatchId = 7, MatchStateVersion = 2 });
+        client.OnMatchStateChanged(new Proxy.MatchStateSnapshot { MatchId = 7, MatchStateVersion = 3 });
+        client.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 7, MessageNumber = 2, Content = "second" });
+        client.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 7, MessageNumber = 1, Content = "first" });
+        client.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 7, MessageNumber = 2, Content = "second" });
+        client.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 8, MessageNumber = 1, Content = "other" });
+        TestAssert.AreEqual(1, stateChanges);
+        TestAssert.AreEqual(3, messageChanges);
+        TestAssert.AreEqual(true, client.TryReadState(7, out Proxy.MatchStateSnapshot? state));
+        TestAssert.AreEqual(3L, state!.MatchStateVersion);
+        TestAssert.AreEqual(2, client.ReadMessages(7).Length);
+        TestAssert.AreEqual("first", client.ReadMessages(7)[0].Content);
+        TestAssert.AreEqual(1, client.ReadMessages(8).Length);
+    }
+
+    internal static void Faults_SupportedCultures_ResolveLocalizedRecoveryAndRejectionMessages()
+    {
+        ResourceManager resources = new("ReversiGameSystem.Properties.Resources", typeof(ReversiGameSystem.App).Assembly);
+        foreach (string culture in new[] { "en-US", "es-MX" })
+        {
+            foreach (string key in new[] { "RemoteMatch_MovesUnavailable", "RemoteMatch_StateFormat",
+                "RemoteMatch_CloseView", "RemoteMatch_SessionExpired", "RemoteMatch_GuestUnavailable",
+                "RemoteMatch_AccessRejected",
+                "RemoteMatch_ServerFailure", "RemoteMatch_ConnectionFailed", "RemoteMatch_NotAvailable", "RemoteMatch_Send" })
+            {
+                TestAssert.AreEqual(false, string.IsNullOrWhiteSpace(resources.GetString(key, CultureInfo.GetCultureInfo(culture))));
+            }
+        }
+        TestAssert.AreEqual("JoinMatch_MatchCodeNotAvailableMessage", RemoteMatchMessages.Key(
+            new FaultException<Proxy.MatchFault>(new Proxy.MatchFault { Reason = Proxy.MatchFailure.MatchCodeUnavailable })));
+        TestAssert.AreEqual("RemoteMatch_ConnectionFailed", RemoteMatchMessages.Key(new TimeoutException()));
+        TestAssert.AreEqual("RemoteMatch_ServerFailure", RemoteMatchMessages.Key(
+            new FaultException<Proxy.ServiceFault>(new Proxy.ServiceFault())));
+    }
+
+    internal static RemoteMatchClient Create(string token) => new(token, new MatchEndpoints
+    {
+        Lobby = "net.tcp://localhost:18095/ReversiReview/MatchLobby",
+        Gameplay = "net.tcp://localhost:18096/ReversiReview/GameplayMatch",
+        Chat = "net.tcp://localhost:18097/ReversiReview/MatchChat"
+    }, NullLogger<RemoteMatchClient>.Instance);
+}

@@ -5,10 +5,10 @@
     <Border CornerRadius="4" ClipToBounds="True" Background="#176A49">
         <Grid>
             <Image x:Name="boardBackgroundImage"
-                   Source="/Assets/Images/DefaultBoardBackground.png"
+                   Source="/ReversiGameSystem.Client.Presentation;component/Assets/Images/DefaultBoardBackground.png"
                    Stretch="Fill" />
             <Image x:Name="boardMaskImage"
-                   Source="/Assets/Images/BoardMask.png"
+                   Source="/ReversiGameSystem.Client.Presentation;component/Assets/Images/BoardMask.png"
                    Stretch="Fill" Visibility="Collapsed"
                    IsHitTestVisible="False" />
             <Grid x:Name="piecesGrid" Margin="15"

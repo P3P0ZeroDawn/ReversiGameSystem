@@ -16,6 +16,25 @@ internal static class ServiceFaultFactory
         {
             nameof(IAccountAccessService.RegisterAccountAsync) => "ACCOUNT_REGISTRATION_FAILURE",
             nameof(ILeaderboardService.GetLeaderboard) => "LEADERBOARD_OPERATION_FAILURE",
+            nameof(IMatchLobbyService.OpenLobbyChannel)
+                or nameof(IMatchLobbyService.CreateMatch)
+                or nameof(IMatchLobbyService.GetAvailableMatches)
+                or nameof(IMatchLobbyService.JoinMatch)
+                or nameof(IMatchLobbyService.ChangeTurnDuration)
+                or nameof(IMatchLobbyService.StartSystemMatch)
+                or nameof(IMatchLobbyService.CancelMatch) => "MATCH_LOBBY_OPERATION_FAILURE",
+            nameof(IGameplayMatchService.OpenMatchChannel)
+                or nameof(IGameplayMatchService.GetMatchInformation)
+                or nameof(IGameplayMatchService.GetMatchState)
+                or nameof(IGameplayMatchService.PlacePiece)
+                or nameof(IGameplayMatchService.ForfeitMatch)
+                or nameof(IGameplayMatchService.ObserveMatch)
+                or nameof(IGameplayMatchService.GetMatchHistory)
+                or nameof(IGameplayMatchService.GetMatchDetails)
+                or nameof(IGameplayMatchService.GetMoveHistory) => "GAMEPLAY_OPERATION_FAILURE",
+            nameof(IMatchChatService.OpenChatChannel)
+                or nameof(IMatchChatService.SendChatMessage)
+                or nameof(IMatchChatService.GetChatHistory) => "MATCH_CHAT_OPERATION_FAILURE",
             nameof(IFriendshipService.OpenFriendshipChannel)
                 or nameof(IFriendshipService.GetFriends)
                 or nameof(IFriendshipService.FindPlayers)
