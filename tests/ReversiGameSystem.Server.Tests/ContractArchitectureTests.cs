@@ -174,6 +174,8 @@ internal sealed class ContractArchitectureTests
                 return new[] { "LeaderboardFault", "ServiceFault" };
             case "IFriendshipService":
                 return new[] { "FriendshipFault", "SessionFault", "ServiceFault" };
+            case "IMatchLobbyService" when methodName == "InviteToMatch":
+                return new[] { "MatchFault", "FriendshipFault", "SessionFault", "ServiceFault" };
             case "IMatchChatService" when methodName == "SendChatMessage":
                 return new[] { "ChatFault", "MatchFault", "SessionFault", "ServiceFault" };
             default:

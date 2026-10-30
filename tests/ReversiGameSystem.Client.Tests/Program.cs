@@ -39,6 +39,8 @@ internal static class Program
         }
         AuthenticationOutcomeMapperTests mapperTests =
             new AuthenticationOutcomeMapperTests();
+        MatchInvitationClientTests invitationTests =
+            new MatchInvitationClientTests();
         Action[] tests =
         {
             RemoteMatchClientTests.Callbacks_StaleVersionsAndDuplicateMessages_PreserveConfirmedState,
@@ -54,7 +56,19 @@ internal static class Program
             mapperTests.Map_SuccessfulOutcome_PreservesSession,
             mapperTests.Map_ExpiredSession_RejectsResponse,
             mapperTests.Map_MissingToken_RejectsResponse,
-            mapperTests.SessionMessages_SupportedCultures_AreAvailable
+            mapperTests.SessionMessages_SupportedCultures_AreAvailable,
+            invitationTests.RemoteMatchMessages_FriendshipFaultAccountUnavailable_ResolvesExpectedResourceKey,
+            invitationTests.RemoteMatchMessages_FriendshipFaultFriendshipNotFound_ResolvesExpectedResourceKey,
+            invitationTests.RemoteMatchMessages_FriendshipFaultInvalidAccountId_ResolvesExpectedResourceKey,
+            invitationTests.RemoteMatchMessages_FriendshipFaultInactiveAccount_ResolvesExpectedResourceKey,
+            invitationTests.RemoteMatchMessages_MatchFaultUnauthorized_ResolvesExpectedResourceKey,
+            invitationTests.RemoteMatchMessages_MatchFaultInactiveAccount_ResolvesExpectedResourceKey,
+            invitationTests.RemoteMatchMessages_MatchFaultMatchNotWaiting_ResolvesExpectedResourceKey,
+            invitationTests.RemoteMatchMessages_DeliveryFailureOrTimeout_ResolvesConnectionFailedKey,
+            invitationTests.LocalizationResources_InvitationKeys_ArePresentInAllSupportedCultures,
+            invitationTests.TurnTimePolicy_ValidRange_ParsesConfiguredSeconds,
+            invitationTests.TurnTimePolicy_OutOfRangeOrNonNumeric_RejectsInput,
+            invitationTests.RemoteMatchClient_InviteAsync_CommunicationException_AbortsWithoutAutoRetry
         };
 
         return Run(CombineTests(tests));

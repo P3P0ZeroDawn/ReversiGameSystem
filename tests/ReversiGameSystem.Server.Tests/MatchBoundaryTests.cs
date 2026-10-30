@@ -48,11 +48,101 @@ internal sealed class MatchBoundaryTests
 
     internal void Lobby_StoreFailure_ReturnsSanitizedServiceFault()
     {
+        // Arrange
         BoundaryStore store = new BoundaryStore();
         MatchHandler handler = new MatchHandler(new BoundarySessions(), store, new BoundaryClock());
         using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
+
+        // Act & Assert
         FaultException<ServiceFault> failure = TestAssert.Throws<FaultException<ServiceFault>>(
             () => service.GetAvailableMatches("valid"));
+        TestAssert.AreEqual("MATCH_LOBBY_OPERATION_FAILURE", failure.Detail.FailureCode);
+        TestAssert.IsTrue(!failure.Message.Contains("private storage failure"), "Leaked storage details.");
+    }
+
+    internal void Lobby_InviteToMatch_GuestSession_ReturnsMatchFaultUnauthorized()
+    {
+        // Arrange
+        BoundaryStore store = new BoundaryStore();
+        BoundarySessions sessions = new BoundarySessions();
+        SessionRegistry registry = new SessionRegistry(sessions, new BoundaryClock());
+        GuestSessionRecord guest = registry.CreateGuest("GuestBoundary");
+        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), registry, new BoundaryMailer());
+        using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
+
+        // Act & Assert
+        FaultException<MatchFault> failure = TestAssert.Throws<FaultException<MatchFault>>(
+            () => service.InviteToMatch(guest.SessionToken, 10, new MatchConfiguration { TurnDurationSeconds = 40 }));
+        TestAssert.AreEqual(MatchFailure.Unauthorized, failure.Detail.Reason);
+    }
+
+    internal void Lobby_InviteToMatch_SelfInvitation_ReturnsMatchFaultUnauthorized()
+    {
+        // Arrange
+        BoundaryStore store = new BoundaryStore();
+        BoundarySessions sessions = new BoundarySessions();
+        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), null, new BoundaryMailer());
+        using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
+
+        // Act & Assert
+        FaultException<MatchFault> failure = TestAssert.Throws<FaultException<MatchFault>>(
+            () => service.InviteToMatch("valid", 1, new MatchConfiguration { TurnDurationSeconds = 40 }));
+        TestAssert.AreEqual(MatchFailure.Unauthorized, failure.Detail.Reason);
+    }
+
+    internal void Lobby_InviteToMatch_InvalidFriendId_ReturnsFriendshipFaultInvalidAccountId()
+    {
+        // Arrange
+        BoundaryStore store = new BoundaryStore();
+        BoundarySessions sessions = new BoundarySessions();
+        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), null, new BoundaryMailer());
+        using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
+
+        // Act & Assert
+        FaultException<FriendshipFault> failure = TestAssert.Throws<FaultException<FriendshipFault>>(
+            () => service.InviteToMatch("valid", 0, new MatchConfiguration { TurnDurationSeconds = 40 }));
+        TestAssert.AreEqual(FriendshipFailure.InvalidAccountId, failure.Detail.Reason);
+    }
+
+    internal void Lobby_InviteToMatch_AccountUnavailable_ReturnsFriendshipFaultAccountUnavailable()
+    {
+        // Arrange
+        BoundaryStore store = new BoundaryStore();
+        BoundarySessions sessions = new BoundarySessions();
+        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), null, new BoundaryMailer());
+        using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
+
+        // Act & Assert
+        FaultException<FriendshipFault> failure = TestAssert.Throws<FaultException<FriendshipFault>>(
+            () => service.InviteToMatch("valid", 2, new MatchConfiguration { TurnDurationSeconds = 40 }));
+        TestAssert.AreEqual(FriendshipFailure.AccountUnavailable, failure.Detail.Reason);
+    }
+
+    internal void Lobby_InviteToMatch_FriendshipNotFound_ReturnsFriendshipFaultFriendshipNotFound()
+    {
+        // Arrange
+        BoundaryStore store = new BoundaryStore();
+        BoundarySessions sessions = new BoundarySessions();
+        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), null, new BoundaryMailer());
+        using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
+
+        // Act & Assert
+        FaultException<FriendshipFault> failure = TestAssert.Throws<FaultException<FriendshipFault>>(
+            () => service.InviteToMatch("valid", 3, new MatchConfiguration { TurnDurationSeconds = 40 }));
+        TestAssert.AreEqual(FriendshipFailure.FriendshipNotFound, failure.Detail.Reason);
+    }
+
+    internal void Lobby_InviteToMatch_StoreFailure_ReturnsSanitizedServiceFault()
+    {
+        // Arrange
+        BoundaryStore store = new BoundaryStore();
+        BoundarySessions sessions = new BoundarySessions();
+        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), null, new BoundaryMailer());
+        using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
+
+        // Act & Assert
+        FaultException<ServiceFault> failure = TestAssert.Throws<FaultException<ServiceFault>>(
+            () => service.InviteToMatch("valid", 999, new MatchConfiguration { TurnDurationSeconds = 40 }));
         TestAssert.AreEqual("MATCH_LOBBY_OPERATION_FAILURE", failure.Detail.FailureCode);
         TestAssert.IsTrue(!failure.Message.Contains("private storage failure"), "Leaked storage details.");
     }
@@ -62,6 +152,13 @@ internal sealed class MatchBoundaryTests
         BoundarySessions sessions = new BoundarySessions();
         return new GameplayMatchService(new MatchHandler(sessions, store, new BoundaryClock()),
             sessions, NullLogger<GameplayMatchService>.Instance);
+    }
+
+    private sealed class BoundaryMailer : IMatchInvitationEmailSender
+    {
+        public void Send(MatchInvitationEmail email)
+        {
+        }
     }
 
     private sealed class BoundaryClock : IUtcClock
@@ -101,6 +198,84 @@ internal sealed class MatchBoundaryTests
                 StartedAtUtc = new BoundaryClock().UtcNow,
                 Participants = new[] { new ParticipantRecord { AccountId = 1, SeatNumber = 1 } }
             };
+        }
+
+        public PrivateMatchInvitationPreparation PreparePrivate(
+            AuthenticatedSessionRecord creator,
+            long friendAccountId,
+            MatchSettings settings,
+            DateTime now)
+        {
+            if (friendAccountId == 999)
+            {
+                throw new InvalidOperationException("private storage failure");
+            }
+            if (friendAccountId == 2)
+            {
+                throw new FriendshipRejectedException(FriendshipRejection.AccountUnavailable);
+            }
+            if (friendAccountId == 3)
+            {
+                throw new FriendshipRejectedException(FriendshipRejection.FriendshipNotFound);
+            }
+            if (friendAccountId == 4)
+            {
+                throw new FriendshipRejectedException(FriendshipRejection.InvalidAccountId);
+            }
+            if (friendAccountId == 5)
+            {
+                throw new FriendshipRejectedException(FriendshipRejection.InactiveAccount);
+            }
+            MatchRecord match = new MatchRecord
+            {
+                Id = 77,
+                Code = "REV123",
+                State = "Waiting",
+                TurnDurationSeconds = settings.TurnDurationSeconds,
+                IsPrivate = true,
+                Participants = new[]
+                {
+                    new ParticipantRecord
+                    {
+                        AccountId = creator.AccountId,
+                        SeatNumber = 1,
+                        DisplayName = creator.Username
+                    }
+                }
+            };
+            return new PrivateMatchInvitationPreparation(match, "friend@example.com");
+        }
+
+        public MatchRecord ConfirmPrivate(
+            long accountId,
+            long matchId,
+            DateTime now)
+        {
+            return new MatchRecord
+            {
+                Id = matchId,
+                Code = "REV123",
+                State = "Waiting",
+                TurnDurationSeconds = 40,
+                IsPrivate = true,
+                Participants = new[]
+                {
+                    new ParticipantRecord
+                    {
+                        AccountId = accountId,
+                        SeatNumber = 1,
+                        DisplayName = "BoundaryPlayer"
+                    }
+                }
+            };
+        }
+
+        public void ValidateJoinForGuest(string matchCode)
+        {
+            if (matchCode == "REV123")
+            {
+                throw new MatchRejectedException(MatchRejection.Unauthorized);
+            }
         }
     }
 }

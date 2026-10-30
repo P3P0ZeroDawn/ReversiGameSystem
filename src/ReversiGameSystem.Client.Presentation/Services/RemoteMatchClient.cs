@@ -110,6 +110,17 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
         });
     });
 
+    internal Task<Proxy.LobbySnapshot> InviteAsync(long friendAccountId, int seconds) =>
+        RequestAsync(() => PrepareLobby(), async () =>
+    {
+        await OpenLobbyAsync();
+        return await _lobby.InviteToMatchAsync(_token, friendAccountId, new Proxy.MatchConfiguration
+        {
+            TurnDurationSeconds = seconds, OpponentKind = Proxy.OpponentKind.Human,
+            CountsTowardStatistics = false
+        });
+    });
+
     internal Task<Proxy.AvailableMatch[]> ListAsync() =>
         RequestAsync(() => PrepareLobby(), async () =>
     {

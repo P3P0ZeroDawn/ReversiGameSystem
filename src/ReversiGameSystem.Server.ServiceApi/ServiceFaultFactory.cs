@@ -18,6 +18,7 @@ internal static class ServiceFaultFactory
             nameof(ILeaderboardService.GetLeaderboard) => "LEADERBOARD_OPERATION_FAILURE",
             nameof(IMatchLobbyService.OpenLobbyChannel)
                 or nameof(IMatchLobbyService.CreateMatch)
+                or nameof(IMatchLobbyService.InviteToMatch)
                 or nameof(IMatchLobbyService.GetAvailableMatches)
                 or nameof(IMatchLobbyService.JoinMatch)
                 or nameof(IMatchLobbyService.ChangeTurnDuration)

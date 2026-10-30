@@ -39,12 +39,14 @@ internal static class Program
                 SystemUtcClock clock = new SystemUtcClock();
                 InMemoryAuthenticatedSessionStore sessions =
                     new InMemoryAuthenticatedSessionStore(clock);
+                SessionRegistry sessionRegistry = new SessionRegistry(sessions, clock);
                 using (FriendshipService friendship = new FriendshipService(sessions,
                     new FriendRepository(), loggerFactory.CreateLogger<FriendshipService>()))
                 {
+                    MatchInvitationEmailSender matchMailer = new MatchInvitationEmailSender(MailSettings.Load());
                     EntityFrameworkMatchStore matchStore = new EntityFrameworkMatchStore();
                     matchStore.CancelAbandonedWaitingMatches();
-                    MatchHandler matches = new MatchHandler(sessions, matchStore, clock);
+                    MatchHandler matches = new MatchHandler(sessions, matchStore, clock, sessionRegistry, matchMailer);
                     using MatchLobbyService lobby = new MatchLobbyService(matches,
                         loggerFactory.CreateLogger<MatchLobbyService>());
                     using GameplayMatchService gameplay = new GameplayMatchService(matches, sessions,
@@ -53,7 +55,7 @@ internal static class Program
                         new ChatHandler(sessions, new EntityFrameworkChatStore(), clock), sessions,
                         loggerFactory.CreateLogger<MatchChatService>());
                     SessionService session = CreateSessionService(
-                        loggerFactory.CreateLogger<SessionService>(), sessions, clock);
+                        loggerFactory.CreateLogger<SessionService>(), sessionRegistry, clock);
                     session.SessionClosed += friendship.RemoveSession;
                     session.SessionClosed += lobby.RemoveSession;
                     session.SessionClosed += gameplay.RemoveSession;
@@ -100,7 +102,7 @@ internal static class Program
     }
 
     private static SessionService CreateSessionService(ILogger<SessionService> logger,
-        IAuthenticatedSessionStore sessionStore, IUtcClock clock)
+        SessionRegistry sessionRegistry, IUtcClock clock)
     {
         byte[] secret = Convert.FromBase64String(
             EnvironmentSettings.ReadRequired("REVERSI_VERIFICATION_SECRET"));
@@ -118,11 +120,9 @@ internal static class Program
             new VerificationEmailSender(MailSettings.Load()), protector, clock);
         VerificationCodeService verification = new VerificationCodeService(
             issuer, new VerificationCodeRepository(), clock);
-        SessionRegistry sessions = new SessionRegistry(
-            sessionStore, clock);
         SessionHandler handler = new SessionHandler(new VerifiedLoginService(
             new EntityFrameworkAccountLoginStore(), new Pbkdf2PasswordHasher()),
-            verification, sessions);
+            verification, sessionRegistry);
         return new SessionService(handler, logger);
     }
 

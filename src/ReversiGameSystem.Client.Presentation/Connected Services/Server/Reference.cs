@@ -4094,6 +4094,16 @@ namespace ReversiGameSystem.ServerProxy
         [System.ServiceModel.OperationContractAttribute(Action="urn:reversi:services:v1/IMatchLobbyService/CreateMatch", ReplyAction="urn:reversi:services:v1/IMatchLobbyService/CreateMatchResponse")]
         System.Threading.Tasks.Task<ReversiGameSystem.ServerProxy.LobbySnapshot> CreateMatchAsync(string sessionToken, ReversiGameSystem.ServerProxy.MatchConfiguration configuration);
         
+        [System.ServiceModel.OperationContractAttribute(Action="urn:reversi:services:v1/IMatchLobbyService/InviteToMatch", ReplyAction="urn:reversi:services:v1/IMatchLobbyService/InviteToMatchResponse")]
+        [System.ServiceModel.FaultContractAttribute(typeof(ReversiGameSystem.ServerProxy.MatchFault), Action="urn:reversi:services:v1/IMatchLobbyService/InviteToMatchMatchFaultFault", Name="MatchFault", Namespace="urn:reversi:contracts:v1")]
+        [System.ServiceModel.FaultContractAttribute(typeof(ReversiGameSystem.ServerProxy.FriendshipFault), Action="urn:reversi:services:v1/IMatchLobbyService/InviteToMatchFriendshipFaultFault", Name="FriendshipFault", Namespace="urn:reversi:contracts:v1")]
+        [System.ServiceModel.FaultContractAttribute(typeof(ReversiGameSystem.ServerProxy.SessionFault), Action="urn:reversi:services:v1/IMatchLobbyService/InviteToMatchSessionFaultFault", Name="SessionFault", Namespace="urn:reversi:contracts:v1")]
+        [System.ServiceModel.FaultContractAttribute(typeof(ReversiGameSystem.ServerProxy.ServiceFault), Action="urn:reversi:services:v1/IMatchLobbyService/InviteToMatchServiceFaultFault", Name="ServiceFault", Namespace="urn:reversi:diagnostics:v1")]
+        ReversiGameSystem.ServerProxy.LobbySnapshot InviteToMatch(string sessionToken, long friendAccountId, ReversiGameSystem.ServerProxy.MatchConfiguration configuration);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="urn:reversi:services:v1/IMatchLobbyService/InviteToMatch", ReplyAction="urn:reversi:services:v1/IMatchLobbyService/InviteToMatchResponse")]
+        System.Threading.Tasks.Task<ReversiGameSystem.ServerProxy.LobbySnapshot> InviteToMatchAsync(string sessionToken, long friendAccountId, ReversiGameSystem.ServerProxy.MatchConfiguration configuration);
+        
         [System.ServiceModel.OperationContractAttribute(Action="urn:reversi:services:v1/IMatchLobbyService/GetAvailableMatches", ReplyAction="urn:reversi:services:v1/IMatchLobbyService/GetAvailableMatchesResponse")]
         [System.ServiceModel.FaultContractAttribute(typeof(ReversiGameSystem.ServerProxy.MatchFault), Action="urn:reversi:services:v1/IMatchLobbyService/GetAvailableMatchesMatchFaultFault", Name="MatchFault", Namespace="urn:reversi:contracts:v1")]
         [System.ServiceModel.FaultContractAttribute(typeof(ReversiGameSystem.ServerProxy.SessionFault), Action="urn:reversi:services:v1/IMatchLobbyService/GetAvailableMatchesSessionFaultFault", Name="SessionFault", Namespace="urn:reversi:contracts:v1")]
@@ -4204,6 +4214,16 @@ namespace ReversiGameSystem.ServerProxy
         public System.Threading.Tasks.Task<ReversiGameSystem.ServerProxy.LobbySnapshot> CreateMatchAsync(string sessionToken, ReversiGameSystem.ServerProxy.MatchConfiguration configuration)
         {
             return base.Channel.CreateMatchAsync(sessionToken, configuration);
+        }
+        
+        public ReversiGameSystem.ServerProxy.LobbySnapshot InviteToMatch(string sessionToken, long friendAccountId, ReversiGameSystem.ServerProxy.MatchConfiguration configuration)
+        {
+            return base.Channel.InviteToMatch(sessionToken, friendAccountId, configuration);
+        }
+        
+        public System.Threading.Tasks.Task<ReversiGameSystem.ServerProxy.LobbySnapshot> InviteToMatchAsync(string sessionToken, long friendAccountId, ReversiGameSystem.ServerProxy.MatchConfiguration configuration)
+        {
+            return base.Channel.InviteToMatchAsync(sessionToken, friendAccountId, configuration);
         }
         
         public ReversiGameSystem.ServerProxy.AvailableMatch[] GetAvailableMatches(string sessionToken)

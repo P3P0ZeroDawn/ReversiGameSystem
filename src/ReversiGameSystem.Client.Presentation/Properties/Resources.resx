@@ -1310,4 +1310,16 @@
   <data name="RemoteMatch_Send" xml:space="preserve"><value>Send</value></data>
   <data name="RemoteMatch_CloseView" xml:space="preserve"><value>Return to menu (the match remains active)</value></data>
   <data name="RemoteMatch_GuestUnavailable" xml:space="preserve"><value>Guest sessions cannot use remote matches yet. Sign in with a registered account.</value></data>
+  <data name="InviteMatch_Button" xml:space="preserve"><value>Invite to match</value></data>
+  <data name="InviteMatch_DialogTitle" xml:space="preserve"><value>Invite to match</value></data>
+  <data name="InviteMatch_DialogPrompt" xml:space="preserve"><value>Enter the turn duration in seconds (10 to 120) for the match with {0}:</value></data>
+  <data name="InviteMatch_ErrorTitle" xml:space="preserve"><value>Could not send invitation</value></data>
+  <data name="InviteMatch_AccountUnavailableMessage" xml:space="preserve"><value>The friend's account is unavailable or no longer active.</value></data>
+  <data name="InviteMatch_FriendshipNotFoundMessage" xml:space="preserve"><value>An active friendship was not found with this player.</value></data>
+  <data name="InviteMatch_InvalidAccountIdMessage" xml:space="preserve"><value>The specified friend account is invalid.</value></data>
+  <data name="InviteMatch_InactiveAccountMessage" xml:space="preserve"><value>The account is inactive and cannot participate in match invitations.</value></data>
+  <data name="InviteMatch_UnauthorizedMessage" xml:space="preserve"><value>You are not authorized to invite this account or you are signed in as a guest.</value></data>
+  <data name="InviteMatch_MatchNotWaitingMessage" xml:space="preserve"><value>The match could not be confirmed because it is no longer waiting.</value></data>
+  <data name="InviteMatch_DeliveryFailedTitle" xml:space="preserve"><value>Invitation not sent</value></data>
+  <data name="InviteMatch_DeliveryFailedMessage" xml:space="preserve"><value>The invitation email could not be delivered. No waiting match was created.</value></data>
 </root>

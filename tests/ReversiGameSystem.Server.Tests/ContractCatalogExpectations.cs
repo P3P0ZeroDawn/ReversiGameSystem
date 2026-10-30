@@ -73,6 +73,8 @@ internal static class ContractCatalogExpectations
             "LobbySnapshot ChangeTurnDuration(string sessionToken, long matchId, "
                 + "int turnDurationSeconds)",
             "MatchStateSnapshot StartSystemMatch(string sessionToken, long matchId)",
+            "LobbySnapshot InviteToMatch(string sessionToken, long friendAccountId, "
+                + "MatchConfiguration configuration)",
             "void CancelMatch(string sessionToken, long matchId)",
         },
         ["IMatchLobbyServiceCallback"] = new[]

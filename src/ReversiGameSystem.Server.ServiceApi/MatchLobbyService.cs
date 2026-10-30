@@ -64,6 +64,20 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
             })));
 
     /// <inheritdoc />
+    public LobbySnapshot InviteToMatch(
+        string sessionToken,
+        long friendAccountId,
+        MatchConfiguration configuration) =>
+        _boundary.Execute(nameof(InviteToMatch), () => MatchContractMapper.Lobby(_handler.Invite(sessionToken,
+            friendAccountId,
+            configuration == null ? null! : new MatchSettings
+            {
+                TurnDurationSeconds = configuration.TurnDurationSeconds,
+                CountsTowardStatistics = configuration.CountsTowardStatistics,
+                OpponentKind = configuration.OpponentKind.ToString()
+            })));
+
+    /// <inheritdoc />
     public AvailableMatch[] GetAvailableMatches(string sessionToken) =>
         _boundary.Execute(nameof(GetAvailableMatches), () => _handler.Available(sessionToken)
             .Select(match => new AvailableMatch

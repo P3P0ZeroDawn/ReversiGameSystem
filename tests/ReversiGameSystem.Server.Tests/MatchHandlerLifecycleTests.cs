@@ -82,10 +82,52 @@ internal sealed class MatchHandlerLifecycleTests
         TestAssert.AreEqual(0, store.CreateAttempts);
     }
 
+    internal void Invite_DeliveryFailure_CancelsMatchAndThrowsServiceFault()
+    {
+        // Arrange
+        SessionTestContext context = new SessionTestContext();
+        AuthenticatedSessionRecord player = CreatePlayer(context);
+        LifecycleStore store = new LifecycleStore();
+        FailingInvitationEmailSender mailer = new FailingInvitationEmailSender();
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+
+        // Act
+        TestAssert.Throws<InvalidOperationException>(() =>
+            handler.Invite(player.SessionToken, 100, new MatchSettings()));
+
+        // Assert
+        TestAssert.AreEqual(1, store.CancelAttempts);
+    }
+
+    internal void Invite_GuestSession_ThrowsUnauthorizedRejection()
+    {
+        // Arrange
+        SessionTestContext context = new SessionTestContext();
+        GuestSessionRecord guest = context.Registry.CreateGuest("GuestPlayer");
+        LifecycleStore store = new LifecycleStore();
+        FailingInvitationEmailSender mailer = new FailingInvitationEmailSender();
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+
+        // Act
+        MatchRejectedException exception = TestAssert.Throws<MatchRejectedException>(() =>
+            handler.Invite(guest.SessionToken, 100, new MatchSettings()));
+
+        // Assert
+        TestAssert.AreEqual(MatchRejection.Unauthorized, exception.Reason);
+    }
+
     private static AuthenticatedSessionRecord CreatePlayer(SessionTestContext context)
     {
         return context.Sessions.Create(new LoginAccount(42, "PlayerOne", "player@example.com",
             "test-hash", "ACTIVE", "en-US"));
+    }
+
+    private sealed class FailingInvitationEmailSender : IMatchInvitationEmailSender
+    {
+        public void Send(MatchInvitationEmail email)
+        {
+            throw new InvalidOperationException("Simulated provider outage.");
+        }
     }
 
     private sealed class LifecycleStore : IMatchStore
@@ -120,5 +162,59 @@ internal sealed class MatchHandlerLifecycleTests
         public MatchRecord Get(long accountId, long matchId) => throw new NotSupportedException();
         public MatchRecord ChangeTurnDuration(long accountId, long matchId, int seconds) =>
             throw new NotSupportedException();
+
+        public PrivateMatchInvitationPreparation PreparePrivate(
+            AuthenticatedSessionRecord creator,
+            long friendAccountId,
+            MatchSettings settings,
+            DateTime now)
+        {
+            MatchRecord match = new MatchRecord
+            {
+                Id = 7,
+                Code = "REV777",
+                State = "Waiting",
+                TurnDurationSeconds = settings.TurnDurationSeconds,
+                IsPrivate = true,
+                Participants = new[]
+                {
+                    new ParticipantRecord
+                    {
+                        AccountId = creator.AccountId,
+                        SeatNumber = 1,
+                        DisplayName = creator.Username
+                    }
+                }
+            };
+            return new PrivateMatchInvitationPreparation(match, "friend@example.com");
+        }
+
+        public MatchRecord ConfirmPrivate(
+            long accountId,
+            long matchId,
+            DateTime now)
+        {
+            return new MatchRecord
+            {
+                Id = matchId,
+                Code = "REV777",
+                State = "Waiting",
+                TurnDurationSeconds = 40,
+                IsPrivate = true,
+                Participants = new[]
+                {
+                    new ParticipantRecord
+                    {
+                        AccountId = accountId,
+                        SeatNumber = 1,
+                        DisplayName = "PlayerOne"
+                    }
+                }
+            };
+        }
+
+        public void ValidateJoinForGuest(string matchCode)
+        {
+        }
     }
 }

@@ -1,9 +1,10 @@
 -- Review fixture only. Create both accounts through the client before running this script.
 -- Run first with @Apply = 0 to inspect the selected pair, then use 1 to accept their friendship.
 -- This does not create accounts, read credentials, or modify any other friendship.
+USE ReversiGameSystem;
 DECLARE @FirstUsername nvarchar(50) = N'p3p0';
 DECLARE @SecondUsername nvarchar(50) = N'cesardoc';
-DECLARE @Apply bit = 0;
+DECLARE @Apply bit = 1;
 
 SET NOCOUNT ON;
 SET XACT_ABORT ON;

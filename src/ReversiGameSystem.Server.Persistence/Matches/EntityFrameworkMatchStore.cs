@@ -1,11 +1,13 @@
 using System;
 using System.Data;
 using System.Data.Entity;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Security.Cryptography;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Persistence.Model;
+
 
 namespace ReversiGameSystem.Server.Persistence.Matches;
 
@@ -55,13 +57,117 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
         return result;
     }
 
+    /// <inheritdoc />
+    public PrivateMatchInvitationPreparation PreparePrivate(
+        AuthenticatedSessionRecord player,
+        long friendAccountId,
+        MatchSettings settings,
+        DateTime now)
+    {
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
+        MatchDatabase.Lock(context, "lobby");
+        MatchDatabase.RequireActive(context, player.AccountId);
+
+        Account? friend = context.Account.SingleOrDefault(candidate => candidate.accountId == friendAccountId);
+        if (friend == null || friend.statusCode != "ACTIVE")
+        {
+            throw new FriendshipRejectedException(FriendshipRejection.AccountUnavailable);
+        }
+
+        long minId = Math.Min(player.AccountId, friendAccountId);
+        long maxId = Math.Max(player.AccountId, friendAccountId);
+        bool areFriends = context.Friendship.Any(candidate =>
+            candidate.accountIdA == minId
+            && candidate.accountIdB == maxId
+            && candidate.statusCode == "ACCEPTED"
+            && candidate.endedAtUtc == null);
+        if (!areFriends)
+        {
+            throw new FriendshipRejectedException(FriendshipRejection.FriendshipNotFound);
+        }
+
+        string code;
+        do
+        {
+            code = CreateCode();
+        }
+        while (context.GameMatch.Any(match => match.matchCode == code));
+
+        GameMatch match = new GameMatch
+        {
+            matchCode = code,
+            statusCode = "WAITING",
+            turnDurationSeconds = (short)settings.TurnDurationSeconds,
+            countsTowardStatistics = settings.CountsTowardStatistics,
+            createdAtUtc = now
+        };
+        match.MatchParticipant1.Add(CreateParticipant(player, 1, now));
+        context.GameMatch.Add(match);
+        context.SaveChanges();
+
+        context.Database.ExecuteSqlCommand(
+            "UPDATE dbo.GameMatch SET isPrivate = 1, invitedAccountId = @friendAccountId WHERE matchId = @matchId",
+            new SqlParameter("@friendAccountId", friendAccountId),
+            new SqlParameter("@matchId", match.matchId));
+
+        MatchRecord result = MatchDatabase.Map(match);
+        result.IsPrivate = true;
+        transaction.Commit();
+        return new PrivateMatchInvitationPreparation(result, friend.emailAddress);
+    }
+
+    /// <inheritdoc />
+    public MatchRecord ConfirmPrivate(long accountId, long matchId, DateTime now)
+    {
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
+        MatchDatabase.Lock(context, "lobby");
+        MatchDatabase.RequireActive(context, accountId);
+
+        GameMatch match = RequireCreator(context, accountId, matchId);
+        if (match.statusCode != "WAITING")
+        {
+            throw new MatchRejectedException(MatchRejection.MatchNotWaiting);
+        }
+
+        MatchPrivacyRow? privacy = context.Database.SqlQuery<MatchPrivacyRow>(
+            "SELECT isPrivate AS IsPrivate, invitedAccountId AS InvitedAccountId, invitationConfirmedAtUtc AS InvitationConfirmedAtUtc FROM dbo.GameMatch WHERE matchId = @matchId",
+            new SqlParameter("@matchId", matchId)).SingleOrDefault();
+
+        if (privacy == null || !privacy.IsPrivate || privacy.InvitedAccountId == null)
+        {
+            throw new MatchRejectedException(MatchRejection.MatchNotWaiting);
+        }
+
+        MatchDatabase.RequireActive(context, privacy.InvitedAccountId.Value);
+
+        context.Database.ExecuteSqlCommand(
+            "UPDATE dbo.GameMatch SET invitationConfirmedAtUtc = @now WHERE matchId = @matchId AND statusCode = 'WAITING'",
+            new SqlParameter("@now", now),
+            new SqlParameter("@matchId", matchId));
+
+        MatchRecord result = MatchDatabase.Map(match);
+        result.IsPrivate = true;
+        transaction.Commit();
+        return result;
+    }
+
     /// <summary>Lists joinable waiting lobbies belonging to other players.</summary>
     public MatchRecord[] Available(long accountId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         MatchDatabase.RequireActive(context, accountId);
+        long[] publicMatchIds = context.Database.SqlQuery<long>(
+            "SELECT matchId FROM dbo.GameMatch WHERE isPrivate = 0 AND statusCode = 'WAITING'").ToArray();
+        if (publicMatchIds.Length == 0)
+        {
+            return Array.Empty<MatchRecord>();
+        }
+
         return context.GameMatch.Include(match => match.MatchParticipant1)
-            .Where(match => match.statusCode == "WAITING" && match.MatchParticipant1.Count == 1
+            .Where(match => publicMatchIds.Contains(match.matchId)
+                && match.statusCode == "WAITING" && match.MatchParticipant1.Count == 1
                 && match.MatchParticipant1.All(player => player.Account.statusCode == "ACTIVE")
                 && !match.MatchParticipant1.Any(player => player.accountId == accountId))
             .OrderBy(match => match.matchId).ToArray().Select(MatchDatabase.Map).ToArray();
@@ -80,12 +186,32 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
         {
             throw new MatchRejectedException(MatchRejection.MatchCodeUnavailable);
         }
+
+        MatchPrivacyRow? privacy = context.Database.SqlQuery<MatchPrivacyRow>(
+            "SELECT isPrivate AS IsPrivate, invitedAccountId AS InvitedAccountId, invitationConfirmedAtUtc AS InvitationConfirmedAtUtc FROM dbo.GameMatch WHERE matchId = @matchId",
+            new SqlParameter("@matchId", match.matchId)).SingleOrDefault();
+
+        if (privacy != null && privacy.IsPrivate && privacy.InvitationConfirmedAtUtc == null)
+        {
+            throw new MatchRejectedException(MatchRejection.MatchCodeUnavailable);
+        }
+
         if (match.MatchParticipant1.Any(participant => participant.accountId == player.AccountId))
         {
             throw new MatchRejectedException(MatchRejection.CannotJoinOwnMatch);
         }
+
+        if (privacy != null && privacy.IsPrivate)
+        {
+            if (privacy.InvitedAccountId != player.AccountId)
+            {
+                throw new MatchRejectedException(MatchRejection.Unauthorized);
+            }
+        }
+
         MatchParticipant creator = match.MatchParticipant1.Single();
         MatchDatabase.RequireActive(context, creator.accountId ?? 0);
+        MatchDatabase.RequireActive(context, player.AccountId);
         match.MatchParticipant1.Add(CreateParticipant(player, 2, now));
         match.statusCode = "IN_PROGRESS";
         match.startedAtUtc = now;
@@ -93,8 +219,41 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
         match.turnStartedAtUtc = now;
         context.SaveChanges();
         MatchRecord result = MatchDatabase.Map(match);
+        if (privacy != null && privacy.IsPrivate)
+        {
+            result.IsPrivate = true;
+        }
+
         transaction.Commit();
         return result;
+    }
+
+    /// <inheritdoc />
+    public void ValidateJoinForGuest(string code)
+    {
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        GameMatch? match = context.GameMatch.SingleOrDefault(candidate =>
+            candidate.matchCode == code && candidate.statusCode == "WAITING");
+        if (match == null)
+        {
+            throw new MatchRejectedException(MatchRejection.MatchCodeUnavailable);
+        }
+
+        MatchPrivacyRow? privacy = context.Database.SqlQuery<MatchPrivacyRow>(
+            "SELECT isPrivate AS IsPrivate, invitedAccountId AS InvitedAccountId, invitationConfirmedAtUtc AS InvitationConfirmedAtUtc FROM dbo.GameMatch WHERE matchId = @matchId",
+            new SqlParameter("@matchId", match.matchId)).SingleOrDefault();
+
+        if (privacy != null && privacy.IsPrivate && privacy.InvitationConfirmedAtUtc == null)
+        {
+            throw new MatchRejectedException(MatchRejection.MatchCodeUnavailable);
+        }
+
+        if (privacy != null && privacy.IsPrivate)
+        {
+            throw new MatchRejectedException(MatchRejection.Unauthorized);
+        }
+
+        throw new MatchRejectedException(MatchRejection.Unauthorized);
     }
 
     /// <summary>Loads confirmed match data for an authorized participant.</summary>
@@ -168,4 +327,12 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
         }
         return new string(random.Select(value => Alphabet[value % Alphabet.Length]).ToArray());
     }
+
+    private sealed class MatchPrivacyRow
+    {
+        public bool IsPrivate { get; set; }
+        public long? InvitedAccountId { get; set; }
+        public DateTime? InvitationConfirmedAtUtc { get; set; }
+    }
 }
+

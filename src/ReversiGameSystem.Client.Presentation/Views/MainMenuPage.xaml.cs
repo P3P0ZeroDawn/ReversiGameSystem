@@ -4,6 +4,7 @@ using System.Globalization;
 using System.ServiceModel;
 using System.Windows;
 using System.Windows.Controls;
+using ReversiGameSystem.Game;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
 using Proxy = ReversiGameSystem.ServerProxy;
@@ -210,6 +211,66 @@ public partial class MainMenuPage : Page
         friendsItemsControl.ItemsSource = items;
         friendsEmptyTextBlock.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         friendsStatusTextBlock.Text = string.Empty;
+    }
+
+    private async void OnInviteFriendClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button
+            || button.Tag is not long friendAccountId
+            || button.DataContext is not FriendItem friend)
+        {
+            return;
+        }
+
+        string initialText = TurnTimePolicy.DefaultSeconds.ToString();
+        int turnDurationSeconds;
+        while (true)
+        {
+            TextInputDialogOptions options = new TextInputDialogOptions(
+                "InviteMatch_DialogTitle",
+                "InviteMatch_DialogPrompt",
+                "MatchSettings_TurnTimeLabel")
+            {
+                ConfirmButtonKey = "InviteMatch_Button",
+                RequireText = true,
+                InitialText = initialText,
+                MessageArguments = new object[] { friend.Username }
+            };
+
+            if (!_dialogService.TryGetText(this, options, out string enteredText))
+            {
+                return;
+            }
+
+            initialText = enteredText;
+            if (!TurnTimePolicy.TryParse(enteredText, out turnDurationSeconds))
+            {
+                _dialogService.ShowWarning(
+                    this,
+                    "MatchCreation_InvalidTurnTimeTitle",
+                    "MatchCreation_InvalidTurnTimeMessage");
+                continue;
+            }
+
+            break;
+        }
+
+        IsEnabled = false;
+        try
+        {
+            RemoteMatchClient client = ClientRuntime.GetMatchClient(guest: false);
+            Proxy.LobbySnapshot lobby = await client.InviteAsync(friendAccountId, turnDurationSeconds);
+            NavigationService?.Navigate(new WaitingForOpponentPage(client, lobby, guestName: null));
+        }
+        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        {
+            _dialogService.ShowError(this, "InviteMatch_ErrorTitle",
+                RemoteMatchMessages.Key(exception, guest: false));
+        }
+        finally
+        {
+            IsEnabled = true;
+        }
     }
 
     private void OnCreateGameClick(object sender, RoutedEventArgs e)

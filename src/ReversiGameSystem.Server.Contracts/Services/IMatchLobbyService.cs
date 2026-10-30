@@ -63,6 +63,44 @@ public interface IMatchLobbyService
     public LobbySnapshot CreateMatch(string sessionToken, MatchConfiguration configuration);
 
     /// <summary>
+    /// Creates a private waiting match, reserves the second seat for an accepted friend,
+    /// and sends the join code to the friend's registered email address.
+    /// </summary>
+    /// <param name="sessionToken">
+    /// The opaque session token identifying the registered creator.
+    /// </param>
+    /// <param name="friendAccountId">
+    /// The stable positive account identifier of the invited friend.
+    /// </param>
+    /// <param name="configuration">
+    /// The proposed human match configuration to validate.
+    /// </param>
+    /// <returns>
+    /// The confirmed private waiting lobby and its temporary join code after mail acceptance.
+    /// </returns>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{FriendshipFault}">
+    /// A declared friendship or recipient account rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
+    [OperationContract]
+    [FaultContract(typeof(MatchFault), Namespace = ContractNamespaces.Data)]
+    [FaultContract(typeof(FriendshipFault), Namespace = ContractNamespaces.Data)]
+    [FaultContract(typeof(SessionFault), Namespace = ContractNamespaces.Data)]
+    [FaultContract(typeof(ServiceFault), Namespace = ContractNamespaces.Diagnostics)]
+    public LobbySnapshot InviteToMatch(
+        string sessionToken,
+        long friendAccountId,
+        MatchConfiguration configuration);
+
+    /// <summary>
     /// Retrieves waiting human-opponent lobbies that the session may join.
     /// </summary>
     /// <param name="sessionToken">

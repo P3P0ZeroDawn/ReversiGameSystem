@@ -16,7 +16,17 @@ internal static class RemoteMatchMessages
             Proxy.MatchFailure.InvalidMatchCode => "JoinMatch_InvalidMatchCodeMessage",
             Proxy.MatchFailure.MatchCodeUnavailable => "JoinMatch_MatchCodeNotAvailableMessage",
             Proxy.MatchFailure.InvalidTurnDuration => "MatchCreation_InvalidTurnTimeMessage",
-            Proxy.MatchFailure.MatchNotWaiting => "JoinMatch_NoLongerAvailableMessage",
+            Proxy.MatchFailure.MatchNotWaiting => "InviteMatch_MatchNotWaitingMessage",
+            Proxy.MatchFailure.Unauthorized => "InviteMatch_UnauthorizedMessage",
+            Proxy.MatchFailure.InactiveAccount => "InviteMatch_InactiveAccountMessage",
+            _ => "RemoteMatch_AccessRejected"
+        },
+        FaultException<Proxy.FriendshipFault> fault => fault.Detail.Reason switch
+        {
+            Proxy.FriendshipFailure.AccountUnavailable => "InviteMatch_AccountUnavailableMessage",
+            Proxy.FriendshipFailure.FriendshipNotFound => "InviteMatch_FriendshipNotFoundMessage",
+            Proxy.FriendshipFailure.InvalidAccountId => "InviteMatch_InvalidAccountIdMessage",
+            Proxy.FriendshipFailure.InactiveAccount => "InviteMatch_InactiveAccountMessage",
             _ => "RemoteMatch_AccessRejected"
         },
         FaultException<Proxy.ChatFault> fault => "Chat_" + fault.Detail.Reason + "Message",

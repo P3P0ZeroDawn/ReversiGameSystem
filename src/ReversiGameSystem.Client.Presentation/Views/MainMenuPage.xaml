@@ -180,6 +180,7 @@
                                                     <Grid.RowDefinitions>
                                                         <RowDefinition Height="Auto" />
                                                         <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
                                                     </Grid.RowDefinitions>
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="42" />
@@ -205,6 +206,14 @@
                                                         <Ellipse Width="10" Height="10" Fill="{Binding PresenceBrush}" Margin="0,0,6,0" />
                                                         <TextBlock Text="{Binding PresenceText}" />
                                                     </StackPanel>
+                                                    <Button Grid.Row="2" Grid.ColumnSpan="2"
+                                                            x:Name="inviteFriendButton"
+                                                            Content="{Binding [InviteMatch_Button], Source={x:Static localization:LocalizationManager.Instance}}"
+                                                            Tag="{Binding AccountId}"
+                                                            Click="OnInviteFriendClick"
+                                                            Style="{StaticResource AuthenticationSecondaryButtonStyle}"
+                                                            HorizontalAlignment="Stretch"
+                                                            Margin="0,8,0,0" />
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>

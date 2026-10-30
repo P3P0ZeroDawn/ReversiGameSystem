@@ -34,6 +34,13 @@ internal sealed class MatchBoundary
                 Reason = (MatchFailure)Enum.Parse(typeof(MatchFailure), exception.Reason.ToString())
             }, "The match request was rejected.");
         }
+        catch (FriendshipRejectedException exception)
+        {
+            throw new FaultException<FriendshipFault>(new FriendshipFault
+            {
+                Reason = (FriendshipFailure)Enum.Parse(typeof(FriendshipFailure), exception.Reason.ToString())
+            }, "The friendship request was rejected.");
+        }
         catch (FaultException)
         {
             throw;

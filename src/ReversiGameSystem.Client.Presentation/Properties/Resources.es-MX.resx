@@ -1310,4 +1310,16 @@
   <data name="RemoteMatch_Send" xml:space="preserve"><value>Enviar</value></data>
   <data name="RemoteMatch_CloseView" xml:space="preserve"><value>Volver al menú (la partida continúa activa)</value></data>
   <data name="RemoteMatch_GuestUnavailable" xml:space="preserve"><value>Las sesiones de invitado aún no pueden usar las partidas remotas. Inicia sesión con una cuenta registrada.</value></data>
+  <data name="InviteMatch_Button" xml:space="preserve"><value>Invitar a partida</value></data>
+  <data name="InviteMatch_DialogTitle" xml:space="preserve"><value>Invitar a partida</value></data>
+  <data name="InviteMatch_DialogPrompt" xml:space="preserve"><value>Ingresa la duración del turno en segundos (10 a 120) para la partida con {0}:</value></data>
+  <data name="InviteMatch_ErrorTitle" xml:space="preserve"><value>No se pudo enviar la invitación</value></data>
+  <data name="InviteMatch_AccountUnavailableMessage" xml:space="preserve"><value>La cuenta del amigo no está disponible o ya no está activa.</value></data>
+  <data name="InviteMatch_FriendshipNotFoundMessage" xml:space="preserve"><value>No se encontró una amistad activa con este jugador.</value></data>
+  <data name="InviteMatch_InvalidAccountIdMessage" xml:space="preserve"><value>La cuenta de amigo especificada no es válida.</value></data>
+  <data name="InviteMatch_InactiveAccountMessage" xml:space="preserve"><value>La cuenta está inactiva y no puede participar en invitaciones a partidas.</value></data>
+  <data name="InviteMatch_UnauthorizedMessage" xml:space="preserve"><value>No tienes autorización para invitar a esta cuenta o has iniciado sesión como invitado.</value></data>
+  <data name="InviteMatch_MatchNotWaitingMessage" xml:space="preserve"><value>No se pudo confirmar la partida porque ya no está en espera.</value></data>
+  <data name="InviteMatch_DeliveryFailedTitle" xml:space="preserve"><value>Invitación no enviada</value></data>
+  <data name="InviteMatch_DeliveryFailedMessage" xml:space="preserve"><value>No se pudo enviar el correo de invitación. No se creó ninguna partida en espera.</value></data>
 </root>

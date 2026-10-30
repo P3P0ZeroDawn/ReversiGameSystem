@@ -5,9 +5,15 @@ CREATE TABLE dbo.GameMatch (
  statusCode varchar(20) NOT NULL CHECK (statusCode IN ('WAITING','IN_PROGRESS','FINISHED','CANCELLED')),
  turnDurationSeconds smallint NOT NULL CHECK (turnDurationSeconds BETWEEN 10 AND 120),
  countsTowardStatistics bit NOT NULL,
+ isPrivate bit NOT NULL CONSTRAINT DF_GameMatch_IsPrivate DEFAULT (0),
+ invitedAccountId bigint NULL CONSTRAINT FK_GameMatch_InvitedAccount REFERENCES dbo.Account(accountId),
+ invitationConfirmedAtUtc datetime2(3) NULL,
  createdAtUtc datetime2(3) NOT NULL, startedAtUtc datetime2(3) NULL,
  endedAtUtc datetime2(3) NULL, endReasonCode varchar(30) NULL,
- currentTurnSeatNumber tinyint NULL, turnStartedAtUtc datetime2(3) NULL);
+ currentTurnSeatNumber tinyint NULL, turnStartedAtUtc datetime2(3) NULL,
+ CONSTRAINT CK_GameMatch_Privacy CHECK (
+  (isPrivate = 0 AND invitedAccountId IS NULL AND invitationConfirmedAtUtc IS NULL)
+  OR (isPrivate = 1 AND invitedAccountId IS NOT NULL)));
 CREATE TABLE dbo.MatchParticipant (
  matchId bigint NOT NULL REFERENCES dbo.GameMatch(matchId),
  seatNumber tinyint NOT NULL CHECK (seatNumber IN (1,2)),

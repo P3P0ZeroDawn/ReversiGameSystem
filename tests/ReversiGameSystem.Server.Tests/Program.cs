@@ -51,7 +51,8 @@ internal static class Program
         ChatContentPolicyTests chatPolicyTests = new ChatContentPolicyTests();
         MatchBoundaryTests matchBoundaryTests = new MatchBoundaryTests();
         MatchHandlerLifecycleTests lifecycleTests = new MatchHandlerLifecycleTests();
-        return new Action[]
+        System.Collections.Generic.List<Action> tests =
+            new System.Collections.Generic.List<Action>
         {
             chatPolicyTests.Matches_AccentsCaseAndPunctuation_MatchesCompletePhrase,
             chatPolicyTests.Matches_WordInsideAnotherWord_DoesNotMatch,
@@ -60,6 +61,12 @@ internal static class Program
             matchBoundaryTests.Gameplay_InitialState_UsesApplicationSnapshot,
             matchBoundaryTests.Gameplay_UnsupportedWrite_ReturnsDeclaredServiceFault,
             matchBoundaryTests.Lobby_StoreFailure_ReturnsSanitizedServiceFault,
+            matchBoundaryTests.Lobby_InviteToMatch_GuestSession_ReturnsMatchFaultUnauthorized,
+            matchBoundaryTests.Lobby_InviteToMatch_SelfInvitation_ReturnsMatchFaultUnauthorized,
+            matchBoundaryTests.Lobby_InviteToMatch_InvalidFriendId_ReturnsFriendshipFaultInvalidAccountId,
+            matchBoundaryTests.Lobby_InviteToMatch_AccountUnavailable_ReturnsFriendshipFaultAccountUnavailable,
+            matchBoundaryTests.Lobby_InviteToMatch_FriendshipNotFound_ReturnsFriendshipFaultFriendshipNotFound,
+            matchBoundaryTests.Lobby_InviteToMatch_StoreFailure_ReturnsSanitizedServiceFault,
             lifecycleTests.CancelWaitingForSession_TransientFailure_RetainsLobbyForRetry,
             lifecycleTests.CancelExpiredWaitingSessions_ChannelCleanupFailure_RetriesWhileSessionIsValid,
             lifecycleTests.CancelWaitingForSession_JoinAlreadyStarted_PreservesStartedMatch,
@@ -131,6 +138,8 @@ internal static class Program
             PlayerBoundaryTests.GetLeaderboard_UnavailableThroughWcf_ReturnsServiceFault,
             ModelResourcesTests.Assembly_RequiredRuntimeModel_IsEmbedded
         };
+        tests.AddRange(MatchInvitationTests.CreateTests());
+        return tests.ToArray();
     }
 
     private static int RunTests(Action[] tests)

@@ -42,6 +42,8 @@ public sealed class MatchRecord
     public DateTime? StartedAtUtc { get; set; }
     /// <summary>Gets or sets the confirmed participants in seat order.</summary>
     public ParticipantRecord[] Participants { get; set; } = Array.Empty<ParticipantRecord>();
+    /// <summary>Gets or sets whether the match is a private friend invitation.</summary>
+    public bool IsPrivate { get; set; }
     /// <summary>Gets a fresh initial board: zero is empty, one black, two white.</summary>
     public int[] InitialBoard => CreateInitialBoard();
     /// <summary>Gets the initial confirmed version supported by this increment.</summary>
@@ -99,19 +101,122 @@ public sealed class MatchRejectedException : Exception
     public MatchRejection Reason { get; }
 }
 
+/// <summary>Expected authoritative friendship rejection for match invitation operations.</summary>
+public enum FriendshipRejection
+{
+    /// <summary>Identifies the InvalidAccountId rejection.</summary>
+    InvalidAccountId,
+    /// <summary>Identifies the AccountUnavailable rejection.</summary>
+    AccountUnavailable,
+    /// <summary>Identifies the FriendshipNotFound rejection.</summary>
+    FriendshipNotFound,
+    /// <summary>Identifies the InactiveAccount rejection.</summary>
+    InactiveAccount
+}
+
+/// <summary>Expected friendship failure, without a communication dependency.</summary>
+public sealed class FriendshipRejectedException : Exception
+{
+    /// <summary>Creates an expected friendship rejection with its actionable reason.</summary>
+    /// <param name="reason">The actionable friendship rejection reason.</param>
+    public FriendshipRejectedException(FriendshipRejection reason)
+        : base("Friendship request rejected.")
+    {
+        Reason = reason;
+    }
+
+    /// <summary>Gets the actionable expected rejection reason.</summary>
+    public FriendshipRejection Reason { get; }
+}
+
+/// <summary>Delivery payload for a private match invitation email.</summary>
+public sealed class MatchInvitationEmail
+{
+    /// <summary>Creates a delivery payload for an invitation message.</summary>
+    /// <param name="recipientEmail">The destination address resolved by the server.</param>
+    /// <param name="creatorDisplayName">The public username of the inviting player.</param>
+    /// <param name="matchCode">The temporary match code.</param>
+    public MatchInvitationEmail(
+        string recipientEmail,
+        string creatorDisplayName,
+        string matchCode)
+    {
+        RecipientEmail = recipientEmail
+            ?? throw new ArgumentNullException(nameof(recipientEmail));
+        CreatorDisplayName = creatorDisplayName
+            ?? throw new ArgumentNullException(nameof(creatorDisplayName));
+        MatchCode = matchCode
+            ?? throw new ArgumentNullException(nameof(matchCode));
+    }
+
+    /// <summary>Gets the server-resolved recipient email address.</summary>
+    public string RecipientEmail { get; }
+
+    /// <summary>Gets the public display name of the match creator.</summary>
+    public string CreatorDisplayName { get; }
+
+    /// <summary>Gets the join code assigned to the waiting match.</summary>
+    public string MatchCode { get; }
+}
+
+/// <summary>Port for delivering private match invitations via email.</summary>
+public interface IMatchInvitationEmailSender
+{
+    /// <summary>Sends a match invitation email synchronously.</summary>
+    /// <param name="email">The delivery payload containing code and recipient.</param>
+    void Send(MatchInvitationEmail email);
+}
+
+/// <summary>Result of preparing a private match invitation before email dispatch.</summary>
+public sealed class PrivateMatchInvitationPreparation
+{
+    /// <summary>Creates the private match preparation details.</summary>
+    /// <param name="match">The created match record in waiting state.</param>
+    /// <param name="friendEmail">The server-resolved email address of the invited friend.</param>
+    public PrivateMatchInvitationPreparation(MatchRecord match, string friendEmail)
+    {
+        Match = match ?? throw new ArgumentNullException(nameof(match));
+        FriendEmail = friendEmail ?? throw new ArgumentNullException(nameof(friendEmail));
+    }
+
+    /// <summary>Gets the created match record.</summary>
+    public MatchRecord Match { get; }
+
+    /// <summary>Gets the recipient email address for invitation dispatch.</summary>
+    public string FriendEmail { get; }
+}
+
 /// <summary>Atomic durable match operations. Implementations enforce state transitions.</summary>
 public interface IMatchStore
 {
     /// <summary>Creates the waiting lobby and its creator seat atomically.</summary>
     MatchRecord Create(AuthenticatedSessionRecord player, MatchSettings settings, DateTime now);
+
+    /// <summary>Prepares a private waiting match reserved for an accepted friend atomically.</summary>
+    PrivateMatchInvitationPreparation PreparePrivate(
+        AuthenticatedSessionRecord player,
+        long friendAccountId,
+        MatchSettings settings,
+        DateTime now);
+
+    /// <summary>Confirms a private match after successful invitation email dispatch.</summary>
+    MatchRecord ConfirmPrivate(long accountId, long matchId, DateTime now);
+
     /// <summary>Lists joinable waiting lobbies belonging to other players.</summary>
     MatchRecord[] Available(long accountId);
+
     /// <summary>Occupies the second seat and starts the waiting match atomically.</summary>
     MatchRecord Join(AuthenticatedSessionRecord player, string code, DateTime now);
+
+    /// <summary>Validates whether a match code is joinable by a guest or rejects appropriately.</summary>
+    void ValidateJoinForGuest(string code);
+
     /// <summary>Loads confirmed match data for an authorized participant.</summary>
     MatchRecord Get(long accountId, long matchId);
+
     /// <summary>Changes the duration only while the creator still owns a waiting lobby.</summary>
     MatchRecord ChangeTurnDuration(long accountId, long matchId, int seconds);
+
     /// <summary>Cancels a waiting lobby owned by the requesting account.</summary>
     void Cancel(long accountId, long matchId);
 }
