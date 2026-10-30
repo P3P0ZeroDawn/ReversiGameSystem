@@ -14,6 +14,13 @@ namespace ReversiGameSystem.Server.Persistence.Matches;
 /// <summary>Persists atomic human lobby transitions using transaction-owned database locks.</summary>
 public sealed class EntityFrameworkMatchStore : IMatchStore
 {
+    /// <inheritdoc />
+    public void Authorize(long accountId)
+    {
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        MatchDatabase.RequireActive(context, accountId);
+    }
+
     private const string Alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
     /// <summary>Cancels orphaned waiting lobbies before the single authoritative host accepts callers.</summary>

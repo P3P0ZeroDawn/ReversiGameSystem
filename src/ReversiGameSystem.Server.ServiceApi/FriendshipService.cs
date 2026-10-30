@@ -50,27 +50,30 @@ public sealed class FriendshipService : IFriendshipService, IDisposable
 
     /// <inheritdoc />
     public void OpenFriendshipChannel(string sessionToken) =>
-        Execute(nameof(OpenFriendshipChannel), () =>
-        {
-            long accountId = RequireCaller(sessionToken);
-            IFriendshipServiceCallback callback = OperationContext.Current
-                .GetCallbackChannel<IFriendshipServiceCallback>();
-            FriendshipChannel channel = new FriendshipChannel(sessionToken, accountId, callback);
-            channel.Terminated = (_, _) => RemoveChannel(channel);
-            channel.Communication.Closed += channel.Terminated;
-            channel.Communication.Faulted += channel.Terminated;
-            RegisterChannel(channel);
-            if (!IsValid(channel))
-            {
-                RemoveChannel(channel);
-                throw SessionFault(SessionFailure.InvalidSession);
-            }
-
-            return true;
-        });
+        Execute(nameof(OpenFriendshipChannel), () => OpenChannel(sessionToken));
 
     /// <inheritdoc />
-    public FriendSummary[] GetFriends(string sessionToken) => Execute(nameof(GetFriends), () =>
+    public FriendSummary[] GetFriends(string sessionToken) =>
+        Execute(nameof(GetFriends), () => ReadFriends(sessionToken));
+
+    private void OpenChannel(string sessionToken)
+    {
+        long accountId = RequireCaller(sessionToken);
+        IFriendshipServiceCallback callback = OperationContext.Current
+            .GetCallbackChannel<IFriendshipServiceCallback>();
+        FriendshipChannel channel = new FriendshipChannel(sessionToken, accountId, callback);
+        channel.Terminated = (_, _) => RemoveChannel(channel);
+        channel.Communication.Closed += channel.Terminated;
+        channel.Communication.Faulted += channel.Terminated;
+        RegisterChannel(channel);
+        if (!IsValid(channel))
+        {
+            RemoveChannel(channel);
+            throw SessionFault(SessionFailure.InvalidSession);
+        }
+    }
+
+    private FriendSummary[] ReadFriends(string sessionToken)
     {
         long accountId = RequireCaller(sessionToken);
         FriendAccount[] friends = _friends.GetFriends(accountId);
@@ -79,20 +82,23 @@ public sealed class FriendshipService : IFriendshipService, IDisposable
         lock (_gate)
         {
             ThrowIfDisposed();
-            return friends.Select(friend => new FriendSummary
-            {
-                Account = new AccountReference
-                {
-                    AccountId = friend.AccountId,
-                    Username = friend.Username
-                },
-                HasProfileImage = friend.HasProfileImage,
-                IsOnline = _channels.Values.Any(channel => channel.AccountId == friend.AccountId)
-            }).ToArray();
+            return friends.Select(CreateFriendSummary).ToArray();
         }
-    });
+    }
 
-    /// <summary>Removes a revoked session without allowing cleanup failures to escape.</summary>
+    // ReadFriends holds the bookkeeping lock while mapping channel presence.
+    private FriendSummary CreateFriendSummary(FriendAccount friend) => new FriendSummary
+    {
+        Account = new AccountReference
+        {
+            AccountId = friend.AccountId,
+            Username = friend.Username
+        },
+        HasProfileImage = friend.HasProfileImage,
+        IsOnline = _channels.Values.Any(channel => channel.AccountId == friend.AccountId)
+    };
+
+    /// <summary>Removes a revoked session and reports cleanup failures.</summary>
     /// <param name="sessionToken">The revoked opaque token.</param>
     public void RemoveSession(string sessionToken)
     {
@@ -111,14 +117,7 @@ public sealed class FriendshipService : IFriendshipService, IDisposable
         }
         catch (Exception exception)
         {
-            try
-            {
-                LogFailure(nameof(RemoveSession), exception);
-            }
-            catch (Exception)
-            {
-                // Session revocation must remain successful even if its log provider fails.
-            }
+            LogFailure(nameof(RemoveSession), exception);
         }
     }
 
@@ -228,7 +227,7 @@ public sealed class FriendshipService : IFriendshipService, IDisposable
         }
         catch (Exception exception)
         {
-            LogFailure(nameof(Dispose), exception);
+            LogFailure(nameof(AbortChannel), exception);
         }
     }
 
@@ -347,14 +346,33 @@ public sealed class FriendshipService : IFriendshipService, IDisposable
             {
                 SendChange(recipient, accountId, online);
             }
+            catch (CommunicationException exception)
+            {
+                DisconnectFailedRecipient(recipient, exception);
+            }
+            catch (TimeoutException exception)
+            {
+                DisconnectFailedRecipient(recipient, exception);
+            }
             catch (Exception exception)
             {
-                RemoveChannel(recipient);
-                AbortChannel(recipient);
                 LogFailure(nameof(Publish), exception);
             }
         }
     }
+
+    private void DisconnectFailedRecipient(FriendshipChannel recipient, Exception exception)
+    {
+        RemoveChannel(recipient);
+        AbortChannel(recipient);
+        LogFailure(nameof(Publish), exception);
+    }
+
+    private void Execute(string operation, Action action) => Execute(operation, () =>
+    {
+        action();
+        return true;
+    });
 
     private TResult Execute<TResult>(string operation, Func<TResult> action)
     {
@@ -369,7 +387,7 @@ public sealed class FriendshipService : IFriendshipService, IDisposable
         catch (Exception exception)
         {
             LogFailure(operation, exception);
-            throw Unsupported(operation);
+            throw CreateServiceFault(operation);
         }
     }
 
@@ -431,14 +449,13 @@ public sealed class FriendshipService : IFriendshipService, IDisposable
     }
 
     private static FaultException<SessionFault> SessionFault(SessionFailure reason) =>
-        new FaultException<SessionFault>(new SessionFault
-        {
-            Reason = reason
-        },
-            "The session request was rejected.");
+        SessionFaultFactory.Create(reason);
+
+    private static FaultException<ServiceFault> CreateServiceFault(string operation) =>
+        ServiceFaultFactory.Create(operation, CorrelationContext.GetOrCreate());
 
     private static FaultException<ServiceFault> Unsupported(string operation) =>
-        ServiceFaultFactory.Create(operation, CorrelationContext.GetOrCreate());
+        CreateServiceFault(operation);
 
     private void ThrowIfDisposed()
     {
@@ -448,8 +465,23 @@ public sealed class FriendshipService : IFriendshipService, IDisposable
         }
     }
 
-    private void LogFailure(string operation, Exception exception) =>
-        _logger.LogError(FailureDiagnostics.ForLogging(exception),
-            "The {Operation} friendship operation failed. CorrelationId: {CorrelationId}",
-            operation, CorrelationContext.GetOrCreate());
+    private void LogFailure(string operation, Exception exception)
+    {
+        string correlationId = CorrelationContext.GetOrCreate();
+        try
+        {
+            _logger.LogError(exception,
+                "The {Operation} friendship operation failed. CorrelationId: {CorrelationId}",
+                operation, correlationId);
+        }
+        catch (Exception loggingFailure)
+        {
+            // Preserve revocation and report both failures through an independent safe sink.
+            Console.Error.WriteLine(
+                "The friendship diagnostic logger failed. Operation: {0}. CorrelationId: {1}.{2}{3}{2}{4}",
+                operation, correlationId, Environment.NewLine,
+                FailureDiagnostics.Describe(exception),
+                FailureDiagnostics.Describe(loggingFailure));
+        }
+    }
 }

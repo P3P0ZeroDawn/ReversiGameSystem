@@ -19,6 +19,7 @@
                       Version="10.0.13" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\ReversiGameSystem.Server.Host\ReversiGameSystem.Server.Host.csproj" />
     <ProjectReference Include="..\..\src\ReversiGameSystem.Domain\ReversiGameSystem.Domain.csproj" />
     <ProjectReference Include="..\..\src\ReversiGameSystem.Server.Application\ReversiGameSystem.Server.Application.csproj" />
     <ProjectReference Include="..\..\src\ReversiGameSystem.Server.Contracts\ReversiGameSystem.Server.Contracts.csproj" />

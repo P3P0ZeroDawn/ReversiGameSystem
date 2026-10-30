@@ -189,6 +189,10 @@ public sealed class PrivateMatchInvitationPreparation
 /// <summary>Atomic durable match operations. Implementations enforce state transitions.</summary>
 public interface IMatchStore
 {
+    /// <summary>Rejects an account that cannot use match operations.</summary>
+    /// <param name="accountId">The authenticated account identifier.</param>
+    void Authorize(long accountId);
+
     /// <summary>Creates the waiting lobby and its creator seat atomically.</summary>
     MatchRecord Create(AuthenticatedSessionRecord player, MatchSettings settings, DateTime now);
 

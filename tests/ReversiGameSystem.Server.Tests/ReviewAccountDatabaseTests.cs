@@ -291,10 +291,16 @@ INSERT dbo.Friendship VALUES (1,3,3,'PENDING','2026-01-01',NULL,NULL);");
             "test-data", "PrepareReviewFriendship.sql"));
         TestAssert.IsTrue(script.Contains("DECLARE @FirstUsername nvarchar(50) = N'p3p0';")
             && script.Contains("DECLARE @SecondUsername nvarchar(50) = N'cesardoc';")
-            && script.Contains("DECLARE @Apply bit = 0;"),
+            && (script.Contains("DECLARE @Apply bit = 0;")
+                || script.Contains("DECLARE @Apply bit = 1;")),
             "The fixture parameter interface has changed.");
+        script = System.Text.RegularExpressions.Regex.Replace(script,
+            @"(?im)^[\t ]*USE[\t ]+(?:\[ReversiGameSystem\]|ReversiGameSystem);[\t ]*\r?$", "");
+        TestAssert.IsTrue(!System.Text.RegularExpressions.Regex.IsMatch(script, @"(?im)^\s*USE\s"),
+            "Review fixtures must never change the disposable database connection context.");
         return script.Replace("N'p3p0'", "N'ReviewAlpha'")
             .Replace("N'cesardoc'", "N'ReviewBeta'")
+            .Replace("DECLARE @Apply bit = 1;", "DECLARE @Apply bit = 0;")
             .Replace("DECLARE @Apply bit = 0;", "DECLARE @Apply bit = " + (apply ? "1;" : "0;"));
     }
 

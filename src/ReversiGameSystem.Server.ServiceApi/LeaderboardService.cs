@@ -57,9 +57,9 @@ public sealed class LeaderboardService : ILeaderboardService
         }
         catch (Exception exception)
         {
-            _logger.LogError("The {Operation} operation failed. "
-                + "CorrelationId: {CorrelationId}. {Diagnostics}",
-                Operation, correlationId, FailureDiagnostics.Describe(exception));
+            _logger.LogError(exception, "The {Operation} operation failed. "
+                + "CorrelationId: {CorrelationId}",
+                Operation, correlationId);
             throw ServiceFaultFactory.Create(Operation, correlationId);
         }
     }

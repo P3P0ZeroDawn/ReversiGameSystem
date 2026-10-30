@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.ServiceModel;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Application.Chat;
@@ -28,7 +29,8 @@ internal static class Program
         using (ILoggerFactory loggerFactory = LoggerFactory.Create(
             builder => builder
                 .SetMinimumLevel(LogLevel.Information)
-                .AddSimpleConsole(options => options.SingleLine = true)))
+                .AddConsole(options => options.FormatterName = SafeConsoleFormatter.FormatterName)
+                .AddConsoleFormatter<SafeConsoleFormatter, ConsoleFormatterOptions>()))
         {
             ILogger<AccountAccessService> serviceLogger =
                 loggerFactory.CreateLogger<AccountAccessService>();
@@ -79,8 +81,7 @@ internal static class Program
             }
             catch (Exception exception)
             {
-                hostLogger.LogCritical("The server could not start. {Diagnostics}",
-                    FailureDiagnostics.Describe(exception));
+                hostLogger.LogCritical(exception, "The server could not start.");
                 return 1;
             }
         }
@@ -163,8 +164,7 @@ internal static class Program
         }
         catch (Exception exception)
         {
-            logger.LogCritical("The Reversi server stopped unexpectedly. {Diagnostics}",
-                FailureDiagnostics.Describe(exception));
+            logger.LogCritical(exception, "The Reversi server stopped unexpectedly.");
             return 1;
         }
         finally
