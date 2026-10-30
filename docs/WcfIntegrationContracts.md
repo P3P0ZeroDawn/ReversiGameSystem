@@ -1484,6 +1484,7 @@ códigos, autorización y transiciones de estado; el cliente no las confirma por
 | --------------------- | -------------------- | ------------------------- |
 | `OpenLobbyChannel`    | `void`               | `Planned`                 |
 | `CreateMatch`         | `LobbySnapshot`      | `Prototype`               |
+| `InviteToMatch`       | `LobbySnapshot`      | `Planned`                 |
 | `GetAvailableMatches` | `AvailableMatch[]`   | `Prototype`               |
 | `JoinMatch`           | `LobbySnapshot`      | `Prototype`               |
 | `ChangeTurnDuration` | `LobbySnapshot`      | `Prototype`               |
@@ -1497,6 +1498,11 @@ void OpenLobbyChannel(string sessionToken);
 
 LobbySnapshot CreateMatch(
     string sessionToken,
+    MatchConfiguration configuration);
+
+LobbySnapshot InviteToMatch(
+    string sessionToken,
+    long friendAccountId,
     MatchConfiguration configuration);
 
 AvailableMatch[] GetAvailableMatches(string sessionToken);
@@ -1513,9 +1519,12 @@ MatchStateSnapshot StartSystemMatch(string sessionToken, long matchId);
 void CancelMatch(string sessionToken, long matchId);
 ```
 
-Los flujos actuales usan `MatchSession`, `PrototypeMatchStore` y servicios locales del
-cliente. No tienen casos de uso, contratos, adaptadores ni endpoints WCF implementados en
-el servidor. El identificador remoto es `long`, acorde con `GameMatch.matchId`; no depende
+La descripción de prototipos de esta sección corresponde a la etapa de definición del
+catálogo. El avance posterior de creación, unión, inicio humano y chat remoto se registra
+en [el inventario de migración](MigrationInventory.md#inicio-remoto-de-partida-humana-y-chat).
+`InviteToMatch` es una ampliación acordada y todavía pendiente: no existe en la interfaz C#,
+el proxy, el endpoint publicado ni la pantalla. Sus reglas se especifican en 13.8.
+El identificador remoto es `long`, acorde con `GameMatch.matchId`; no depende
 de los identificadores textuales del catálogo prototipo ni del código temporal de unión.
 
 Se conserva `MatchConfiguration` para agrupar la configuración objetivo de creación.
@@ -1541,6 +1550,9 @@ sustituye las comprobaciones de autorización de las operaciones posteriores.
 
 #### `CreateMatch`
 
+Esta operación conserva la creación pública. La creación privada con destinatario y
+envío de correo corresponde a la ampliación pendiente `InviteToMatch` de 13.8.
+
 Recibe la configuración propuesta y devuelve el estado de la sala creada. La duración debe
 estar entre 10 y 120 segundos inclusive; la interfaz utiliza 40 segundos como valor inicial.
 
@@ -1559,6 +1571,9 @@ Devuelve un array de resúmenes de salas que, al consultar, están en `Waiting`,
 participante, admiten otro jugador y no pertenecen al solicitante. Excluye partidas contra
 el sistema, partidas en curso, terminadas o canceladas.
 
+Con la ampliación de 13.8 excluirá también las partidas privadas por invitación, incluso
+al consultar desde la cuenta invitada. Estas se unen introduciendo el código recibido.
+
 No mezcla salas disponibles con partidas observables en curso. El listado de observación
 pertenece al servicio de partidas y conserva las restricciones de invitados.
 
@@ -1576,6 +1591,10 @@ El servidor normaliza y valida el código con la política descrita para creaci�
 un formato inválido de un código que ya no identifica una sala disponible. Después
 comprueba que la sala siga esperando, tenga exactamente un participante, admita otro jugador
 y no sea del propio solicitante.
+
+Para una partida privada, la ampliación de 13.8 exige además que la cuenta autenticada sea
+la destinataria reservada. Conocer el código no concede ese permiso. La comprobación de
+destinatario, vigencia de la espera y ocupación del asiento debe ser atómica con la unión.
 
 Una unión correcta registra exactamente un segundo participante en el asiento 2 con piezas
 blancas, inicia la partida en `InProgress` e invalida el código para uniones posteriores.
@@ -1738,10 +1757,12 @@ concretarse antes de integrar el flujo remoto, como se indica en la sección 13.
 
 ### 13.6 Faults declarados
 
-Todas las operaciones declaran `ServiceFault` y `SessionFault`.
+Todas las operaciones declaran `ServiceFault` y `SessionFault`. La ampliación pendiente
+`InviteToMatch` declarará además `MatchFault` y `FriendshipFault`, como precisa 13.8.
 Un token vacío o ausente produce `SessionFailure.MissingSessionToken`; una sesión inexistente,
-caducada o revocada produce `SessionFailure.InvalidSession`. Una sesión válida de invitado
-no se rechaza por su condición de invitado.
+caducada o revocada produce `SessionFailure.InvalidSession`. La admisión objetivo de
+invitados se conserva para los flujos generales; `InviteToMatch` requiere una cuenta
+registrada activa y no está disponible para invitados.
 
 Los rechazos propios de salas utilizan `MatchFault`, con el miembro obligatorio `Reason`
 de tipo `MatchFailure`. Este fault puede reutilizarse en el servicio de partidas para
@@ -1756,19 +1777,22 @@ condiciones del mismo dominio, sin crear una clase por operación.
 | `CannotJoinOwnMatch` | El solicitante intenta unirse a su propia sala. |
 | `InvalidMatchCode` | El código no cumple el formato. |
 | `MatchCodeUnavailable` | El código no identifica una sala actualmente admisible. |
-| `Unauthorized` | La sesión no tiene el rol requerido para modificar o cerrar la sala. |
+| `Unauthorized` | La sesión no tiene el rol requerido para la acción; en la ampliación privada, no es la cuenta destinataria o intenta invitarse a sí misma. |
 | `MatchNotWaiting` | La partida ya no espera y no admite la acción de sala solicitada. |
 | `InactiveAccount` | La cuenta registrada solicitante ya no está activa. |
 
 Los valores se seleccionan según la operación:
 
 - `CreateMatch`: configuración ausente o no admitida y duración inválida.
-- `JoinMatch`: formato de código inválido, código no disponible o sala propia.
+- `JoinMatch`: formato de código inválido, código no disponible o sala propia; con la
+  ampliación privada, también cuenta distinta de la destinataria.
+- `InviteToMatch` (pendiente): sesión, configuración y duración; identificador,
+  disponibilidad y amistad del destinatario; autorización de cuenta registrada.
 - `ChangeTurnDuration`: identificador, existencia, autoría, estado y duración.
 - `StartSystemMatch`: identificador, existencia, autoría y estado de espera con un participante.
 - `CancelMatch`: identificador, existencia, autoría y estado; una repetición del cierre ya
   confirmado por el creador no genera otro rechazo.
-- Las siete operaciones pueden rechazar una cuenta registrada inactiva.
+- Las operaciones pueden rechazar una cuenta registrada inactiva.
 
 Los valores del enum usan `EnumMember`. Las operaciones declaran los `FaultContract`
 aplicables con los namespaces de la sección 4. El cliente distingue
@@ -1796,6 +1820,136 @@ se haya recibido un callback anterior.
 
 Estas decisiones forman parte del diseño pendiente; no autorizan a presentar la interfaz,
 la persistencia ni la integración WCF como terminadas.
+
+### 13.8 Ampliación pendiente: invitación privada por correo
+
+**Estado:** diseño acordado, sin implementación. Esta ampliación no crea otro servicio,
+callback, wrapper de solicitud ni objeto de resultado. Reutiliza `IMatchLobbyService`,
+`MatchConfiguration`, `LobbySnapshot` y los faults existentes.
+
+```csharp
+LobbySnapshot InviteToMatch(
+    string sessionToken,
+    long friendAccountId,
+    MatchConfiguration configuration);
+```
+
+#### Entrada y resultado
+
+- `sessionToken` identifica al creador mediante una cuenta registrada activa.
+- `friendAccountId` identifica al destinatario estable; no recibe nombre ni correo del cliente.
+- `configuration` agrupa la configuración de la partida humana. Se valida en el servidor
+  con las mismas reglas aplicables a `CreateMatch`; no añade privacidad ni destinatario.
+- El resultado es la partida privada creada en `Waiting`, con su código y el creador en
+  el asiento 1. La cuenta invitada no ocupa el asiento 2 hasta confirmar `JoinMatch`.
+  El retorno no equivale a la entrega del mensaje en el buzón.
+
+#### Autorización, privacidad y unión
+
+La amistad debe estar aceptada y vigente al solicitar la invitación, ambas cuentas deben
+estar activas y el destinatario debe ser distinto del creador. El amigo puede estar
+conectado o desconectado: `IsOnline` es informativo, no un requisito ni una autorización.
+
+El servidor crea la partida privada y reserva el segundo asiento para la cuenta invitada.
+La privacidad y el destinatario se conservan internamente; no se agregan a
+`MatchConfiguration`, `AvailableMatch` ni a un nuevo DTO de invitación. La partida no
+aparece en `GetAvailableMatches` para ningún solicitante. Ocultarla no sustituye la
+comprobación de identidad al entrar.
+
+El destinatario inicia sesión y utiliza `JoinMatch(sessionToken, matchCode)`. El servidor
+revalida cuentas activas, identidad reservada, código y estado disponible. La amistad es
+el requisito para emitir la invitación; la autorización de entrada usa la reserva de la
+cuenta, sin convertir la presencia en permiso. Una unión válida ocupa el asiento 2,
+inicia la partida e invalida el código en una misma transición. No hay botón adicional de
+aceptación ni otra sala de espera para ambos. Se reutilizan los callbacks de inicio y cierre.
+
+#### Vigencia vinculada a la espera
+
+El código es válido únicamente mientras el creador mantiene esa partida en espera. No
+tiene una caducidad independiente de cinco minutos, una fecha fija en el correo ni una
+duración adicional. Es el código de partida de seis caracteres de 13.3, no un código de
+verificación de cuenta; no se incorpora como propósito de `VerificationCode`.
+
+Cancelar o abandonar la espera invalida el código. Al cerrar la aplicación, perder su
+canal o dejar de tener una sesión válida, el servidor cancela la espera cuando confirma
+esa condición. La detección de una desconexión puede tardar según los tiempos de WCF;
+el correo no promete detección instantánea. Otra instancia conectada del mismo creador
+no prolonga por sí sola la espera mantenida por la sesión que creó la partida.
+
+Al entrar el invitado también se invalida el código. Reiniciar el host no prolonga la
+invitación: las partidas que quedaron esperando se cancelan conforme al ciclo actual de
+sesiones. Ante carreras entre unión, cancelación y desconexión prevalece una única
+transición confirmada por el servidor; un correo antiguo no reabre una partida.
+
+#### Correo y secuencia de confirmación
+
+El servidor obtiene el correo registrado del destinatario, prepara la partida privada,
+envía el mensaje y devuelve `LobbySnapshot` solo si el proveedor acepta el envío y la
+partida continúa esperando. Si el creador abandona durante el envío no se reactiva la
+partida ni se informa que sigue disponible. La cancelación no puede retirar un mensaje
+ya aceptado por el proveedor.
+
+El mensaje identifica al creador por su nombre público, incluye el código, explica cómo
+iniciar sesión y unirse, e indica: «Puedes unirte con este código mientras el creador siga
+esperando». Aclara que la disponibilidad puede cambiar. Se reutilizan la configuración,
+credenciales inyectadas por entorno y transporte del mailer, con contenido separado del
+correo de verificación y nombres ajenos a la tecnología del proveedor. El correo del
+destinatario y las credenciales no se devuelven al cliente.
+
+El envío queda fuera de las transacciones SQL y de los bloqueos de estado. Se confirma
+aceptación por el proveedor, nunca entrega garantizada al buzón. No se añaden cola,
+reenvío automático ni operación de reenvío en esta ampliación.
+
+#### Faults y fallos parciales
+
+| Operación o condición | Fault y `Reason` |
+| --- | --- |
+| Token ausente; inválido, caducado o revocado | `SessionFault`: `MissingSessionToken` o `InvalidSession`, respectivamente. |
+| Solicitante inactivo | `MatchFault.InactiveAccount`. |
+| `InviteToMatch`: invitado o destinatario igual al creador | `MatchFault.Unauthorized`. |
+| `InviteToMatch`: configuración ausente o incompatible; duración fuera de rango | `MatchFault.InvalidConfiguration` o `InvalidTurnDuration`, respectivamente. |
+| `InviteToMatch`: identificador del destinatario no positivo | `FriendshipFault.InvalidAccountId`. |
+| `InviteToMatch`: destinatario inexistente o inactivo | `FriendshipFault.AccountUnavailable`. |
+| `InviteToMatch`: no existe amistad aceptada y vigente | `FriendshipFault.FriendshipNotFound`. |
+| `JoinMatch`: cuenta distinta del destinatario reservado | `MatchFault.Unauthorized`; no ocupa asiento ni cambia la partida. |
+| `JoinMatch`: código cancelado, usado o ya no disponible | `MatchFault.MatchCodeUnavailable`; el formato inválido conserva `InvalidMatchCode`. |
+| El creador dejó de esperar antes de confirmar la invitación | `MatchFault.MatchNotWaiting`; no se devuelve una espera activa. |
+| Fallo de persistencia, consulta o envío | `ServiceFault` con correlación; sin correo, código ni credenciales en el diagnóstico. |
+
+Se reutilizan los miembros `Reason` de los enums existentes; no se usa
+`CannotSendRequestToSelf`, que corresponde a una solicitud de amistad. La notación de la
+tabla abrevia, por ejemplo, `FriendshipFault` con `Reason = FriendshipFailure.InvalidAccountId`.
+El cliente distinguirá los cuatro `FaultException<T>` declarados. El código técnico de
+`ServiceFault` se mantiene en la familia de operaciones de lobby; no se publica la causa
+interna del proveedor ni se convierte el fallo de correo en un rechazo de amistad.
+
+Si el envío falla, se cancela la partida preparada y se invalida el código. Un timeout
+del proveedor puede ocurrir después de aceptar el mensaje; aun si llega ese correo, la
+partida cancelada no admite unión. Si falla también la compensación en BD, no se afirma
+que la cancelación se confirmó ni se devuelve éxito. Antes de implementar debe definirse
+cómo impedir el uso de una preparación no confirmada y conciliar ese fallo parcial.
+No se supone una transacción atómica entre SQL y el proveedor de correo.
+
+Ante un timeout de WCF el cliente no repite automáticamente `InviteToMatch`: la partida
+y el envío podrían haberse confirmado. Tampoco muestra «correo enviado» sin respuesta
+confirmada. La recuperación de ese resultado incierto debe resolverse antes de ofrecer
+reintentos que creen partidas o correos duplicados; no se incorpora ahora un wrapper o
+una operación adicional para ocultar esa decisión pendiente.
+
+#### Persistencia y compatibilidad pendientes
+
+El modelo actual no conserva un destinatario de invitación asociado a `GameMatch`.
+Se debe definir su representación durable y la distinción entre partidas públicas y
+privadas, preparar la migración con claves y restricciones, y conciliar el EDMX mediante
+su generación habitual. Una referencia opcional al destinatario es una alternativa
+mínima por evaluar; no es un campo aprobado ni una migración ya preparada. El cambio
+de cuenta o su baja nunca debe convertir una partida privada en pública.
+
+La futura implementación agregará `InviteToMatch` y sus `FaultContract`, actualizará el
+host y regenerará el proxy con las herramientas existentes. `JoinMatch` y
+`GetAvailableMatches` conservan sus firmas y adquieren las comprobaciones descritas.
+No se modifica hoy código, esquema, endpoint, proxy ni credenciales. Las tareas y
+pruebas pendientes se registran en el inventario de migración.
 
 ## 14. `IGameplayMatchService`
 

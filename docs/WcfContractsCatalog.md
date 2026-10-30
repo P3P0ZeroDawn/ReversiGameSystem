@@ -285,6 +285,12 @@ LobbySnapshot CreateMatch(
     string sessionToken,
     MatchConfiguration configuration);
 
+// Ampliación pendiente de implementación.
+LobbySnapshot InviteToMatch(
+    string sessionToken,
+    long friendAccountId,
+    MatchConfiguration configuration);
+
 AvailableMatch[] GetAvailableMatches(string sessionToken);
 
 LobbySnapshot JoinMatch(string sessionToken, string matchCode);
@@ -307,15 +313,47 @@ void CancelMatch(string sessionToken, long matchId);
 | Operación | Detalle del fault |
 | --- | --- |
 | Todas | `MatchFault`, `SessionFault` |
+| `InviteToMatch` (pendiente) | Además, `FriendshipFault` |
 
 **Falla técnica:** `FaultException<ServiceFault>` en todas las operaciones.
 
 **Condiciones contractuales:**
 
-- Acceso con cuenta registrada activa o sesión de invitado.
+- Acceso objetivo con cuenta registrada activa o sesión de invitado; `InviteToMatch`
+  requiere cuenta registrada activa.
 - `JoinMatch` recibe el código de sala e inicia la partida con el segundo participante.
 - `ChangeTurnDuration`, `StartSystemMatch` y `CancelMatch`: creador de una sala en `Waiting`.
 - `CancelMatch` es idempotente para el cierre ya confirmado por el mismo creador.
+
+**Ampliación pendiente: `InviteToMatch`.** Firma aún ausente del código y del proxy.
+
+- Crea una partida humana privada en `Waiting`, con el creador en el asiento 1 y el
+  asiento 2 reservado para el amigo indicado. Devuelve `LobbySnapshot` tras la aceptación
+  del correo por el proveedor, si la partida sigue esperando; no garantiza entrega al buzón.
+- Requiere amistad aceptada y vigente y cuentas activas y distintas. No requiere que el
+  destinatario esté conectado. El servidor resuelve su correo registrado.
+- Reutiliza `MatchConfiguration` y `LobbySnapshot`; no incorpora datos de privacidad ni
+  correo a estos contratos. `CreateMatch` conserva la creación pública.
+- Las partidas privadas quedan excluidas de `GetAvailableMatches`, también para el
+  destinatario. `JoinMatch` conserva su firma y exige la cuenta reservada, además del código.
+- Código válido solo mientras el creador mantiene esa espera; sin vencimiento temporal
+  independiente. Cancelación, abandono, desconexión detectada, invalidez de la sesión
+  creadora o reinicio del host cancelan la espera. Otra instancia del creador no la prolonga.
+- La unión confirmada inicia la partida e invalida el código; reutiliza los callbacks existentes.
+- Correo con creador, código e instrucciones: «Puedes unirte con este código mientras el
+  creador siga esperando». No utiliza los códigos de verificación de cuenta.
+- Rechazos de `InviteToMatch`: `MatchFault` con `Unauthorized` para invitado o destinatario
+  propio, `InvalidConfiguration`, `InvalidTurnDuration`, `InactiveAccount` o `MatchNotWaiting`;
+  `FriendshipFault` con `InvalidAccountId`, `AccountUnavailable` o `FriendshipNotFound`;
+  `SessionFault` con `MissingSessionToken` o `InvalidSession`, según corresponda.
+- Unión de un tercero: `MatchFault.Unauthorized`; código cancelado o usado:
+  `MatchFault.MatchCodeUnavailable`. Un rechazo no ocupa asiento ni altera el estado.
+- Fallo técnico o de correo: `ServiceFault`; se cancela la preparación y se invalida el
+  código. La compensación fallida y el resultado incierto tras timeout requieren resolución
+  antes de implementar. No hay reenvío automático ni confirmación visual anticipada.
+
+Especificación interna completa y decisiones técnicas pendientes:
+[catálogo de integración, sección 13.8](WcfIntegrationContracts.md#138-ampliación-pendiente-invitación-privada-por-correo).
 
 #### `IMatchLobbyServiceCallback`
 
@@ -896,7 +934,7 @@ Cada detalle se declara mediante `FaultContract(typeof(TFault))` y se comunica c
 | `CannotJoinOwnMatch` | El solicitante intenta unirse a su propia sala. |
 | `InvalidMatchCode` | El código no cumple el formato. |
 | `MatchCodeUnavailable` | El código no identifica una sala actualmente admisible. |
-| `Unauthorized` | La sesión no tiene el rol requerido para modificar o cerrar la sala. |
+| `Unauthorized` | La sesión no tiene el rol requerido; la ampliación privada incluye a quien no es destinatario reservado o intenta invitarse a sí mismo. |
 | `MatchNotWaiting` | La partida ya no espera y no admite la acción de sala solicitada. |
 | `InactiveAccount` | La cuenta registrada solicitante ya no está activa. |
 | `MissingPlacement` | El objeto de colocación está ausente. |

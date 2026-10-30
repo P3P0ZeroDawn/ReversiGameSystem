@@ -45,6 +45,7 @@ Las funciones pendientes se conservan identificadas más abajo; el estándar tod
 | Tipos antiguos de perfil y clasificación sin consumidores | Implementado | Nueve tipos retirados. |
 | Pruebas de contratos | Implementado | Paso anterior: 29 pruebas del servidor y dos del cliente aprobadas; ambas soluciones compilaron. |
 | Acceso heredado y `ServiceFault.IsTransient` | Pendiente | Retirar al migrar sus consumidores y regenerar referencias; evitar romper registro durante el cambio de login. |
+| Invitación privada: `IMatchLobbyService.InviteToMatch` | Pendiente | Diseño documentado en la sección 13.8 del catálogo interno; no se ha agregado a C#, proxy, host ni interfaz. |
 
 ## 2. Códigos de verificación y correo
 
@@ -378,6 +379,86 @@ servicios pendientes indicados en este inventario.
   dinámicos al cambiar idioma. No acredita todas las resoluciones ni una revisión
   completa de interacción manual. La prueba y las correcciones finales de recursos
   y localización fueron autoinspeccionadas por el coordinador.
-- La invitación privada por correo constituye el siguiente paso autorizado. Requiere
-  documentar y agregar `InviteToMatch`, reservar el destinatario, excluir esa partida del
-  listado público y mantener el código válido únicamente durante la espera del creador.
+- La invitación privada por correo constituye el siguiente paso autorizado. Su diseño se
+  documenta en el apartado siguiente; agregar `InviteToMatch`, la reserva del destinatario,
+  la exclusión del listado y la vigencia ligada a la espera sigue pendiente de implementación.
+
+## Paso 2 pendiente: invitación privada por correo
+
+**Estado: documentado, sin implementar.** La documentación de este paso no modifica código,
+BD, contratos C#, proxy, endpoints, credenciales ni comportamiento de la aplicación.
+
+Especificación de referencia:
+[WcfIntegrationContracts.md, sección 13.8](WcfIntegrationContracts.md#138-ampliación-pendiente-invitación-privada-por-correo).
+El [catálogo resumido](WcfContractsCatalog.md#27-imatchlobbyservice) incluye la ampliación
+marcada expresamente como pendiente.
+
+### Diseño acordado
+
+```csharp
+LobbySnapshot InviteToMatch(
+    string sessionToken,
+    long friendAccountId,
+    MatchConfiguration configuration);
+```
+
+- Botón «Invitar a partida» en la lista inicial de amigos, asociado al identificador
+  estable de la cuenta. Se permite invitar a amigos conectados o desconectados.
+- El servidor valida sesión, amistad aceptada y vigente, cuentas activas y distintas y
+  configuración; crea una partida humana privada y reserva el segundo asiento al amigo.
+- El servidor obtiene el correo registrado y envía creador, código e instrucciones.
+  Reutiliza configuración y credenciales inyectadas por entorno del mailer existente,
+  con contenido específico de invitación y nombres independientes de su tecnología.
+  No se devuelve al cliente el correo del amigo ni se reutiliza `VerificationCode`.
+- Se devuelve la partida en `Waiting` solo tras aceptar el proveedor el envío y confirmar
+  que el creador sigue esperando. Aceptación del proveedor no equivale a entrega en el buzón.
+- La partida no aparece en el listado público, ni siquiera al consultarlo el invitado.
+  El invitado inicia sesión y usa el `JoinMatch` existente con el código. El servidor
+  valida su identidad reservada, disponibilidad y cuentas activas antes de ocupar asiento.
+  Conocer el código sin ser destinatario no autoriza la unión.
+- El código conserva el formato de partida existente, sin duración independiente:
+  vale exactamente durante esa espera. Cancelar, abandonarla, perder el canal o la
+  sesión creadora y reiniciar el host invalidan la espera al confirmarse en el servidor.
+  La detección de desconexión no es instantánea. Otra instancia conectada del creador
+  no mantiene esa invitación. La unión confirmada también invalida el código e inicia
+  la partida; no introduce otra pantalla ni un botón de aceptación/inicio adicional.
+- El correo indica: «Puedes unirte con este código mientras el creador siga esperando».
+  Un mensaje recibido después de la cancelación no recupera la partida.
+- Fallo de envío: cancelar la preparación, invalidar el código y devolver `ServiceFault`
+  correlacionado. No mantener transacciones SQL ni bloqueos del estado durante el envío.
+  No agregar cola, reintento automático ni confirmaciones de éxito anticipadas.
+- Reutilizar `MatchConfiguration`, `LobbySnapshot`, callbacks y faults existentes.
+  `InviteToMatch` agrega `FriendshipFault` a los faults de lobby; los motivos y casos
+  concretos están documentados en 13.8. `CreateMatch` conserva la creación pública.
+
+### Trabajo técnico pendiente
+
+| Área | Cambio a realizar al implementar |
+| --- | --- |
+| Contrato y proxy | Agregar la operación síncrona con tres parámetros, declarar sus cuatro tipos de fault y regenerar el proxy; mantener firmas de listado y unión. |
+| Persistencia | Definir el destinatario durable de la partida y su privacidad; evaluar una referencia opcional como representación mínima, sin darla por aprobada. Preparar migración, claves, restricciones, compatibilidad con partidas públicas y conciliación del EDMX. |
+| Ciclo de espera | Vincular la partida a la sesión creadora y cancelar por salida, cierre, fallo de canal o sesión inválida; coordinar carreras con el envío y la unión. Conservar la cancelación al reiniciar. |
+| Privacidad | Excluir las partidas privadas en las consultas y reservar el asiento en la transacción de unión. Una baja o cambio de cuenta no debe convertirlas en públicas. |
+| Correo | Separar el contenido de invitación del de verificación; reutilizar el transporte y variables de entorno sin exponer direcciones, códigos o secretos en logs. |
+| Fallo parcial | Definir cómo impedir la unión a una preparación no confirmada si falla el correo y también la compensación SQL; no declarar una cancelación que no se guardó. |
+| Respuesta incierta | Resolver la recuperación del resultado si WCF pierde la respuesta después de crear y enviar. Evitar duplicados antes de ofrecer reintentos; no asumir que un timeout deshizo la escritura. |
+| Interfaz | Botón en amigos sin depender de `IsOnline`, apertura de la espera original tras confirmar y entrada mediante el código en las pantallas existentes; errores localizados sin éxito anticipado. |
+
+### Verificaciones que deberá cubrir la implementación
+
+- Amigo desconectado invitado correctamente y amigo conectado con el mismo comportamiento.
+- Rechazo de invitado, cuenta propia, identificador inválido, cuenta inactiva y amistad no vigente.
+- Exclusión de la partida privada del listado para creador, destinatario y terceros;
+  conservación del listado y unión de partidas públicas.
+- Unión exclusiva del destinatario, con código válido, un único segundo asiento y un único
+  inicio ante concurrencia; rechazo de terceros aunque conozcan el código.
+- Invalidez por cancelación, salida de la espera, desconexión detectada, revocación y
+  reinicio; otra instancia de la misma cuenta no prolonga la espera.
+- Fallo, rechazo o timeout del correo; compensación SQL fallida; cancelación durante el
+  envío; mensaje recibido después del cierre; respuesta WCF perdida y prevención de duplicados.
+- Mailer capturado o proveedor de prueba y BD desechable para integración; correo externo
+  únicamente en una prueba autorizada. Pantallas originales y mensajes en ambos idiomas.
+
+Estas son verificaciones previstas: no se han ejecutado para la invitación, porque la
+funcionalidad todavía no está implementada. La documentación del estándar y
+`Documento-Entrega.md` permanecen sin cambios.
