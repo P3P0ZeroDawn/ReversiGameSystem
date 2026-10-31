@@ -74,12 +74,10 @@ internal static class FriendshipConnectionTests
             using FriendshipClient client = new(NullLogger<FriendshipClient>.Instance,
                 context => new Proxy.FriendshipServiceClient(
                     context, CreateBinding(), new EndpointAddress(address)));
-            using ManualResetEventSlim refreshed = new();
-            client.FriendsChanged += () => refreshed.Set();
             client.GetFriendsAsync("test-session").GetAwaiter().GetResult();
-            refreshed.Reset();
-            TestAssert.AreEqual(true, refreshed.Wait(TimeSpan.FromSeconds(12)));
-            TestAssert.AreEqual(true, service.RequestCount >= 2);
+            TestAssert.AreEqual(true, client.IsConnected);
+            TestAssert.AreEqual(1, client.GetSnapshot().Length);
+
             using ManualResetEventSlim started = new();
             using ManualResetEventSlim release = new();
             service.RequestStarted = started;
@@ -90,9 +88,6 @@ internal static class FriendshipConnectionTests
             TestAssert.AreEqual(false, close.Wait(TimeSpan.FromMilliseconds(100)));
             release.Set();
             Task.WhenAll(refresh, close).GetAwaiter().GetResult();
-            int requestsAfterClose = service.RequestCount;
-            TestAssert.AreEqual(false, SpinWait.SpinUntil(
-                () => service.RequestCount > requestsAfterClose, TimeSpan.FromSeconds(11)));
             TestAssert.AreEqual(false, client.IsConnected);
             TestAssert.AreEqual(0, client.GetSnapshot().Length);
             host.Close();

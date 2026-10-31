@@ -56,6 +56,7 @@
     </Reference>
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
+    <Reference Include="System.Configuration" />
     <Reference Include="PresentationFramework" />
   </ItemGroup>
   <ItemGroup>
@@ -262,6 +263,8 @@
     <Compile Include="Services\FriendsService.cs" />
     <Compile Include="Services\FriendRemovalService.cs" />
     <Compile Include="Services\ChatService.cs" />
+    <Compile Include="Configuration\ClientEnvironmentSettings.cs" />
+    <Compile Include="Services\ServerConnectionFactory.cs" />
     <Compile Include="Services\ClientRuntime.cs" />
     <Compile Include="Services\RemoteMatchClient.cs" />
     <Compile Include="Services\RemoteMatchMessages.cs" />

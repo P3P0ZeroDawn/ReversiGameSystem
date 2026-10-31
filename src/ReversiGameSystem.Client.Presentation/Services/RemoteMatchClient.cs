@@ -30,11 +30,14 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
     private readonly Dictionary<long, SortedDictionary<int, Proxy.MatchChatEntry>> _messages = new();
 
     internal RemoteMatchClient(string token, ILogger<RemoteMatchClient> logger)
-        : this(token, new MatchEndpoints(), logger)
+        : this(token, ServerConnectionFactory.CreateMatchEndpoints(), logger)
     {
     }
 
-    internal RemoteMatchClient(string token, MatchEndpoints endpoints, ILogger<RemoteMatchClient> logger)
+    internal RemoteMatchClient(
+        string token,
+        MatchEndpoints endpoints,
+        ILogger<RemoteMatchClient> logger)
     {
         _token = token;
         _logger = logger;
@@ -44,17 +47,14 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
         _chat = CreateChat();
     }
 
-    private Proxy.MatchLobbyServiceClient CreateLobby() => _endpoints.Lobby == null
-        ? new(new InstanceContext(this), "MatchLobbyEndpoint")
-        : new(new InstanceContext(this), CreateBinding(), new EndpointAddress(_endpoints.Lobby));
+    private Proxy.MatchLobbyServiceClient CreateLobby() =>
+        ServerConnectionFactory.CreateLobbyClient(new InstanceContext(this));
 
-    private Proxy.GameplayMatchServiceClient CreateGameplay() => _endpoints.Gameplay == null
-        ? new(new InstanceContext(this), "GameplayMatchEndpoint")
-        : new(new InstanceContext(this), CreateBinding(), new EndpointAddress(_endpoints.Gameplay));
+    private Proxy.GameplayMatchServiceClient CreateGameplay() =>
+        ServerConnectionFactory.CreateGameplayClient(new InstanceContext(this));
 
-    private Proxy.MatchChatServiceClient CreateChat() => _endpoints.Chat == null
-        ? new(new InstanceContext(this), "MatchChatEndpoint")
-        : new(new InstanceContext(this), CreateBinding(), new EndpointAddress(_endpoints.Chat));
+    private Proxy.MatchChatServiceClient CreateChat() =>
+        ServerConnectionFactory.CreateChatClient(new InstanceContext(this));
 
     private Proxy.MatchLobbyServiceClient PrepareLobby()
     {
@@ -93,11 +93,19 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
     internal event Action<long>? MessagesChanged;
     internal event Action<Proxy.ChatMuteNotification>? Muted;
 
-    private static NetTcpBinding CreateBinding() => new(SecurityMode.Transport)
+    private static NetTcpBinding CreateBinding()
     {
-        ReceiveTimeout = TimeSpan.FromHours(1), SendTimeout = TimeSpan.FromSeconds(5),
-        MaxReceivedMessageSize = 6291456
-    };
+        NetTcpBinding binding = new NetTcpBinding(SecurityMode.Transport)
+        {
+            ReceiveTimeout = TimeSpan.FromHours(1),
+            SendTimeout = TimeSpan.FromSeconds(5),
+            MaxReceivedMessageSize = 6291456
+        };
+        binding.Security.Transport.ClientCredentialType = TcpClientCredentialType.None;
+        binding.Security.Transport.ProtectionLevel =
+            System.Net.Security.ProtectionLevel.EncryptAndSign;
+        return binding;
+    }
 
     internal Task<Proxy.LobbySnapshot> CreateAsync(int seconds) =>
         RequestAsync(() => PrepareLobby(), async () =>

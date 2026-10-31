@@ -17,13 +17,12 @@ internal sealed class FriendshipClient : IDisposable
     private readonly FriendshipSnapshot _snapshot = new();
     private Proxy.FriendshipServiceClient? _client;
     private string? _token;
-    private Timer? _heartbeat;
     private int _generation;
     private bool _connected;
     private bool _disposed;
 
     internal FriendshipClient(ILogger<FriendshipClient> logger)
-        : this(logger, context => new Proxy.FriendshipServiceClient(context, "FriendshipEndpoint"))
+        : this(logger, context => ServerConnectionFactory.CreateFriendshipClient(context))
     {
     }
 
@@ -92,7 +91,6 @@ internal sealed class FriendshipClient : IDisposable
                 }
                 _snapshot.CompleteRefresh(friends);
                 _connected = true;
-                _heartbeat ??= new Timer(OnHeartbeat, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
             }
             FriendsChanged?.Invoke();
             return _snapshot.Read();
@@ -119,35 +117,6 @@ internal sealed class FriendshipClient : IDisposable
             OperationContext.Current.OutgoingMessageHeaders.Add(MessageHeader.CreateHeader(
                 "CorrelationId", "urn:reversi:diagnostics:v1", correlationId));
             return operation();
-        }
-    }
-
-    private async void OnHeartbeat(object? state)
-    {
-        if (!await _requests.WaitAsync(0).ConfigureAwait(false))
-        {
-            return;
-        }
-        try
-        {
-            string? token;
-            lock (_sync)
-            {
-                token = IsConnected && !_disposed ? _token : null;
-            }
-            if (token != null)
-            {
-                await RefreshAsync(token).ConfigureAwait(false);
-            }
-        }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
-        {
-            // RefreshAsync has already logged the correlated failure and released the channel.
-            _logger.LogDebug("Friendship keepalive stopped after a remote failure.");
-        }
-        finally
-        {
-            _requests.Release();
         }
     }
 
@@ -229,8 +198,6 @@ internal sealed class FriendshipClient : IDisposable
     private void ReleaseChannel()
     {
         _generation++;
-        _heartbeat?.Dispose();
-        _heartbeat = null;
         _connected = false;
         _token = null;
         if (_client != null)

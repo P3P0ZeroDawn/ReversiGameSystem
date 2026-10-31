@@ -41,6 +41,8 @@ internal static class Program
             new AuthenticationOutcomeMapperTests();
         MatchInvitationClientTests invitationTests =
             new MatchInvitationClientTests();
+        ServerConnectionFactoryTests connectionFactoryTests =
+            new ServerConnectionFactoryTests();
         Action[] tests =
         {
             RemoteMatchClientTests.Callbacks_StaleVersionsAndDuplicateMessages_PreserveConfirmedState,
@@ -68,7 +70,12 @@ internal static class Program
             invitationTests.LocalizationResources_InvitationKeys_ArePresentInAllSupportedCultures,
             invitationTests.TurnTimePolicy_ValidRange_ParsesConfiguredSeconds,
             invitationTests.TurnTimePolicy_OutOfRangeOrNonNumeric_RejectsInput,
-            invitationTests.RemoteMatchClient_InviteAsync_CommunicationException_AbortsWithoutAutoRetry
+            invitationTests.RemoteMatchClient_InviteAsync_CommunicationException_AbortsWithoutAutoRetry,
+            connectionFactoryTests.GetServerHost_VariableAbsent_ReturnsLocalhost,
+            connectionFactoryTests.GetServerHost_EnvironmentVariableProvided_ReturnsConfiguredHost,
+            connectionFactoryTests.CreateEndpointAddress_ValidHost_RewritesAddressPreservingPortAndPath,
+            connectionFactoryTests.CreateMatchEndpoints_CustomHost_OverridesAllThreeEndpoints,
+            connectionFactoryTests.GetServerHost_WhitespaceOrInvalidHost_ThrowsInvalidOperationException
         };
 
         return Run(CombineTests(tests));

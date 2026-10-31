@@ -14,7 +14,7 @@ internal sealed class SessionClient
     private readonly Func<Proxy.SessionServiceClient> _createClient;
 
     internal SessionClient(ILogger<SessionClient> logger)
-        : this(logger, () => new Proxy.SessionServiceClient("SessionEndpoint"))
+        : this(logger, ServerConnectionFactory.CreateSessionClient)
     {
     }
 
