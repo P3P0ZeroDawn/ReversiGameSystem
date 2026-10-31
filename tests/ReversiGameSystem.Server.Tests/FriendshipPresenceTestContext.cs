@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.ServiceModel;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Friendships;
@@ -30,11 +31,18 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, IAuthenticate
     internal int FriendshipReads;
     internal bool FriendshipActive = true;
     internal int RelationshipChecks;
+    internal int FailedRelationshipChecks;
+    internal readonly Exception RepositoryFailure =
+        new InvalidOperationException("private-provider-diagnostic");
     internal readonly FriendshipService Service;
 
-    internal FriendshipPresenceTestContext()
+    internal FriendshipPresenceTestContext() : this(NullLogger<FriendshipService>.Instance)
     {
-        Service = new FriendshipService(this, this, NullLogger<FriendshipService>.Instance);
+    }
+
+    internal FriendshipPresenceTestContext(ILogger<FriendshipService> logger)
+    {
+        Service = new FriendshipService(this, this, logger);
         _host = new ServiceHost(Service, _address);
         _host.AddServiceEndpoint(typeof(IFriendshipService), Binding(), string.Empty);
         _host.Open();
@@ -74,7 +82,10 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, IAuthenticate
 
     public bool IsAccountActive(long accountId)
     {
-        if (FailRepository) { throw new InvalidOperationException("Private provider diagnostic"); }
+        if (FailRepository)
+        {
+            throw RepositoryFailure;
+        }
         return !Inactive;
     }
 
@@ -91,6 +102,7 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, IAuthenticate
         System.Threading.Interlocked.Increment(ref RelationshipChecks);
         if (FailRelationshipChecks && accountId == 1 && friendAccountId == 2)
         {
+            System.Threading.Interlocked.Increment(ref FailedRelationshipChecks);
             throw new InvalidOperationException("Private relationship provider diagnostic");
         }
         return FriendshipActive && !Inactive && ((accountId == 1 && friendAccountId == 2)

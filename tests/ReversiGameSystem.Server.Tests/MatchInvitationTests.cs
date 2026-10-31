@@ -714,6 +714,14 @@ internal sealed class MatchInvitationTests
 
     private sealed class InvitationMockStore : IMatchStore
     {
+        public void Authorize(long accountId)
+        {
+            if (!Accounts.TryGetValue(accountId, out (string Email, bool IsActive) account)
+                || !account.IsActive)
+            {
+                throw new MatchRejectedException(MatchRejection.InactiveAccount);
+            }
+        }
         private readonly object _sync = new object();
         private long _nextId = 100;
         internal Dictionary<long, MockMatchRow> Rows { get; } = new Dictionary<long, MockMatchRow>();

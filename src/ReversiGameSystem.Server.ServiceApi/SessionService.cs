@@ -69,7 +69,7 @@ public sealed class SessionService : ISessionService
         }
         catch (Exception exception)
         {
-            _logger.LogWarning(FailureDiagnostics.ForLogging(exception),
+            _logger.LogWarning(exception,
                 "A server observer could not process a confirmed session closure. "
                 + "CorrelationId: {CorrelationId}", CorrelationContext.GetOrCreate());
         }
@@ -101,8 +101,7 @@ public sealed class SessionService : ISessionService
         }
         catch (Exception exception)
         {
-            // Exception messages from external providers may contain private request data.
-            _logger.LogError(FailureDiagnostics.ForLogging(exception),
+            _logger.LogError(exception,
                 "The {Operation} operation failed. CorrelationId: {CorrelationId}",
                 operation, correlationId);
             throw ServiceFaultFactory.Create(operation, correlationId);

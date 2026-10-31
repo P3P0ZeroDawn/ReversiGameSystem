@@ -22,24 +22,15 @@ internal sealed class MatchBoundary
         }
         catch (SessionRejectedException exception)
         {
-            throw new FaultException<SessionFault>(new SessionFault
-            {
-                Reason = (SessionFailure)Enum.Parse(typeof(SessionFailure), exception.Reason.ToString())
-            }, "The session request was rejected.");
+            throw CreateSessionFault(exception);
         }
         catch (MatchRejectedException exception)
         {
-            throw new FaultException<MatchFault>(new MatchFault
-            {
-                Reason = (MatchFailure)Enum.Parse(typeof(MatchFailure), exception.Reason.ToString())
-            }, "The match request was rejected.");
+            throw CreateMatchFault(exception);
         }
         catch (FriendshipRejectedException exception)
         {
-            throw new FaultException<FriendshipFault>(new FriendshipFault
-            {
-                Reason = (FriendshipFailure)Enum.Parse(typeof(FriendshipFailure), exception.Reason.ToString())
-            }, "The friendship request was rejected.");
+            throw CreateFriendshipFault(exception);
         }
         catch (FaultException)
         {
@@ -48,15 +39,42 @@ internal sealed class MatchBoundary
         catch (Exception exception)
         {
             Log(operation, exception);
-            throw Unsupported(operation);
+            throw CreateServiceFault(operation);
         }
     }
 
+    internal void Execute(string operation, Action action) => Execute(operation, () =>
+    {
+        action();
+        return true;
+    });
+
+    private static FaultException<SessionFault> CreateSessionFault(SessionRejectedException exception) =>
+        SessionFaultFactory.Create((SessionFailure)Enum.Parse(
+            typeof(SessionFailure), exception.Reason.ToString()));
+
+    private static FaultException<MatchFault> CreateMatchFault(MatchRejectedException exception) =>
+        new FaultException<MatchFault>(new MatchFault
+        {
+            Reason = (MatchFailure)Enum.Parse(typeof(MatchFailure), exception.Reason.ToString())
+        }, "The match request was rejected.");
+
+    private static FaultException<FriendshipFault> CreateFriendshipFault(
+        FriendshipRejectedException exception) =>
+        new FaultException<FriendshipFault>(new FriendshipFault
+        {
+            Reason = (FriendshipFailure)Enum.Parse(
+                typeof(FriendshipFailure), exception.Reason.ToString())
+        }, "The friendship request was rejected.");
+
     internal void Log(string operation, Exception exception) =>
-        _logger.LogError(FailureDiagnostics.ForLogging(exception),
+        _logger.LogError(exception,
             "The {Operation} match operation failed. CorrelationId: {CorrelationId}",
             operation, CorrelationContext.GetOrCreate());
 
     internal static FaultException<ServiceFault> Unsupported(string operation) =>
+        CreateServiceFault(operation);
+
+    private static FaultException<ServiceFault> CreateServiceFault(string operation) =>
         ServiceFaultFactory.Create(operation, CorrelationContext.GetOrCreate());
 }

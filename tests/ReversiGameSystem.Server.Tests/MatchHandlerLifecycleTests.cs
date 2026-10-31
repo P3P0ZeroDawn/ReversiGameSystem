@@ -132,6 +132,10 @@ internal sealed class MatchHandlerLifecycleTests
 
     private sealed class LifecycleStore : IMatchStore
     {
+        public void Authorize(long accountId)
+        {
+            // This fixture isolates creation and cleanup of an already authorized account.
+        }
         internal bool FailCancel { get; set; }
         internal bool Started { get; set; }
         internal int CancelAttempts { get; private set; }

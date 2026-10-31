@@ -78,9 +78,9 @@ public sealed class PlayerProfileService : IPlayerProfileService
         }
         catch (Exception exception)
         {
-            _logger.LogError("The {Operation} operation failed. "
-                + "CorrelationId: {CorrelationId}. {Diagnostics}",
-                operation, correlationId, FailureDiagnostics.Describe(exception));
+            _logger.LogError(exception, "The {Operation} operation failed. "
+                + "CorrelationId: {CorrelationId}",
+                operation, correlationId);
             throw ServiceFaultFactory.Create(operation, correlationId);
         }
     }

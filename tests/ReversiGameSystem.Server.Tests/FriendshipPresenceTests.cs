@@ -1,9 +1,12 @@
 using System;
+using System.IO;
 using System.ServiceModel;
 using System.Threading;
+using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Contracts.Common;
 using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.Contracts.Friendships;
+using ReversiGameSystem.Server.ServiceApi;
 
 namespace ReversiGameSystem.Server.Tests;
 
@@ -177,28 +180,95 @@ internal sealed class FriendshipPresenceTests
         TestAssert.AreEqual(0, observer.Count(2, FriendChange.Connected));
     }
 
-    internal void RelationshipFailure_ClosesChannelAndAllowsPresenceRecovery()
+    internal void RelationshipFailure_PreservesHealthyChannelAndAllowsPresenceRecovery()
     {
         // Arrange
         using FriendshipPresenceTestContext context = new FriendshipPresenceTestContext();
-        FriendshipPresenceTestClient disconnected = context.Connect("one");
+        FriendshipPresenceTestClient observer = context.Connect("one");
         context.FailRelationshipChecks = true;
 
         // Act
         FriendshipPresenceTestClient friend = context.Connect("two");
-        Wait(() => ((ICommunicationObject)disconnected.Channel).State is
-            CommunicationState.Faulted or CommunicationState.Closed);
+        Wait(() => Volatile.Read(ref context.FailedRelationshipChecks) > 0);
+        TestAssert.AreEqual(CommunicationState.Opened,
+            ((ICommunicationObject)observer.Channel).State);
         context.FailRelationshipChecks = false;
-        FriendshipPresenceTestClient recovered = context.Connect("one");
 
         // Assert
-        TestAssert.IsTrue(recovered.Channel.GetFriends("one")[0].IsOnline,
-            "Reconnected session must recover its friend snapshot.");
+        TestAssert.IsTrue(observer.Channel.GetFriends("one")[0].IsOnline,
+            "The existing channel must recover its friend snapshot.");
         TestAssert.IsTrue(friend.Channel.GetFriends("two")[0].IsOnline,
-            "Reconnected session must restore its own visible presence.");
+            "A repository failure must not remove the observer's presence.");
         context.Revoke("two");
         context.Service.RemoveSession("two");
-        Wait(() => recovered.Count(2, FriendChange.Disconnected) == 1);
+        Wait(() => observer.Count(2, FriendChange.Disconnected) == 1);
+    }
+
+    internal void RepositoryFailure_LogsOriginalExceptionAndReturnsDeclaredFault()
+    {
+        // Arrange
+        FailureLogger logger = new FailureLogger();
+        using FriendshipPresenceTestContext context = new FriendshipPresenceTestContext(logger);
+        context.FailRepository = true;
+
+        // Act
+        TestAssert.Throws<FaultException<ServiceFault>>(() => context.Service.GetFriends("one"));
+
+        // Assert
+        TestAssert.IsTrue(ReferenceEquals(context.RepositoryFailure, logger.Failure),
+            "The logger must receive the original exception, including its diagnostic structure.");
+    }
+
+    internal void LoggerFailure_ReportsBothFailuresWithoutExposingProviderMessages()
+    {
+        // Arrange
+        FailureLogger logger = new FailureLogger { ThrowOnLog = true };
+        using FriendshipPresenceTestContext context = new FriendshipPresenceTestContext(logger);
+        context.FailRepository = true;
+        TextWriter previousError = Console.Error;
+        using StringWriter fallback = new StringWriter();
+
+        // Act
+        try
+        {
+            Console.SetError(fallback);
+            TestAssert.Throws<FaultException<ServiceFault>>(() => context.Service.GetFriends("one"));
+        }
+        finally
+        {
+            Console.SetError(previousError);
+        }
+
+        // Assert
+        string output = fallback.ToString();
+        TestAssert.IsTrue(output.Contains("CorrelationId:")
+            && output.Contains(nameof(FriendshipService.GetFriends)),
+            "Fallback diagnostics must retain the operation and correlation.");
+        TestAssert.IsTrue(output.Contains(nameof(InvalidOperationException))
+            && output.Contains(nameof(IOException)),
+            "Fallback diagnostics must report both the operation and logger failures.");
+        TestAssert.IsTrue(!output.Contains("private-"),
+            "The independent diagnostic sink must exclude both provider messages.");
+    }
+
+    private sealed class FailureLogger : ILogger<FriendshipService>
+    {
+        internal bool ThrowOnLog { get; set; }
+        internal Exception? Failure { get; private set; }
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
+            Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            Failure = exception;
+            if (ThrowOnLog)
+            {
+                throw new IOException("private-logging-provider-message");
+            }
+        }
     }
 
     private static void Wait(Func<bool> condition, int timeout = 5000) =>

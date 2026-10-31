@@ -180,6 +180,8 @@ internal sealed class MatchBoundaryTests
 
     private sealed class BoundaryStore : IMatchStore
     {
+        public void Authorize(long accountId) =>
+            throw new InvalidOperationException("private storage failure");
         internal bool AllowRead { get; set; }
         public MatchRecord Create(AuthenticatedSessionRecord player, MatchSettings settings, DateTime now) => throw new NotSupportedException();
         public MatchRecord[] Available(long accountId) => throw new InvalidOperationException("private storage failure");

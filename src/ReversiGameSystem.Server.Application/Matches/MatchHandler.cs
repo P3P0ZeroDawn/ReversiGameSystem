@@ -41,7 +41,7 @@ public sealed class MatchHandler
     }
 
     /// <summary>Creates the waiting lobby and its creator seat atomically.</summary>
-    public MatchRecord Create(string token, MatchSettings settings)
+    public MatchRecord Create(string token, MatchSettings? settings)
     {
         lock (_creationSync)
         {
@@ -49,30 +49,18 @@ public sealed class MatchHandler
         }
     }
 
-    private MatchRecord CreateTracked(string token, MatchSettings settings)
+    private MatchRecord CreateTracked(string token, MatchSettings? settings)
     {
         AuthenticatedSessionRecord player = RequirePlayer(token);
-        if (_pendingCleanup.Contains(token))
-        {
-            CancelTracked(token);
-        }
-        else if (_created.ContainsKey(token))
-        {
-            CancelTracked(token);
-        }
-
-        if (settings == null || settings.OpponentKind != "Human" || settings.CountsTowardStatistics)
-        {
-            throw new MatchRejectedException(MatchRejection.InvalidConfiguration);
-        }
-        ValidateDuration(settings.TurnDurationSeconds);
+        PrepareCreation(token);
+        settings = ValidateSettings(settings);
         MatchRecord result = _store.Create(player, settings, _clock.UtcNow);
-        _created.GetOrAdd(token, _ => new ConcurrentDictionary<long, long>())[result.Id] = player.AccountId;
+        TrackCreatedMatch(token, player.AccountId, result.Id);
         return result;
     }
 
     /// <summary>Creates a private waiting match and delivers the join code to an accepted friend.</summary>
-    public MatchRecord Invite(string token, long friendAccountId, MatchSettings settings)
+    public MatchRecord Invite(string token, long friendAccountId, MatchSettings? settings)
     {
         if (string.IsNullOrWhiteSpace(token))
         {
@@ -97,27 +85,14 @@ public sealed class MatchHandler
             throw new MatchRejectedException(MatchRejection.Unauthorized);
         }
 
-        if (settings == null || settings.OpponentKind != "Human" || settings.CountsTowardStatistics)
-        {
-            throw new MatchRejectedException(MatchRejection.InvalidConfiguration);
-        }
-
-        ValidateDuration(settings.TurnDurationSeconds);
+        settings = ValidateSettings(settings);
 
         PrivateMatchInvitationPreparation preparation;
         lock (_creationSync)
         {
-            if (_pendingCleanup.Contains(token))
-            {
-                CancelTracked(token);
-            }
-            else if (_created.ContainsKey(token))
-            {
-                CancelTracked(token);
-            }
-
+            PrepareCreation(token);
             preparation = _store.PreparePrivate(player, friendAccountId, settings, _clock.UtcNow);
-            _created.GetOrAdd(token, _ => new ConcurrentDictionary<long, long>())[preparation.Match.Id] = player.AccountId;
+            TrackCreatedMatch(token, player.AccountId, preparation.Match.Id);
         }
 
         try
@@ -182,6 +157,38 @@ public sealed class MatchHandler
 
             return _store.ConfirmPrivate(player.AccountId, preparation.Match.Id, _clock.UtcNow);
         }
+    }
+
+    private static MatchSettings ValidateSettings(MatchSettings? settings)
+    {
+        if (settings == null || settings.OpponentKind != "Human" || settings.CountsTowardStatistics)
+        {
+            throw new MatchRejectedException(MatchRejection.InvalidConfiguration);
+        }
+        ValidateDuration(settings.TurnDurationSeconds);
+        return settings;
+    }
+
+    // Creation and invitation call these bookkeeping methods while holding _creationSync.
+    private void PrepareCreation(string token)
+    {
+        if (_pendingCleanup.Contains(token) || _created.ContainsKey(token))
+        {
+            CancelTracked(token);
+        }
+    }
+
+    private void TrackCreatedMatch(string token, long accountId, long matchId)
+    {
+        ConcurrentDictionary<long, long> matches =
+            _created.GetOrAdd(token, _ => new ConcurrentDictionary<long, long>());
+        matches[matchId] = accountId;
+    }
+
+    /// <summary>Validates a live registered session and its current account eligibility.</summary>
+    public void Authorize(string token)
+    {
+        _store.Authorize(RequirePlayer(token).AccountId);
     }
 
     /// <summary>Lists joinable waiting lobbies belonging to other players.</summary>

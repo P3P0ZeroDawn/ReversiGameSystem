@@ -51,9 +51,15 @@ internal static class Program
         ChatContentPolicyTests chatPolicyTests = new ChatContentPolicyTests();
         MatchBoundaryTests matchBoundaryTests = new MatchBoundaryTests();
         MatchHandlerLifecycleTests lifecycleTests = new MatchHandlerLifecycleTests();
+        LobbyAuthorizationTests lobbyAuthorizationTests = new LobbyAuthorizationTests();
         System.Collections.Generic.List<Action> tests =
             new System.Collections.Generic.List<Action>
         {
+            lobbyAuthorizationTests.Authorize_LiveSession_ChecksAccountWithoutListingMatches,
+            lobbyAuthorizationTests.Authorize_ExpiredSession_RejectsBeforeAccountQuery,
+            lobbyAuthorizationTests.Authorize_RevokedSession_RejectsBeforeAccountQuery,
+            lobbyAuthorizationTests.OpenLobbyChannel_InactiveAccount_ReturnsMatchFaultWithoutListing,
+            lobbyAuthorizationTests.OpenLobbyChannel_MissingToken_ReturnsSessionFaultBeforeAccountQuery,
             chatPolicyTests.Matches_AccentsCaseAndPunctuation_MatchesCompletePhrase,
             chatPolicyTests.Matches_WordInsideAnotherWord_DoesNotMatch,
             chatPolicyTests.Matches_EmptyPattern_DoesNotBlockEveryMessage,
@@ -114,11 +120,13 @@ internal static class Program
             mailTests.Load_ProcessConfiguration_ValidatesPortAndRequiresEncryption,
             mailTests.Send_LocalServerWithheldBanner_CancelsWithinDeliveryBudget,
             FailureDiagnosticsTests.Describe_NestedProviderFailure_ExcludesMessagesAndPrivateData,
-            FailureDiagnosticsTests.ForLogging_ThrownFailure_PreservesOnlySafeDiagnostics,
+            DiagnosticFormatterTests.Run,
             presenceTests.DuplexChannels_PublishPresenceAndOwnFriendSnapshot,
             presenceTests.MultipleSessions_StayOnlineUntilLastRevocation,
             presenceTests.ClosedAndReplacementChannels_PreservePresence,
-            presenceTests.RelationshipFailure_ClosesChannelAndAllowsPresenceRecovery,
+            presenceTests.RelationshipFailure_PreservesHealthyChannelAndAllowsPresenceRecovery,
+            presenceTests.RepositoryFailure_LogsOriginalExceptionAndReturnsDeclaredFault,
+            presenceTests.LoggerFailure_ReportsBothFailuresWithoutExposingProviderMessages,
             presenceTests.InvalidInactiveAndExpiredSessions_ReturnTypedFaults,
             presenceTests.UnsupportedOperations_ReturnDeclaredServiceFaultWithoutRepositoryAccess,
             presenceTests.ExpiredReceiver_ReceivesNoCallbacks,
