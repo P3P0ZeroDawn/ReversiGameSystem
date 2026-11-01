@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace ReversiGameSystem.Domain.Chat;
+namespace ReversiGameSystem.Server.Domain.Chat;
 
 /// <summary>Matches complete words and phrases without case or diacritic distinctions.</summary>
 public static class ChatContentPolicy

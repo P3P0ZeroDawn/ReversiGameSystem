@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace ReversiGameSystem.Domain.Accounts;
+namespace ReversiGameSystem.Server.Domain.Accounts;
 
 /// <summary>
 /// Defines the password rules shared by account clients and application services.

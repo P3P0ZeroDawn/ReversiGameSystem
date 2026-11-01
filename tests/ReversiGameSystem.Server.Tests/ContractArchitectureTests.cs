@@ -104,7 +104,7 @@ internal sealed class ContractArchitectureTests
         // Act
         bool hasInfrastructure = references.Any(reference =>
             reference.Name == "ReversiGameSystem.Server.Persistence"
-            || reference.Name == "ReversiGameSystem.Domain"
+            || reference.Name == "ReversiGameSystem.Server.Domain"
             || reference.Name == "EntityFramework"
             || reference.Name == "PresentationFramework");
 

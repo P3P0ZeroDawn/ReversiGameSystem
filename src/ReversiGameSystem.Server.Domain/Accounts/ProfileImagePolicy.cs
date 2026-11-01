@@ -1,6 +1,6 @@
 using System;
 
-namespace ReversiGameSystem.Domain.Accounts;
+namespace ReversiGameSystem.Server.Domain.Accounts;
 
 /// <summary>
 /// Represents profile image policy.

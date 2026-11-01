@@ -2,7 +2,7 @@ using System;
 using System.Drawing;
 using System.IO;
 using System.Security;
-using ReversiGameSystem.Domain.Accounts;
+using ReversiGameSystem.Server.Domain.Accounts;
 using ReversiGameSystem.Server.Application.Accounts;
 
 namespace ReversiGameSystem.Server.Persistence.Accounts;

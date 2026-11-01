@@ -2,7 +2,7 @@ using System;
 using System.Data;
 using System.Data.Entity;
 using System.Linq;
-using ReversiGameSystem.Domain.Chat;
+using ReversiGameSystem.Server.Domain.Chat;
 using ReversiGameSystem.Server.Application.Chat;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Persistence.Matches;

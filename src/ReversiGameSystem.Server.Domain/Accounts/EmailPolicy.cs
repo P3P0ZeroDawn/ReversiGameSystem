@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace ReversiGameSystem.Domain.Accounts;
+namespace ReversiGameSystem.Server.Domain.Accounts;
 
 /// <summary>
 /// Defines the email address syntax accepted for account registration.

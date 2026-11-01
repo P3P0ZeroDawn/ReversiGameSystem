@@ -1,4 +1,4 @@
-namespace ReversiGameSystem.Domain.Accounts;
+namespace ReversiGameSystem.Server.Domain.Accounts;
 
 /// <summary>
 /// Defines the username rules shared by account clients and application services.

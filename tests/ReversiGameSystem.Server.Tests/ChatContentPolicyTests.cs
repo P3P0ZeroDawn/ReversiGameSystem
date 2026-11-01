@@ -1,4 +1,4 @@
-using ReversiGameSystem.Domain.Chat;
+using ReversiGameSystem.Server.Domain.Chat;
 
 namespace ReversiGameSystem.Server.Tests;
 

@@ -1,5 +1,5 @@
 using System;
-using ReversiGameSystem.Domain.Accounts;
+using ReversiGameSystem.Server.Domain.Accounts;
 using ReversiGameSystem.Server.Application.Accounts;
 
 namespace ReversiGameSystem.Server.Application.Players;

@@ -8,6 +8,6 @@
     <ProjectGuid>{FE67E273-7E6A-4640-B804-37DD43ACCB7A}</ProjectGuid>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ReversiGameSystem.Domain\ReversiGameSystem.Domain.csproj" />
+    <ProjectReference Include="..\ReversiGameSystem.Server.Domain\ReversiGameSystem.Server.Domain.csproj" />
   </ItemGroup>
 </Project>
