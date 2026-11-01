@@ -47,7 +47,7 @@ internal static class ServiceFaultFactory
                 or nameof(IPlayerProfileService.GetProfileImage)
                 or nameof(IPlayerProfileService.ChangeUsername)
                 or nameof(IPlayerProfileService.UpdateProfileImage) => "PROFILE_OPERATION_FAILURE",
-            _ => "SESSION_OPERATION_FAILURE"
+            _ => "UNEXPECTED_SERVICE_FAILURE"
         };
         ServiceFault detail = new ServiceFault
         {

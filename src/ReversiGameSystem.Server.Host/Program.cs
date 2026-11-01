@@ -64,17 +64,21 @@ internal static class Program
                     session.SessionClosed += chat.RemoveSession;
                     ServiceHost[] hosts =
                     {
-                        new ServiceHost(CreateAccountAccessService(serviceLogger)),
-                        new ServiceHost(session),
-                        new ServiceHost(CreatePlayerProfileService(
-                            loggerFactory.CreateLogger<PlayerProfileService>(), sessions)),
-                        new ServiceHost(new LeaderboardService(new GetLeaderboardUseCase(
-                            new LeaderboardRepository()),
-                            loggerFactory.CreateLogger<LeaderboardService>())),
-                        new ServiceHost(friendship),
-                        new ServiceHost(lobby),
-                        new ServiceHost(gameplay),
-                        new ServiceHost(chat)
+                        CreateServiceHost(CreateAccountAccessService(serviceLogger), loggerFactory),
+                        CreateServiceHost(session, loggerFactory),
+                        CreateServiceHost(
+                            CreatePlayerProfileService(
+                                loggerFactory.CreateLogger<PlayerProfileService>(),
+                                sessions),
+                            loggerFactory),
+                        CreateServiceHost(
+                            new LeaderboardService(
+                                new GetLeaderboardUseCase(new LeaderboardRepository())),
+                            loggerFactory),
+                        CreateServiceHost(friendship, loggerFactory),
+                        CreateServiceHost(lobby, loggerFactory),
+                        CreateServiceHost(gameplay, loggerFactory),
+                        CreateServiceHost(chat, loggerFactory)
                     };
                     return Run(hosts, hostLogger);
                 }
@@ -143,6 +147,16 @@ internal static class Program
         return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "ReversiGameSystem.Server", "profile-images");
+    }
+
+    private static ServiceHost CreateServiceHost(
+        object service,
+        ILoggerFactory loggerFactory)
+    {
+        ServiceHost host = new ServiceHost(service);
+        host.Description.Behaviors.Add(new ServiceErrorBehavior(
+            loggerFactory.CreateLogger<ServiceErrorBehavior>()));
+        return host;
     }
 
     private static int Run(ServiceHost[] hosts, ILogger logger)

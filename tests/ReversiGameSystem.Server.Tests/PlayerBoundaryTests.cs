@@ -139,8 +139,7 @@ internal static class PlayerBoundaryTests
             }
         };
         LeaderboardService service = new LeaderboardService(
-            new GetLeaderboardUseCase(repository),
-            NullLogger<LeaderboardService>.Instance);
+            new GetLeaderboardUseCase(repository));
         ReversiGameSystem.Server.Contracts.Leaderboards.LeaderboardEntry[] result =
             Invoke<ILeaderboardService, ReversiGameSystem.Server.Contracts.Leaderboards.LeaderboardEntry[]>(
                 service, channel => channel.GetLeaderboard(10));
@@ -155,8 +154,7 @@ internal static class PlayerBoundaryTests
     internal static void GetLeaderboard_InvalidLimitThroughWcf_ReturnsTypedFault()
     {
         LeaderboardService service = new LeaderboardService(
-            new GetLeaderboardUseCase(new LeaderboardRepositoryStub()),
-            NullLogger<LeaderboardService>.Instance);
+            new GetLeaderboardUseCase(new LeaderboardRepositoryStub()));
         FaultException<LeaderboardFault> fault = TestAssert.Throws<FaultException<LeaderboardFault>>(() =>
             Invoke<ILeaderboardService, object>(service, channel => channel.GetLeaderboard(0)));
         TestAssert.AreEqual(LeaderboardFailure.InvalidMaximumEntries, fault.Detail.Reason);
@@ -165,10 +163,10 @@ internal static class PlayerBoundaryTests
     internal static void GetLeaderboard_UnavailableThroughWcf_ReturnsServiceFault()
     {
         LeaderboardService service = new LeaderboardService(new GetLeaderboardUseCase(
-            new LeaderboardRepositoryStub { ThrowOnGet = true }),
-            NullLogger<LeaderboardService>.Instance);
+            new LeaderboardRepositoryStub { ThrowOnGet = true }));
         FaultException<ServiceFault> fault = TestAssert.Throws<FaultException<ServiceFault>>(() =>
             Invoke<ILeaderboardService, object>(service, channel => channel.GetLeaderboard(10)));
+        TestAssert.AreEqual("LEADERBOARD_OPERATION_FAILURE", fault.Detail.FailureCode);
         TestAssert.AreEqual(true, !string.IsNullOrWhiteSpace(fault.Detail.CorrelationId));
     }
 
@@ -186,6 +184,8 @@ internal static class PlayerBoundaryTests
             + Guid.NewGuid().ToString("N") + "/");
         NetNamedPipeBinding binding = new NetNamedPipeBinding(NetNamedPipeSecurityMode.None);
         using ServiceHost host = new ServiceHost(service, address);
+        host.Description.Behaviors.Add(new ServiceErrorBehavior(
+            NullLogger<ServiceErrorBehavior>.Instance));
         host.AddServiceEndpoint(typeof(TContract), binding, "Service");
         host.Open();
         ChannelFactory<TContract> factory = new ChannelFactory<TContract>(binding,

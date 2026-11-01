@@ -13,10 +13,15 @@ internal static class CorrelationContext
     internal static string GetOrCreate()
     {
         OperationContext? operationContext = OperationContext.Current;
-        string correlationId = Read(operationContext?.IncomingMessageHeaders)
+        string? outgoingCorrelationId = Read(operationContext?.OutgoingMessageHeaders);
+        string correlationId = outgoingCorrelationId
+            ?? Read(operationContext?.IncomingMessageHeaders)
             ?? Guid.NewGuid().ToString("D");
-        if (operationContext != null)
+        if (operationContext != null && outgoingCorrelationId == null)
         {
+            operationContext.OutgoingMessageHeaders.RemoveAll(
+                HeaderName,
+                ContractNamespaces.Diagnostics);
             MessageHeader header = MessageHeader.CreateHeader(
                 HeaderName,
                 ContractNamespaces.Diagnostics,
@@ -34,14 +39,14 @@ internal static class CorrelationContext
             return null;
         }
 
-        int headerIndex = headers.FindHeader(HeaderName, ContractNamespaces.Diagnostics);
-        if (headerIndex < 0)
-        {
-            return null;
-        }
-
         try
         {
+            int headerIndex = headers.FindHeader(HeaderName, ContractNamespaces.Diagnostics);
+            if (headerIndex < 0)
+            {
+                return null;
+            }
+
             string value = headers.GetHeader<string>(headerIndex);
             return Guid.TryParse(value, out Guid parsed)
                 ? parsed.ToString("D")

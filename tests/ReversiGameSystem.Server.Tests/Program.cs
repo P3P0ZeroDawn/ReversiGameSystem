@@ -52,6 +52,7 @@ internal static class Program
         MatchBoundaryTests matchBoundaryTests = new MatchBoundaryTests();
         MatchHandlerLifecycleTests lifecycleTests = new MatchHandlerLifecycleTests();
         LobbyAuthorizationTests lobbyAuthorizationTests = new LobbyAuthorizationTests();
+        ServiceErrorBehaviorTests errorBehaviorTests = new ServiceErrorBehaviorTests();
         System.Collections.Generic.List<Action> tests =
             new System.Collections.Generic.List<Action>
         {
@@ -60,6 +61,12 @@ internal static class Program
             lobbyAuthorizationTests.Authorize_RevokedSession_RejectsBeforeAccountQuery,
             lobbyAuthorizationTests.OpenLobbyChannel_InactiveAccount_ReturnsMatchFaultWithoutListing,
             lobbyAuthorizationTests.OpenLobbyChannel_MissingToken_ReturnsSessionFaultBeforeAccountQuery,
+            errorBehaviorTests.UnexpectedFailure_ThroughWcf_ReturnsSanitizedFaultAndLogsOnce,
+            errorBehaviorTests.UnexpectedFailure_WithIncomingCorrelation_PreservesIdentifier,
+            errorBehaviorTests.UnexpectedFailure_AfterCorrelationWasCreated_ReusesIdentifier,
+            errorBehaviorTests.UndeclaredFault_ThroughWcf_IsSanitizedAndLogged,
+            errorBehaviorTests.LoggingFailure_ThroughWcf_StillReturnsSanitizedFault,
+            errorBehaviorTests.BusinessFault_ThroughWcf_PreservesTypeWithoutTechnicalLog,
             chatPolicyTests.Matches_AccentsCaseAndPunctuation_MatchesCompletePhrase,
             chatPolicyTests.Matches_WordInsideAnotherWord_DoesNotMatch,
             chatPolicyTests.Matches_EmptyPattern_DoesNotBlockEveryMessage,
