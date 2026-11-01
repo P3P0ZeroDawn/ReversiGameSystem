@@ -131,12 +131,15 @@ internal static class PlayerBoundaryTests
 
     internal static void GetLeaderboard_ThroughWcf_MapsOrderedEntries()
     {
-        LeaderboardStoreStub store = new LeaderboardStoreStub
+        LeaderboardRepositoryStub repository = new LeaderboardRepositoryStub
         {
-            Result = new LeaderboardStoreResult(LeaderboardStoreOutcome.Success,
-                new[] { new LeaderboardEntry(1, 42, "PlayerOne", "image", 6, 3, 0.5d) })
+            Players = new[]
+            {
+                new LeaderboardPlayer(42, "PlayerOne", "image", 6, 3)
+            }
         };
-        LeaderboardService service = new LeaderboardService(new GetLeaderboardHandler(store),
+        LeaderboardService service = new LeaderboardService(
+            new GetLeaderboardUseCase(repository),
             NullLogger<LeaderboardService>.Instance);
         ReversiGameSystem.Server.Contracts.Leaderboards.LeaderboardEntry[] result =
             Invoke<ILeaderboardService, ReversiGameSystem.Server.Contracts.Leaderboards.LeaderboardEntry[]>(
@@ -146,13 +149,14 @@ internal static class PlayerBoundaryTests
         TestAssert.AreEqual(42L, result[0].Account.AccountId);
         TestAssert.AreEqual(true, result[0].HasProfileImage);
         TestAssert.AreEqual(0.5d, result[0].WinRate);
-        TestAssert.AreEqual<int?>(10, store.MaximumEntries);
+        TestAssert.AreEqual(true, repository.WasCalled);
     }
 
     internal static void GetLeaderboard_InvalidLimitThroughWcf_ReturnsTypedFault()
     {
         LeaderboardService service = new LeaderboardService(
-            new GetLeaderboardHandler(new LeaderboardStoreStub()), NullLogger<LeaderboardService>.Instance);
+            new GetLeaderboardUseCase(new LeaderboardRepositoryStub()),
+            NullLogger<LeaderboardService>.Instance);
         FaultException<LeaderboardFault> fault = TestAssert.Throws<FaultException<LeaderboardFault>>(() =>
             Invoke<ILeaderboardService, object>(service, channel => channel.GetLeaderboard(0)));
         TestAssert.AreEqual(LeaderboardFailure.InvalidMaximumEntries, fault.Detail.Reason);
@@ -160,8 +164,8 @@ internal static class PlayerBoundaryTests
 
     internal static void GetLeaderboard_UnavailableThroughWcf_ReturnsServiceFault()
     {
-        LeaderboardService service = new LeaderboardService(new GetLeaderboardHandler(
-            new LeaderboardStoreStub { Result = new LeaderboardStoreResult(LeaderboardStoreOutcome.Unavailable) }),
+        LeaderboardService service = new LeaderboardService(new GetLeaderboardUseCase(
+            new LeaderboardRepositoryStub { ThrowOnGet = true }),
             NullLogger<LeaderboardService>.Instance);
         FaultException<ServiceFault> fault = TestAssert.Throws<FaultException<ServiceFault>>(() =>
             Invoke<ILeaderboardService, object>(service, channel => channel.GetLeaderboard(10)));

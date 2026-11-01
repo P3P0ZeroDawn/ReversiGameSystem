@@ -68,8 +68,8 @@ internal static class Program
                         new ServiceHost(session),
                         new ServiceHost(CreatePlayerProfileService(
                             loggerFactory.CreateLogger<PlayerProfileService>(), sessions)),
-                        new ServiceHost(new LeaderboardService(new GetLeaderboardHandler(
-                            new EntityFrameworkLeaderboardStore()),
+                        new ServiceHost(new LeaderboardService(new GetLeaderboardUseCase(
+                            new LeaderboardRepository()),
                             loggerFactory.CreateLogger<LeaderboardService>())),
                         new ServiceHost(friendship),
                         new ServiceHost(lobby),

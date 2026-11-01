@@ -1,155 +1,78 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace ReversiGameSystem.Server.Application.Leaderboards;
 
 /// <summary>
-/// Defines the leaderboard query use-case contract.
+/// Retrieves and ranks the global leaderboard from persisted player statistics.
 /// </summary>
-public interface IGetLeaderboardHandler
+public sealed class GetLeaderboardUseCase
 {
-    /// <summary>
-    /// Performs the execute async operation.
-    /// </summary>
-    /// <param name="query">The query.</param>
-    /// <returns>The result of the operation.</returns>
-    public Task<LeaderboardResult> ExecuteAsync(LeaderboardQuery query);
-}
+    /// <summary>Represents the maximum accepted number of leaderboard entries.</summary>
+    public const int MaximumAllowedEntries = 100;
 
-/// <summary>
-/// Represents leaderboard query.
-/// </summary>
-public sealed class LeaderboardQuery
-{
+    private readonly ILeaderboardRepository _leaderboardRepository;
+
     /// <summary>
-    /// Initializes a new instance of the <see cref="LeaderboardQuery"/> class.
+    /// Initializes a new instance of the <see cref="GetLeaderboardUseCase"/> class.
     /// </summary>
-    /// <param name="maximumEntries">The maximum entries.</param>
-    public LeaderboardQuery(int maximumEntries)
+    /// <param name="leaderboardRepository">The leaderboard data repository.</param>
+    public GetLeaderboardUseCase(ILeaderboardRepository leaderboardRepository)
     {
-        MaximumEntries = maximumEntries;
+        _leaderboardRepository = leaderboardRepository
+            ?? throw new ArgumentNullException(nameof(leaderboardRepository));
     }
 
-    /// <summary>
-    /// Gets the maximum entries.
-    /// </summary>
-    public int MaximumEntries { get; }
-}
-
-/// <summary>
-/// Represents leaderboard result.
-/// </summary>
-public sealed class LeaderboardResult
-{
-    /// <summary>
-    /// Initializes a new instance of the <see cref="LeaderboardResult"/> class.
-    /// </summary>
-    /// <param name="outcome">The outcome.</param>
-    /// <param name="entries">The entries.</param>
-    public LeaderboardResult(
-        LeaderboardOutcome outcome,
-        IReadOnlyList<LeaderboardEntry>? entries = null)
+    /// <summary>Retrieves, orders, and limits the global leaderboard.</summary>
+    /// <param name="maximumEntries">The maximum number of entries to return.</param>
+    /// <returns>The application result.</returns>
+    public async Task<LeaderboardResult> GetAsync(int maximumEntries)
     {
-        Outcome = outcome;
-        Entries = entries ?? Array.Empty<LeaderboardEntry>();
+        if (maximumEntries < 1 || maximumEntries > MaximumAllowedEntries)
+        {
+            return new LeaderboardResult(LeaderboardStatus.InvalidMaximumEntries);
+        }
+
+        IReadOnlyList<LeaderboardPlayer> players =
+            await _leaderboardRepository.GetPlayersAsync();
+        List<LeaderboardPlayer> rankedPlayers = players
+            .OrderByDescending(player => player.Wins)
+            .ThenByDescending(CalculateWinRate)
+            .ThenBy(player => player.Username, StringComparer.OrdinalIgnoreCase)
+            .Take(maximumEntries)
+            .ToList();
+
+        return new LeaderboardResult(
+            LeaderboardStatus.Success,
+            CreateEntries(rankedPlayers));
     }
 
-    /// <summary>
-    /// Gets the outcome.
-    /// </summary>
-    public LeaderboardOutcome Outcome { get; }
-
-    /// <summary>
-    /// Gets the entries.
-    /// </summary>
-    public IReadOnlyList<LeaderboardEntry> Entries { get; }
-}
-
-/// <summary>
-/// Represents leaderboard entry.
-/// </summary>
-public sealed class LeaderboardEntry
-{
-    /// <summary>
-    /// Initializes a new instance of the <see cref="LeaderboardEntry"/> class.
-    /// </summary>
-    /// <param name="rank">The rank.</param>
-    /// <param name="accountId">The account id.</param>
-    /// <param name="username">The username.</param>
-    /// <param name="profileImageUri">The profile image uri.</param>
-    /// <param name="matchesPlayed">The matches played.</param>
-    /// <param name="wins">The wins.</param>
-    /// <param name="winRate">The win rate.</param>
-    public LeaderboardEntry(
-        int rank,
-        long accountId,
-        string username,
-        string? profileImageUri,
-        int matchesPlayed,
-        int wins,
-        double winRate)
+    private static IReadOnlyList<LeaderboardEntry> CreateEntries(
+        IReadOnlyList<LeaderboardPlayer> players)
     {
-        Rank = rank;
-        AccountId = accountId;
-        Username = username;
-        ProfileImageUri = profileImageUri;
-        MatchesPlayed = matchesPlayed;
-        Wins = wins;
-        WinRate = winRate;
+        List<LeaderboardEntry> entries = new List<LeaderboardEntry>();
+        for (int index = 0; index < players.Count; index++)
+        {
+            LeaderboardPlayer player = players[index];
+            entries.Add(new LeaderboardEntry(
+                index + 1,
+                player.AccountId,
+                player.Username,
+                player.ProfileImageUri,
+                player.MatchesPlayed,
+                player.Wins,
+                CalculateWinRate(player)));
+        }
+
+        return entries;
     }
 
-    /// <summary>
-    /// Gets the rank.
-    /// </summary>
-    public int Rank { get; }
-
-    /// <summary>
-    /// Gets the account id.
-    /// </summary>
-    public long AccountId { get; }
-
-    /// <summary>
-    /// Gets the username.
-    /// </summary>
-    public string Username { get; }
-
-    /// <summary>
-    /// Gets the profile image uri.
-    /// </summary>
-    public string? ProfileImageUri { get; }
-
-    /// <summary>
-    /// Gets the matches played.
-    /// </summary>
-    public int MatchesPlayed { get; }
-
-    /// <summary>
-    /// Gets the wins.
-    /// </summary>
-    public int Wins { get; }
-
-    /// <summary>
-    /// Gets the win rate.
-    /// </summary>
-    public double WinRate { get; }
-}
-
-/// <summary>
-/// Defines the supported leaderboard outcome values.
-/// </summary>
-public enum LeaderboardOutcome
-{
-    /// <summary>
-    /// Represents success.
-    /// </summary>
-    Success,
-    /// <summary>
-    /// Represents invalid request.
-    /// </summary>
-    InvalidRequest,
-    /// <summary>
-    /// Represents service unavailable.
-    /// </summary>
-    ServiceUnavailable
+    private static double CalculateWinRate(LeaderboardPlayer player)
+    {
+        return player.MatchesPlayed == 0
+            ? 0d
+            : (double)player.Wins / player.MatchesPlayed;
+    }
 }

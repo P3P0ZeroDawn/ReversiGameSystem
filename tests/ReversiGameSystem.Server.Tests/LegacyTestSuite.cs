@@ -10,7 +10,7 @@ internal static class LegacyTestSuite
         List<Action> tests = new List<Action>();
         tests.AddRange(CreateCreateAccountHandlerTests());
         tests.AddRange(CreateEmailPolicyTests());
-        tests.AddRange(CreateLeaderboardHandlerTests());
+        tests.AddRange(CreateGetLeaderboardUseCaseTests());
         tests.AddRange(CreateAccountAccessValidationTests());
         tests.AddRange(CreatePasswordPolicyTests());
         tests.AddRange(CreatePersistenceModelTests());
@@ -59,15 +59,16 @@ internal static class LegacyTestSuite
         };
     }
 
-    private static Action[] CreateLeaderboardHandlerTests()
+    private static Action[] CreateGetLeaderboardUseCaseTests()
     {
-        LeaderboardHandlerTests tests = new LeaderboardHandlerTests();
+        GetLeaderboardUseCaseTests tests = new GetLeaderboardUseCaseTests();
         return new Action[]
         {
-            tests.ExecuteAsync_ValidRequest_ReturnsRankedEntries,
-            tests.ExecuteAsync_InvalidMaximum_ReturnsInvalidRequest,
-            tests.ExecuteAsync_UnavailableStore_ReturnsServiceUnavailable,
-            tests.ExecuteAsync_StoreFailure_PropagatesException,
+            tests.GetAsync_ValidRequest_RanksAndLimitsEntries,
+            tests.GetAsync_InvalidMaximum_RejectsBeforeRepositoryAccess,
+            tests.GetAsync_EmptyRepository_ReturnsSuccessfulEmptyList,
+            tests.GetAsync_BoundaryMaximums_AcceptsOneAndOneHundred,
+            tests.GetAsync_RepositoryFailure_PropagatesException,
         };
     }
 
