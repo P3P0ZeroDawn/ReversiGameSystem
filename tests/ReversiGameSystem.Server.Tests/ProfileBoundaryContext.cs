@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Players;
 using ReversiGameSystem.Server.ServiceApi;
@@ -9,40 +8,35 @@ namespace ReversiGameSystem.Server.Tests;
 
 internal sealed class ProfileBoundaryContext
 {
+    internal ProfileBoundaryContext()
+    {
+        Profiles.Profiles.Add(42, new PlayerProfile(
+            42,
+            "PlayerOne",
+            null,
+            3,
+            2,
+            1));
+    }
+
     internal PlayerProfileSessionStoreStub Sessions { get; } = new PlayerProfileSessionStoreStub
     {
         Session = new AuthenticatedSessionRecord("session-token", 42, "PlayerOne",
             "player@example.com", "en-US", DateTime.UtcNow.AddHours(1))
     };
-    internal PlayerProfileStoreStub Profiles { get; } = new PlayerProfileStoreStub
-    {
-        Result = new PlayerProfileStoreResult(PlayerProfileStoreOutcome.Found,
-            new PlayerProfileData(42, "PlayerOne", null, 3, 2, 1))
-    };
-    internal ProfileEditorStub Editor { get; } = new ProfileEditorStub();
+    internal PlayerProfileRepositoryStub Profiles { get; } =
+        new PlayerProfileRepositoryStub();
     internal ProfileImageRepositoryStub Images { get; } = new ProfileImageRepositoryStub();
-    internal PlayerProfileService Service => new PlayerProfileService(
-        new PlayerProfileReader(Sessions, Profiles, Images),
-        new PlayerProfileEditor(Sessions, Editor, Images), NullLogger<PlayerProfileService>.Instance);
-}
-
-internal sealed class ProfileEditorStub : IPlayerProfileEditorStore
-{
-    internal long? AccountId { get; private set; }
-    internal string? Username { get; private set; }
-    internal bool FailAssociation { get; set; }
-    public bool IsActive(long accountId) => accountId == 42;
-    public void ChangeUsername(long accountId, string username)
+    internal PlayerProfileService Service
     {
-        AccountId = accountId;
-        Username = username;
-    }
-    public void SetProfileImage(long accountId, string imageReference)
-    {
-        AccountId = accountId;
-        if (FailAssociation)
+        get
         {
-            throw new InvalidOperationException("private-provider-message");
+            PlayerProfileApplicationService applicationService =
+                new PlayerProfileApplicationService(
+                Sessions,
+                Profiles,
+                Images);
+            return new PlayerProfileService(applicationService);
         }
     }
 }
@@ -50,6 +44,7 @@ internal sealed class ProfileEditorStub : IPlayerProfileEditorStore
 internal sealed class ProfileImageRepositoryStub : IPlayerImageRepository
 {
     internal bool FailRead { get; set; }
+    internal bool RejectSave { get; set; }
     internal bool ReadCalled { get; private set; }
     internal string? Deleted { get; private set; }
     public ProfileImageData Read(string imageReference)
@@ -61,8 +56,15 @@ internal sealed class ProfileImageRepositoryStub : IPlayerImageRepository
         }
         return new ProfileImageData(new byte[] { 1, 2 }, "image/png");
     }
-    public string Save(ProfileImageData image) => "new-image";
-    public void Delete(string imageReference) => Deleted = imageReference;
+    public bool TrySave(ProfileImageData image, out string imageReference)
+    {
+        imageReference = "new-image";
+        return !RejectSave;
+    }
+    public void Delete(string imageReference)
+    {
+        Deleted = imageReference;
+    }
 }
 
 internal sealed class RecordingRegistrationHandler : ICreateAccountHandler

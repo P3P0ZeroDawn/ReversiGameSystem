@@ -2,9 +2,9 @@ using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using ReversiGameSystem.Server.Domain.Accounts;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Players;
+using ReversiGameSystem.Server.Domain.Accounts;
 
 namespace ReversiGameSystem.Server.Persistence.Players;
 
@@ -42,22 +42,23 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
         string mediaType = string.Equals(Path.GetExtension(path), ".png",
             StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
         ProfileImageData data = new ProfileImageData(content, mediaType);
-        try
+        if (!IsValid(data))
         {
-            Validate(data);
-        }
-        catch (ProfileRejectedException exception)
-        {
-            throw new IOException("The stored profile image content is invalid.", exception);
+            throw new IOException("The stored profile image content is invalid.");
         }
 
         return data;
     }
 
     /// <inheritdoc />
-    public string Save(ProfileImageData image)
+    public bool TrySave(ProfileImageData image, out string imageReference)
     {
-        byte[] recoded = Recode(image);
+        imageReference = string.Empty;
+        if (!TryRecode(image, out byte[] recoded))
+        {
+            return false;
+        }
+
         string reference = ReferencePrefix + Guid.NewGuid().ToString("N")
             + (image.MediaType.Equals("image/png", StringComparison.OrdinalIgnoreCase)
                 ? ".png" : ".jpg");
@@ -77,7 +78,8 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
             }
         }
 
-        return reference;
+        imageReference = reference;
+        return true;
     }
 
     /// <inheritdoc />
@@ -105,9 +107,15 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
         return Path.Combine(_directory, fileName);
     }
 
-    private static byte[] Recode(ProfileImageData image)
+    private static bool TryRecode(ProfileImageData image, out byte[] recoded)
     {
-        Validate(image);
+        recoded = Array.Empty<byte>();
+        if (!IsValid(image))
+        {
+            return false;
+        }
+
+        bool wasRecoded;
         try
         {
             using (MemoryStream input = new MemoryStream(image.Content, writable: false))
@@ -120,25 +128,31 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
                         ? ImageFormat.Png : ImageFormat.Jpeg);
                 if (output.Length > ProfileImagePolicy.MaximumFileBytes)
                 {
-                    throw new ProfileRejectedException(ProfileRejection.InvalidImage);
+                    wasRecoded = false;
                 }
-
-                return output.ToArray();
+                else
+                {
+                    recoded = output.ToArray();
+                    wasRecoded = true;
+                }
             }
         }
-        catch (Exception exception) when (exception is ArgumentException or OutOfMemoryException)
+        catch (Exception exception) when (IsInvalidImageException(exception))
         {
-            throw new ProfileRejectedException(ProfileRejection.InvalidImage);
+            wasRecoded = false;
         }
+
+        return wasRecoded;
     }
 
-    private static void Validate(ProfileImageData image)
+    private static bool IsValid(ProfileImageData image)
     {
         if (image == null || !ProfileImagePolicy.IsSupported(image.Content, image.MediaType))
         {
-            throw new ProfileRejectedException(ProfileRejection.InvalidImage);
+            return false;
         }
 
+        bool isValid;
         try
         {
             using (MemoryStream input = new MemoryStream(image.Content, writable: false))
@@ -147,18 +161,22 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
                 Guid expectedFormat = image.MediaType.Equals(
                     "image/png", StringComparison.OrdinalIgnoreCase)
                         ? ImageFormat.Png.Guid : ImageFormat.Jpeg.Guid;
-                if (decoded.RawFormat.Guid != expectedFormat
-                    || decoded.Width < 1 || decoded.Height < 1
-                    || decoded.Width > ProfileImagePolicy.MaximumDimension
-                    || decoded.Height > ProfileImagePolicy.MaximumDimension)
-                {
-                    throw new ProfileRejectedException(ProfileRejection.InvalidImage);
-                }
+                isValid = decoded.RawFormat.Guid == expectedFormat
+                    && decoded.Width >= 1 && decoded.Height >= 1
+                    && decoded.Width <= ProfileImagePolicy.MaximumDimension
+                    && decoded.Height <= ProfileImagePolicy.MaximumDimension;
             }
         }
-        catch (Exception exception) when (exception is ArgumentException or OutOfMemoryException)
+        catch (Exception exception) when (IsInvalidImageException(exception))
         {
-            throw new ProfileRejectedException(ProfileRejection.InvalidImage);
+            isValid = false;
         }
+
+        return isValid;
+    }
+
+    private static bool IsInvalidImageException(Exception exception)
+    {
+        return exception is ArgumentException || exception is OutOfMemoryException;
     }
 }

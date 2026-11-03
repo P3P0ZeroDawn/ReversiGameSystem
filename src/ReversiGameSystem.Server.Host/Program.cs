@@ -4,19 +4,19 @@ using System.ServiceModel;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using ReversiGameSystem.Server.Application.Accounts;
-using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Application.Chat;
-using ReversiGameSystem.Server.Application.Verification;
-using ReversiGameSystem.Server.Application.Players;
 using ReversiGameSystem.Server.Application.Leaderboards;
+using ReversiGameSystem.Server.Application.Matches;
+using ReversiGameSystem.Server.Application.Players;
+using ReversiGameSystem.Server.Application.Verification;
 using ReversiGameSystem.Server.Persistence.Accounts;
-using ReversiGameSystem.Server.Persistence.Matches;
 using ReversiGameSystem.Server.Persistence.Chat;
-using ReversiGameSystem.Server.Persistence.Friendships;
-using ReversiGameSystem.Server.Persistence.Players;
-using ReversiGameSystem.Server.Persistence.Leaderboards;
 using ReversiGameSystem.Server.Persistence.Configuration;
+using ReversiGameSystem.Server.Persistence.Friendships;
+using ReversiGameSystem.Server.Persistence.Leaderboards;
 using ReversiGameSystem.Server.Persistence.Mail;
+using ReversiGameSystem.Server.Persistence.Matches;
+using ReversiGameSystem.Server.Persistence.Players;
 using ReversiGameSystem.Server.Persistence.Verification;
 using ReversiGameSystem.Server.ServiceApi;
 
@@ -67,9 +67,7 @@ internal static class Program
                         CreateServiceHost(CreateAccountAccessService(serviceLogger), loggerFactory),
                         CreateServiceHost(session, loggerFactory),
                         CreateServiceHost(
-                            CreatePlayerProfileService(
-                                loggerFactory.CreateLogger<PlayerProfileService>(),
-                                sessions),
+                            CreatePlayerProfileService(sessions),
                             loggerFactory),
                         CreateServiceHost(
                             new LeaderboardService(
@@ -132,14 +130,16 @@ internal static class Program
     }
 
     private static PlayerProfileService CreatePlayerProfileService(
-        ILogger<PlayerProfileService> logger, IAuthenticatedSessionStore sessions)
+        IAuthenticatedSessionStore sessions)
     {
+        PlayerProfileRepository profiles = new PlayerProfileRepository();
         ProfileImageRepository images = new ProfileImageRepository(GetProfileImageDirectory());
-        PlayerProfileReader reader = new PlayerProfileReader(sessions,
-            new EntityFrameworkPlayerProfileStore(), images);
-        PlayerProfileEditor editor = new PlayerProfileEditor(sessions,
-            new ProfileRepository(), images);
-        return new PlayerProfileService(reader, editor, logger);
+        PlayerProfileApplicationService applicationService =
+            new PlayerProfileApplicationService(
+            sessions,
+            profiles,
+            images);
+        return new PlayerProfileService(applicationService);
     }
 
     private static string GetProfileImageDirectory()

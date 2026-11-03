@@ -14,7 +14,7 @@ internal static class LegacyTestSuite
         tests.AddRange(CreateAccountAccessValidationTests());
         tests.AddRange(CreatePasswordPolicyTests());
         tests.AddRange(CreatePersistenceModelTests());
-        tests.AddRange(CreatePlayerProfileHandlerTests());
+        tests.AddRange(CreatePlayerProfileApplicationServiceTests());
         tests.AddRange(CreateProfileImageStoreIntegrationTests());
         tests.AddRange(CreateUsernamePolicyTests());
         return tests.ToArray();
@@ -120,17 +120,23 @@ internal static class LegacyTestSuite
         };
     }
 
-    private static Action[] CreatePlayerProfileHandlerTests()
+    private static Action[] CreatePlayerProfileApplicationServiceTests()
     {
-        PlayerProfileHandlerTests tests = new PlayerProfileHandlerTests();
+        PlayerProfileApplicationServiceTests tests =
+            new PlayerProfileApplicationServiceTests();
         return new Action[]
         {
-            tests.ExecuteAsync_CurrentPlayer_ReturnsCalculatedStatistics,
-            tests.ExecuteAsync_PublicProfile_UsesRequestedAccount,
-            tests.ExecuteAsync_MissingOrInvalidInput_ReturnsInvalidRequest,
-            tests.ExecuteAsync_UnknownSession_ReturnsInvalidSession,
-            tests.ExecuteAsync_MissingAccount_ReturnsAccountNotFound,
-            tests.ExecuteAsync_UnavailableStore_ReturnsServiceUnavailable,
+            tests.GetAsync_CurrentPlayer_ReturnsCalculatedStatistics,
+            tests.GetAsync_PublicProfile_VerifiesCallerThenUsesTargetAccount,
+            tests.GetAsync_InvalidInput_RejectsBeforeRepositoryAccess,
+            tests.GetAsync_InvalidSession_PrecedesInvalidTargetAccount,
+            tests.GetAsync_UnknownSession_RejectsBeforeRepositoryAccess,
+            tests.GetAsync_InactiveCaller_DoesNotReadRequestedTarget,
+            tests.GetAsync_MissingTarget_ReturnsAccountNotFound,
+            tests.GetAsync_RepositoryFailure_PropagatesException,
+            tests.ChangeUsernameAsync_ValidUsername_NormalizesAndUpdatesCaller,
+            tests.ChangeUsernameAsync_UnavailableUsername_ReturnsExpectedStatus,
+            tests.UpdateImageAsync_AssociationFailure_RemovesStoredImageAndPropagates,
         };
     }
 
@@ -140,6 +146,7 @@ internal static class LegacyTestSuite
         return new Action[]
         {
             tests.SaveAndDelete_ValidImage_UsesRelativeUri,
+            tests.TrySave_ValidAndInvalidImages_ReturnsExpectedOutcome,
         };
     }
 

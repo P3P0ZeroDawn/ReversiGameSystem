@@ -1,11 +1,11 @@
 using System;
 using System.ServiceModel;
-using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Players;
 using ReversiGameSystem.Server.Contracts.Common;
 using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.Contracts.Services;
+using ApplicationProfile = ReversiGameSystem.Server.Application.Players.PlayerProfile;
 using ContractProfile = ReversiGameSystem.Server.Contracts.Players.PlayerProfile;
 
 namespace ReversiGameSystem.Server.ServiceApi;
@@ -15,99 +15,164 @@ namespace ReversiGameSystem.Server.ServiceApi;
     ConcurrencyMode = ConcurrencyMode.Multiple, UseSynchronizationContext = false)]
 public sealed class PlayerProfileService : IPlayerProfileService
 {
-    private readonly PlayerProfileReader _reader;
-    private readonly PlayerProfileEditor _editor;
-    private readonly ILogger<PlayerProfileService> _logger;
+    private readonly PlayerProfileApplicationService _applicationService;
 
-    /// <summary>Initializes the profile boundary with shared server sessions.</summary>
-    /// <param name="reader">The authenticated public profile reader.</param>
-    /// <param name="editor">The authenticated profile mutation use cases.</param>
-    /// <param name="logger">The boundary diagnostic logger.</param>
+    /// <summary>Initializes the profile boundary.</summary>
+    /// <param name="applicationService">The player profile application service.</param>
     /// <exception cref="ArgumentNullException">A required dependency is absent.</exception>
-    public PlayerProfileService(PlayerProfileReader reader, PlayerProfileEditor editor,
-        ILogger<PlayerProfileService> logger)
+    public PlayerProfileService(PlayerProfileApplicationService applicationService)
     {
-        _reader = reader ?? throw new ArgumentNullException(nameof(reader));
-        _editor = editor ?? throw new ArgumentNullException(nameof(editor));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _applicationService = applicationService
+            ?? throw new ArgumentNullException(nameof(applicationService));
     }
 
     /// <inheritdoc />
-    public ContractProfile GetPlayerProfile(string sessionToken, long? targetAccountId) =>
-        Execute(nameof(GetPlayerProfile), () => PlayerDataMapper.Map(
-            _reader.GetProfile(sessionToken, targetAccountId)));
+    public ContractProfile GetPlayerProfile(string sessionToken, long? targetAccountId)
+    {
+        GetPlayerProfileResult result = _applicationService.GetProfileAsync(
+            sessionToken,
+            targetAccountId).GetAwaiter().GetResult();
+        if (result.Status != ProfileOperationStatus.Success)
+        {
+            throw MapFailure(result.Status);
+        }
+        if (result.Profile == null)
+        {
+            throw new InvalidOperationException(
+                "A successful profile result must contain a profile.");
+        }
+
+        return MapProfile(result.Profile);
+    }
 
     /// <inheritdoc />
-    public ImageContent? GetProfileImage(string sessionToken, long? targetAccountId) =>
-        Execute(nameof(GetProfileImage), () =>
+    public ImageContent? GetProfileImage(string sessionToken, long? targetAccountId)
+    {
+        GetProfileImageResult result = _applicationService.GetImageAsync(
+            sessionToken,
+            targetAccountId).GetAwaiter().GetResult();
+        if (result.Status != ProfileOperationStatus.Success)
         {
-            ProfileImageData? image = _reader.GetImage(sessionToken, targetAccountId);
-            return image == null ? null : new ImageContent
+            throw MapFailure(result.Status);
+        }
+        ImageContent? image;
+        if (result.Image == null)
+        {
+            image = null;
+        }
+        else
+        {
+            image = new ImageContent
             {
-                MediaType = image.MediaType, Content = image.Content
+                MediaType = result.Image.MediaType,
+                Content = result.Image.Content
             };
-        });
+        }
+
+        return image;
+    }
 
     /// <inheritdoc />
-    public void ChangeUsername(string sessionToken, string username) =>
-        Execute(nameof(ChangeUsername), () =>
-        {
-            _editor.ChangeUsername(sessionToken, username);
-            return true;
-        });
-
-    /// <inheritdoc />
-    public void UpdateProfileImage(string sessionToken, ImageContent image) =>
-        Execute(nameof(UpdateProfileImage), () =>
-        {
-            _editor.UpdateImage(sessionToken, image == null ? null
-                : new ProfileImageData(image.Content, image.MediaType));
-            return true;
-        });
-
-    private TResult Execute<TResult>(string operation, Func<TResult> action)
+    public void ChangeUsername(string sessionToken, string username)
     {
-        string correlationId = CorrelationContext.GetOrCreate();
-        try
+        ProfileOperationStatus status = _applicationService.ChangeUsernameAsync(
+            sessionToken,
+            username).GetAwaiter().GetResult();
+        if (status != ProfileOperationStatus.Success)
         {
-            return action();
-        }
-        catch (ProfileRejectedException exception)
-        {
-            throw MapRejection(exception.Reason);
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(exception, "The {Operation} operation failed. "
-                + "CorrelationId: {CorrelationId}",
-                operation, correlationId);
-            throw ServiceFaultFactory.Create(operation, correlationId);
+            throw MapFailure(status);
         }
     }
 
-    private static FaultException MapRejection(ProfileRejection reason)
+    /// <inheritdoc />
+    public void UpdateProfileImage(string sessionToken, ImageContent image)
     {
-        if (reason == ProfileRejection.MissingSessionToken
-            || reason == ProfileRejection.InvalidSession)
+        ProfileImageData? imageData = image == null ? null
+            : new ProfileImageData(image.Content, image.MediaType);
+        ProfileOperationStatus status = _applicationService.UpdateImageAsync(
+            sessionToken,
+            imageData).GetAwaiter().GetResult();
+        if (status != ProfileOperationStatus.Success)
         {
-            return new FaultException<SessionFault>(new SessionFault
+            throw MapFailure(status);
+        }
+    }
+
+    private static FaultException MapFailure(ProfileOperationStatus status)
+    {
+        FaultException fault;
+        if (status == ProfileOperationStatus.MissingSessionToken)
+        {
+            fault = SessionFaultFactory.Create(SessionFailure.MissingSessionToken);
+        }
+        else if (status == ProfileOperationStatus.InvalidSession)
+        {
+            fault = SessionFaultFactory.Create(SessionFailure.InvalidSession);
+        }
+        else
+        {
+            ProfileFailure failure;
+            if (status == ProfileOperationStatus.InactiveAccount)
             {
-                Reason = reason == ProfileRejection.MissingSessionToken
-                    ? SessionFailure.MissingSessionToken : SessionFailure.InvalidSession
-            }, "The session request was rejected.");
+                failure = ProfileFailure.InactiveAccount;
+            }
+            else if (status == ProfileOperationStatus.InvalidAccountId)
+            {
+                failure = ProfileFailure.InvalidAccountId;
+            }
+            else if (status == ProfileOperationStatus.AccountNotFound)
+            {
+                failure = ProfileFailure.AccountNotFound;
+            }
+            else if (status == ProfileOperationStatus.InvalidUsername)
+            {
+                failure = ProfileFailure.InvalidUsername;
+            }
+            else if (status == ProfileOperationStatus.UsernameUnavailable)
+            {
+                failure = ProfileFailure.UsernameUnavailable;
+            }
+            else if (status == ProfileOperationStatus.InvalidImage)
+            {
+                failure = ProfileFailure.InvalidImage;
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException(nameof(status));
+            }
+
+            fault = CreateProfileFault(failure);
         }
 
-        ProfileFailure failure = reason switch
+        return fault;
+    }
+
+    private static FaultException<ProfileFault> CreateProfileFault(ProfileFailure failure)
+    {
+        return new FaultException<ProfileFault>(new ProfileFault
         {
-            ProfileRejection.InvalidAccountId => ProfileFailure.InvalidAccountId,
-            ProfileRejection.AccountNotFound => ProfileFailure.AccountNotFound,
-            ProfileRejection.InvalidUsername => ProfileFailure.InvalidUsername,
-            ProfileRejection.UsernameUnavailable => ProfileFailure.UsernameUnavailable,
-            ProfileRejection.InvalidImage => ProfileFailure.InvalidImage,
-            ProfileRejection.InactiveAccount => ProfileFailure.InactiveAccount,
-            _ => throw new ArgumentOutOfRangeException(nameof(reason))
+            Reason = failure
+        }, "The profile request was rejected.");
+    }
+
+    private static ContractProfile MapProfile(ApplicationProfile profile)
+    {
+        return new ContractProfile
+        {
+            Account = new AccountReference
+            {
+                AccountId = profile.AccountId,
+                Username = profile.Username
+            },
+            HasProfileImage = !string.IsNullOrWhiteSpace(profile.ProfileImageUri),
+            Statistics = new ReversiGameSystem.Server.Contracts.Players.PlayerStatistics
+            {
+                MatchesPlayed = profile.MatchesPlayed,
+                Wins = profile.Wins,
+                Losses = profile.Losses,
+                Draws = profile.Draws,
+                WinRate = profile.WinRate
+            }
         };
-        return new FaultException<ProfileFault>(new ProfileFault { Reason = failure },
-            "The profile request was rejected.");
     }
 }
