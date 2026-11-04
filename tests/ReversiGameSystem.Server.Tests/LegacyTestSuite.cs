@@ -10,7 +10,7 @@ internal static class LegacyTestSuite
         List<Action> tests = new List<Action>();
         tests.AddRange(CreateCreateAccountHandlerTests());
         tests.AddRange(CreateEmailPolicyTests());
-        tests.AddRange(CreateGetLeaderboardUseCaseTests());
+        tests.AddRange(CreateLeaderboardApplicationServiceTests());
         tests.AddRange(CreateAccountAccessValidationTests());
         tests.AddRange(CreatePasswordPolicyTests());
         tests.AddRange(CreatePersistenceModelTests());
@@ -59,9 +59,10 @@ internal static class LegacyTestSuite
         };
     }
 
-    private static Action[] CreateGetLeaderboardUseCaseTests()
+    private static Action[] CreateLeaderboardApplicationServiceTests()
     {
-        GetLeaderboardUseCaseTests tests = new GetLeaderboardUseCaseTests();
+        LeaderboardApplicationServiceTests tests =
+            new LeaderboardApplicationServiceTests();
         return new Action[]
         {
             tests.GetAsync_ValidRequest_RanksAndLimitsEntries,

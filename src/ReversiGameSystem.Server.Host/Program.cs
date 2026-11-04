@@ -70,8 +70,7 @@ internal static class Program
                             CreatePlayerProfileService(sessions),
                             loggerFactory),
                         CreateServiceHost(
-                            new LeaderboardService(
-                                new GetLeaderboardUseCase(new LeaderboardRepository())),
+                            CreateLeaderboardService(),
                             loggerFactory),
                         CreateServiceHost(friendship, loggerFactory),
                         CreateServiceHost(lobby, loggerFactory),
@@ -140,6 +139,14 @@ internal static class Program
             profiles,
             images);
         return new PlayerProfileService(applicationService);
+    }
+
+    private static LeaderboardService CreateLeaderboardService()
+    {
+        LeaderboardRepository leaderboard = new LeaderboardRepository();
+        LeaderboardApplicationService applicationService =
+            new LeaderboardApplicationService(leaderboard);
+        return new LeaderboardService(applicationService);
     }
 
     private static string GetProfileImageDirectory()

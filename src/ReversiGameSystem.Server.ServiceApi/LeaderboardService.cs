@@ -15,21 +15,21 @@ namespace ReversiGameSystem.Server.ServiceApi;
     ConcurrencyMode = ConcurrencyMode.Multiple, UseSynchronizationContext = false)]
 public sealed class LeaderboardService : ILeaderboardService
 {
-    private readonly GetLeaderboardUseCase _getLeaderboard;
+    private readonly LeaderboardApplicationService _applicationService;
 
     /// <summary>Initializes the leaderboard boundary.</summary>
-    /// <param name="getLeaderboard">The server-calculated leaderboard use case.</param>
+    /// <param name="applicationService">The leaderboard application service.</param>
     /// <exception cref="ArgumentNullException">A required dependency is absent.</exception>
-    public LeaderboardService(GetLeaderboardUseCase getLeaderboard)
+    public LeaderboardService(LeaderboardApplicationService applicationService)
     {
-        _getLeaderboard = getLeaderboard
-            ?? throw new ArgumentNullException(nameof(getLeaderboard));
+        _applicationService = applicationService
+            ?? throw new ArgumentNullException(nameof(applicationService));
     }
 
     /// <inheritdoc />
     public ContractEntry[] GetLeaderboard(int maximumEntries)
     {
-        LeaderboardResult result = _getLeaderboard.GetAsync(maximumEntries)
+        LeaderboardResult result = _applicationService.GetAsync(maximumEntries)
             .GetAwaiter().GetResult();
         if (result.Status == LeaderboardStatus.InvalidMaximumEntries)
         {

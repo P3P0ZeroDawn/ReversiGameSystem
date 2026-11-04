@@ -232,7 +232,7 @@ internal static class PlayerBoundaryTests
             }
         };
         LeaderboardService service = new LeaderboardService(
-            new GetLeaderboardUseCase(repository));
+            new LeaderboardApplicationService(repository));
         ReversiGameSystem.Server.Contracts.Leaderboards.LeaderboardEntry[] result =
             Invoke<ILeaderboardService, ReversiGameSystem.Server.Contracts.Leaderboards.LeaderboardEntry[]>(
                 service, channel => channel.GetLeaderboard(10));
@@ -247,7 +247,7 @@ internal static class PlayerBoundaryTests
     internal static void GetLeaderboard_InvalidLimitThroughWcf_ReturnsTypedFault()
     {
         LeaderboardService service = new LeaderboardService(
-            new GetLeaderboardUseCase(new LeaderboardRepositoryStub()));
+            new LeaderboardApplicationService(new LeaderboardRepositoryStub()));
         FaultException<LeaderboardFault> fault = TestAssert.Throws<FaultException<LeaderboardFault>>(() =>
             Invoke<ILeaderboardService, object>(service, channel => channel.GetLeaderboard(0)));
         TestAssert.AreEqual(LeaderboardFailure.InvalidMaximumEntries, fault.Detail.Reason);
@@ -255,7 +255,7 @@ internal static class PlayerBoundaryTests
 
     internal static void GetLeaderboard_UnavailableThroughWcf_ReturnsServiceFault()
     {
-        LeaderboardService service = new LeaderboardService(new GetLeaderboardUseCase(
+        LeaderboardService service = new LeaderboardService(new LeaderboardApplicationService(
             new LeaderboardRepositoryStub { ThrowOnGet = true }));
         FaultException<ServiceFault> fault = TestAssert.Throws<FaultException<ServiceFault>>(() =>
             Invoke<ILeaderboardService, object>(service, channel => channel.GetLeaderboard(10)));

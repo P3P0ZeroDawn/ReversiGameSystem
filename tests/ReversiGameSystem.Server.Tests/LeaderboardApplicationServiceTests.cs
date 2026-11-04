@@ -6,7 +6,7 @@ using ReversiGameSystem.Server.Application.Leaderboards;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class GetLeaderboardUseCaseTests
+internal sealed class LeaderboardApplicationServiceTests
 {
     internal void GetAsync_ValidRequest_RanksAndLimitsEntries()
     {
@@ -21,10 +21,11 @@ internal sealed class GetLeaderboardUseCaseTests
                 new LeaderboardPlayer(4, "Alpha", null, 10, 7)
             }
         };
-        GetLeaderboardUseCase useCase = new GetLeaderboardUseCase(repository);
+        LeaderboardApplicationService applicationService =
+            new LeaderboardApplicationService(repository);
 
         // Act
-        LeaderboardResult result = useCase.GetAsync(3).GetAwaiter().GetResult();
+        LeaderboardResult result = applicationService.GetAsync(3).GetAwaiter().GetResult();
 
         // Assert
         TestAssert.AreEqual(LeaderboardStatus.Success, result.Status);
@@ -42,12 +43,14 @@ internal sealed class GetLeaderboardUseCaseTests
     {
         // Arrange
         LeaderboardRepositoryStub repository = new LeaderboardRepositoryStub();
-        GetLeaderboardUseCase useCase = new GetLeaderboardUseCase(repository);
+        LeaderboardApplicationService applicationService =
+            new LeaderboardApplicationService(repository);
 
         // Act
-        LeaderboardResult belowMinimum = useCase.GetAsync(0).GetAwaiter().GetResult();
-        LeaderboardResult aboveMaximum = useCase
-            .GetAsync(GetLeaderboardUseCase.MaximumAllowedEntries + 1)
+        LeaderboardResult belowMinimum = applicationService.GetAsync(0)
+            .GetAwaiter().GetResult();
+        LeaderboardResult aboveMaximum = applicationService
+            .GetAsync(LeaderboardApplicationService.MaximumAllowedEntries + 1)
             .GetAwaiter()
             .GetResult();
 
@@ -65,10 +68,12 @@ internal sealed class GetLeaderboardUseCaseTests
     {
         // Arrange
         LeaderboardRepositoryStub repository = new LeaderboardRepositoryStub();
-        GetLeaderboardUseCase useCase = new GetLeaderboardUseCase(repository);
+        LeaderboardApplicationService applicationService =
+            new LeaderboardApplicationService(repository);
 
         // Act
-        LeaderboardResult result = useCase.GetAsync(10).GetAwaiter().GetResult();
+        LeaderboardResult result = applicationService.GetAsync(10)
+            .GetAwaiter().GetResult();
 
         // Assert
         TestAssert.AreEqual(LeaderboardStatus.Success, result.Status);
@@ -97,12 +102,14 @@ internal sealed class GetLeaderboardUseCaseTests
         };
 
         // Act
-        LeaderboardResult minimumResult = new GetLeaderboardUseCase(minimumRepository)
+        LeaderboardResult minimumResult =
+            new LeaderboardApplicationService(minimumRepository)
             .GetAsync(1)
             .GetAwaiter()
             .GetResult();
-        LeaderboardResult maximumResult = new GetLeaderboardUseCase(maximumRepository)
-            .GetAsync(GetLeaderboardUseCase.MaximumAllowedEntries)
+        LeaderboardResult maximumResult =
+            new LeaderboardApplicationService(maximumRepository)
+            .GetAsync(LeaderboardApplicationService.MaximumAllowedEntries)
             .GetAwaiter()
             .GetResult();
 
@@ -116,12 +123,13 @@ internal sealed class GetLeaderboardUseCaseTests
     internal void GetAsync_RepositoryFailure_PropagatesException()
     {
         // Arrange
-        GetLeaderboardUseCase useCase = new GetLeaderboardUseCase(
+        LeaderboardApplicationService applicationService =
+            new LeaderboardApplicationService(
             new LeaderboardRepositoryStub { ThrowOnGet = true });
 
         // Act
         InvalidOperationException exception = TestAssert.Throws<InvalidOperationException>(
-            () => useCase.GetAsync(10).GetAwaiter().GetResult());
+            () => applicationService.GetAsync(10).GetAwaiter().GetResult());
 
         // Assert
         TestAssert.AreEqual("Simulated leaderboard repository failure.", exception.Message);
