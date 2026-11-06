@@ -16,12 +16,12 @@ namespace ReversiGameSystem.Server.ServiceApi;
 public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
 {
     private readonly MatchHandler _handler;
-    private readonly IAuthenticatedSessionStore _sessions;
+    private readonly ISessionRepository _sessions;
     private readonly MatchBoundary _boundary;
     private readonly MatchChannels<IGameplayMatchServiceCallback> _channels;
 
     /// <summary>Creates the initial match boundary.</summary>
-    public GameplayMatchService(MatchHandler handler, IAuthenticatedSessionStore sessions,
+    public GameplayMatchService(MatchHandler handler, ISessionRepository sessions,
         ILogger<GameplayMatchService> logger)
     {
         _handler = handler ?? throw new ArgumentNullException(nameof(handler));
@@ -59,7 +59,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         {
             MatchRecord match = _handler.Get(sessionToken, matchId);
             MatchContractMapper.RequireStarted(match);
-            if (!_sessions.TryGet(sessionToken, out AuthenticatedSessionRecord? session) || session == null)
+            if (!_sessions.TryGet(sessionToken, out AuthenticatedSession? session) || session == null)
             {
                 throw new SessionRejectedException();
             }

@@ -10,33 +10,30 @@ namespace ReversiGameSystem.Server.Application.Matches;
 public sealed class MatchHandler
 {
     private const string CodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    private readonly IAuthenticatedSessionStore _sessions;
+    private readonly ISessionRepository _sessions;
     private readonly IMatchStore _store;
     private readonly IUtcClock _clock;
-    private readonly SessionRegistry? _sessionRegistry;
     private readonly IMatchInvitationEmailSender? _emailSender;
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<long, long>> _created = new();
     private readonly HashSet<string> _pendingCleanup = new HashSet<string>(StringComparer.Ordinal);
     private readonly object _creationSync = new object();
 
     /// <summary>Creates a match handler with server sessions, durable storage, and a clock.</summary>
-    public MatchHandler(IAuthenticatedSessionStore sessions, IMatchStore store, IUtcClock clock)
-        : this(sessions, store, clock, sessionRegistry: null, emailSender: null)
+    public MatchHandler(ISessionRepository sessions, IMatchStore store, IUtcClock clock)
+        : this(sessions, store, clock, emailSender: null)
     {
     }
 
     /// <summary>Creates a match handler with guest registry and invitation email sender.</summary>
     public MatchHandler(
-        IAuthenticatedSessionStore sessions,
+        ISessionRepository sessions,
         IMatchStore store,
         IUtcClock clock,
-        SessionRegistry? sessionRegistry,
         IMatchInvitationEmailSender? emailSender)
     {
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
-        _sessionRegistry = sessionRegistry;
         _emailSender = emailSender;
     }
 
@@ -51,7 +48,7 @@ public sealed class MatchHandler
 
     private MatchRecord CreateTracked(string token, MatchSettings? settings)
     {
-        AuthenticatedSessionRecord player = RequirePlayer(token);
+        AuthenticatedSession player = RequirePlayer(token);
         PrepareCreation(token);
         settings = ValidateSettings(settings);
         MatchRecord result = _store.Create(player, settings, _clock.UtcNow);
@@ -67,13 +64,13 @@ public sealed class MatchHandler
             throw new SessionRejectedException(SessionRejection.MissingSessionToken);
         }
 
-        if (_sessionRegistry != null && _sessionRegistry.TryGetGuest(token, out GuestSessionRecord? guest)
+        if (_sessions.TryGetGuest(token, out GuestSession? guest)
             && guest != null && guest.ExpiresAtUtc > _clock.UtcNow)
         {
             throw new MatchRejectedException(MatchRejection.Unauthorized);
         }
 
-        AuthenticatedSessionRecord player = RequirePlayer(token);
+        AuthenticatedSession player = RequirePlayer(token);
 
         if (friendAccountId <= 0)
         {
@@ -135,7 +132,7 @@ public sealed class MatchHandler
             if (_pendingCleanup.Contains(token)
                 || !_created.TryGetValue(token, out ConcurrentDictionary<long, long>? matches)
                 || !matches.ContainsKey(preparation.Match.Id)
-                || !_sessions.TryGet(token, out AuthenticatedSessionRecord? currentSession)
+                || !_sessions.TryGet(token, out AuthenticatedSession? currentSession)
                 || currentSession == null
                 || currentSession.ExpiresAtUtc <= _clock.UtcNow)
             {
@@ -208,14 +205,14 @@ public sealed class MatchHandler
             throw new MatchRejectedException(MatchRejection.InvalidMatchCode);
         }
 
-        if (_sessionRegistry != null && _sessionRegistry.TryGetGuest(token, out GuestSessionRecord? guest)
+        if (_sessions.TryGetGuest(token, out GuestSession? guest)
             && guest != null && guest.ExpiresAtUtc > _clock.UtcNow)
         {
             _store.ValidateJoinForGuest(normalized);
             throw new MatchRejectedException(MatchRejection.Unauthorized);
         }
 
-        AuthenticatedSessionRecord player = RequirePlayer(token);
+        AuthenticatedSession player = RequirePlayer(token);
         return _store.Join(player, normalized, _clock.UtcNow);
     }
 
@@ -225,7 +222,7 @@ public sealed class MatchHandler
     /// <summary>Changes the duration only while the creator still owns a waiting lobby.</summary>
     public MatchRecord ChangeTurnDuration(string token, long id, int seconds)
     {
-        AuthenticatedSessionRecord player = RequirePlayer(token);
+        AuthenticatedSession player = RequirePlayer(token);
         ValidateDuration(seconds);
         return _store.ChangeTurnDuration(player.AccountId, RequireId(id), seconds);
     }
@@ -259,7 +256,7 @@ public sealed class MatchHandler
             foreach (string token in _created.Keys)
             {
                 if (_pendingCleanup.Contains(token)
-                    || !_sessions.TryGet(token, out AuthenticatedSessionRecord? session)
+                    || !_sessions.TryGet(token, out AuthenticatedSession? session)
                     || session == null || session.ExpiresAtUtc <= _clock.UtcNow)
                 {
                     cancelled.AddRange(CancelTracked(token));
@@ -299,13 +296,13 @@ public sealed class MatchHandler
         return cancelled.ToArray();
     }
 
-    private AuthenticatedSessionRecord RequirePlayer(string token)
+    private AuthenticatedSession RequirePlayer(string token)
     {
         if (string.IsNullOrWhiteSpace(token))
         {
             throw new SessionRejectedException(SessionRejection.MissingSessionToken);
         }
-        if (!_sessions.TryGet(token, out AuthenticatedSessionRecord? player)
+        if (!_sessions.TryGet(token, out AuthenticatedSession? player)
             || player == null || player.ExpiresAtUtc <= _clock.UtcNow)
         {
             throw new SessionRejectedException();

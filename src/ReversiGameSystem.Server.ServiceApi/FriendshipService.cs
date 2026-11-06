@@ -26,7 +26,7 @@ public sealed class FriendshipService : IFriendshipService, IDisposable
         new Dictionary<string, FriendshipChannel>(StringComparer.Ordinal);
     private readonly Queue<long> _changes = new Queue<long>();
     private readonly HashSet<long> _published = new HashSet<long>();
-    private readonly IAuthenticatedSessionStore _sessions;
+    private readonly ISessionRepository _sessions;
     private readonly IFriendshipRepository _friends;
     private readonly ILogger<FriendshipService> _logger;
     private readonly Timer _timer;
@@ -39,7 +39,7 @@ public sealed class FriendshipService : IFriendshipService, IDisposable
     /// <param name="sessions">The authoritative authenticated sessions.</param>
     /// <param name="friends">The current active friendships.</param>
     /// <param name="logger">The sanitized diagnostic logger.</param>
-    public FriendshipService(IAuthenticatedSessionStore sessions,
+    public FriendshipService(ISessionRepository sessions,
         IFriendshipRepository friends, ILogger<FriendshipService> logger)
     {
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
@@ -173,7 +173,7 @@ public sealed class FriendshipService : IFriendshipService, IDisposable
             throw SessionFault(SessionFailure.MissingSessionToken);
         }
 
-        if (!_sessions.TryGet(token, out AuthenticatedSessionRecord? session) || session == null)
+        if (!_sessions.TryGet(token, out AuthenticatedSession? session) || session == null)
         {
             throw SessionFault(SessionFailure.InvalidSession);
         }
@@ -189,7 +189,7 @@ public sealed class FriendshipService : IFriendshipService, IDisposable
 
     private bool IsValid(FriendshipChannel channel) =>
         channel.Communication.State == CommunicationState.Opened
-        && _sessions.TryGet(channel.Token, out AuthenticatedSessionRecord? session)
+        && _sessions.TryGet(channel.Token, out AuthenticatedSession? session)
         && session != null && session.AccountId == channel.AccountId
         && _friends.IsAccountActive(channel.AccountId);
 

@@ -194,11 +194,11 @@ public interface IMatchStore
     void Authorize(long accountId);
 
     /// <summary>Creates the waiting lobby and its creator seat atomically.</summary>
-    MatchRecord Create(AuthenticatedSessionRecord player, MatchSettings settings, DateTime now);
+    MatchRecord Create(AuthenticatedSession player, MatchSettings settings, DateTime now);
 
     /// <summary>Prepares a private waiting match reserved for an accepted friend atomically.</summary>
     PrivateMatchInvitationPreparation PreparePrivate(
-        AuthenticatedSessionRecord player,
+        AuthenticatedSession player,
         long friendAccountId,
         MatchSettings settings,
         DateTime now);
@@ -210,7 +210,7 @@ public interface IMatchStore
     MatchRecord[] Available(long accountId);
 
     /// <summary>Occupies the second seat and starts the waiting match atomically.</summary>
-    MatchRecord Join(AuthenticatedSessionRecord player, string code, DateTime now);
+    MatchRecord Join(AuthenticatedSession player, string code, DateTime now);
 
     /// <summary>Validates whether a match code is joinable by a guest or rejects appropriately.</summary>
     void ValidateJoinForGuest(string code);

@@ -1,6 +1,8 @@
 using System;
 using System.Threading.Tasks;
 using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Verification;
+using ReversiGameSystem.Server.Persistence.Sessions;
 
 namespace ReversiGameSystem.Server.Tests;
 
@@ -9,7 +11,7 @@ internal sealed class AccountAccessValidationTests
     internal void ValidateCredentials_ValidCredentials_NormalizesAndReturnsActiveAccount()
     {
         // Arrange
-        AccountLoginStoreStub accountStore = new AccountLoginStoreStub
+        AccountLoginRepositoryStub accountStore = new AccountLoginRepositoryStub
         {
             Result = FoundAccount("ACTIVE")
         };
@@ -17,51 +19,53 @@ internal sealed class AccountAccessValidationTests
         {
             VerifyResult = true
         };
-        VerifiedLoginService service = new VerifiedLoginService(accountStore, passwordHasher);
+        SessionApplicationService service = CreateApplicationService(
+            accountStore,
+            passwordHasher);
 
         // Act
-        LoginAccount account = service.ValidateCredentials(
+        SessionOperationResult<DateTime> result = service.RequestLoginCode(
             "  player@example.com  ", "A\u0301b12345!");
 
         // Assert
         TestAssert.AreEqual("player@example.com", accountStore.Login);
         TestAssert.AreEqual("Áb12345!", passwordHasher.Password);
         TestAssert.AreEqual("stored-hash", passwordHasher.EncodedHash);
-        TestAssert.AreEqual(42L, account.AccountId);
-        TestAssert.AreEqual("PlayerOne", account.Username);
+        TestAssert.AreEqual(SessionOperationStatus.Success, result.Status);
     }
 
     internal void ValidateCredentials_MissingCredentials_RejectsBeforeLookup()
     {
         // Arrange
-        AccountLoginStoreStub accountStore = new AccountLoginStoreStub();
-        VerifiedLoginService service = new VerifiedLoginService(
-            accountStore, new LoginPasswordHasherStub());
+        AccountLoginRepositoryStub accountStore = new AccountLoginRepositoryStub();
+        SessionApplicationService service = CreateApplicationService(
+            accountStore,
+            new LoginPasswordHasherStub());
 
         // Act
-        SessionRejectedException exception = TestAssert.Throws<SessionRejectedException>(
-            () => service.ValidateCredentials("", ""));
+        SessionOperationResult<DateTime> result = service.RequestLoginCode("", "");
 
         // Assert
-        TestAssert.AreEqual(SessionRejection.InvalidCredentials, exception.Reason);
+        TestAssert.AreEqual(SessionOperationStatus.InvalidCredentials, result.Status);
         TestAssert.AreEqual<string?>(null, accountStore.Login);
     }
 
     internal void ValidateCredentials_UnknownAccount_ReturnsInvalidCredentials()
     {
         // Arrange
-        VerifiedLoginService service = new VerifiedLoginService(
-            new AccountLoginStoreStub
+        SessionApplicationService service = CreateApplicationService(
+            new AccountLoginRepositoryStub
             {
-                Result = new AccountLoginLookupResult(AccountLoginLookupOutcome.NotFound)
+                Result = AccountLoginLookupResult.CreateNotFound()
             }, new LoginPasswordHasherStub());
 
         // Act
-        SessionRejectedException exception = TestAssert.Throws<SessionRejectedException>(
-            () => service.ValidateCredentials("UnknownPlayer", "Password1!"));
+        SessionOperationResult<DateTime> result = service.RequestLoginCode(
+            "UnknownPlayer",
+            "Password1!");
 
         // Assert
-        TestAssert.AreEqual(SessionRejection.InvalidCredentials, exception.Reason);
+        TestAssert.AreEqual(SessionOperationStatus.InvalidCredentials, result.Status);
     }
 
     internal void ValidateCredentials_WrongPassword_ReturnsInvalidCredentials()
@@ -71,45 +75,49 @@ internal sealed class AccountAccessValidationTests
         {
             VerifyResult = false
         };
-        VerifiedLoginService service = new VerifiedLoginService(
-            new AccountLoginStoreStub { Result = FoundAccount("ACTIVE") }, passwordHasher);
+        SessionApplicationService service = CreateApplicationService(
+            new AccountLoginRepositoryStub { Result = FoundAccount("ACTIVE") }, passwordHasher);
 
         // Act
-        SessionRejectedException exception = TestAssert.Throws<SessionRejectedException>(
-            () => service.ValidateCredentials("PlayerOne", "WrongPassword1!"));
+        SessionOperationResult<DateTime> result = service.RequestLoginCode(
+            "PlayerOne",
+            "WrongPassword1!");
 
         // Assert
-        TestAssert.AreEqual(SessionRejection.InvalidCredentials, exception.Reason);
+        TestAssert.AreEqual(SessionOperationStatus.InvalidCredentials, result.Status);
         TestAssert.AreEqual("WrongPassword1!", passwordHasher.Password);
     }
 
     internal void ValidateCredentials_InactiveAccount_ReturnsInactiveAccount()
     {
         // Arrange
-        VerifiedLoginService service = new VerifiedLoginService(
-            new AccountLoginStoreStub { Result = FoundAccount("DISABLED") },
+        SessionApplicationService service = CreateApplicationService(
+            new AccountLoginRepositoryStub { Result = FoundAccount("DISABLED") },
             new LoginPasswordHasherStub { VerifyResult = true });
 
         // Act
-        SessionRejectedException exception = TestAssert.Throws<SessionRejectedException>(
-            () => service.ValidateCredentials("PlayerOne", "Password1!"));
+        SessionOperationResult<DateTime> result = service.RequestLoginCode(
+            "PlayerOne",
+            "Password1!");
 
         // Assert
-        TestAssert.AreEqual(SessionRejection.InactiveAccount, exception.Reason);
+        TestAssert.AreEqual(SessionOperationStatus.InactiveAccount, result.Status);
     }
 
     internal void ValidateCredentials_UnavailableStore_PropagatesTechnicalFailure()
     {
         // Arrange
-        VerifiedLoginService service = new VerifiedLoginService(
-            new AccountLoginStoreStub
-            {
-                Result = new AccountLoginLookupResult(AccountLoginLookupOutcome.Unavailable)
-            }, new LoginPasswordHasherStub());
+        AccountLoginRepositoryStub accountStore = new AccountLoginRepositoryStub
+        {
+            Failure = new InvalidOperationException("Account lookup is unavailable.")
+        };
+        SessionApplicationService service = CreateApplicationService(
+            accountStore,
+            new LoginPasswordHasherStub());
 
         // Act
         InvalidOperationException exception = TestAssert.Throws<InvalidOperationException>(
-            () => service.ValidateCredentials("PlayerOne", "Password1!"));
+            () => service.RequestLoginCode("PlayerOne", "Password1!"));
 
         // Assert
         TestAssert.AreEqual("Account lookup is unavailable.", exception.Message);
@@ -120,21 +128,21 @@ internal sealed class AccountAccessValidationTests
         // Arrange
         MutableUtcClock clock = new MutableUtcClock(
             new DateTime(2026, 9, 26, 12, 0, 0, DateTimeKind.Utc));
-        InMemoryAuthenticatedSessionStore store = new InMemoryAuthenticatedSessionStore(
+        SessionRepository store = new SessionRepository(
             clock,
             TimeSpan.FromMinutes(30));
 
         // Act
-        LoginAccount account = TestAssert.IsNotNull(FoundAccount("ACTIVE").Account);
-        AuthenticatedSessionRecord first = store.Create(account);
-        AuthenticatedSessionRecord second = store.Create(account);
-        bool found = store.TryGet(first.SessionToken, out AuthenticatedSessionRecord? active);
-        bool missing = store.TryGet("unknown", out AuthenticatedSessionRecord? absent);
-        bool empty = store.TryGet(string.Empty, out AuthenticatedSessionRecord? emptySession);
+        LoginAccount account = FoundAccount("ACTIVE").GetFoundAccount();
+        AuthenticatedSession first = store.Create(account);
+        AuthenticatedSession second = store.Create(account);
+        bool found = store.TryGet(first.SessionToken, out AuthenticatedSession? active);
+        bool missing = store.TryGet("unknown", out AuthenticatedSession? absent);
+        bool empty = store.TryGet(string.Empty, out AuthenticatedSession? emptySession);
         store.Revoke(second.SessionToken);
-        bool revoked = store.TryGet(second.SessionToken, out AuthenticatedSessionRecord? closed);
+        bool revoked = store.TryGet(second.SessionToken, out AuthenticatedSession? closed);
         clock.UtcNow = first.ExpiresAtUtc;
-        bool expired = store.TryGet(first.SessionToken, out AuthenticatedSessionRecord? stale);
+        bool expired = store.TryGet(first.SessionToken, out AuthenticatedSession? stale);
         clock.UtcNow = clock.UtcNow.AddMinutes(-1);
         bool removed = store.TryGet(first.SessionToken, out _);
 
@@ -146,20 +154,19 @@ internal sealed class AccountAccessValidationTests
         TestAssert.AreEqual(account.EmailAddress, first.EmailAddress);
         TestAssert.AreEqual(account.PreferredLocaleCode, first.PreferredLocaleCode);
         TestAssert.AreEqual(false, missing);
-        TestAssert.AreEqual<AuthenticatedSessionRecord?>(null, absent);
+        TestAssert.AreEqual<AuthenticatedSession?>(null, absent);
         TestAssert.AreEqual(false, empty);
-        TestAssert.AreEqual<AuthenticatedSessionRecord?>(null, emptySession);
+        TestAssert.AreEqual<AuthenticatedSession?>(null, emptySession);
         TestAssert.AreEqual(false, revoked);
-        TestAssert.AreEqual<AuthenticatedSessionRecord?>(null, closed);
+        TestAssert.AreEqual<AuthenticatedSession?>(null, closed);
         TestAssert.AreEqual(false, expired);
-        TestAssert.AreEqual<AuthenticatedSessionRecord?>(null, stale);
+        TestAssert.AreEqual<AuthenticatedSession?>(null, stale);
         TestAssert.AreEqual(false, removed);
     }
 
     private static AccountLoginLookupResult FoundAccount(string statusCode)
     {
-        return new AccountLoginLookupResult(
-            AccountLoginLookupOutcome.Found,
+        return AccountLoginLookupResult.CreateFound(
             new LoginAccount(
                 42,
                 "PlayerOne",
@@ -168,19 +175,66 @@ internal sealed class AccountAccessValidationTests
                 statusCode,
                 "en-US"));
     }
+
+    private static SessionApplicationService CreateApplicationService(
+        IAccountLoginRepository accounts,
+        IPasswordHasher passwordHasher)
+    {
+        MutableUtcClock clock = new MutableUtcClock(
+            new DateTime(2026, 9, 26, 12, 0, 0, DateTimeKind.Utc));
+        VerificationCodeIssuer issuer = new VerificationCodeIssuer(
+            new VerificationEmailSenderStub(),
+            new VerificationCodeProtector(new byte[32]),
+            clock);
+        VerificationCodeService verificationCodes = new VerificationCodeService(
+            issuer,
+            new VerificationCodeRepositoryStub(),
+            clock);
+        return new SessionApplicationService(
+            accounts,
+            passwordHasher,
+            verificationCodes,
+            new SessionRepository(clock));
+    }
 }
 
-internal sealed class AccountLoginStoreStub : IAccountLoginStore
+internal sealed class AccountLoginRepositoryStub : IAccountLoginRepository
 {
     internal string? Login { get; private set; }
 
     internal AccountLoginLookupResult Result { get; set; } =
-        new AccountLoginLookupResult(AccountLoginLookupOutcome.NotFound);
+        AccountLoginLookupResult.CreateNotFound();
+
+    internal Exception? Failure { get; set; }
 
     public Task<AccountLoginLookupResult> FindByLoginAsync(string login)
     {
+        if (Failure != null)
+        {
+            throw Failure;
+        }
+
         Login = login;
         return Task.FromResult(Result);
+    }
+}
+
+internal sealed class VerificationEmailSenderStub : IVerificationEmailSender
+{
+    public void Send(VerificationEmail email)
+    {
+    }
+}
+
+internal sealed class VerificationCodeRepositoryStub : IVerificationCodeRepository
+{
+    public void Replace(PendingVerificationCode code)
+    {
+    }
+
+    public VerificationStatus Consume(VerificationAttempt attempt)
+    {
+        return VerificationStatus.Accepted;
     }
 }
 

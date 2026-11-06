@@ -75,12 +75,12 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creator = CreatePlayer(context, 10, "AlphaPlayer");
-        AuthenticatedSessionRecord friend = CreatePlayer(context, 20, "BetaPlayer");
+        AuthenticatedSession creator = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession friend = CreatePlayer(context, 20, "BetaPlayer");
         InvitationMockStore store = new InvitationMockStore();
         store.RegisterFriendship(10, 20, "beta@example.com");
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
 
         // Act
         MatchRecord result = handler.Invite(creator.SessionToken, 20, new MatchSettings { TurnDurationSeconds = 40 });
@@ -102,11 +102,11 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creator = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession creator = CreatePlayer(context, 10, "AlphaPlayer");
         InvitationMockStore store = new InvitationMockStore();
         store.RegisterFriendship(10, 30, "gamma@example.com");
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
 
         // Act
         MatchRecord result = handler.Invite(creator.SessionToken, 30, new MatchSettings { TurnDurationSeconds = 60 });
@@ -125,10 +125,10 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        GuestSessionRecord guest = context.Registry.CreateGuest("GuestAlpha");
+        GuestSession guest = context.Sessions.CreateGuest("Guest-GuestAlpha").GetValue();
         InvitationMockStore store = new InvitationMockStore();
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
 
         // Act
         MatchRejectedException exception = TestAssert.Throws<MatchRejectedException>(() =>
@@ -146,10 +146,10 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creator = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession creator = CreatePlayer(context, 10, "AlphaPlayer");
         InvitationMockStore store = new InvitationMockStore();
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
 
         // Act
         MatchRejectedException exception = TestAssert.Throws<MatchRejectedException>(() =>
@@ -167,10 +167,10 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creator = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession creator = CreatePlayer(context, 10, "AlphaPlayer");
         InvitationMockStore store = new InvitationMockStore();
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
 
         // Act & Assert
         FriendshipRejectedException zeroException = TestAssert.Throws<FriendshipRejectedException>(() =>
@@ -189,10 +189,10 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creator = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession creator = CreatePlayer(context, 10, "AlphaPlayer");
         InvitationMockStore store = new InvitationMockStore();
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
 
         // Act
         FriendshipRejectedException exception = TestAssert.Throws<FriendshipRejectedException>(() =>
@@ -210,11 +210,11 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creator = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession creator = CreatePlayer(context, 10, "AlphaPlayer");
         InvitationMockStore store = new InvitationMockStore();
         store.RegisterAccount(50, "inactive@example.com", true);
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
 
         // Act
         FriendshipRejectedException exception = TestAssert.Throws<FriendshipRejectedException>(() =>
@@ -232,13 +232,13 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord inactiveCaller = context.Sessions.Create(
+        AuthenticatedSession inactiveCaller = context.Sessions.Create(
             new LoginAccount(10, "InactiveAlpha", "alpha@example.com", "hash", "INACTIVE", "en-US"));
         InvitationMockStore store = new InvitationMockStore();
         store.RegisterFriendship(10, 20, "beta@example.com");
         store.RegisterAccount(10, "alpha@example.com", false);
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
 
         // Act
         MatchRejectedException exception = TestAssert.Throws<MatchRejectedException>(() =>
@@ -256,10 +256,10 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creator = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession creator = CreatePlayer(context, 10, "AlphaPlayer");
         InvitationMockStore store = new InvitationMockStore();
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
 
         // Act & Assert
         MatchRejectedException tooLow = TestAssert.Throws<MatchRejectedException>(() =>
@@ -278,10 +278,10 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creator = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession creator = CreatePlayer(context, 10, "AlphaPlayer");
         InvitationMockStore store = new InvitationMockStore();
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
 
         // Act
         MatchRejectedException exception = TestAssert.Throws<MatchRejectedException>(() =>
@@ -298,10 +298,10 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creator = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession creator = CreatePlayer(context, 10, "AlphaPlayer");
         InvitationMockStore store = new InvitationMockStore();
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
 
         // Act
         MatchRejectedException exception = TestAssert.Throws<MatchRejectedException>(() =>
@@ -318,11 +318,11 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creator = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession creator = CreatePlayer(context, 10, "AlphaPlayer");
         InvitationMockStore store = new InvitationMockStore();
         store.RegisterFriendship(10, 20, "beta@example.com");
         InMemoryInvitationSender mailer = new InMemoryInvitationSender { FailSend = true };
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
 
         // Act
         TestAssert.Throws<InvalidOperationException>(() =>
@@ -341,11 +341,11 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creator = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession creator = CreatePlayer(context, 10, "AlphaPlayer");
         InvitationMockStore store = new InvitationMockStore { FailCancel = true };
         store.RegisterFriendship(10, 20, "beta@example.com");
         InMemoryInvitationSender mailer = new InMemoryInvitationSender { FailSend = true };
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
 
         // Act
         TestAssert.Throws<InvalidOperationException>(() =>
@@ -365,11 +365,11 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creator = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession creator = CreatePlayer(context, 10, "AlphaPlayer");
         InvitationMockStore store = new InvitationMockStore();
         store.RegisterFriendship(10, 20, "beta@example.com");
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
         mailer.BeforeSendCallback = () =>
         {
             context.Sessions.Revoke(creator.SessionToken);
@@ -391,16 +391,16 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creator = CreatePlayer(context, 10, "AlphaPlayer");
-        AuthenticatedSessionRecord friend = CreatePlayer(context, 20, "BetaPlayer");
-        AuthenticatedSessionRecord stranger = CreatePlayer(context, 99, "StrangerPlayer");
+        AuthenticatedSession creator = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession friend = CreatePlayer(context, 20, "BetaPlayer");
+        AuthenticatedSession stranger = CreatePlayer(context, 99, "StrangerPlayer");
         InvitationMockStore store = new InvitationMockStore();
         store.RegisterFriendship(10, 20, "beta@example.com");
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
 
         handler.Invite(creator.SessionToken, 20, new MatchSettings());
-        AuthenticatedSessionRecord otherCreator = CreatePlayer(context, 88, "OtherCreator");
+        AuthenticatedSession otherCreator = CreatePlayer(context, 88, "OtherCreator");
         handler.Create(otherCreator.SessionToken, new MatchSettings());
 
         // Act & Assert
@@ -424,12 +424,12 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creator = CreatePlayer(context, 10, "AlphaPlayer");
-        AuthenticatedSessionRecord friend = CreatePlayer(context, 20, "BetaPlayer");
+        AuthenticatedSession creator = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession friend = CreatePlayer(context, 20, "BetaPlayer");
         InvitationMockStore store = new InvitationMockStore();
         store.RegisterFriendship(10, 20, "beta@example.com");
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
         MatchRecord waiting = handler.Invite(creator.SessionToken, 20, new MatchSettings());
 
         // Act
@@ -448,13 +448,13 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creator = CreatePlayer(context, 10, "AlphaPlayer");
-        AuthenticatedSessionRecord friend = CreatePlayer(context, 20, "BetaPlayer");
-        AuthenticatedSessionRecord stranger = CreatePlayer(context, 99, "StrangerPlayer");
+        AuthenticatedSession creator = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession friend = CreatePlayer(context, 20, "BetaPlayer");
+        AuthenticatedSession stranger = CreatePlayer(context, 99, "StrangerPlayer");
         InvitationMockStore store = new InvitationMockStore();
         store.RegisterFriendship(10, 20, "beta@example.com");
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
         MatchRecord waiting = handler.Invite(creator.SessionToken, 20, new MatchSettings());
 
         // Act
@@ -472,11 +472,11 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creator = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession creator = CreatePlayer(context, 10, "AlphaPlayer");
         InvitationMockStore store = new InvitationMockStore();
         store.RegisterFriendship(10, 20, "beta@example.com");
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
         MatchRecord waiting = handler.Invite(creator.SessionToken, 20, new MatchSettings());
 
         // Act
@@ -494,7 +494,7 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord friend = CreatePlayer(context, 20, "BetaPlayer");
+        AuthenticatedSession friend = CreatePlayer(context, 20, "BetaPlayer");
         InvitationMockStore store = new InvitationMockStore();
         MatchRecord unconfirmed = new MatchRecord
         {
@@ -521,7 +521,7 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord friend = CreatePlayer(context, 20, "BetaPlayer");
+        AuthenticatedSession friend = CreatePlayer(context, 20, "BetaPlayer");
         InvitationMockStore store = new InvitationMockStore();
         MatchRecord cancelled = new MatchRecord
         {
@@ -548,12 +548,12 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creator = CreatePlayer(context, 10, "AlphaPlayer");
-        AuthenticatedSessionRecord friend = CreatePlayer(context, 20, "BetaPlayer");
+        AuthenticatedSession creator = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession friend = CreatePlayer(context, 20, "BetaPlayer");
         InvitationMockStore store = new InvitationMockStore();
         store.RegisterFriendship(10, 20, "beta@example.com");
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
         MatchRecord waiting = handler.Invite(creator.SessionToken, 20, new MatchSettings());
 
         // Act
@@ -583,11 +583,11 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creator = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession creator = CreatePlayer(context, 10, "AlphaPlayer");
         InvitationMockStore store = new InvitationMockStore();
         store.RegisterFriendship(10, 20, "beta@example.com");
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
         MatchRecord waiting = handler.Invite(creator.SessionToken, 20, new MatchSettings());
 
         // Act
@@ -606,14 +606,14 @@ internal sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord creatorSession1 = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession creatorSession1 = CreatePlayer(context, 10, "AlphaPlayer");
         InvitationMockStore store = new InvitationMockStore();
         store.RegisterFriendship(10, 20, "beta@example.com");
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
         MatchRecord waiting = handler.Invite(creatorSession1.SessionToken, 20, new MatchSettings());
 
-        AuthenticatedSessionRecord creatorSession2 = CreatePlayer(context, 10, "AlphaPlayer");
+        AuthenticatedSession creatorSession2 = CreatePlayer(context, 10, "AlphaPlayer");
 
         // Act
         long[] cancelled = handler.CancelWaitingForSession(creatorSession1.SessionToken);
@@ -681,7 +681,7 @@ internal sealed class MatchInvitationTests
         }
     }
 
-    private static AuthenticatedSessionRecord CreatePlayer(
+    private static AuthenticatedSession CreatePlayer(
         SessionTestContext context, long accountId, string username)
     {
         return context.Sessions.Create(new LoginAccount(
@@ -745,7 +745,7 @@ internal sealed class MatchInvitationTests
             Accounts[accountId] = (email, isActive);
         }
 
-        public MatchRecord Create(AuthenticatedSessionRecord player, MatchSettings settings, DateTime now)
+        public MatchRecord Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
         {
             lock (_sync)
             {
@@ -784,7 +784,7 @@ internal sealed class MatchInvitationTests
             }
         }
 
-        public MatchRecord Join(AuthenticatedSessionRecord player, string code, DateTime now)
+        public MatchRecord Join(AuthenticatedSession player, string code, DateTime now)
         {
             lock (_sync)
             {
@@ -822,7 +822,7 @@ internal sealed class MatchInvitationTests
         }
 
         public PrivateMatchInvitationPreparation PreparePrivate(
-            AuthenticatedSessionRecord creator,
+            AuthenticatedSession creator,
             long friendAccountId,
             MatchSettings settings,
             DateTime now)

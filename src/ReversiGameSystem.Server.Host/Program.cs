@@ -17,6 +17,7 @@ using ReversiGameSystem.Server.Persistence.Leaderboards;
 using ReversiGameSystem.Server.Persistence.Mail;
 using ReversiGameSystem.Server.Persistence.Matches;
 using ReversiGameSystem.Server.Persistence.Players;
+using ReversiGameSystem.Server.Persistence.Sessions;
 using ReversiGameSystem.Server.Persistence.Verification;
 using ReversiGameSystem.Server.ServiceApi;
 
@@ -39,16 +40,14 @@ internal static class Program
             try
             {
                 SystemUtcClock clock = new SystemUtcClock();
-                InMemoryAuthenticatedSessionStore sessions =
-                    new InMemoryAuthenticatedSessionStore(clock);
-                SessionRegistry sessionRegistry = new SessionRegistry(sessions, clock);
+                SessionRepository sessions = new SessionRepository(clock);
                 using (FriendshipService friendship = new FriendshipService(sessions,
                     new FriendRepository(), loggerFactory.CreateLogger<FriendshipService>()))
                 {
                     MatchInvitationEmailSender matchMailer = new MatchInvitationEmailSender(MailSettings.Load());
                     EntityFrameworkMatchStore matchStore = new EntityFrameworkMatchStore();
                     matchStore.CancelAbandonedWaitingMatches();
-                    MatchHandler matches = new MatchHandler(sessions, matchStore, clock, sessionRegistry, matchMailer);
+                    MatchHandler matches = new MatchHandler(sessions, matchStore, clock, matchMailer);
                     using MatchLobbyService lobby = new MatchLobbyService(matches,
                         loggerFactory.CreateLogger<MatchLobbyService>());
                     using GameplayMatchService gameplay = new GameplayMatchService(matches, sessions,
@@ -57,7 +56,7 @@ internal static class Program
                         new ChatHandler(sessions, new EntityFrameworkChatStore(), clock), sessions,
                         loggerFactory.CreateLogger<MatchChatService>());
                     SessionService session = CreateSessionService(
-                        loggerFactory.CreateLogger<SessionService>(), sessionRegistry, clock);
+                        loggerFactory.CreateLogger<SessionService>(), sessions, clock);
                     session.SessionClosed += friendship.RemoveSession;
                     session.SessionClosed += lobby.RemoveSession;
                     session.SessionClosed += gameplay.RemoveSession;
@@ -104,7 +103,7 @@ internal static class Program
     }
 
     private static SessionService CreateSessionService(ILogger<SessionService> logger,
-        SessionRegistry sessionRegistry, IUtcClock clock)
+        ISessionRepository sessions, IUtcClock clock)
     {
         byte[] secret = Convert.FromBase64String(
             EnvironmentSettings.ReadRequired("REVERSI_VERIFICATION_SECRET"));
@@ -122,14 +121,16 @@ internal static class Program
             new VerificationEmailSender(MailSettings.Load()), protector, clock);
         VerificationCodeService verification = new VerificationCodeService(
             issuer, new VerificationCodeRepository(), clock);
-        SessionHandler handler = new SessionHandler(new VerifiedLoginService(
-            new EntityFrameworkAccountLoginStore(), new Pbkdf2PasswordHasher()),
-            verification, sessionRegistry);
-        return new SessionService(handler, logger);
+        SessionApplicationService applicationService = new SessionApplicationService(
+            new AccountLoginRepository(),
+            new Pbkdf2PasswordHasher(),
+            verification,
+            sessions);
+        return new SessionService(applicationService, logger);
     }
 
     private static PlayerProfileService CreatePlayerProfileService(
-        IAuthenticatedSessionStore sessions)
+        ISessionRepository sessions)
     {
         PlayerProfileRepository profiles = new PlayerProfileRepository();
         ProfileImageRepository images = new ProfileImageRepository(GetProfileImageDirectory());

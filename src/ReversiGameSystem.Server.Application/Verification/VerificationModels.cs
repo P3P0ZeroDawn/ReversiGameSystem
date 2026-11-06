@@ -11,7 +11,7 @@ public enum VerificationPurpose
     Registration
 }
 
-/// <summary>Contains the verification message accepted by the delivery port.</summary>
+/// <summary>Contains the verification message accepted by the delivery service.</summary>
 public sealed class VerificationEmail
 {
     /// <summary>Gets or sets the destination mailbox.</summary>
@@ -22,14 +22,6 @@ public sealed class VerificationEmail
     public VerificationPurpose Purpose { get; set; }
     /// <summary>Gets or sets the UTC code expiry.</summary>
     public DateTime ExpiresAtUtc { get; set; }
-}
-
-/// <summary>Delivers verification mail or throws when delivery is not accepted.</summary>
-public interface IVerificationEmailSender
-{
-    /// <summary>Submits a verification message to the delivery mechanism.</summary>
-    /// <param name="email">The destination, code and authorized action.</param>
-    public void Send(VerificationEmail email);
 }
 
 /// <summary>Identifies one account or the proposed registration identity.</summary>
@@ -103,7 +95,7 @@ public sealed class VerificationAttempt
 }
 
 /// <summary>Identifies the result of a durable verification attempt.</summary>
-public enum VerificationResult
+public enum VerificationStatus
 {
     /// <summary>The pending code was consumed by this operation.</summary>
     Accepted,
@@ -111,16 +103,4 @@ public enum VerificationResult
     Invalid,
     /// <summary>The pending code expired.</summary>
     Expired
-}
-
-/// <summary>Persists replacements and atomically consumes one valid code.</summary>
-public interface IVerificationCodeRepository
-{
-    /// <summary>Atomically replaces the pending code after successful delivery.</summary>
-    /// <param name="code">The protected code and identity binding.</param>
-    public void Replace(PendingVerificationCode code);
-    /// <summary>Atomically consumes a match or increments failed attempts up to five.</summary>
-    /// <param name="attempt">The protected candidate and server time.</param>
-    /// <returns>The durable verification result.</returns>
-    public VerificationResult Consume(VerificationAttempt attempt);
 }

@@ -82,8 +82,8 @@ internal sealed class VerificationDatabaseTests
     {
         VerificationIdentity identity = Identity(1);
         Replace(identity, "000001");
-        TestAssert.AreEqual(VerificationResult.Accepted, Consume(identity, "000001"));
-        TestAssert.AreEqual(VerificationResult.Invalid, Consume(identity, "000001"));
+        TestAssert.AreEqual(VerificationStatus.Accepted, Consume(identity, "000001"));
+        TestAssert.AreEqual(VerificationStatus.Invalid, Consume(identity, "000001"));
     }
 
     private void Consume_FiveFailures_ExhaustsCodeAndReplacementResetsAttempts()
@@ -92,9 +92,9 @@ internal sealed class VerificationDatabaseTests
         Replace(identity, "000002");
         for (int attempt = 0; attempt < 5; attempt++)
         {
-            TestAssert.AreEqual(VerificationResult.Invalid, Consume(identity, "999999"));
+            TestAssert.AreEqual(VerificationStatus.Invalid, Consume(identity, "999999"));
         }
-        TestAssert.AreEqual(VerificationResult.Invalid, Consume(identity, "000002"));
+        TestAssert.AreEqual(VerificationStatus.Invalid, Consume(identity, "000002"));
         TestAssert.AreEqual(5, Convert.ToInt32(Scalar(
             "SELECT failedAttempts FROM dbo.VerificationCode WHERE identityKey = @identity",
             identity.Key)));
@@ -102,7 +102,7 @@ internal sealed class VerificationDatabaseTests
         TestAssert.AreEqual(0, Convert.ToInt32(Scalar(
             "SELECT failedAttempts FROM dbo.VerificationCode WHERE identityKey = @identity",
             identity.Key)));
-        TestAssert.AreEqual(VerificationResult.Accepted, Consume(identity, "000003"));
+        TestAssert.AreEqual(VerificationStatus.Accepted, Consume(identity, "000003"));
     }
 
     private void Consume_FourFailures_AllowsCorrectFifthAttempt()
@@ -111,16 +111,16 @@ internal sealed class VerificationDatabaseTests
         Replace(identity, "000004");
         for (int attempt = 0; attempt < 4; attempt++)
         {
-            TestAssert.AreEqual(VerificationResult.Invalid, Consume(identity, "999999"));
+            TestAssert.AreEqual(VerificationStatus.Invalid, Consume(identity, "999999"));
         }
-        TestAssert.AreEqual(VerificationResult.Accepted, Consume(identity, "000004"));
+        TestAssert.AreEqual(VerificationStatus.Accepted, Consume(identity, "000004"));
     }
 
     private void Consume_ExactExpiry_RejectsExpiredCode()
     {
         VerificationIdentity identity = Identity(4);
         Replace(identity, "000005");
-        TestAssert.AreEqual(VerificationResult.Expired,
+        TestAssert.AreEqual(VerificationStatus.Expired,
             _repository.Consume(Attempt(identity, "000005", _now.AddMinutes(5))));
     }
 
@@ -129,8 +129,8 @@ internal sealed class VerificationDatabaseTests
         VerificationIdentity identity = Identity(5);
         Replace(identity, "000006");
         Replace(identity, "000007");
-        TestAssert.AreEqual(VerificationResult.Invalid, Consume(identity, "000006"));
-        TestAssert.AreEqual(VerificationResult.Accepted, Consume(identity, "000007"));
+        TestAssert.AreEqual(VerificationStatus.Invalid, Consume(identity, "000006"));
+        TestAssert.AreEqual(VerificationStatus.Accepted, Consume(identity, "000007"));
         TestAssert.AreEqual(1, Convert.ToInt32(Scalar(
             "SELECT COUNT(*) FROM dbo.VerificationCode WHERE identityKey = @identity",
             identity.Key)));
@@ -145,20 +145,20 @@ internal sealed class VerificationDatabaseTests
         Replace(login, "000008");
         Replace(other, "000009");
         Replace(registration, "000010");
-        TestAssert.AreEqual(VerificationResult.Invalid, Consume(other, "000008"));
-        TestAssert.AreEqual(VerificationResult.Invalid, Consume(registration, "000008"));
-        TestAssert.AreEqual(VerificationResult.Accepted, Consume(login, "000008"));
-        TestAssert.AreEqual(VerificationResult.Accepted, Consume(registration, "000010"));
+        TestAssert.AreEqual(VerificationStatus.Invalid, Consume(other, "000008"));
+        TestAssert.AreEqual(VerificationStatus.Invalid, Consume(registration, "000008"));
+        TestAssert.AreEqual(VerificationStatus.Accepted, Consume(login, "000008"));
+        TestAssert.AreEqual(VerificationStatus.Accepted, Consume(registration, "000010"));
     }
 
     private void Consume_ConcurrentRequests_AcceptsExactlyOne()
     {
         VerificationIdentity identity = Identity(8);
         Replace(identity, "000011");
-        VerificationResult[] results = new VerificationResult[16];
+        VerificationStatus[] results = new VerificationStatus[16];
         Parallel.For(0, results.Length, index => results[index] = Consume(identity, "000011"));
-        TestAssert.AreEqual(1, results.Count(result => result == VerificationResult.Accepted));
-        TestAssert.AreEqual(15, results.Count(result => result == VerificationResult.Invalid));
+        TestAssert.AreEqual(1, results.Count(result => result == VerificationStatus.Accepted));
+        TestAssert.AreEqual(15, results.Count(result => result == VerificationStatus.Invalid));
     }
 
     private void Migration_RepeatedApplication_PreservesLegacyRows()
@@ -208,7 +208,7 @@ VALUES ('invalid@example.invalid','UNKNOWN','test-digest',
         });
     }
 
-    private VerificationResult Consume(VerificationIdentity identity, string code) =>
+    private VerificationStatus Consume(VerificationIdentity identity, string code) =>
         _repository.Consume(Attempt(identity, code, _now));
 
     private VerificationAttempt Attempt(VerificationIdentity identity, string code, DateTime now) =>

@@ -77,7 +77,7 @@ SELECT @result;";
     }
 
     /// <inheritdoc />
-    public VerificationResult Consume(VerificationAttempt attempt)
+    public VerificationStatus Consume(VerificationAttempt attempt)
     {
         if (attempt == null)
         {
@@ -92,7 +92,7 @@ SELECT @result;";
                 IdentityParameter(attempt.IdentityKey), DigestParameter(attempt.Digest),
                 new SqlParameter("@now", SqlDbType.DateTime2) { Value = attempt.NowUtc }).Single();
             transaction.Commit();
-            return (VerificationResult)result;
+            return (VerificationStatus)result;
         }
     }
 

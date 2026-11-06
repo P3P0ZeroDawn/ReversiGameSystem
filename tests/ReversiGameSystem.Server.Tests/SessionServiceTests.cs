@@ -97,7 +97,7 @@ internal sealed class SessionServiceTests
         // Arrange
         SessionTestContext context = new SessionTestContext
         {
-            ConsumeResult = VerificationResult.Expired
+            ConsumeStatus = VerificationStatus.Expired
         };
         // Act
         Invoke(context, channel =>
@@ -118,14 +118,12 @@ internal sealed class SessionServiceTests
         // Arrange
         SessionTestContext context = new SessionTestContext { Inactive = true };
         // Act
-        try { context.Handler.CompleteLogin("PlayerOne", "000012"); }
-        catch (SessionRejectedException exception)
-        {
-            // Assert
-            TestAssert.AreEqual(SessionRejection.InactiveAccount, exception.Reason);
-            return;
-        }
-        throw new InvalidOperationException("An inactive account cannot open a session.");
+        SessionOperationResult<AuthenticatedSession> result =
+            context.ApplicationService.CompleteLogin("PlayerOne", "000012");
+
+        // Assert
+        TestAssert.AreEqual(SessionOperationStatus.InactiveAccount, result.Status);
+        TestAssert.AreEqual(0, context.Sessions.CreatedCount);
     }
 
     internal void CompleteLogin_RepositoryRejectsConsumedCode_DoesNotCreateSession()
@@ -133,18 +131,15 @@ internal sealed class SessionServiceTests
         // Arrange
         SessionTestContext context = new SessionTestContext
         {
-            ConsumeResult = VerificationResult.Invalid
+            ConsumeStatus = VerificationStatus.Invalid
         };
         // Act
-        try { context.Handler.CompleteLogin("PlayerOne", "000012"); }
-        catch (SessionRejectedException exception)
-        {
-            // Assert
-            TestAssert.AreEqual(SessionRejection.InvalidVerificationCode, exception.Reason);
-            TestAssert.AreEqual(0, context.Sessions.CreatedCount);
-            return;
-        }
-        throw new InvalidOperationException("A rejected verification must not create a session.");
+        SessionOperationResult<AuthenticatedSession> result =
+            context.ApplicationService.CompleteLogin("PlayerOne", "000012");
+
+        // Assert
+        TestAssert.AreEqual(SessionOperationStatus.InvalidVerificationCode, result.Status);
+        TestAssert.AreEqual(0, context.Sessions.CreatedCount);
     }
 
     internal void OpenGuestSession_ExpiredGuest_ReleasesReservedName()
@@ -152,22 +147,22 @@ internal sealed class SessionServiceTests
         // Arrange
         SessionTestContext context = new SessionTestContext();
         TestAssert.AreEqual(false,
-            context.Registry.TryGetGuest("unknown", out GuestSessionRecord? absent));
-        TestAssert.AreEqual<GuestSessionRecord?>(null, absent);
+            context.Sessions.TryGetGuest("unknown", out GuestSession? absent));
+        TestAssert.AreEqual<GuestSession?>(null, absent);
         TestAssert.AreEqual(false,
-            context.Registry.TryGetGuest(string.Empty, out GuestSessionRecord? empty));
-        TestAssert.AreEqual<GuestSessionRecord?>(null, empty);
-        GuestSessionRecord previous = context.Registry.CreateGuest("Visitor");
+            context.Sessions.TryGetGuest(string.Empty, out GuestSession? empty));
+        TestAssert.AreEqual<GuestSession?>(null, empty);
+        GuestSession previous = context.Sessions.CreateGuest("Guest-Visitor").GetValue();
         TestAssert.AreEqual(true,
-            context.Registry.TryGetGuest(previous.SessionToken, out GuestSessionRecord? active));
+            context.Sessions.TryGetGuest(previous.SessionToken, out GuestSession? active));
         TestAssert.AreEqual(previous, active);
         context.UtcNow = previous.ExpiresAtUtc;
         // Act
-        GuestSessionRecord current = context.Registry.CreateGuest("Visitor");
+        GuestSession current = context.Sessions.CreateGuest("Guest-Visitor").GetValue();
         // Assert
         TestAssert.AreEqual(false,
-            context.Registry.TryGetGuest(previous.SessionToken, out GuestSessionRecord? expired));
-        TestAssert.AreEqual<GuestSessionRecord?>(null, expired);
+            context.Sessions.TryGetGuest(previous.SessionToken, out GuestSession? expired));
+        TestAssert.AreEqual<GuestSession?>(null, expired);
         TestAssert.AreEqual("Guest-Visitor", current.DisplayName);
         TestAssert.IsTrue(previous.SessionToken != current.SessionToken,
             "A new guest must receive a new token.");
@@ -184,15 +179,15 @@ internal sealed class SessionServiceTests
                 channel.OpenGuestSession("Visitor");
             // Assert
             TestAssert.AreEqual("Guest-Visitor", guest.DisplayName);
-            TestAssert.AreEqual(true, context.Registry.TryGetGuest(guest.SessionToken, out _));
+            TestAssert.AreEqual(true, context.Sessions.TryGetGuest(guest.SessionToken, out _));
             try { channel.OpenGuestSession("visitor"); }
             catch (FaultException<SessionFault> fault)
             {
                 TestAssert.AreEqual(SessionFailure.GuestNameUnavailable, fault.Detail.Reason);
                 channel.CloseSession(guest.SessionToken);
                 TestAssert.AreEqual(false,
-                    context.Registry.TryGetGuest(guest.SessionToken, out GuestSessionRecord? revoked));
-                TestAssert.AreEqual<GuestSessionRecord?>(null, revoked);
+                    context.Sessions.TryGetGuest(guest.SessionToken, out GuestSession? revoked));
+                TestAssert.AreEqual<GuestSession?>(null, revoked);
                 TestAssert.AreEqual("Guest-Visitor",
                     channel.OpenGuestSession("Visitor").DisplayName);
                 return true;
@@ -210,14 +205,17 @@ internal sealed class SessionServiceTests
         // Act
         Parallel.For(0, 16, index =>
         {
-            try
+            SessionOperationResult<GuestSession> result =
+                context.Sessions.CreateGuest("Guest-Visitor");
+            if (result.Status == SessionOperationStatus.Success)
             {
-                context.Registry.CreateGuest("Visitor");
                 Interlocked.Increment(ref accepted);
             }
-            catch (SessionRejectedException exception)
+            else
             {
-                TestAssert.AreEqual(SessionRejection.GuestNameUnavailable, exception.Reason);
+                TestAssert.AreEqual(
+                    SessionOperationStatus.GuestNameUnavailable,
+                    result.Status);
                 Interlocked.Increment(ref rejected);
             }
         });
@@ -244,16 +242,36 @@ internal sealed class SessionServiceTests
         });
     }
 
+    internal void CloseSession_FailingObserver_NotifiesRemainingObservers()
+    {
+        // Arrange
+        SessionTestContext context = new SessionTestContext();
+        SessionService service = new SessionService(
+            context.ApplicationService,
+            NullLogger<SessionService>.Instance);
+        SessionClosureObserver observer = new SessionClosureObserver();
+        service.SessionClosed += observer.Fail;
+        service.SessionClosed += observer.Record;
+
+        // Act
+        service.CloseSession("unknown-token");
+
+        // Assert
+        TestAssert.AreEqual("unknown-token", observer.ObservedToken);
+    }
+
     private static TResult Invoke<TResult>(SessionTestContext context,
         Func<ISessionService, TResult> action)
     {
-        SessionService service = new SessionService(context.Handler,
+        SessionService service = new SessionService(context.ApplicationService,
             NullLogger<SessionService>.Instance);
         Uri address = new Uri("net.pipe://localhost/ReversiGameSystem.Tests/"
             + Guid.NewGuid().ToString("N") + "/");
         NetNamedPipeBinding binding = new NetNamedPipeBinding(NetNamedPipeSecurityMode.None);
         using (ServiceHost host = new ServiceHost(service, address))
         {
+            host.Description.Behaviors.Add(new ServiceErrorBehavior(
+                NullLogger<ServiceErrorBehavior>.Instance));
             host.AddServiceEndpoint(typeof(ISessionService), binding, "Session");
             host.Open();
             ChannelFactory<ISessionService> factory = new ChannelFactory<ISessionService>(binding,
@@ -273,5 +291,21 @@ internal sealed class SessionServiceTests
                 throw;
             }
         }
+    }
+}
+
+internal sealed class SessionClosureObserver
+{
+    internal string? ObservedToken { get; private set; }
+
+    internal void Fail(string sessionToken)
+    {
+        ObservedToken = sessionToken;
+        throw new InvalidOperationException("Observer failure for isolation testing.");
+    }
+
+    internal void Record(string sessionToken)
+    {
+        ObservedToken = sessionToken;
     }
 }

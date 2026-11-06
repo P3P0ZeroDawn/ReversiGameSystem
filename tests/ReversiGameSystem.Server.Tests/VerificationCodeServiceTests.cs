@@ -52,13 +52,13 @@ internal sealed class VerificationCodeServiceTests
         // Arrange
         SessionTestContext context = new SessionTestContext
         {
-            ConsumeResult = VerificationResult.Expired
+            ConsumeStatus = VerificationStatus.Expired
         };
         context.UtcNow = context.UtcNow.AddMinutes(5);
         // Act
-        VerificationResult result = context.Codes.Consume(Identity, "000012");
+        VerificationStatus result = context.Codes.Consume(Identity, "000012");
         // Assert
-        TestAssert.AreEqual(VerificationResult.Expired, result);
+        TestAssert.AreEqual(VerificationStatus.Expired, result);
         VerificationAttempt attempt = TestAssert.IsNotNull(context.Attempt);
         TestAssert.AreEqual(context.UtcNow, attempt.NowUtc);
         TestAssert.IsTrue(attempt.Digest.SequenceEqual(

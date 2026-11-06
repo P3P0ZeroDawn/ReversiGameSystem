@@ -14,11 +14,11 @@ using ReversiGameSystem.Server.ServiceApi;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class FriendshipPresenceTestContext : IDisposable, IAuthenticatedSessionStore,
+internal sealed class FriendshipPresenceTestContext : IDisposable, ISessionRepository,
     IFriendshipRepository
 {
-    private readonly ConcurrentDictionary<string, AuthenticatedSessionRecord> _sessions =
-        new ConcurrentDictionary<string, AuthenticatedSessionRecord>();
+    private readonly ConcurrentDictionary<string, AuthenticatedSession> _sessions =
+        new ConcurrentDictionary<string, AuthenticatedSession>();
     private readonly ConcurrentDictionary<string, bool> _expired =
         new ConcurrentDictionary<string, bool>();
     private readonly List<FriendshipPresenceTestClient> _clients = new List<FriendshipPresenceTestClient>();
@@ -52,7 +52,7 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, IAuthenticate
     }
 
     internal void AddSession(string token, long accountId) =>
-        _sessions[token] = new AuthenticatedSessionRecord(token, accountId,
+        _sessions[token] = new AuthenticatedSession(token, accountId,
             "Player" + accountId, "unused", "en-US", DateTime.UtcNow.AddHours(1));
 
     internal FriendshipPresenceTestClient Connect(string token)
@@ -72,13 +72,24 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, IAuthenticate
 
     public void Revoke(string sessionToken) => _sessions.TryRemove(sessionToken, out _);
     internal void Expire(string token) => _expired[token] = true;
-    public bool TryGet(string sessionToken, out AuthenticatedSessionRecord? session)
+    public bool TryGet(string sessionToken, out AuthenticatedSession? session)
     {
         session = null;
         return !_expired.ContainsKey(sessionToken ?? string.Empty)
             && _sessions.TryGetValue(sessionToken ?? string.Empty, out session);
     }
-    public AuthenticatedSessionRecord Create(LoginAccount account) => throw new NotSupportedException();
+    public AuthenticatedSession Create(LoginAccount account) => throw new NotSupportedException();
+
+    public SessionOperationResult<GuestSession> CreateGuest(string displayName)
+    {
+        throw new NotSupportedException();
+    }
+
+    public bool TryGetGuest(string sessionToken, out GuestSession? session)
+    {
+        session = null;
+        return false;
+    }
 
     public bool IsAccountActive(long accountId)
     {

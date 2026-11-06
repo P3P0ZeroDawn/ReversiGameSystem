@@ -21,7 +21,7 @@ internal sealed class ProfileBoundaryContext
 
     internal PlayerProfileSessionStoreStub Sessions { get; } = new PlayerProfileSessionStoreStub
     {
-        Session = new AuthenticatedSessionRecord("session-token", 42, "PlayerOne",
+        Session = new AuthenticatedSession("session-token", 42, "PlayerOne",
             "player@example.com", "en-US", DateTime.UtcNow.AddHours(1))
     };
     internal PlayerProfileRepositoryStub Profiles { get; } =

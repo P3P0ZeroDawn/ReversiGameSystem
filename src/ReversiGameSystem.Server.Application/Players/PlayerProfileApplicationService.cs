@@ -8,7 +8,7 @@ namespace ReversiGameSystem.Server.Application.Players;
 /// <summary>Coordinates the application operations for player profiles.</summary>
 public sealed class PlayerProfileApplicationService
 {
-    private readonly IAuthenticatedSessionStore _sessions;
+    private readonly ISessionRepository _sessions;
     private readonly IPlayerProfileRepository _profiles;
     private readonly IPlayerImageRepository _images;
 
@@ -18,7 +18,7 @@ public sealed class PlayerProfileApplicationService
     /// <param name="images">The server-owned image repository.</param>
     /// <exception cref="ArgumentNullException">A dependency is absent.</exception>
     public PlayerProfileApplicationService(
-        IAuthenticatedSessionStore sessions,
+        ISessionRepository sessions,
         IPlayerProfileRepository profiles,
         IPlayerImageRepository images)
     {
@@ -39,7 +39,7 @@ public sealed class PlayerProfileApplicationService
         {
             return new GetPlayerProfileResult(ProfileOperationStatus.MissingSessionToken);
         }
-        if (!_sessions.TryGet(sessionToken, out AuthenticatedSessionRecord? session)
+        if (!_sessions.TryGet(sessionToken, out AuthenticatedSession? session)
             || session == null)
         {
             return new GetPlayerProfileResult(ProfileOperationStatus.InvalidSession);
@@ -131,7 +131,7 @@ public sealed class PlayerProfileApplicationService
         {
             return ProfileOperationStatus.MissingSessionToken;
         }
-        if (!_sessions.TryGet(sessionToken, out AuthenticatedSessionRecord? session)
+        if (!_sessions.TryGet(sessionToken, out AuthenticatedSession? session)
             || session == null)
         {
             return ProfileOperationStatus.InvalidSession;
@@ -167,7 +167,7 @@ public sealed class PlayerProfileApplicationService
         {
             return ProfileOperationStatus.MissingSessionToken;
         }
-        if (!_sessions.TryGet(sessionToken, out AuthenticatedSessionRecord? session)
+        if (!_sessions.TryGet(sessionToken, out AuthenticatedSession? session)
             || session == null)
         {
             return ProfileOperationStatus.InvalidSession;

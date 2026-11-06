@@ -18,12 +18,12 @@ namespace ReversiGameSystem.Server.ServiceApi;
 public sealed class MatchChatService : IMatchChatService, IDisposable
 {
     private readonly ChatHandler _handler;
-    private readonly IAuthenticatedSessionStore _sessions;
+    private readonly ISessionRepository _sessions;
     private readonly MatchBoundary _boundary;
     private readonly MatchChannels<IMatchChatServiceCallback> _channels;
 
     /// <summary>Creates the durable chat boundary.</summary>
-    public MatchChatService(ChatHandler handler, IAuthenticatedSessionStore sessions,
+    public MatchChatService(ChatHandler handler, ISessionRepository sessions,
         ILogger<MatchChatService> logger)
     {
         _handler = handler ?? throw new ArgumentNullException(nameof(handler));
@@ -102,8 +102,8 @@ public sealed class MatchChatService : IMatchChatService, IDisposable
     private void PublishMute(string token, ChatMuteRecord mute) =>
         _channels.PublishAll((recipient, recipientMatchId, callback) =>
         {
-            if (!_sessions.TryGet(token, out AuthenticatedSessionRecord? sender) || sender == null
-                || !_sessions.TryGet(recipient, out AuthenticatedSessionRecord? receiver) || receiver == null
+            if (!_sessions.TryGet(token, out AuthenticatedSession? sender) || sender == null
+                || !_sessions.TryGet(recipient, out AuthenticatedSession? receiver) || receiver == null
                 || sender.AccountId != receiver.AccountId)
             {
                 return;

@@ -10,7 +10,7 @@ internal sealed class MatchHandlerLifecycleTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord player = CreatePlayer(context);
+        AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore { FailCancel = true };
         MatchHandler handler = new MatchHandler(context.Sessions, store, context);
         handler.Create(player.SessionToken, new MatchSettings());
@@ -31,7 +31,7 @@ internal sealed class MatchHandlerLifecycleTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord player = CreatePlayer(context);
+        AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore { FailCancel = true };
         MatchHandler handler = new MatchHandler(context.Sessions, store, context);
         handler.Create(player.SessionToken, new MatchSettings());
@@ -52,7 +52,7 @@ internal sealed class MatchHandlerLifecycleTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord player = CreatePlayer(context);
+        AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore { Started = true };
         MatchHandler handler = new MatchHandler(context.Sessions, store, context);
         handler.Create(player.SessionToken, new MatchSettings());
@@ -70,7 +70,7 @@ internal sealed class MatchHandlerLifecycleTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord player = CreatePlayer(context);
+        AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore();
         MatchHandler handler = new MatchHandler(context.Sessions, store, context);
         context.UtcNow = player.ExpiresAtUtc;
@@ -86,10 +86,10 @@ internal sealed class MatchHandlerLifecycleTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSessionRecord player = CreatePlayer(context);
+        AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore();
         FailingInvitationEmailSender mailer = new FailingInvitationEmailSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
 
         // Act
         TestAssert.Throws<InvalidOperationException>(() =>
@@ -103,10 +103,10 @@ internal sealed class MatchHandlerLifecycleTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        GuestSessionRecord guest = context.Registry.CreateGuest("GuestPlayer");
+        GuestSession guest = context.Sessions.CreateGuest("Guest-GuestPlayer").GetValue();
         LifecycleStore store = new LifecycleStore();
         FailingInvitationEmailSender mailer = new FailingInvitationEmailSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, context.Registry, mailer);
+        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
 
         // Act
         MatchRejectedException exception = TestAssert.Throws<MatchRejectedException>(() =>
@@ -116,7 +116,7 @@ internal sealed class MatchHandlerLifecycleTests
         TestAssert.AreEqual(MatchRejection.Unauthorized, exception.Reason);
     }
 
-    private static AuthenticatedSessionRecord CreatePlayer(SessionTestContext context)
+    private static AuthenticatedSession CreatePlayer(SessionTestContext context)
     {
         return context.Sessions.Create(new LoginAccount(42, "PlayerOne", "player@example.com",
             "test-hash", "ACTIVE", "en-US"));
@@ -141,7 +141,7 @@ internal sealed class MatchHandlerLifecycleTests
         internal int CancelAttempts { get; private set; }
         internal int CreateAttempts { get; private set; }
 
-        public MatchRecord Create(AuthenticatedSessionRecord player, MatchSettings settings, DateTime now)
+        public MatchRecord Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
         {
             CreateAttempts++;
             return new MatchRecord { Id = 7 };
@@ -161,14 +161,14 @@ internal sealed class MatchHandlerLifecycleTests
         }
 
         public MatchRecord[] Available(long accountId) => throw new NotSupportedException();
-        public MatchRecord Join(AuthenticatedSessionRecord player, string code, DateTime now) =>
+        public MatchRecord Join(AuthenticatedSession player, string code, DateTime now) =>
             throw new NotSupportedException();
         public MatchRecord Get(long accountId, long matchId) => throw new NotSupportedException();
         public MatchRecord ChangeTurnDuration(long accountId, long matchId, int seconds) =>
             throw new NotSupportedException();
 
         public PrivateMatchInvitationPreparation PreparePrivate(
-            AuthenticatedSessionRecord creator,
+            AuthenticatedSession creator,
             long friendAccountId,
             MatchSettings settings,
             DateTime now)

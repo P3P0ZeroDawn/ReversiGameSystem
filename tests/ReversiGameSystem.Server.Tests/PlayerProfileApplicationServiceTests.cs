@@ -217,9 +217,9 @@ internal sealed class PlayerProfileApplicationServiceTests
         return profiles;
     }
 
-    private static AuthenticatedSessionRecord CreateSession(long accountId)
+    private static AuthenticatedSession CreateSession(long accountId)
     {
-        return new AuthenticatedSessionRecord(
+        return new AuthenticatedSession(
             "session-token",
             accountId,
             "PlayerOne",
@@ -229,22 +229,33 @@ internal sealed class PlayerProfileApplicationServiceTests
     }
 }
 
-internal sealed class PlayerProfileSessionStoreStub : IAuthenticatedSessionStore
+internal sealed class PlayerProfileSessionStoreStub : ISessionRepository
 {
-    internal AuthenticatedSessionRecord? Session { get; set; }
+    internal AuthenticatedSession? Session { get; set; }
 
     internal string? SessionToken { get; private set; }
 
-    public AuthenticatedSessionRecord Create(LoginAccount account)
+    public AuthenticatedSession Create(LoginAccount account)
     {
         throw new NotSupportedException();
     }
 
-    public bool TryGet(string sessionToken, out AuthenticatedSessionRecord? session)
+    public SessionOperationResult<GuestSession> CreateGuest(string displayName)
+    {
+        throw new NotSupportedException();
+    }
+
+    public bool TryGet(string sessionToken, out AuthenticatedSession? session)
     {
         SessionToken = sessionToken;
         session = Session?.SessionToken == sessionToken ? Session : null;
         return session != null;
+    }
+
+    public bool TryGetGuest(string sessionToken, out GuestSession? session)
+    {
+        session = null;
+        return false;
     }
 
     public void Revoke(string sessionToken)

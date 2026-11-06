@@ -7,12 +7,12 @@ namespace ReversiGameSystem.Server.Application.Chat;
 /// <summary>Resolves callers and validates messages before durable processing.</summary>
 public sealed class ChatHandler
 {
-    private readonly IAuthenticatedSessionStore _sessions;
+    private readonly ISessionRepository _sessions;
     private readonly IChatStore _store;
     private readonly IUtcClock _clock;
 
     /// <summary>Creates a chat handler with server sessions, durable storage, and a clock.</summary>
-    public ChatHandler(IAuthenticatedSessionStore sessions, IChatStore store, IUtcClock clock)
+    public ChatHandler(ISessionRepository sessions, IChatStore store, IUtcClock clock)
     {
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
         _store = store ?? throw new ArgumentNullException(nameof(store));
@@ -59,7 +59,7 @@ public sealed class ChatHandler
         {
             throw new SessionRejectedException(SessionRejection.MissingSessionToken);
         }
-        if (!_sessions.TryGet(token, out AuthenticatedSessionRecord? player)
+        if (!_sessions.TryGet(token, out AuthenticatedSession? player)
             || player == null || player.ExpiresAtUtc <= _clock.UtcNow)
         {
             throw new SessionRejectedException();

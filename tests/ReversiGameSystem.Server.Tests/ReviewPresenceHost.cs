@@ -14,9 +14,13 @@ internal static class ReviewPresenceHost
 {
     internal static void Run() => ReviewAccountDatabaseTests.RunWithReviewAccounts(Host);
 
-    private static void Host(ISessionHandler handler, IAuthenticatedSessionStore sessions)
+    private static void Host(
+        SessionApplicationService applicationService,
+        ISessionRepository sessions)
     {
-        SessionService session = new SessionService(handler, NullLogger<SessionService>.Instance);
+        SessionService session = new SessionService(
+            applicationService,
+            NullLogger<SessionService>.Instance);
         using FriendshipService friendship = new FriendshipService(sessions,
             new FriendRepository(), NullLogger<FriendshipService>.Instance);
         session.SessionClosed += friendship.RemoveSession;
@@ -47,8 +51,10 @@ internal static class ReviewPresenceHost
     {
         NetTcpBinding binding = new NetTcpBinding(SecurityMode.Transport)
         {
-            OpenTimeout = TimeSpan.FromSeconds(10), CloseTimeout = TimeSpan.FromSeconds(5),
-            SendTimeout = TimeSpan.FromSeconds(10), ReceiveTimeout = TimeSpan.FromSeconds(15)
+            OpenTimeout = TimeSpan.FromSeconds(10),
+            CloseTimeout = TimeSpan.FromSeconds(5),
+            SendTimeout = TimeSpan.FromSeconds(10),
+            ReceiveTimeout = TimeSpan.FromSeconds(15)
         };
         binding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Windows;
         binding.Security.Transport.ProtectionLevel = ProtectionLevel.EncryptAndSign;

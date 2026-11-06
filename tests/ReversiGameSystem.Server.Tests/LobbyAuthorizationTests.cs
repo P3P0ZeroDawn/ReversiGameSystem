@@ -101,7 +101,7 @@ internal sealed class LobbyAuthorizationTests
         }
 
         internal SessionTestContext Sessions { get; }
-        internal AuthenticatedSessionRecord Player { get; }
+        internal AuthenticatedSession Player { get; }
         internal AuthorizationStore Store { get; }
         internal MatchHandler Handler { get; }
     }
@@ -130,13 +130,13 @@ internal sealed class LobbyAuthorizationTests
         }
 
         public MatchRecord Create(
-            AuthenticatedSessionRecord player, MatchSettings settings, DateTime now)
+            AuthenticatedSession player, MatchSettings settings, DateTime now)
         {
             throw new NotSupportedException();
         }
 
         public PrivateMatchInvitationPreparation PreparePrivate(
-            AuthenticatedSessionRecord player,
+            AuthenticatedSession player,
             long friendAccountId,
             MatchSettings settings,
             DateTime now)
@@ -149,7 +149,7 @@ internal sealed class LobbyAuthorizationTests
             throw new NotSupportedException();
         }
 
-        public MatchRecord Join(AuthenticatedSessionRecord player, string code, DateTime now)
+        public MatchRecord Join(AuthenticatedSession player, string code, DateTime now)
         {
             throw new NotSupportedException();
         }

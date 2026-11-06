@@ -42,7 +42,7 @@ public sealed class VerificationCodeService
     /// <param name="identity">The authorized action and recipient binding.</param>
     /// <param name="code">The candidate supplied by the user.</param>
     /// <returns>The verification outcome.</returns>
-    public VerificationResult Consume(VerificationIdentity identity, string code)
+    public VerificationStatus Consume(VerificationIdentity identity, string code)
     {
         string candidate = code ?? string.Empty;
         if (candidate.Length > 6)
@@ -51,7 +51,8 @@ public sealed class VerificationCodeService
         }
         return _repository.Consume(new VerificationAttempt
         {
-            IdentityKey = identity.Key, Digest = _issuer.Protect(identity, candidate),
+            IdentityKey = identity.Key,
+            Digest = _issuer.Protect(identity, candidate),
             NowUtc = _clock.UtcNow
         });
     }

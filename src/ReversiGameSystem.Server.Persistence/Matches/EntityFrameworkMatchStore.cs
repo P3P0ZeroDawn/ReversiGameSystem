@@ -39,7 +39,7 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
     }
 
     /// <summary>Creates the waiting lobby and its creator seat atomically.</summary>
-    public MatchRecord Create(AuthenticatedSessionRecord player, MatchSettings settings, DateTime now)
+    public MatchRecord Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
@@ -66,7 +66,7 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
 
     /// <inheritdoc />
     public PrivateMatchInvitationPreparation PreparePrivate(
-        AuthenticatedSessionRecord player,
+        AuthenticatedSession player,
         long friendAccountId,
         MatchSettings settings,
         DateTime now)
@@ -181,7 +181,7 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
     }
 
     /// <summary>Occupies the second seat and starts the waiting match atomically.</summary>
-    public MatchRecord Join(AuthenticatedSessionRecord player, string code, DateTime now)
+    public MatchRecord Join(AuthenticatedSession player, string code, DateTime now)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
@@ -315,7 +315,7 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
         return MatchDatabase.RequireMatch(context, matchId);
     }
 
-    private static MatchParticipant CreateParticipant(AuthenticatedSessionRecord player, byte seat, DateTime now)
+    private static MatchParticipant CreateParticipant(AuthenticatedSession player, byte seat, DateTime now)
     {
         return new MatchParticipant
         {

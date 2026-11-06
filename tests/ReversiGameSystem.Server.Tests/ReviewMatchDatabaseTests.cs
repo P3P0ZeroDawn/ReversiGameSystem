@@ -15,12 +15,16 @@ internal static class ReviewMatchDatabaseTests
 {
     internal static void Run() => ReviewAccountDatabaseTests.RunWithReviewAccounts(Check);
 
-    private static void Check(ISessionHandler sessions, IAuthenticatedSessionStore store)
+    private static void Check(
+        SessionApplicationService sessions,
+        ISessionRepository store)
     {
         // Arrange
         ReviewMatchHost.PrepareSchema();
-        string alpha = sessions.CompleteLogin("ReviewAlpha", "000001").SessionToken;
-        string beta = sessions.CompleteLogin("ReviewBeta", "000002").SessionToken;
+        string alpha = sessions.CompleteLogin("ReviewAlpha", "000001")
+            .GetValue().SessionToken;
+        string beta = sessions.CompleteLogin("ReviewBeta", "000002")
+            .GetValue().SessionToken;
         MatchHandler matches = new MatchHandler(store, new EntityFrameworkMatchStore(), new SystemUtcClock());
         ChatHandler chat = new ChatHandler(store, new EntityFrameworkChatStore(), new SystemUtcClock());
         MatchRecord waiting = matches.Create(alpha, new MatchSettings());

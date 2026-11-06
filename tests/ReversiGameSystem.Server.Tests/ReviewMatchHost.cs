@@ -20,13 +20,17 @@ internal static class ReviewMatchHost
 {
     internal static void Run() => ReviewAccountDatabaseTests.RunWithReviewAccounts(Host);
 
-    private static void Host(ISessionHandler sessions, IAuthenticatedSessionStore store)
+    private static void Host(
+        SessionApplicationService applicationService,
+        ISessionRepository store)
     {
         PrepareSchema();
         SystemUtcClock clock = new SystemUtcClock();
         MatchHandler matches = new MatchHandler(store, new EntityFrameworkMatchStore(), clock);
         ChatHandler messages = new ChatHandler(store, new EntityFrameworkChatStore(), clock);
-        SessionService session = new SessionService(sessions, NullLogger<SessionService>.Instance);
+        SessionService session = new SessionService(
+            applicationService,
+            NullLogger<SessionService>.Instance);
         using MatchLobbyService lobby = new MatchLobbyService(matches,
             NullLogger<MatchLobbyService>.Instance);
         using GameplayMatchService gameplay = new GameplayMatchService(matches, store,
@@ -72,8 +76,10 @@ internal static class ReviewMatchHost
     {
         NetTcpBinding binding = new NetTcpBinding(SecurityMode.Transport)
         {
-            OpenTimeout = TimeSpan.FromSeconds(10), CloseTimeout = TimeSpan.FromSeconds(5),
-            SendTimeout = TimeSpan.FromSeconds(5), ReceiveTimeout = TimeSpan.FromSeconds(45)
+            OpenTimeout = TimeSpan.FromSeconds(10),
+            CloseTimeout = TimeSpan.FromSeconds(5),
+            SendTimeout = TimeSpan.FromSeconds(5),
+            ReceiveTimeout = TimeSpan.FromSeconds(45)
         };
         binding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Windows;
         binding.Security.Transport.ProtectionLevel = ProtectionLevel.EncryptAndSign;

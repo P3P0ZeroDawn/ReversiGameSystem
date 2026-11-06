@@ -7,6 +7,7 @@ using ReversiGameSystem.Server.Contracts.Common;
 using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.Contracts.Matches;
 using ReversiGameSystem.Server.ServiceApi;
+using ReversiGameSystem.Server.Persistence.Sessions;
 
 namespace ReversiGameSystem.Server.Tests;
 
@@ -64,10 +65,10 @@ internal sealed class MatchBoundaryTests
     {
         // Arrange
         BoundaryStore store = new BoundaryStore();
-        BoundarySessions sessions = new BoundarySessions();
-        SessionRegistry registry = new SessionRegistry(sessions, new BoundaryClock());
-        GuestSessionRecord guest = registry.CreateGuest("GuestBoundary");
-        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), registry, new BoundaryMailer());
+        BoundaryClock clock = new BoundaryClock();
+        SessionRepository sessions = new SessionRepository(clock);
+        GuestSession guest = sessions.CreateGuest("Guest-GuestBoundary").GetValue();
+        MatchHandler handler = new MatchHandler(sessions, store, clock, new BoundaryMailer());
         using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
 
         // Act & Assert
@@ -81,7 +82,7 @@ internal sealed class MatchBoundaryTests
         // Arrange
         BoundaryStore store = new BoundaryStore();
         BoundarySessions sessions = new BoundarySessions();
-        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), null, new BoundaryMailer());
+        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), new BoundaryMailer());
         using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
 
         // Act & Assert
@@ -95,7 +96,7 @@ internal sealed class MatchBoundaryTests
         // Arrange
         BoundaryStore store = new BoundaryStore();
         BoundarySessions sessions = new BoundarySessions();
-        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), null, new BoundaryMailer());
+        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), new BoundaryMailer());
         using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
 
         // Act & Assert
@@ -109,7 +110,7 @@ internal sealed class MatchBoundaryTests
         // Arrange
         BoundaryStore store = new BoundaryStore();
         BoundarySessions sessions = new BoundarySessions();
-        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), null, new BoundaryMailer());
+        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), new BoundaryMailer());
         using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
 
         // Act & Assert
@@ -123,7 +124,7 @@ internal sealed class MatchBoundaryTests
         // Arrange
         BoundaryStore store = new BoundaryStore();
         BoundarySessions sessions = new BoundarySessions();
-        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), null, new BoundaryMailer());
+        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), new BoundaryMailer());
         using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
 
         // Act & Assert
@@ -137,7 +138,7 @@ internal sealed class MatchBoundaryTests
         // Arrange
         BoundaryStore store = new BoundaryStore();
         BoundarySessions sessions = new BoundarySessions();
-        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), null, new BoundaryMailer());
+        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), new BoundaryMailer());
         using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
 
         // Act & Assert
@@ -166,15 +167,23 @@ internal sealed class MatchBoundaryTests
         public DateTime UtcNow => new DateTime(2026, 10, 30, 12, 0, 0, DateTimeKind.Utc);
     }
 
-    private sealed class BoundarySessions : IAuthenticatedSessionStore
+    private sealed class BoundarySessions : ISessionRepository
     {
-        public AuthenticatedSessionRecord Create(LoginAccount account) => throw new NotSupportedException();
+        public AuthenticatedSession Create(LoginAccount account) => throw new NotSupportedException();
+        public SessionOperationResult<GuestSession> CreateGuest(string displayName) =>
+            throw new NotSupportedException();
         public void Revoke(string sessionToken) => throw new NotSupportedException();
-        public bool TryGet(string sessionToken, out AuthenticatedSessionRecord? session)
+        public bool TryGet(string sessionToken, out AuthenticatedSession? session)
         {
-            session = new AuthenticatedSessionRecord("valid", 1, "BoundaryPlayer", "test@example.invalid", "en-US",
+            session = new AuthenticatedSession("valid", 1, "BoundaryPlayer", "test@example.invalid", "en-US",
                 DateTime.UtcNow.AddDays(1));
             return sessionToken == "valid";
+        }
+
+        public bool TryGetGuest(string sessionToken, out GuestSession? session)
+        {
+            session = null;
+            return false;
         }
     }
 
@@ -183,9 +192,9 @@ internal sealed class MatchBoundaryTests
         public void Authorize(long accountId) =>
             throw new InvalidOperationException("private storage failure");
         internal bool AllowRead { get; set; }
-        public MatchRecord Create(AuthenticatedSessionRecord player, MatchSettings settings, DateTime now) => throw new NotSupportedException();
+        public MatchRecord Create(AuthenticatedSession player, MatchSettings settings, DateTime now) => throw new NotSupportedException();
         public MatchRecord[] Available(long accountId) => throw new InvalidOperationException("private storage failure");
-        public MatchRecord Join(AuthenticatedSessionRecord player, string code, DateTime now) => throw new NotSupportedException();
+        public MatchRecord Join(AuthenticatedSession player, string code, DateTime now) => throw new NotSupportedException();
         public MatchRecord ChangeTurnDuration(long accountId, long matchId, int seconds) => throw new NotSupportedException();
         public void Cancel(long accountId, long matchId) => throw new NotSupportedException();
         public MatchRecord Get(long accountId, long matchId)
@@ -196,14 +205,16 @@ internal sealed class MatchBoundaryTests
             }
             return new MatchRecord
             {
-                Id = matchId, State = "InProgress", TurnDurationSeconds = 40,
+                Id = matchId,
+                State = "InProgress",
+                TurnDurationSeconds = 40,
                 StartedAtUtc = new BoundaryClock().UtcNow,
                 Participants = new[] { new ParticipantRecord { AccountId = 1, SeatNumber = 1 } }
             };
         }
 
         public PrivateMatchInvitationPreparation PreparePrivate(
-            AuthenticatedSessionRecord creator,
+            AuthenticatedSession creator,
             long friendAccountId,
             MatchSettings settings,
             DateTime now)

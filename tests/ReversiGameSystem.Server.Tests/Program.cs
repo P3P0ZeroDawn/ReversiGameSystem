@@ -120,6 +120,7 @@ internal static class Program
             sessionTests.OpenGuestSession_ThroughWcfChannel_ReservesAndReleasesName,
             sessionTests.OpenGuestSession_ConcurrentSameName_CreatesOnlyOneGuest,
             sessionTests.CloseSession_EmptyTokenThroughWcf_ReturnsTypedFault,
+            sessionTests.CloseSession_FailingObserver_NotifiesRemainingObservers,
             codeTests.Request_ValidIdentity_DeliversSixDigitsWithFiveMinuteExpiry,
             codeTests.Request_DeliveryTimeout_DoesNotReplacePendingCode,
             codeTests.Consume_ExpiredRepositoryResult_PreservesRejectionAndServerTime,
