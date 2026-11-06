@@ -69,6 +69,7 @@ internal static class MatchScreenTests
         {
             Proxy.LobbySnapshot waiting = first.CreateAsync(40).GetAwaiter().GetResult();
             second.JoinAsync(waiting.MatchCode).GetAwaiter().GetResult();
+            second.LoadStateAsync(waiting.MatchId).GetAwaiter().GetResult();
             SynchronizationContext.SetSynchronizationContext(
                 new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));
             GamePage page = new GamePage(first, waiting.MatchId, null);
@@ -80,6 +81,10 @@ internal static class MatchScreenTests
             PumpUntil(() => send.IsEnabled);
             TestAssert.AreEqual("ReviewAlpha", Control<TextBlock>(page, "creatorNameTextBlock").Text);
             TestAssert.AreEqual("ReviewBeta", Control<TextBlock>(page, "opponentNameTextBlock").Text);
+            PumpUntil(() => Control<TextBlock>(page, "creatorConnectionTextBlock").Text
+                == LocalizationManager.Instance["Game_PresenceConnected"]
+                && Control<TextBlock>(page, "opponentConnectionTextBlock").Text
+                == LocalizationManager.Instance["Game_PresenceConnected"]);
             ReversiBoardControl board = Control<ReversiBoardControl>(page, "gameBoardControl");
             TestAssert.AreEqual(4, Control<Grid>(board, "piecesGrid").Children.Count);
             foreach (Image piece in Control<Grid>(board, "piecesGrid").Children)

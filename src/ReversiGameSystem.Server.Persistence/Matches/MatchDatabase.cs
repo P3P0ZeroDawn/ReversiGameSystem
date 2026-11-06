@@ -3,6 +3,8 @@ using System.Data.SqlClient;
 using System.Linq;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Persistence.Model;
+using ApplicationMatchParticipant = ReversiGameSystem.Server.Application.Matches.MatchParticipant;
+using PersistentMatchParticipant = ReversiGameSystem.Server.Persistence.Model.MatchParticipant;
 
 namespace ReversiGameSystem.Server.Persistence.Matches;
 
@@ -36,11 +38,11 @@ internal static class MatchDatabase
         return match;
     }
 
-    internal static MatchParticipant RequireParticipant(
+    internal static PersistentMatchParticipant RequireParticipant(
         ReversiGameSystemEntities context, long accountId, long matchId)
     {
         RequireActive(context, accountId);
-        MatchParticipant? participant = context.MatchParticipant.SingleOrDefault(candidate =>
+        PersistentMatchParticipant? participant = context.MatchParticipant.SingleOrDefault(candidate =>
             candidate.matchId == matchId && candidate.accountId == accountId
             && candidate.participantTypeCode == "REGISTERED");
         if (participant == null)
@@ -50,13 +52,13 @@ internal static class MatchDatabase
         return participant;
     }
 
-    internal static MatchRecord Map(GameMatch match)
+    internal static Match Map(GameMatch match)
     {
         if (match.statusCode == "IN_PROGRESS" && match.GameMove.Any())
         {
             throw new NotSupportedException("This match contains gameplay beyond the supported initial position.");
         }
-        return new MatchRecord
+        return new Match
         {
             Id = match.matchId,
             Code = match.statusCode == "WAITING" ? match.matchCode : null,
@@ -68,7 +70,7 @@ internal static class MatchDatabase
             StartedAtUtc = match.startedAtUtc.HasValue
                 ? DateTime.SpecifyKind(match.startedAtUtc.Value, DateTimeKind.Utc) : (DateTime?)null,
             Participants = match.MatchParticipant1.OrderBy(player => player.seatNumber)
-                .Select(player => new ParticipantRecord
+                .Select(player => new ApplicationMatchParticipant
                 {
                     SeatNumber = player.seatNumber, AccountId = player.accountId ?? 0,
                     DisplayName = player.displayNameSnapshot

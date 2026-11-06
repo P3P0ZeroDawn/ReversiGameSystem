@@ -22,15 +22,18 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
     private Proxy.GameplayMatchServiceClient _gameplay;
     private Proxy.MatchChatServiceClient _chat;
     private readonly MatchEndpoints _endpoints;
+    private readonly bool _usesEndpointOverrides;
     private bool _lobbyOpen;
     private readonly HashSet<long> _gameplayOpen = new();
     private bool _disposed;
     private readonly object _sync = new();
     private readonly Dictionary<long, Proxy.MatchStateSnapshot> _states = new();
     private readonly Dictionary<long, SortedDictionary<int, Proxy.MatchChatEntry>> _messages = new();
+    private readonly Dictionary<long, Dictionary<int, ParticipantConnectionState>>
+        _participantConnections = new();
 
     internal RemoteMatchClient(string token, ILogger<RemoteMatchClient> logger)
-        : this(token, ServerConnectionFactory.CreateMatchEndpoints(), logger)
+        : this(token, ServerConnectionFactory.CreateMatchEndpoints(), logger, false)
     {
     }
 
@@ -38,23 +41,92 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
         string token,
         MatchEndpoints endpoints,
         ILogger<RemoteMatchClient> logger)
+        : this(token, endpoints, logger, true)
+    {
+    }
+
+    private RemoteMatchClient(
+        string token,
+        MatchEndpoints endpoints,
+        ILogger<RemoteMatchClient> logger,
+        bool usesEndpointOverrides)
     {
         _token = token;
-        _logger = logger;
-        _endpoints = endpoints;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _endpoints = endpoints ?? throw new ArgumentNullException(nameof(endpoints));
+        _usesEndpointOverrides = usesEndpointOverrides;
         _lobby = CreateLobby();
         _gameplay = CreateGameplay();
         _chat = CreateChat();
     }
 
-    private Proxy.MatchLobbyServiceClient CreateLobby() =>
-        ServerConnectionFactory.CreateLobbyClient(new InstanceContext(this));
+    private Proxy.MatchLobbyServiceClient CreateLobby()
+    {
+        Proxy.MatchLobbyServiceClient client;
+        if (_usesEndpointOverrides)
+        {
+            client = new Proxy.MatchLobbyServiceClient(
+                new InstanceContext(this),
+                CreateOverrideBinding(),
+                new EndpointAddress(_endpoints.Lobby));
+        }
+        else
+        {
+            client = ServerConnectionFactory.CreateLobbyClient(new InstanceContext(this));
+        }
 
-    private Proxy.GameplayMatchServiceClient CreateGameplay() =>
-        ServerConnectionFactory.CreateGameplayClient(new InstanceContext(this));
+        return client;
+    }
 
-    private Proxy.MatchChatServiceClient CreateChat() =>
-        ServerConnectionFactory.CreateChatClient(new InstanceContext(this));
+    private Proxy.GameplayMatchServiceClient CreateGameplay()
+    {
+        Proxy.GameplayMatchServiceClient client;
+        if (_usesEndpointOverrides)
+        {
+            client = new Proxy.GameplayMatchServiceClient(
+                new InstanceContext(this),
+                CreateOverrideBinding(),
+                new EndpointAddress(_endpoints.Gameplay));
+        }
+        else
+        {
+            client = ServerConnectionFactory.CreateGameplayClient(new InstanceContext(this));
+        }
+
+        return client;
+    }
+
+    private Proxy.MatchChatServiceClient CreateChat()
+    {
+        Proxy.MatchChatServiceClient client;
+        if (_usesEndpointOverrides)
+        {
+            client = new Proxy.MatchChatServiceClient(
+                new InstanceContext(this),
+                CreateOverrideBinding(),
+                new EndpointAddress(_endpoints.Chat));
+        }
+        else
+        {
+            client = ServerConnectionFactory.CreateChatClient(new InstanceContext(this));
+        }
+
+        return client;
+    }
+
+    private static NetTcpBinding CreateOverrideBinding()
+    {
+        NetTcpBinding binding = new NetTcpBinding(SecurityMode.Transport)
+        {
+            ReceiveTimeout = TimeSpan.FromHours(1),
+            SendTimeout = TimeSpan.FromSeconds(5),
+            MaxReceivedMessageSize = 6291456
+        };
+        binding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Windows;
+        binding.Security.Transport.ProtectionLevel =
+            System.Net.Security.ProtectionLevel.EncryptAndSign;
+        return binding;
+    }
 
     private Proxy.MatchLobbyServiceClient PrepareLobby()
     {
@@ -91,64 +163,66 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
     internal event Action<Proxy.MatchStateSnapshot>? StateChanged;
     internal event Action<long>? LobbyClosed;
     internal event Action<long>? MessagesChanged;
+    internal event Action<long>? ParticipantConnectionChanged;
     internal event Action<Proxy.ChatMuteNotification>? Muted;
 
-    private static NetTcpBinding CreateBinding()
+    internal Task<Proxy.LobbySnapshot> CreateAsync(int seconds)
     {
-        NetTcpBinding binding = new NetTcpBinding(SecurityMode.Transport)
+        return RequestAsync(() => PrepareLobby(), async () =>
         {
-            ReceiveTimeout = TimeSpan.FromHours(1),
-            SendTimeout = TimeSpan.FromSeconds(5),
-            MaxReceivedMessageSize = 6291456
-        };
-        binding.Security.Transport.ClientCredentialType = TcpClientCredentialType.None;
-        binding.Security.Transport.ProtectionLevel =
-            System.Net.Security.ProtectionLevel.EncryptAndSign;
-        return binding;
+            await OpenLobbyAsync();
+            return await _lobby.CreateMatchAsync(_token, new Proxy.MatchConfiguration
+            {
+                TurnDurationSeconds = seconds,
+                OpponentKind = Proxy.OpponentKind.Human,
+                CountsTowardStatistics = false
+            });
+        });
     }
 
-    internal Task<Proxy.LobbySnapshot> CreateAsync(int seconds) =>
-        RequestAsync(() => PrepareLobby(), async () =>
+    internal Task<Proxy.LobbySnapshot> InviteAsync(long friendAccountId, int seconds)
     {
-        await OpenLobbyAsync();
-        return await _lobby.CreateMatchAsync(_token, new Proxy.MatchConfiguration
+        return RequestAsync(() => PrepareLobby(), async () =>
         {
-            TurnDurationSeconds = seconds, OpponentKind = Proxy.OpponentKind.Human,
-            CountsTowardStatistics = false
+            await OpenLobbyAsync();
+            return await _lobby.InviteToMatchAsync(
+                _token,
+                friendAccountId,
+                new Proxy.MatchConfiguration
+                {
+                    TurnDurationSeconds = seconds,
+                    OpponentKind = Proxy.OpponentKind.Human,
+                    CountsTowardStatistics = false
+                });
         });
-    });
+    }
 
-    internal Task<Proxy.LobbySnapshot> InviteAsync(long friendAccountId, int seconds) =>
-        RequestAsync(() => PrepareLobby(), async () =>
+    internal Task<Proxy.AvailableMatch[]> ListAsync()
     {
-        await OpenLobbyAsync();
-        return await _lobby.InviteToMatchAsync(_token, friendAccountId, new Proxy.MatchConfiguration
+        return RequestAsync(() => PrepareLobby(), async () =>
         {
-            TurnDurationSeconds = seconds, OpponentKind = Proxy.OpponentKind.Human,
-            CountsTowardStatistics = false
+            await OpenLobbyAsync();
+            return await _lobby.GetAvailableMatchesAsync(_token);
         });
-    });
+    }
 
-    internal Task<Proxy.AvailableMatch[]> ListAsync() =>
-        RequestAsync(() => PrepareLobby(), async () =>
+    internal Task<Proxy.LobbySnapshot> JoinAsync(string code)
     {
-        await OpenLobbyAsync();
-        return await _lobby.GetAvailableMatchesAsync(_token);
-    });
+        return RequestAsync(() => PrepareLobby(), async () =>
+        {
+            await OpenLobbyAsync();
+            return await _lobby.JoinMatchAsync(_token, code);
+        });
+    }
 
-    internal Task<Proxy.LobbySnapshot> JoinAsync(string code) =>
-        RequestAsync(() => PrepareLobby(), async () =>
+    internal Task<bool> CancelAsync(long id)
     {
-        await OpenLobbyAsync();
-        return await _lobby.JoinMatchAsync(_token, code);
-    });
-
-    internal Task<bool> CancelAsync(long id) =>
-        RequestAsync(() => PrepareLobby(), async () =>
-    {
-        await _lobby.CancelMatchAsync(_token, id);
-        return true;
-    });
+        return RequestAsync(() => PrepareLobby(), async () =>
+        {
+            await _lobby.CancelMatchAsync(_token, id);
+            return true;
+        });
+    }
 
     private async Task OpenLobbyAsync()
     {
@@ -168,12 +242,14 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
         }
     }
 
-    internal Task<Proxy.MatchInformation> LoadInformationAsync(long id) =>
-        RequestAsync(() => PrepareGameplay(), async () =>
+    internal Task<Proxy.MatchInformation> LoadInformationAsync(long id)
     {
-        await OpenGameplayAsync(id);
-        return await _gameplay.GetMatchInformationAsync(_token, id);
-    });
+        return RequestAsync(() => PrepareGameplay(), async () =>
+        {
+            await OpenGameplayAsync(id);
+            return await _gameplay.GetMatchInformationAsync(_token, id);
+        });
+    }
 
     internal async Task<Proxy.MatchStateSnapshot> LoadStateAsync(long id)
     {
@@ -189,11 +265,14 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
         }
     }
 
-    internal Task<bool> OpenChatAsync(long id) => RequestAsync(() => PrepareChat(), async () =>
+    internal Task<bool> OpenChatAsync(long id)
     {
-        await _chat.OpenChatChannelAsync(_token, id);
-        return true;
-    });
+        return RequestAsync(() => PrepareChat(), async () =>
+        {
+            await _chat.OpenChatChannelAsync(_token, id);
+            return true;
+        });
+    }
 
     internal async Task RefreshChatAsync(long id)
     {
@@ -226,6 +305,24 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
         lock (_sync)
         {
             return _states.TryGetValue(id, out state);
+        }
+    }
+
+    internal ParticipantConnectionState ReadParticipantConnection(long matchId, int seatNumber)
+    {
+        lock (_sync)
+        {
+            if (_participantConnections.TryGetValue(
+                matchId,
+                out Dictionary<int, ParticipantConnectionState>? matchPresence)
+                && matchPresence.TryGetValue(
+                    seatNumber,
+                    out ParticipantConnectionState state))
+            {
+                return state;
+            }
+
+            return ParticipantConnectionState.Unknown;
         }
     }
 
@@ -271,25 +368,52 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
         }
     }
 
-    public void OnMatchStarted(Proxy.MatchStateSnapshot state) => OnMatchStateChanged(state);
-    public void OnLobbyClosed(long id) => LobbyClosed?.Invoke(id);
+    public void OnMatchStarted(Proxy.MatchStateSnapshot state)
+    {
+        OnMatchStateChanged(state);
+    }
+
+    public void OnLobbyClosed(long id)
+    {
+        LobbyClosed?.Invoke(id);
+    }
+
     public void OnMatchStateChanged(Proxy.MatchStateSnapshot state)
     {
         lock (_sync)
         {
             if (_states.TryGetValue(state.MatchId, out Proxy.MatchStateSnapshot previous)
                 && previous.MatchStateVersion >= state.MatchStateVersion)
-        {
-            return;
-        }
+            {
+                return;
+            }
+
             _states[state.MatchId] = state;
         }
+
         StateChanged?.Invoke(state);
     }
+
     public void OnParticipantConnectionChanged(long matchId, int seatNumber, bool isConnected)
     {
-        // The initial-state view does not expose connection indicators yet.
+        lock (_sync)
+        {
+            if (!_participantConnections.TryGetValue(
+                matchId,
+                out Dictionary<int, ParticipantConnectionState>? matchPresence))
+            {
+                matchPresence = new Dictionary<int, ParticipantConnectionState>();
+                _participantConnections.Add(matchId, matchPresence);
+            }
+
+            matchPresence[seatNumber] = isConnected
+                ? ParticipantConnectionState.Connected
+                : ParticipantConnectionState.Disconnected;
+        }
+
+        ParticipantConnectionChanged?.Invoke(matchId);
     }
+
     public void OnChatMessageReceived(Proxy.MatchChatEntry message)
     {
         lock (_sync)
@@ -306,9 +430,14 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
             }
             messages.Add(message.MessageNumber, message);
         }
+
         MessagesChanged?.Invoke(message.MatchId);
     }
-    public void OnPlayerMuted(Proxy.ChatMuteNotification mute) => Muted?.Invoke(mute);
+
+    public void OnPlayerMuted(Proxy.ChatMuteNotification mute)
+    {
+        Muted?.Invoke(mute);
+    }
 
     public void Dispose()
     {
@@ -322,10 +451,17 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
     }
 }
 
+internal enum ParticipantConnectionState
+{
+    Unknown,
+    Connected,
+    Disconnected
+}
+
 /// <summary>Optional endpoint overrides for a coherent remote match service deployment.</summary>
 internal sealed class MatchEndpoints
 {
-    internal string? Lobby { get; set; }
-    internal string? Gameplay { get; set; }
-    internal string? Chat { get; set; }
+    internal string Lobby { get; set; } = string.Empty;
+    internal string Gameplay { get; set; } = string.Empty;
+    internal string Chat { get; set; } = string.Empty;
 }

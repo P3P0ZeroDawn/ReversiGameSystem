@@ -3,26 +3,33 @@ using System.Collections.Generic;
 using System.Linq;
 using System.ServiceModel;
 using System.Threading;
+using Microsoft.Extensions.Logging;
+using ReversiGameSystem.Server.Contracts.Common;
 
 namespace ReversiGameSystem.Server.ServiceApi;
 
 internal sealed class MatchChannels<T> : IDisposable where T : class
 {
     private readonly object _gate = new object();
+    private readonly object _dispatchSync = new object();
     private readonly List<Subscription> _channels = new List<Subscription>();
+    private readonly Queue<Action> _dispatchQueue = new Queue<Action>();
     private readonly Func<string, long, bool> _authorize;
-    private readonly Action<string> _removed;
-    private readonly MatchBoundary _boundary;
+    private readonly Action<string, long> _removed;
+    private readonly ILogger _logger;
     private readonly Timer _timer;
     private bool _disposed;
+    private bool _dispatching;
     private int _sweeping;
 
-    internal MatchChannels(Func<string, long, bool> authorize, Action<string> removed,
-        MatchBoundary boundary)
+    internal MatchChannels(
+        Func<string, long, bool> authorize,
+        Action<string, long> removed,
+        ILogger logger)
     {
-        _authorize = authorize;
-        _removed = removed;
-        _boundary = boundary;
+        _authorize = authorize ?? throw new ArgumentNullException(nameof(authorize));
+        _removed = removed ?? throw new ArgumentNullException(nameof(removed));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timer = new Timer(_ => Sweep(), null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
     }
 
@@ -47,6 +54,7 @@ internal sealed class MatchChannels<T> : IDisposable where T : class
             channel.Communication.Closed += channel.Terminated;
             channel.Communication.Faulted += channel.Terminated;
         }
+
     }
 
     internal void RemoveSession(string token)
@@ -58,13 +66,18 @@ internal sealed class MatchChannels<T> : IDisposable where T : class
     }
 
     internal void Publish(long matchId, Action<string, T> send)
-        => PublishWhere(matchId, (token, _, callback) => send(token, callback));
+    {
+        PublishWhere(matchId, (token, _, callback) => send(token, callback));
+    }
 
-    internal void PublishAll(Action<string, long, T> send) => PublishWhere(-1, send);
+    internal void PublishAll(Action<string, long, T> send)
+    {
+        PublishWhere(-1, send);
+    }
 
     private void PublishWhere(long matchId, Action<string, long, T> send)
     {
-        ThreadPool.QueueUserWorkItem(_ =>
+        QueueDispatch(() =>
         {
             foreach (Subscription channel in Snapshot().Where(item => matchId == -1 || item.MatchId == 0
                 || item.MatchId == matchId))
@@ -91,17 +104,17 @@ internal sealed class MatchChannels<T> : IDisposable where T : class
                 }
                 catch (CommunicationException exception)
                 {
-                    _boundary.Log("MatchCallback", exception);
+                    Log("MatchCallback", exception);
                     Remove(channel, true);
                 }
                 catch (TimeoutException exception)
                 {
-                    _boundary.Log("MatchCallback", exception);
+                    Log("MatchCallback", exception);
                     Remove(channel, true);
                 }
                 catch (Exception exception)
                 {
-                    _boundary.Log("MatchCallback", exception);
+                    Log("MatchCallback", exception);
                 }
             }
         });
@@ -119,10 +132,17 @@ internal sealed class MatchChannels<T> : IDisposable where T : class
             _channels.Clear();
         }
         _timer.Dispose();
+        lock (_dispatchSync)
+        {
+            _dispatchQueue.Clear();
+        }
     }
 
-    private bool IsValid(Subscription channel) => channel.Communication.State == CommunicationState.Opened
-        && _authorize(channel.Token, channel.MatchId);
+    private bool IsValid(Subscription channel)
+    {
+        return channel.Communication.State == CommunicationState.Opened
+            && _authorize(channel.Token, channel.MatchId);
+    }
 
     private Subscription[] Snapshot()
     {
@@ -151,7 +171,7 @@ internal sealed class MatchChannels<T> : IDisposable where T : class
                 }
                 catch (Exception exception)
                 {
-                    _boundary.Log("MatchChannelSweep", exception);
+                    Log("MatchChannelSweep", exception);
                 }
             }
         }
@@ -175,11 +195,66 @@ internal sealed class MatchChannels<T> : IDisposable where T : class
         {
             try
             {
-                _removed(channel.Token);
+                _removed(channel.Token, channel.MatchId);
             }
             catch (Exception exception)
             {
-                _boundary.Log("MatchChannelCleanup", exception);
+                Log("MatchChannelCleanup", exception);
+            }
+        }
+    }
+
+    private void Log(string operation, Exception exception)
+    {
+        _logger.LogError(
+            exception,
+            "The {Operation} background operation failed. CorrelationId: {CorrelationId}",
+            operation,
+            CorrelationContext.GetOrCreate());
+    }
+
+    private void QueueDispatch(Action action)
+    {
+        bool startDispatcher = false;
+        lock (_dispatchSync)
+        {
+            _dispatchQueue.Enqueue(action);
+            if (!_dispatching)
+            {
+                _dispatching = true;
+                startDispatcher = true;
+            }
+        }
+
+        if (startDispatcher)
+        {
+            ThreadPool.QueueUserWorkItem(_ => ProcessDispatchQueue());
+        }
+    }
+
+    private void ProcessDispatchQueue()
+    {
+        while (true)
+        {
+            Action? action = null;
+            lock (_dispatchSync)
+            {
+                if (_dispatchQueue.Count == 0)
+                {
+                    _dispatching = false;
+                    return;
+                }
+
+                action = _dispatchQueue.Dequeue();
+            }
+
+            try
+            {
+                action();
+            }
+            catch (Exception exception)
+            {
+                Log("MatchCallbackDispatch", exception);
             }
         }
     }
@@ -188,7 +263,9 @@ internal sealed class MatchChannels<T> : IDisposable where T : class
     {
         internal Subscription(string token, long matchId, T callback)
         {
-            Token = token; MatchId = matchId; Callback = callback;
+            Token = token;
+            MatchId = matchId;
+            Callback = callback;
             Communication = (ICommunicationObject)callback;
         }
         internal string Token { get; }

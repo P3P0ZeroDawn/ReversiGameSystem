@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Media;
 using System.Windows.Threading;
 using ReversiGameSystem.Game;
 using ReversiGameSystem.Localization;
@@ -40,6 +41,8 @@ public partial class GamePage
         // This path never constructs a local match, subscribes board input, or starts turn timers.
         sendMessageButton.IsEnabled = false;
         refreshRemoteMatchButton.Visibility = Visibility.Visible;
+        creatorConnectionTextBlock.Visibility = Visibility.Visible;
+        opponentConnectionTextBlock.Visibility = Visibility.Visible;
         leaveMatchButton.SetBinding(ContentControl.ContentProperty,
             new Binding("[RemoteMatch_CloseView]") { Source = LocalizationManager.Instance });
         turnTimeTextBlock.SetBinding(TextBlock.TextProperty,
@@ -61,6 +64,7 @@ public partial class GamePage
         LocalizationManager.Instance.PropertyChanged += OnRemoteCultureChanged;
         _remoteClient.StateChanged += OnRemoteStateChanged;
         _remoteClient.MessagesChanged += OnRemoteMessagesChanged;
+        _remoteClient.ParticipantConnectionChanged += OnParticipantConnectionChanged;
         _remoteClient.Muted += OnRemoteMuted;
         await LoadRemoteMatchAsync();
         if (IsLoaded)
@@ -75,6 +79,7 @@ public partial class GamePage
         _remoteRefreshTimer.Stop();
         _remoteClient.StateChanged -= OnRemoteStateChanged;
         _remoteClient.MessagesChanged -= OnRemoteMessagesChanged;
+        _remoteClient.ParticipantConnectionChanged -= OnParticipantConnectionChanged;
         _remoteClient.Muted -= OnRemoteMuted;
         _remoteChatReady = false;
         sendMessageButton.IsEnabled = false;
@@ -90,15 +95,22 @@ public partial class GamePage
                 {
                     RenderRemoteMatch();
                     RenderRemoteMessages();
+                    RenderParticipantConnections();
                     UpdateRemoteStatus();
                 }
             }));
         }
     }
 
-    private async void OnRemoteRefreshTick(object? sender, EventArgs e) => await LoadRemoteMatchAsync();
+    private async void OnRemoteRefreshTick(object? sender, EventArgs e)
+    {
+        await LoadRemoteMatchAsync();
+    }
 
-    private async void OnRefreshRemoteMatchClick(object sender, RoutedEventArgs e) => await LoadRemoteMatchAsync();
+    private async void OnRefreshRemoteMatchClick(object sender, RoutedEventArgs e)
+    {
+        await LoadRemoteMatchAsync();
+    }
 
     private async Task LoadRemoteMatchAsync()
     {
@@ -180,11 +192,15 @@ public partial class GamePage
             }).ToArray())).ToArray();
         gameBoardControl.ShowBoard(ReversiBoard.FromRows(rows),
             _remoteInformation.AssignedSeatNumber == 2 ? DiscColor.White : DiscColor.Black);
+        RenderParticipantConnections();
     }
 
-    private string RemotePlayerName(int seat) =>
-        _remoteInformation?.Participants.FirstOrDefault(player => player.SeatNumber == seat)?.DisplayName
-        ?? LocalizationManager.Instance["AccountInformation_UnavailableValue"];
+    private string RemotePlayerName(int seat)
+    {
+        return _remoteInformation?.Participants
+            .FirstOrDefault(player => player.SeatNumber == seat)?.DisplayName
+            ?? LocalizationManager.Instance["AccountInformation_UnavailableValue"];
+    }
 
     private void OnRemoteMessagesChanged(long matchId)
     {
@@ -198,6 +214,48 @@ public partial class GamePage
                 }
             }));
         }
+    }
+
+    private void OnParticipantConnectionChanged(long matchId)
+    {
+        if (matchId == _remoteMatchId)
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (IsLoaded)
+                {
+                    RenderParticipantConnections();
+                }
+            }));
+        }
+    }
+
+    private void RenderParticipantConnections()
+    {
+        RenderParticipantConnection(creatorConnectionTextBlock, 1);
+        RenderParticipantConnection(opponentConnectionTextBlock, 2);
+    }
+
+    private void RenderParticipantConnection(TextBlock textBlock, int seatNumber)
+    {
+        ParticipantConnectionState state = _remoteClient.ReadParticipantConnection(
+            _remoteMatchId,
+            seatNumber);
+        string resourceKey = "Game_PresenceUnknown";
+        Brush foreground = Brushes.Gray;
+        if (state == ParticipantConnectionState.Connected)
+        {
+            resourceKey = "Game_PresenceConnected";
+            foreground = Brushes.ForestGreen;
+        }
+        else if (state == ParticipantConnectionState.Disconnected)
+        {
+            resourceKey = "Game_PresenceDisconnected";
+            foreground = Brushes.IndianRed;
+        }
+
+        textBlock.Text = LocalizationManager.Instance[resourceKey];
+        textBlock.Foreground = foreground;
     }
 
     private void RenderRemoteMessages()

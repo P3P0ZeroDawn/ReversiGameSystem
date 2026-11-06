@@ -47,18 +47,19 @@ internal sealed class MatchBoundaryTests
         TestAssert.IsTrue(!string.IsNullOrWhiteSpace(failure.Detail.CorrelationId), "Missing correlation.");
     }
 
-    internal void Lobby_StoreFailure_ReturnsSanitizedServiceFault()
+    internal void Lobby_StoreFailure_PropagatesToGlobalHandler()
     {
         // Arrange
         BoundaryStore store = new BoundaryStore();
-        MatchHandler handler = new MatchHandler(new BoundarySessions(), store, new BoundaryClock());
+        MatchApplicationService handler = new MatchApplicationService(new BoundarySessions(), store, new BoundaryClock());
         using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
 
         // Act & Assert
-        FaultException<ServiceFault> failure = TestAssert.Throws<FaultException<ServiceFault>>(
+        InvalidOperationException failure = TestAssert.Throws<InvalidOperationException>(
             () => service.GetAvailableMatches("valid"));
-        TestAssert.AreEqual("MATCH_LOBBY_OPERATION_FAILURE", failure.Detail.FailureCode);
-        TestAssert.IsTrue(!failure.Message.Contains("private storage failure"), "Leaked storage details.");
+        TestAssert.IsTrue(
+            failure.Message.Contains("private storage failure"),
+            "The service must preserve the technical failure for ServiceErrorBehavior.");
     }
 
     internal void Lobby_InviteToMatch_GuestSession_ReturnsMatchFaultUnauthorized()
@@ -68,7 +69,7 @@ internal sealed class MatchBoundaryTests
         BoundaryClock clock = new BoundaryClock();
         SessionRepository sessions = new SessionRepository(clock);
         GuestSession guest = sessions.CreateGuest("Guest-GuestBoundary").GetValue();
-        MatchHandler handler = new MatchHandler(sessions, store, clock, new BoundaryMailer());
+        MatchApplicationService handler = new MatchApplicationService(sessions, store, clock, new BoundaryMailer());
         using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
 
         // Act & Assert
@@ -82,7 +83,7 @@ internal sealed class MatchBoundaryTests
         // Arrange
         BoundaryStore store = new BoundaryStore();
         BoundarySessions sessions = new BoundarySessions();
-        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), new BoundaryMailer());
+        MatchApplicationService handler = new MatchApplicationService(sessions, store, new BoundaryClock(), new BoundaryMailer());
         using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
 
         // Act & Assert
@@ -96,7 +97,7 @@ internal sealed class MatchBoundaryTests
         // Arrange
         BoundaryStore store = new BoundaryStore();
         BoundarySessions sessions = new BoundarySessions();
-        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), new BoundaryMailer());
+        MatchApplicationService handler = new MatchApplicationService(sessions, store, new BoundaryClock(), new BoundaryMailer());
         using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
 
         // Act & Assert
@@ -110,7 +111,7 @@ internal sealed class MatchBoundaryTests
         // Arrange
         BoundaryStore store = new BoundaryStore();
         BoundarySessions sessions = new BoundarySessions();
-        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), new BoundaryMailer());
+        MatchApplicationService handler = new MatchApplicationService(sessions, store, new BoundaryClock(), new BoundaryMailer());
         using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
 
         // Act & Assert
@@ -124,7 +125,7 @@ internal sealed class MatchBoundaryTests
         // Arrange
         BoundaryStore store = new BoundaryStore();
         BoundarySessions sessions = new BoundarySessions();
-        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), new BoundaryMailer());
+        MatchApplicationService handler = new MatchApplicationService(sessions, store, new BoundaryClock(), new BoundaryMailer());
         using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
 
         // Act & Assert
@@ -133,25 +134,26 @@ internal sealed class MatchBoundaryTests
         TestAssert.AreEqual(FriendshipFailure.FriendshipNotFound, failure.Detail.Reason);
     }
 
-    internal void Lobby_InviteToMatch_StoreFailure_ReturnsSanitizedServiceFault()
+    internal void Lobby_InviteToMatch_StoreFailure_PropagatesToGlobalHandler()
     {
         // Arrange
         BoundaryStore store = new BoundaryStore();
         BoundarySessions sessions = new BoundarySessions();
-        MatchHandler handler = new MatchHandler(sessions, store, new BoundaryClock(), new BoundaryMailer());
+        MatchApplicationService handler = new MatchApplicationService(sessions, store, new BoundaryClock(), new BoundaryMailer());
         using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
 
         // Act & Assert
-        FaultException<ServiceFault> failure = TestAssert.Throws<FaultException<ServiceFault>>(
+        InvalidOperationException failure = TestAssert.Throws<InvalidOperationException>(
             () => service.InviteToMatch("valid", 999, new MatchConfiguration { TurnDurationSeconds = 40 }));
-        TestAssert.AreEqual("MATCH_LOBBY_OPERATION_FAILURE", failure.Detail.FailureCode);
-        TestAssert.IsTrue(!failure.Message.Contains("private storage failure"), "Leaked storage details.");
+        TestAssert.IsTrue(
+            failure.Message.Contains("private storage failure"),
+            "The service must preserve the technical failure for ServiceErrorBehavior.");
     }
 
     private static GameplayMatchService CreateGameplay(BoundaryStore store)
     {
         BoundarySessions sessions = new BoundarySessions();
-        return new GameplayMatchService(new MatchHandler(sessions, store, new BoundaryClock()),
+        return new GameplayMatchService(new MatchApplicationService(sessions, store, new BoundaryClock()),
             sessions, NullLogger<GameplayMatchService>.Instance);
     }
 
@@ -187,33 +189,33 @@ internal sealed class MatchBoundaryTests
         }
     }
 
-    private sealed class BoundaryStore : IMatchStore
+    private sealed class BoundaryStore : IMatchRepository
     {
         public void Authorize(long accountId) =>
             throw new InvalidOperationException("private storage failure");
         internal bool AllowRead { get; set; }
-        public MatchRecord Create(AuthenticatedSession player, MatchSettings settings, DateTime now) => throw new NotSupportedException();
-        public MatchRecord[] Available(long accountId) => throw new InvalidOperationException("private storage failure");
-        public MatchRecord Join(AuthenticatedSession player, string code, DateTime now) => throw new NotSupportedException();
-        public MatchRecord ChangeTurnDuration(long accountId, long matchId, int seconds) => throw new NotSupportedException();
+        public Match Create(AuthenticatedSession player, MatchSettings settings, DateTime now) => throw new NotSupportedException();
+        public Match[] Available(long accountId) => throw new InvalidOperationException("private storage failure");
+        public Match Join(AuthenticatedSession player, string code, DateTime now) => throw new NotSupportedException();
+        public Match ChangeTurnDuration(long accountId, long matchId, int seconds) => throw new NotSupportedException();
         public void Cancel(long accountId, long matchId) => throw new NotSupportedException();
-        public MatchRecord Get(long accountId, long matchId)
+        public Match Get(long accountId, long matchId)
         {
             if (!AllowRead)
             {
                 throw new MatchRejectedException(MatchRejection.Unauthorized);
             }
-            return new MatchRecord
+            return new Match
             {
                 Id = matchId,
                 State = "InProgress",
                 TurnDurationSeconds = 40,
                 StartedAtUtc = new BoundaryClock().UtcNow,
-                Participants = new[] { new ParticipantRecord { AccountId = 1, SeatNumber = 1 } }
+                Participants = new[] { new MatchParticipant { AccountId = 1, SeatNumber = 1 } }
             };
         }
 
-        public PrivateMatchInvitationPreparation PreparePrivate(
+        public MatchInvitationPreparation PreparePrivateInvitation(
             AuthenticatedSession creator,
             long friendAccountId,
             MatchSettings settings,
@@ -239,7 +241,7 @@ internal sealed class MatchBoundaryTests
             {
                 throw new FriendshipRejectedException(FriendshipRejection.InactiveAccount);
             }
-            MatchRecord match = new MatchRecord
+            Match match = new Match
             {
                 Id = 77,
                 Code = "REV123",
@@ -248,7 +250,7 @@ internal sealed class MatchBoundaryTests
                 IsPrivate = true,
                 Participants = new[]
                 {
-                    new ParticipantRecord
+                    new MatchParticipant
                     {
                         AccountId = creator.AccountId,
                         SeatNumber = 1,
@@ -256,15 +258,15 @@ internal sealed class MatchBoundaryTests
                     }
                 }
             };
-            return new PrivateMatchInvitationPreparation(match, "friend@example.com");
+            return new MatchInvitationPreparation(match, "friend@example.com");
         }
 
-        public MatchRecord ConfirmPrivate(
+        public Match MarkInvitationDelivered(
             long accountId,
             long matchId,
             DateTime now)
         {
-            return new MatchRecord
+            return new Match
             {
                 Id = matchId,
                 Code = "REV123",
@@ -273,7 +275,7 @@ internal sealed class MatchBoundaryTests
                 IsPrivate = true,
                 Participants = new[]
                 {
-                    new ParticipantRecord
+                    new MatchParticipant
                     {
                         AccountId = accountId,
                         SeatNumber = 1,

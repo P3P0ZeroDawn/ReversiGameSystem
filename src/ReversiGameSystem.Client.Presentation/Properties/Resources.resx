@@ -1160,6 +1160,9 @@
   <data name="Game_InactivityResultMessage" xml:space="preserve"><value>Victory for “{0}”. The opponent exhausted three consecutive turns.</value></data>
   <data name="Game_ServerConnectionFailedTitle" xml:space="preserve"><value>Game connection lost</value></data>
   <data name="Game_ServerConnectionFailedMessage" xml:space="preserve"><value>The move could not be confirmed because communication with the server was lost. The last confirmed board was kept.</value></data>
+  <data name="Game_PresenceUnknown" xml:space="preserve"><value>Connection unknown</value></data>
+  <data name="Game_PresenceConnected" xml:space="preserve"><value>Connected</value></data>
+  <data name="Game_PresenceDisconnected" xml:space="preserve"><value>Disconnected</value></data>
   <data name="Game_MovementPersistenceErrorTitle" xml:space="preserve"><value>Move not registered</value></data>
   <data name="Game_MovementPersistenceErrorMessage" xml:space="preserve"><value>The move and its board update could not be saved. The last valid board was kept.</value></data>
   <data name="Game_MatchResultPersistenceErrorTitle" xml:space="preserve"><value>Match result not saved</value></data>

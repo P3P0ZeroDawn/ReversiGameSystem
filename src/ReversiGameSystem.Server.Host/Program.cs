@@ -44,27 +44,40 @@ internal static class Program
                 using (FriendshipService friendship = new FriendshipService(sessions,
                     new FriendRepository(), loggerFactory.CreateLogger<FriendshipService>()))
                 {
-                    MatchInvitationEmailSender matchMailer = new MatchInvitationEmailSender(MailSettings.Load());
-                    EntityFrameworkMatchStore matchStore = new EntityFrameworkMatchStore();
-                    matchStore.CancelAbandonedWaitingMatches();
-                    MatchHandler matches = new MatchHandler(sessions, matchStore, clock, matchMailer);
-                    using MatchLobbyService lobby = new MatchLobbyService(matches,
+                    MatchInvitationEmailSender matchInvitationEmailSender =
+                        new MatchInvitationEmailSender(MailSettings.Load());
+                    MatchRepository matchRepository = new MatchRepository();
+                    matchRepository.CancelAbandonedWaitingMatches();
+                    MatchApplicationService matchApplicationService =
+                        new MatchApplicationService(
+                        sessions,
+                        matchRepository,
+                        clock,
+                        matchInvitationEmailSender);
+                    using MatchLobbyService matchLobbyService = new MatchLobbyService(
+                        matchApplicationService,
                         loggerFactory.CreateLogger<MatchLobbyService>());
-                    using GameplayMatchService gameplay = new GameplayMatchService(matches, sessions,
+                    using GameplayMatchService gameplayMatchService = new GameplayMatchService(
+                        matchApplicationService,
+                        sessions,
                         loggerFactory.CreateLogger<GameplayMatchService>());
-                    using MatchChatService chat = new MatchChatService(
-                        new ChatHandler(sessions, new EntityFrameworkChatStore(), clock), sessions,
+                    ChatRepository chatRepository = new ChatRepository();
+                    ChatApplicationService chatApplicationService =
+                        new ChatApplicationService(sessions, chatRepository, clock);
+                    using MatchChatService matchChatService = new MatchChatService(
+                        chatApplicationService,
+                        sessions,
                         loggerFactory.CreateLogger<MatchChatService>());
-                    SessionService session = CreateSessionService(
+                    SessionService sessionService = CreateSessionService(
                         loggerFactory.CreateLogger<SessionService>(), sessions, clock);
-                    session.SessionClosed += friendship.RemoveSession;
-                    session.SessionClosed += lobby.RemoveSession;
-                    session.SessionClosed += gameplay.RemoveSession;
-                    session.SessionClosed += chat.RemoveSession;
+                    sessionService.SessionClosed += friendship.RemoveSession;
+                    sessionService.SessionClosed += matchLobbyService.RemoveSession;
+                    sessionService.SessionClosed += gameplayMatchService.RemoveSession;
+                    sessionService.SessionClosed += matchChatService.RemoveSession;
                     ServiceHost[] hosts =
                     {
                         CreateServiceHost(CreateAccountAccessService(serviceLogger), loggerFactory),
-                        CreateServiceHost(session, loggerFactory),
+                        CreateServiceHost(sessionService, loggerFactory),
                         CreateServiceHost(
                             CreatePlayerProfileService(sessions),
                             loggerFactory),
@@ -72,9 +85,9 @@ internal static class Program
                             CreateLeaderboardService(),
                             loggerFactory),
                         CreateServiceHost(friendship, loggerFactory),
-                        CreateServiceHost(lobby, loggerFactory),
-                        CreateServiceHost(gameplay, loggerFactory),
-                        CreateServiceHost(chat, loggerFactory)
+                        CreateServiceHost(matchLobbyService, loggerFactory),
+                        CreateServiceHost(gameplayMatchService, loggerFactory),
+                        CreateServiceHost(matchChatService, loggerFactory)
                     };
                     return Run(hosts, hostLogger);
                 }

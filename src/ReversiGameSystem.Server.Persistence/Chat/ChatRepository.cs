@@ -7,11 +7,16 @@ using ReversiGameSystem.Server.Application.Chat;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Persistence.Matches;
 using ReversiGameSystem.Server.Persistence.Model;
+using PersistentMatchParticipant = ReversiGameSystem.Server.Persistence.Model.MatchParticipant;
+using ApplicationChatMessage = ReversiGameSystem.Server.Application.Chat.ChatMessage;
+using ApplicationChatMute = ReversiGameSystem.Server.Application.Chat.ChatMute;
+using PersistentChatMessage = ReversiGameSystem.Server.Persistence.Model.ChatMessage;
+using PersistentChatMute = ReversiGameSystem.Server.Persistence.Model.ChatMute;
 
 namespace ReversiGameSystem.Server.Persistence.Chat;
 
 /// <summary>Persists messages and moderation before returning a confirmed result.</summary>
-public sealed class EntityFrameworkChatStore : IChatStore
+public sealed class ChatRepository : IChatRepository
 {
     /// <summary>Requires an active registered participant in an in-progress match.</summary>
     public void Authorize(long accountId, long matchId)
@@ -21,7 +26,7 @@ public sealed class EntityFrameworkChatStore : IChatStore
     }
 
     /// <summary>Tries to retrieve the account sanction currently in effect.</summary>
-    public bool TryGetMute(long accountId, DateTime now, out ChatMuteRecord? mute)
+    public bool TryGetMute(long accountId, DateTime now, out ApplicationChatMute? mute)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         MatchDatabase.RequireActive(context, accountId);
@@ -29,55 +34,65 @@ public sealed class EntityFrameworkChatStore : IChatStore
     }
 
     /// <summary>Loads the authorized conversation in ascending durable message order.</summary>
-    public ChatEntryRecord[] History(long accountId, long matchId)
+    public ApplicationChatMessage[] History(long accountId, long matchId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
         RequireChatParticipant(context, accountId, matchId);
-        ChatEntryRecord[] result = context.ChatMessage.Where(message => message.matchId == matchId)
+        ApplicationChatMessage[] result = context.ChatMessage
+            .Where(message => message.matchId == matchId)
             .OrderBy(message => message.messageNumber).ToArray().Select(Map).ToArray();
         transaction.Commit();
         return result;
     }
 
     /// <summary>Commits either the accepted message or its moderation outcome before returning.</summary>
-    public ChatEntryRecord Send(ChatSubmission submission)
+    public ApplicationChatMessage Send(ChatMessageSubmission submission)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
         MatchDatabase.Lock(context, "chat-account:" + submission.AccountId);
         MatchDatabase.Lock(context, "chat-match:" + submission.MatchId);
-        MatchParticipant participant = RequireChatParticipant(context, submission.AccountId, submission.MatchId);
-        AccountModerationWindow window = new AccountModerationWindow(submission.AccountId, submission.Now);
-        if (TryLoadMute(context, window, out ChatMuteRecord? mute))
+        PersistentMatchParticipant participant = RequireChatParticipant(
+            context,
+            submission.AccountId,
+            submission.MatchId);
+        AccountModerationWindow window = new AccountModerationWindow(
+            submission.AccountId,
+            submission.NowUtc);
+        if (TryLoadMute(context, window, out ApplicationChatMute? mute))
         {
             throw new ChatRejectedException(ChatRejection.PlayerMuted, mute);
         }
-        if (TryFindPattern(context, submission.Content, out ModerationPattern? pattern))
+        if (TryFindPattern(context, submission.Content, out ModerationPattern? pattern)
+            && pattern != null)
         {
-            ModerationDecision decision = RecordViolation(context, submission, pattern!);
+            ModerationDecision decision = RecordViolation(context, submission, pattern);
             transaction.Commit();
             throw new ChatRejectedException(decision.Reason, decision.Mute);
         }
-        ChatMessage message = new ChatMessage
+        PersistentChatMessage message = new PersistentChatMessage
         {
             matchId = submission.MatchId,
             messageNumber = (context.ChatMessage.Where(entry => entry.matchId == submission.MatchId)
                 .Select(entry => (int?)entry.messageNumber).Max() ?? 0) + 1,
             senderSeatNumber = participant.seatNumber,
-            content = submission.Content, sentAtUtc = submission.Now
+            content = submission.Content, sentAtUtc = submission.NowUtc
         };
         context.ChatMessage.Add(message);
         context.SaveChanges();
-        ChatEntryRecord result = Map(message);
+        ApplicationChatMessage result = Map(message);
         transaction.Commit();
         return result;
     }
 
-    private static MatchParticipant RequireChatParticipant(
+    private static PersistentMatchParticipant RequireChatParticipant(
         ReversiGameSystemEntities context, long accountId, long matchId)
     {
-        MatchParticipant participant = MatchDatabase.RequireParticipant(context, accountId, matchId);
+        PersistentMatchParticipant participant = MatchDatabase.RequireParticipant(
+            context,
+            accountId,
+            matchId);
         if (MatchDatabase.RequireMatch(context, matchId).statusCode != "IN_PROGRESS")
         {
             throw new MatchRejectedException(MatchRejection.MatchNotInProgress);
@@ -86,12 +101,14 @@ public sealed class EntityFrameworkChatStore : IChatStore
     }
 
     private static bool TryLoadMute(
-        ReversiGameSystemEntities context, AccountModerationWindow window, out ChatMuteRecord? result)
+        ReversiGameSystemEntities context,
+        AccountModerationWindow window,
+        out ApplicationChatMute? result)
     {
-        ChatMute? mute = context.ChatMute.Where(sanction =>
+        PersistentChatMute? mute = context.ChatMute.Where(sanction =>
             sanction.ChatViolation.MatchParticipant.accountId == window.AccountId && sanction.endsAtUtc > window.Now)
             .OrderByDescending(sanction => sanction.endsAtUtc).FirstOrDefault();
-        result = mute == null ? null : new ChatMuteRecord
+        result = mute == null ? null : new ApplicationChatMute
         {
             StartsAtUtc = DateTime.SpecifyKind(mute.startsAtUtc, DateTimeKind.Utc),
             EndsAtUtc = DateTime.SpecifyKind(mute.endsAtUtc, DateTimeKind.Utc)
@@ -109,30 +126,32 @@ public sealed class EntityFrameworkChatStore : IChatStore
     }
 
     private static ModerationDecision RecordViolation(
-        ReversiGameSystemEntities context, ChatSubmission submission, ModerationPattern pattern)
+        ReversiGameSystemEntities context, ChatMessageSubmission submission, ModerationPattern pattern)
     {
-        DateTime windowStart = submission.Now.AddHours(-24);
+        DateTime windowStart = submission.NowUtc.AddHours(-24);
         int previous = context.ChatViolation.Count(violation =>
             violation.MatchParticipant.accountId == submission.AccountId
-            && violation.detectedAtUtc >= windowStart && violation.detectedAtUtc <= submission.Now);
+            && violation.detectedAtUtc >= windowStart
+            && violation.detectedAtUtc <= submission.NowUtc);
         ChatViolation violation = new ChatViolation
         {
             detectionEventId = Guid.NewGuid(), matchId = submission.MatchId,
             offenderSeatNumber = context.MatchParticipant.Where(player => player.matchId == submission.MatchId
                 && player.accountId == submission.AccountId).Select(player => player.seatNumber).Single(),
             ruleCode = pattern.ruleCode, detectedLocaleCode = pattern.localeCode,
-            detectedAtUtc = submission.Now
+            detectedAtUtc = submission.NowUtc
         };
         context.ChatViolation.Add(violation);
         ModerationDecision decision = new ModerationDecision();
         if (previous >= 2)
         {
             decision.Reason = ChatRejection.PlayerMuted;
-            decision.Mute = new ChatMuteRecord
+            decision.Mute = new ApplicationChatMute
             {
-                StartsAtUtc = submission.Now, EndsAtUtc = submission.Now.AddMinutes(10)
+                StartsAtUtc = submission.NowUtc,
+                EndsAtUtc = submission.NowUtc.AddMinutes(10)
             };
-            context.ChatMute.Add(new ChatMute
+            context.ChatMute.Add(new PersistentChatMute
             {
                 ChatViolation = violation, reasonCode = "REPEATED_VIOLATIONS",
                 startsAtUtc = decision.Mute.StartsAtUtc, endsAtUtc = decision.Mute.EndsAtUtc
@@ -142,9 +161,9 @@ public sealed class EntityFrameworkChatStore : IChatStore
         return decision;
     }
 
-    private static ChatEntryRecord Map(ChatMessage message)
+    private static ApplicationChatMessage Map(PersistentChatMessage message)
     {
-        return new ChatEntryRecord
+        return new ApplicationChatMessage
         {
             MatchId = message.matchId, MessageNumber = message.messageNumber,
             SenderSeatNumber = message.senderSeatNumber, Content = message.content,
@@ -167,6 +186,6 @@ public sealed class EntityFrameworkChatStore : IChatStore
     private sealed class ModerationDecision
     {
         internal ChatRejection Reason { get; set; } = ChatRejection.MessageBlocked;
-        internal ChatMuteRecord? Mute { get; set; }
+        internal ApplicationChatMute? Mute { get; set; }
     }
 }

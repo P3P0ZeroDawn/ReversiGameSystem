@@ -50,7 +50,7 @@ internal static class Program
         FriendshipPresenceTests presenceTests = new FriendshipPresenceTests();
         ChatContentPolicyTests chatPolicyTests = new ChatContentPolicyTests();
         MatchBoundaryTests matchBoundaryTests = new MatchBoundaryTests();
-        MatchHandlerLifecycleTests lifecycleTests = new MatchHandlerLifecycleTests();
+        MatchApplicationServiceLifecycleTests lifecycleTests = new MatchApplicationServiceLifecycleTests();
         LobbyAuthorizationTests lobbyAuthorizationTests = new LobbyAuthorizationTests();
         ServiceErrorBehaviorTests errorBehaviorTests = new ServiceErrorBehaviorTests();
         System.Collections.Generic.List<Action> tests =
@@ -73,13 +73,13 @@ internal static class Program
             matchBoundaryTests.Gameplay_UnauthorizedParticipant_PreservesDeclaredRejection,
             matchBoundaryTests.Gameplay_InitialState_UsesApplicationSnapshot,
             matchBoundaryTests.Gameplay_UnsupportedWrite_ReturnsDeclaredServiceFault,
-            matchBoundaryTests.Lobby_StoreFailure_ReturnsSanitizedServiceFault,
+            matchBoundaryTests.Lobby_StoreFailure_PropagatesToGlobalHandler,
             matchBoundaryTests.Lobby_InviteToMatch_GuestSession_ReturnsMatchFaultUnauthorized,
             matchBoundaryTests.Lobby_InviteToMatch_SelfInvitation_ReturnsMatchFaultUnauthorized,
             matchBoundaryTests.Lobby_InviteToMatch_InvalidFriendId_ReturnsFriendshipFaultInvalidAccountId,
             matchBoundaryTests.Lobby_InviteToMatch_AccountUnavailable_ReturnsFriendshipFaultAccountUnavailable,
             matchBoundaryTests.Lobby_InviteToMatch_FriendshipNotFound_ReturnsFriendshipFaultFriendshipNotFound,
-            matchBoundaryTests.Lobby_InviteToMatch_StoreFailure_ReturnsSanitizedServiceFault,
+            matchBoundaryTests.Lobby_InviteToMatch_StoreFailure_PropagatesToGlobalHandler,
             lifecycleTests.CancelWaitingForSession_TransientFailure_RetainsLobbyForRetry,
             lifecycleTests.CancelExpiredWaitingSessions_ChannelCleanupFailure_RetriesWhileSessionIsValid,
             lifecycleTests.CancelWaitingForSession_JoinAlreadyStarted_PreservesStartedMatch,

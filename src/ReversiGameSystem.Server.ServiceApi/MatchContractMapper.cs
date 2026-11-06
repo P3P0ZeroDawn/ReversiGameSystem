@@ -7,14 +7,14 @@ namespace ReversiGameSystem.Server.ServiceApi;
 
 internal static class MatchContractMapper
 {
-    internal static MatchParticipantSummary[] Participants(MatchRecord match) =>
+    internal static MatchParticipantSummary[] Participants(Match match) =>
         match.Participants.Select(player => new MatchParticipantSummary
         {
             SeatNumber = player.SeatNumber, AccountId = player.AccountId,
             DisplayName = player.DisplayName, Kind = ParticipantKind.Registered
         }).ToArray();
 
-    internal static LobbySnapshot Lobby(MatchRecord match) => new LobbySnapshot
+    internal static LobbySnapshot Lobby(Match match) => new LobbySnapshot
     {
         MatchId = match.Id, MatchCode = match.Code,
         State = (MatchState)Enum.Parse(typeof(MatchState), match.State),
@@ -27,7 +27,7 @@ internal static class MatchContractMapper
     };
 
     // Step one exposes only the initial confirmed state; gameplay writes remain unsupported.
-    internal static MatchStateSnapshot InitialState(MatchRecord match)
+    internal static MatchStateSnapshot InitialState(Match match)
     {
         RequireStarted(match);
         return new MatchStateSnapshot
@@ -40,7 +40,7 @@ internal static class MatchContractMapper
         };
     }
 
-    internal static void RequireStarted(MatchRecord match)
+    internal static void RequireStarted(Match match)
     {
         if (match.State == "Cancelled")
         {

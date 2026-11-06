@@ -4,7 +4,7 @@ using ReversiGameSystem.Server.Application.Matches;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class MatchHandlerLifecycleTests
+internal sealed class MatchApplicationServiceLifecycleTests
 {
     internal void CancelExpiredWaitingSessions_ChannelCleanupFailure_RetriesWhileSessionIsValid()
     {
@@ -12,8 +12,8 @@ internal sealed class MatchHandlerLifecycleTests
         SessionTestContext context = new SessionTestContext();
         AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore { FailCancel = true };
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context);
-        handler.Create(player.SessionToken, new MatchSettings());
+        MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context);
+        handler.Create(player.SessionToken, new MatchSettings()).GetValue();
 
         // Act
         TestAssert.Throws<InvalidOperationException>(
@@ -33,8 +33,8 @@ internal sealed class MatchHandlerLifecycleTests
         SessionTestContext context = new SessionTestContext();
         AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore { FailCancel = true };
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context);
-        handler.Create(player.SessionToken, new MatchSettings());
+        MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context);
+        handler.Create(player.SessionToken, new MatchSettings()).GetValue();
         context.Sessions.Revoke(player.SessionToken);
 
         // Act
@@ -54,8 +54,8 @@ internal sealed class MatchHandlerLifecycleTests
         SessionTestContext context = new SessionTestContext();
         AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore { Started = true };
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context);
-        handler.Create(player.SessionToken, new MatchSettings());
+        MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context);
+        handler.Create(player.SessionToken, new MatchSettings()).GetValue();
 
         // Act
         long[] cancelled = handler.CancelWaitingForSession(player.SessionToken);
@@ -72,14 +72,17 @@ internal sealed class MatchHandlerLifecycleTests
         SessionTestContext context = new SessionTestContext();
         AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context);
+        MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context);
         context.UtcNow = player.ExpiresAtUtc;
 
         // Act
-        TestAssert.Throws<SessionRejectedException>(() => handler.Create(player.SessionToken, new MatchSettings()));
+        MatchOperationResult<Match> result = handler.Create(
+            player.SessionToken,
+            new MatchSettings());
 
         // Assert
         TestAssert.AreEqual(0, store.CreateAttempts);
+        TestAssert.AreEqual(MatchOperationStatus.InvalidSession, result.Status);
     }
 
     internal void Invite_DeliveryFailure_CancelsMatchAndThrowsServiceFault()
@@ -89,7 +92,7 @@ internal sealed class MatchHandlerLifecycleTests
         AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore();
         FailingInvitationEmailSender mailer = new FailingInvitationEmailSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
+        MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
 
         // Act
         TestAssert.Throws<InvalidOperationException>(() =>
@@ -106,14 +109,16 @@ internal sealed class MatchHandlerLifecycleTests
         GuestSession guest = context.Sessions.CreateGuest("Guest-GuestPlayer").GetValue();
         LifecycleStore store = new LifecycleStore();
         FailingInvitationEmailSender mailer = new FailingInvitationEmailSender();
-        MatchHandler handler = new MatchHandler(context.Sessions, store, context, mailer);
+        MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
 
         // Act
-        MatchRejectedException exception = TestAssert.Throws<MatchRejectedException>(() =>
-            handler.Invite(guest.SessionToken, 100, new MatchSettings()));
+        MatchOperationResult<Match> result = handler.Invite(
+            guest.SessionToken,
+            100,
+            new MatchSettings());
 
         // Assert
-        TestAssert.AreEqual(MatchRejection.Unauthorized, exception.Reason);
+        TestAssert.AreEqual(MatchOperationStatus.Unauthorized, result.Status);
     }
 
     private static AuthenticatedSession CreatePlayer(SessionTestContext context)
@@ -130,7 +135,7 @@ internal sealed class MatchHandlerLifecycleTests
         }
     }
 
-    private sealed class LifecycleStore : IMatchStore
+    private sealed class LifecycleStore : IMatchRepository
     {
         public void Authorize(long accountId)
         {
@@ -141,10 +146,10 @@ internal sealed class MatchHandlerLifecycleTests
         internal int CancelAttempts { get; private set; }
         internal int CreateAttempts { get; private set; }
 
-        public MatchRecord Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
+        public Match Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
         {
             CreateAttempts++;
-            return new MatchRecord { Id = 7 };
+            return new Match { Id = 7 };
         }
 
         public void Cancel(long accountId, long matchId)
@@ -160,20 +165,20 @@ internal sealed class MatchHandlerLifecycleTests
             }
         }
 
-        public MatchRecord[] Available(long accountId) => throw new NotSupportedException();
-        public MatchRecord Join(AuthenticatedSession player, string code, DateTime now) =>
+        public Match[] Available(long accountId) => throw new NotSupportedException();
+        public Match Join(AuthenticatedSession player, string code, DateTime now) =>
             throw new NotSupportedException();
-        public MatchRecord Get(long accountId, long matchId) => throw new NotSupportedException();
-        public MatchRecord ChangeTurnDuration(long accountId, long matchId, int seconds) =>
+        public Match Get(long accountId, long matchId) => throw new NotSupportedException();
+        public Match ChangeTurnDuration(long accountId, long matchId, int seconds) =>
             throw new NotSupportedException();
 
-        public PrivateMatchInvitationPreparation PreparePrivate(
+        public MatchInvitationPreparation PreparePrivateInvitation(
             AuthenticatedSession creator,
             long friendAccountId,
             MatchSettings settings,
             DateTime now)
         {
-            MatchRecord match = new MatchRecord
+            Match match = new Match
             {
                 Id = 7,
                 Code = "REV777",
@@ -182,7 +187,7 @@ internal sealed class MatchHandlerLifecycleTests
                 IsPrivate = true,
                 Participants = new[]
                 {
-                    new ParticipantRecord
+                    new MatchParticipant
                     {
                         AccountId = creator.AccountId,
                         SeatNumber = 1,
@@ -190,15 +195,15 @@ internal sealed class MatchHandlerLifecycleTests
                     }
                 }
             };
-            return new PrivateMatchInvitationPreparation(match, "friend@example.com");
+            return new MatchInvitationPreparation(match, "friend@example.com");
         }
 
-        public MatchRecord ConfirmPrivate(
+        public Match MarkInvitationDelivered(
             long accountId,
             long matchId,
             DateTime now)
         {
-            return new MatchRecord
+            return new Match
             {
                 Id = matchId,
                 Code = "REV777",
@@ -207,7 +212,7 @@ internal sealed class MatchHandlerLifecycleTests
                 IsPrivate = true,
                 Participants = new[]
                 {
-                    new ParticipantRecord
+                    new MatchParticipant
                     {
                         AccountId = accountId,
                         SeatNumber = 1,

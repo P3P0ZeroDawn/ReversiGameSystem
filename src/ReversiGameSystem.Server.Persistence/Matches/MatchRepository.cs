@@ -7,12 +7,13 @@ using System.Security.Cryptography;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Persistence.Model;
+using PersistentMatchParticipant = ReversiGameSystem.Server.Persistence.Model.MatchParticipant;
 
 
 namespace ReversiGameSystem.Server.Persistence.Matches;
 
 /// <summary>Persists atomic human lobby transitions using transaction-owned database locks.</summary>
-public sealed class EntityFrameworkMatchStore : IMatchStore
+public sealed class MatchRepository : IMatchRepository
 {
     /// <inheritdoc />
     public void Authorize(long accountId)
@@ -39,7 +40,7 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
     }
 
     /// <summary>Creates the waiting lobby and its creator seat atomically.</summary>
-    public MatchRecord Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
+    public Match Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
@@ -59,13 +60,13 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
         match.MatchParticipant1.Add(CreateParticipant(player, 1, now));
         context.GameMatch.Add(match);
         context.SaveChanges();
-        MatchRecord result = MatchDatabase.Map(match);
+        Match result = MatchDatabase.Map(match);
         transaction.Commit();
         return result;
     }
 
     /// <inheritdoc />
-    public PrivateMatchInvitationPreparation PreparePrivate(
+    public MatchInvitationPreparation PreparePrivateInvitation(
         AuthenticatedSession player,
         long friendAccountId,
         MatchSettings settings,
@@ -118,14 +119,14 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
             new SqlParameter("@friendAccountId", friendAccountId),
             new SqlParameter("@matchId", match.matchId));
 
-        MatchRecord result = MatchDatabase.Map(match);
+        Match result = MatchDatabase.Map(match);
         result.IsPrivate = true;
         transaction.Commit();
-        return new PrivateMatchInvitationPreparation(result, friend.emailAddress);
+        return new MatchInvitationPreparation(result, friend.emailAddress);
     }
 
     /// <inheritdoc />
-    public MatchRecord ConfirmPrivate(long accountId, long matchId, DateTime now)
+    public Match MarkInvitationDelivered(long accountId, long matchId, DateTime now)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
@@ -154,14 +155,14 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
             new SqlParameter("@now", now),
             new SqlParameter("@matchId", matchId));
 
-        MatchRecord result = MatchDatabase.Map(match);
+        Match result = MatchDatabase.Map(match);
         result.IsPrivate = true;
         transaction.Commit();
         return result;
     }
 
     /// <summary>Lists joinable waiting lobbies belonging to other players.</summary>
-    public MatchRecord[] Available(long accountId)
+    public Match[] Available(long accountId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         MatchDatabase.RequireActive(context, accountId);
@@ -169,7 +170,7 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
             "SELECT matchId FROM dbo.GameMatch WHERE isPrivate = 0 AND statusCode = 'WAITING'").ToArray();
         if (publicMatchIds.Length == 0)
         {
-            return Array.Empty<MatchRecord>();
+            return Array.Empty<Match>();
         }
 
         return context.GameMatch.Include(match => match.MatchParticipant1)
@@ -181,7 +182,7 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
     }
 
     /// <summary>Occupies the second seat and starts the waiting match atomically.</summary>
-    public MatchRecord Join(AuthenticatedSession player, string code, DateTime now)
+    public Match Join(AuthenticatedSession player, string code, DateTime now)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
@@ -216,7 +217,7 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
             }
         }
 
-        MatchParticipant creator = match.MatchParticipant1.Single();
+        PersistentMatchParticipant creator = match.MatchParticipant1.Single();
         MatchDatabase.RequireActive(context, creator.accountId ?? 0);
         MatchDatabase.RequireActive(context, player.AccountId);
         match.MatchParticipant1.Add(CreateParticipant(player, 2, now));
@@ -225,7 +226,7 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
         match.currentTurnSeatNumber = 1;
         match.turnStartedAtUtc = now;
         context.SaveChanges();
-        MatchRecord result = MatchDatabase.Map(match);
+        Match result = MatchDatabase.Map(match);
         if (privacy != null && privacy.IsPrivate)
         {
             result.IsPrivate = true;
@@ -264,7 +265,7 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
     }
 
     /// <summary>Loads confirmed match data for an authorized participant.</summary>
-    public MatchRecord Get(long accountId, long matchId)
+    public Match Get(long accountId, long matchId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         MatchDatabase.RequireParticipant(context, accountId, matchId);
@@ -272,7 +273,7 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
     }
 
     /// <summary>Changes the duration only while the creator still owns a waiting lobby.</summary>
-    public MatchRecord ChangeTurnDuration(long accountId, long matchId, int seconds)
+    public Match ChangeTurnDuration(long accountId, long matchId, int seconds)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
@@ -284,7 +285,7 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
         }
         match.turnDurationSeconds = (short)seconds;
         context.SaveChanges();
-        MatchRecord result = MatchDatabase.Map(match);
+        Match result = MatchDatabase.Map(match);
         transaction.Commit();
         return result;
     }
@@ -307,7 +308,7 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
 
     private static GameMatch RequireCreator(ReversiGameSystemEntities context, long accountId, long matchId)
     {
-        MatchParticipant player = MatchDatabase.RequireParticipant(context, accountId, matchId);
+        PersistentMatchParticipant player = MatchDatabase.RequireParticipant(context, accountId, matchId);
         if (!player.isCreator)
         {
             throw new MatchRejectedException(MatchRejection.Unauthorized);
@@ -315,9 +316,12 @@ public sealed class EntityFrameworkMatchStore : IMatchStore
         return MatchDatabase.RequireMatch(context, matchId);
     }
 
-    private static MatchParticipant CreateParticipant(AuthenticatedSession player, byte seat, DateTime now)
+    private static PersistentMatchParticipant CreateParticipant(
+        AuthenticatedSession player,
+        byte seat,
+        DateTime now)
     {
-        return new MatchParticipant
+        return new PersistentMatchParticipant
         {
             seatNumber = seat, accountId = player.AccountId, participantTypeCode = "REGISTERED",
             displayNameSnapshot = player.Username, pieceColorCode = seat == 1 ? "BLACK" : "WHITE",

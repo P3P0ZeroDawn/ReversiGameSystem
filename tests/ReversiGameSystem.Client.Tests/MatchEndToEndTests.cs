@@ -49,9 +49,26 @@ internal static class MatchEndToEndTests
             TestAssert.AreEqual("ReviewAlpha", firstInfo.Participants.Single(player => player.SeatNumber == 1).DisplayName);
             TestAssert.AreEqual("ReviewBeta", firstInfo.Participants.Single(player => player.SeatNumber == 2).DisplayName);
             TestAssert.AreEqual(40, firstInfo.TurnDurationSeconds);
+            TestAssert.AreEqual(true, SpinWait.SpinUntil(
+                () => first.ReadParticipantConnection(waiting.MatchId, 1)
+                    == ParticipantConnectionState.Connected
+                    && first.ReadParticipantConnection(waiting.MatchId, 2)
+                    == ParticipantConnectionState.Connected,
+                TimeSpan.FromSeconds(10)));
             Console.WriteLine("PASS: two participants, lobby callback and initial board.");
             Chat_RealDuplex_ReconcilesReturnCallbackAndHistory(first, second, waiting.MatchId);
             Console.WriteLine("PASS: two-way chat, history reconciliation and moderation.");
+
+            sessions.CloseSessionAsync(beta.SessionToken).GetAwaiter().GetResult();
+            beta = null;
+            TestAssert.AreEqual(true, SpinWait.SpinUntil(
+                () => first.ReadParticipantConnection(waiting.MatchId, 2)
+                    == ParticipantConnectionState.Disconnected,
+                TimeSpan.FromSeconds(10)));
+            TestAssert.AreEqual(
+                Proxy.MatchState.InProgress,
+                first.LoadStateAsync(waiting.MatchId).GetAwaiter().GetResult().State);
+            Console.WriteLine("PASS: session closure publishes participant disconnection without ending the match.");
 
             guest = sessions.OpenGuestSessionAsync("Outsider" + Guid.NewGuid().ToString("N").Substring(0, 6))
                 .GetAwaiter().GetResult();

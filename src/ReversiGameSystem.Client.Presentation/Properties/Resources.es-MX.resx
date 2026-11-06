@@ -1160,6 +1160,9 @@
   <data name="Game_InactivityResultMessage" xml:space="preserve"><value>Victoria de “{0}”. El oponente agotó tres turnos consecutivos.</value></data>
   <data name="Game_ServerConnectionFailedTitle" xml:space="preserve"><value>Se perdió la conexión de la partida</value></data>
   <data name="Game_ServerConnectionFailedMessage" xml:space="preserve"><value>No se pudo confirmar el movimiento porque se perdió la comunicación con el servidor. Se conservó el último tablero confirmado.</value></data>
+  <data name="Game_PresenceUnknown" xml:space="preserve"><value>Conexión desconocida</value></data>
+  <data name="Game_PresenceConnected" xml:space="preserve"><value>Conectado</value></data>
+  <data name="Game_PresenceDisconnected" xml:space="preserve"><value>Desconectado</value></data>
   <data name="Game_MovementPersistenceErrorTitle" xml:space="preserve"><value>Movimiento no registrado</value></data>
   <data name="Game_MovementPersistenceErrorMessage" xml:space="preserve"><value>No se pudieron guardar el movimiento y la actualización del tablero. Se conservó el último tablero válido.</value></data>
   <data name="Game_MatchResultPersistenceErrorTitle" xml:space="preserve"><value>Resultado de partida no guardado</value></data>

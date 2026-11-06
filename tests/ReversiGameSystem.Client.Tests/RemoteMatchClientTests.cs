@@ -15,8 +15,10 @@ internal static class RemoteMatchClientTests
         using RemoteMatchClient client = Create("unused");
         int stateChanges = 0;
         int messageChanges = 0;
+        int presenceChanges = 0;
         client.StateChanged += _ => stateChanges++;
         client.MessagesChanged += _ => messageChanges++;
+        client.ParticipantConnectionChanged += _ => presenceChanges++;
         client.OnMatchStarted(new Proxy.MatchStateSnapshot { MatchId = 7, MatchStateVersion = 3 });
         client.OnMatchStateChanged(new Proxy.MatchStateSnapshot { MatchId = 7, MatchStateVersion = 2 });
         client.OnMatchStateChanged(new Proxy.MatchStateSnapshot { MatchId = 7, MatchStateVersion = 3 });
@@ -24,13 +26,25 @@ internal static class RemoteMatchClientTests
         client.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 7, MessageNumber = 1, Content = "first" });
         client.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 7, MessageNumber = 2, Content = "second" });
         client.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 8, MessageNumber = 1, Content = "other" });
+        client.OnParticipantConnectionChanged(7, 1, true);
+        client.OnParticipantConnectionChanged(7, 2, false);
         TestAssert.AreEqual(1, stateChanges);
         TestAssert.AreEqual(3, messageChanges);
+        TestAssert.AreEqual(2, presenceChanges);
         TestAssert.AreEqual(true, client.TryReadState(7, out Proxy.MatchStateSnapshot? state));
         TestAssert.AreEqual(3L, state!.MatchStateVersion);
         TestAssert.AreEqual(2, client.ReadMessages(7).Length);
         TestAssert.AreEqual("first", client.ReadMessages(7)[0].Content);
         TestAssert.AreEqual(1, client.ReadMessages(8).Length);
+        TestAssert.AreEqual(
+            ParticipantConnectionState.Connected,
+            client.ReadParticipantConnection(7, 1));
+        TestAssert.AreEqual(
+            ParticipantConnectionState.Disconnected,
+            client.ReadParticipantConnection(7, 2));
+        TestAssert.AreEqual(
+            ParticipantConnectionState.Unknown,
+            client.ReadParticipantConnection(8, 1));
     }
 
     internal static void Faults_SupportedCultures_ResolveLocalizedRecoveryAndRejectionMessages()
@@ -41,7 +55,9 @@ internal static class RemoteMatchClientTests
             foreach (string key in new[] { "RemoteMatch_MovesUnavailable", "RemoteMatch_StateFormat",
                 "RemoteMatch_CloseView", "RemoteMatch_SessionExpired", "RemoteMatch_GuestUnavailable",
                 "RemoteMatch_AccessRejected",
-                "RemoteMatch_ServerFailure", "RemoteMatch_ConnectionFailed", "RemoteMatch_NotAvailable", "RemoteMatch_Send" })
+                "RemoteMatch_ServerFailure", "RemoteMatch_ConnectionFailed", "RemoteMatch_NotAvailable",
+                "RemoteMatch_Send", "Game_PresenceUnknown", "Game_PresenceConnected",
+                "Game_PresenceDisconnected" })
             {
                 TestAssert.AreEqual(false, string.IsNullOrWhiteSpace(resources.GetString(key, CultureInfo.GetCultureInfo(culture))));
             }

@@ -16,10 +16,12 @@ internal sealed class LobbyAuthorizationTests
         AuthorizationContext context = new AuthorizationContext();
 
         // Act
-        context.Handler.Authorize(context.Player.SessionToken);
+        MatchOperationStatus status = context.Handler.Authorize(
+            context.Player.SessionToken);
 
         // Assert
         TestAssert.AreEqual(context.Player.AccountId, context.Store.AuthorizedAccountId);
+        TestAssert.AreEqual(MatchOperationStatus.Success, status);
         TestAssert.AreEqual(1, context.Store.AuthorizationCalls);
         TestAssert.AreEqual(0, context.Store.AvailableCalls);
     }
@@ -31,12 +33,13 @@ internal sealed class LobbyAuthorizationTests
         context.Sessions.UtcNow = context.Player.ExpiresAtUtc;
 
         // Act
-        TestAssert.Throws<SessionRejectedException>(
-            () => context.Handler.Authorize(context.Player.SessionToken));
+        MatchOperationStatus status = context.Handler.Authorize(
+            context.Player.SessionToken);
 
         // Assert
         TestAssert.AreEqual(0, context.Store.AuthorizationCalls);
         TestAssert.AreEqual(0, context.Store.AvailableCalls);
+        TestAssert.AreEqual(MatchOperationStatus.InvalidSession, status);
     }
 
     internal void Authorize_RevokedSession_RejectsBeforeAccountQuery()
@@ -46,12 +49,13 @@ internal sealed class LobbyAuthorizationTests
         context.Sessions.Sessions.Revoke(context.Player.SessionToken);
 
         // Act
-        TestAssert.Throws<SessionRejectedException>(
-            () => context.Handler.Authorize(context.Player.SessionToken));
+        MatchOperationStatus status = context.Handler.Authorize(
+            context.Player.SessionToken);
 
         // Assert
         TestAssert.AreEqual(0, context.Store.AuthorizationCalls);
         TestAssert.AreEqual(0, context.Store.AvailableCalls);
+        TestAssert.AreEqual(MatchOperationStatus.InvalidSession, status);
     }
 
     internal void OpenLobbyChannel_InactiveAccount_ReturnsMatchFaultWithoutListing()
@@ -97,16 +101,16 @@ internal sealed class LobbyAuthorizationTests
             Player = Sessions.Sessions.Create(new LoginAccount(
                 42, "LobbyPlayer", "lobby@example.com", "test-hash", "ACTIVE", "en-US"));
             Store = new AuthorizationStore();
-            Handler = new MatchHandler(Sessions.Sessions, Store, Sessions);
+            Handler = new MatchApplicationService(Sessions.Sessions, Store, Sessions);
         }
 
         internal SessionTestContext Sessions { get; }
         internal AuthenticatedSession Player { get; }
         internal AuthorizationStore Store { get; }
-        internal MatchHandler Handler { get; }
+        internal MatchApplicationService Handler { get; }
     }
 
-    private sealed class AuthorizationStore : IMatchStore
+    private sealed class AuthorizationStore : IMatchRepository
     {
         internal bool Active { get; set; } = true;
         internal long AuthorizedAccountId { get; private set; }
@@ -123,19 +127,19 @@ internal sealed class LobbyAuthorizationTests
             }
         }
 
-        public MatchRecord[] Available(long accountId)
+        public Match[] Available(long accountId)
         {
             AvailableCalls++;
             throw new InvalidOperationException("Authorization must not enumerate lobbies.");
         }
 
-        public MatchRecord Create(
+        public Match Create(
             AuthenticatedSession player, MatchSettings settings, DateTime now)
         {
             throw new NotSupportedException();
         }
 
-        public PrivateMatchInvitationPreparation PreparePrivate(
+        public MatchInvitationPreparation PreparePrivateInvitation(
             AuthenticatedSession player,
             long friendAccountId,
             MatchSettings settings,
@@ -144,12 +148,12 @@ internal sealed class LobbyAuthorizationTests
             throw new NotSupportedException();
         }
 
-        public MatchRecord ConfirmPrivate(long accountId, long matchId, DateTime now)
+        public Match MarkInvitationDelivered(long accountId, long matchId, DateTime now)
         {
             throw new NotSupportedException();
         }
 
-        public MatchRecord Join(AuthenticatedSession player, string code, DateTime now)
+        public Match Join(AuthenticatedSession player, string code, DateTime now)
         {
             throw new NotSupportedException();
         }
@@ -159,12 +163,12 @@ internal sealed class LobbyAuthorizationTests
             throw new NotSupportedException();
         }
 
-        public MatchRecord Get(long accountId, long matchId)
+        public Match Get(long accountId, long matchId)
         {
             throw new NotSupportedException();
         }
 
-        public MatchRecord ChangeTurnDuration(long accountId, long matchId, int seconds)
+        public Match ChangeTurnDuration(long accountId, long matchId, int seconds)
         {
             throw new NotSupportedException();
         }

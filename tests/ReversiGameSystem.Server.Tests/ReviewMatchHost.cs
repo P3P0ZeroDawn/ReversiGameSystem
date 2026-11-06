@@ -26,8 +26,8 @@ internal static class ReviewMatchHost
     {
         PrepareSchema();
         SystemUtcClock clock = new SystemUtcClock();
-        MatchHandler matches = new MatchHandler(store, new EntityFrameworkMatchStore(), clock);
-        ChatHandler messages = new ChatHandler(store, new EntityFrameworkChatStore(), clock);
+        MatchApplicationService matches = new MatchApplicationService(store, new MatchRepository(), clock);
+        ChatApplicationService messages = new ChatApplicationService(store, new ChatRepository(), clock);
         SessionService session = new SessionService(
             applicationService,
             NullLogger<SessionService>.Instance);

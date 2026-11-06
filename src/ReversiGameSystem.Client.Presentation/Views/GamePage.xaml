@@ -85,6 +85,8 @@
                         </Grid>
                         <TextBlock x:Name="creatorScoreTextBlock" FontSize="15"
                                    Foreground="#52685B" />
+                        <TextBlock x:Name="creatorConnectionTextBlock" FontSize="13"
+                                   Foreground="Gray" Visibility="Collapsed" />
                     </StackPanel>
                 </Border>
 
@@ -103,6 +105,8 @@
                         </Grid>
                         <TextBlock x:Name="opponentScoreTextBlock" FontSize="15"
                                    Foreground="#52685B" />
+                        <TextBlock x:Name="opponentConnectionTextBlock" FontSize="13"
+                                   Foreground="Gray" Visibility="Collapsed" />
                     </StackPanel>
                 </Border>
             </StackPanel>

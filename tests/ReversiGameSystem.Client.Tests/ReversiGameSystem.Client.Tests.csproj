@@ -7,6 +7,7 @@
     <RootNamespace>ReversiGameSystem.Client.Tests</RootNamespace>
     <AssemblyName>ReversiGameSystem.Client.Tests</AssemblyName>
     <ProjectGuid>{D4D27CB2-3B12-4C32-9058-2BE953E01385}</ProjectGuid>
+    <AppConfig>..\..\src\ReversiGameSystem.Client.Presentation\App.config</AppConfig>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.ServiceModel" />
