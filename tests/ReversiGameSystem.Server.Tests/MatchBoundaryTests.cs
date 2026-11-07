@@ -191,21 +191,39 @@ internal sealed class MatchBoundaryTests
 
     private sealed class BoundaryStore : IMatchRepository
     {
-        public void Authorize(long accountId) =>
+        public MatchRepositoryStatus Authorize(long accountId)
+        {
             throw new InvalidOperationException("private storage failure");
+        }
         internal bool AllowRead { get; set; }
-        public Match Create(AuthenticatedSession player, MatchSettings settings, DateTime now) => throw new NotSupportedException();
-        public Match[] Available(long accountId) => throw new InvalidOperationException("private storage failure");
-        public Match Join(AuthenticatedSession player, string code, DateTime now) => throw new NotSupportedException();
-        public Match ChangeTurnDuration(long accountId, long matchId, int seconds) => throw new NotSupportedException();
-        public void Cancel(long accountId, long matchId) => throw new NotSupportedException();
-        public Match Get(long accountId, long matchId)
+        public MatchRepositoryResult<Match> Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
+        {
+            throw new NotSupportedException();
+        }
+        public MatchRepositoryResult<Match[]> Available(long accountId)
+        {
+            throw new InvalidOperationException("private storage failure");
+        }
+        public MatchRepositoryResult<Match> Join(AuthenticatedSession player, string code, DateTime now)
+        {
+            throw new NotSupportedException();
+        }
+        public MatchRepositoryResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
+        {
+            throw new NotSupportedException();
+        }
+        public MatchRepositoryStatus Cancel(long accountId, long matchId)
+        {
+            throw new NotSupportedException();
+        }
+        public MatchRepositoryResult<Match> Get(long accountId, long matchId)
         {
             if (!AllowRead)
             {
-                throw new MatchRejectedException(MatchRejection.Unauthorized);
+                return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.Unauthorized);
             }
-            return new Match
+
+            Match match = new Match
             {
                 Id = matchId,
                 State = "InProgress",
@@ -213,9 +231,10 @@ internal sealed class MatchBoundaryTests
                 StartedAtUtc = new BoundaryClock().UtcNow,
                 Participants = new[] { new MatchParticipant { AccountId = 1, SeatNumber = 1 } }
             };
+            return MatchRepositoryResult<Match>.CreateSuccess(match);
         }
 
-        public MatchInvitationPreparation PreparePrivateInvitation(
+        public MatchRepositoryResult<MatchInvitationPreparation> PreparePrivateInvitation(
             AuthenticatedSession creator,
             long friendAccountId,
             MatchSettings settings,
@@ -227,19 +246,19 @@ internal sealed class MatchBoundaryTests
             }
             if (friendAccountId == 2)
             {
-                throw new FriendshipRejectedException(FriendshipRejection.AccountUnavailable);
+                return MatchRepositoryResult<MatchInvitationPreparation>.CreateFailure(MatchRepositoryStatus.FriendAccountUnavailable);
             }
             if (friendAccountId == 3)
             {
-                throw new FriendshipRejectedException(FriendshipRejection.FriendshipNotFound);
+                return MatchRepositoryResult<MatchInvitationPreparation>.CreateFailure(MatchRepositoryStatus.FriendshipNotFound);
             }
             if (friendAccountId == 4)
             {
-                throw new FriendshipRejectedException(FriendshipRejection.InvalidAccountId);
+                return MatchRepositoryResult<MatchInvitationPreparation>.CreateFailure(MatchRepositoryStatus.FriendAccountUnavailable);
             }
             if (friendAccountId == 5)
             {
-                throw new FriendshipRejectedException(FriendshipRejection.InactiveAccount);
+                return MatchRepositoryResult<MatchInvitationPreparation>.CreateFailure(MatchRepositoryStatus.InactiveAccount);
             }
             Match match = new Match
             {
@@ -258,15 +277,16 @@ internal sealed class MatchBoundaryTests
                     }
                 }
             };
-            return new MatchInvitationPreparation(match, "friend@example.com");
+            MatchInvitationPreparation preparation = new MatchInvitationPreparation(match, "friend@example.com");
+            return MatchRepositoryResult<MatchInvitationPreparation>.CreateSuccess(preparation);
         }
 
-        public Match MarkInvitationDelivered(
+        public MatchRepositoryResult<Match> MarkInvitationDelivered(
             long accountId,
             long matchId,
             DateTime now)
         {
-            return new Match
+            Match match = new Match
             {
                 Id = matchId,
                 Code = "REV123",
@@ -283,14 +303,17 @@ internal sealed class MatchBoundaryTests
                     }
                 }
             };
+            return MatchRepositoryResult<Match>.CreateSuccess(match);
         }
 
-        public void ValidateJoinForGuest(string matchCode)
+        public MatchRepositoryStatus ValidateJoinForGuest(string matchCode)
         {
             if (matchCode == "REV123")
             {
-                throw new MatchRejectedException(MatchRejection.Unauthorized);
+                return MatchRepositoryStatus.Unauthorized;
             }
+
+            return MatchRepositoryStatus.Success;
         }
     }
 }

@@ -28,10 +28,6 @@ internal sealed class MatchBoundary
         {
             throw CreateMatchFault(exception);
         }
-        catch (FriendshipRejectedException exception)
-        {
-            throw CreateFriendshipFault(exception);
-        }
         catch (FaultException)
         {
             throw;
@@ -58,14 +54,6 @@ internal sealed class MatchBoundary
         {
             Reason = (MatchFailure)Enum.Parse(typeof(MatchFailure), exception.Reason.ToString())
         }, "The match request was rejected.");
-
-    private static FaultException<FriendshipFault> CreateFriendshipFault(
-        FriendshipRejectedException exception) =>
-        new FaultException<FriendshipFault>(new FriendshipFault
-        {
-            Reason = (FriendshipFailure)Enum.Parse(
-                typeof(FriendshipFailure), exception.Reason.ToString())
-        }, "The friendship request was rejected.");
 
     internal void Log(string operation, Exception exception) =>
         _logger.LogError(exception,

@@ -137,22 +137,22 @@ internal sealed class MatchApplicationServiceLifecycleTests
 
     private sealed class LifecycleStore : IMatchRepository
     {
-        public void Authorize(long accountId)
+        public MatchRepositoryStatus Authorize(long accountId)
         {
-            // This fixture isolates creation and cleanup of an already authorized account.
+            return MatchRepositoryStatus.Success;
         }
         internal bool FailCancel { get; set; }
         internal bool Started { get; set; }
         internal int CancelAttempts { get; private set; }
         internal int CreateAttempts { get; private set; }
 
-        public Match Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
+        public MatchRepositoryResult<Match> Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
         {
             CreateAttempts++;
-            return new Match { Id = 7 };
+            return MatchRepositoryResult<Match>.CreateSuccess(new Match { Id = 7 });
         }
 
-        public void Cancel(long accountId, long matchId)
+        public MatchRepositoryStatus Cancel(long accountId, long matchId)
         {
             CancelAttempts++;
             if (FailCancel)
@@ -161,18 +161,30 @@ internal sealed class MatchApplicationServiceLifecycleTests
             }
             if (Started)
             {
-                throw new MatchRejectedException(MatchRejection.MatchNotWaiting);
+                return MatchRepositoryStatus.MatchNotWaiting;
             }
+
+            return MatchRepositoryStatus.Success;
         }
 
-        public Match[] Available(long accountId) => throw new NotSupportedException();
-        public Match Join(AuthenticatedSession player, string code, DateTime now) =>
+        public MatchRepositoryResult<Match[]> Available(long accountId)
+        {
             throw new NotSupportedException();
-        public Match Get(long accountId, long matchId) => throw new NotSupportedException();
-        public Match ChangeTurnDuration(long accountId, long matchId, int seconds) =>
+        }
+        public MatchRepositoryResult<Match> Join(AuthenticatedSession player, string code, DateTime now)
+        {
             throw new NotSupportedException();
+        }
+        public MatchRepositoryResult<Match> Get(long accountId, long matchId)
+        {
+            throw new NotSupportedException();
+        }
+        public MatchRepositoryResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
+        {
+            throw new NotSupportedException();
+        }
 
-        public MatchInvitationPreparation PreparePrivateInvitation(
+        public MatchRepositoryResult<MatchInvitationPreparation> PreparePrivateInvitation(
             AuthenticatedSession creator,
             long friendAccountId,
             MatchSettings settings,
@@ -195,15 +207,16 @@ internal sealed class MatchApplicationServiceLifecycleTests
                     }
                 }
             };
-            return new MatchInvitationPreparation(match, "friend@example.com");
+            MatchInvitationPreparation preparation = new MatchInvitationPreparation(match, "friend@example.com");
+            return MatchRepositoryResult<MatchInvitationPreparation>.CreateSuccess(preparation);
         }
 
-        public Match MarkInvitationDelivered(
+        public MatchRepositoryResult<Match> MarkInvitationDelivered(
             long accountId,
             long matchId,
             DateTime now)
         {
-            return new Match
+            Match match = new Match
             {
                 Id = matchId,
                 Code = "REV777",
@@ -220,10 +233,12 @@ internal sealed class MatchApplicationServiceLifecycleTests
                     }
                 }
             };
+            return MatchRepositoryResult<Match>.CreateSuccess(match);
         }
 
-        public void ValidateJoinForGuest(string matchCode)
+        public MatchRepositoryStatus ValidateJoinForGuest(string matchCode)
         {
+            return MatchRepositoryStatus.Success;
         }
     }
 }

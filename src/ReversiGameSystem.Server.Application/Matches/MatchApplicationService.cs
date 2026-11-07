@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using ReversiGameSystem.Server.Application.Accounts;
@@ -63,17 +63,19 @@ public sealed class MatchApplicationService
         lock (_lobbySync)
         {
             PrepareCreation(token);
-            try
-            {
-                Match match = _matches.Create(player, acceptedSettings, _clock.UtcNow);
-                TrackCreatedMatch(token, player.AccountId, match.Id);
-                return MatchOperationResult<Match>.CreateSuccess(match);
-            }
-            catch (MatchRejectedException exception)
+            MatchRepositoryResult<Match> creationResult = _matches.Create(
+                player,
+                acceptedSettings,
+                _clock.UtcNow);
+            if (creationResult.Status != MatchRepositoryStatus.Success)
             {
                 return MatchOperationResult<Match>.CreateFailure(
-                    GetStatus(exception.Reason));
+                    MapRepositoryStatus(creationResult.Status));
             }
+
+            Match match = creationResult.GetValue();
+            TrackCreatedMatch(token, player.AccountId, match.Id);
+            return MatchOperationResult<Match>.CreateSuccess(match);
         }
     }
 
@@ -128,25 +130,19 @@ public sealed class MatchApplicationService
         lock (_lobbySync)
         {
             PrepareCreation(token);
-            try
-            {
-                preparation = _matches.PreparePrivateInvitation(
-                    player,
-                    friendAccountId,
-                    acceptedSettings,
-                    _clock.UtcNow);
-                TrackCreatedMatch(token, player.AccountId, preparation.Match.Id);
-            }
-            catch (MatchRejectedException exception)
+            MatchRepositoryResult<MatchInvitationPreparation> prepareResult = _matches.PreparePrivateInvitation(
+                player,
+                friendAccountId,
+                acceptedSettings,
+                _clock.UtcNow);
+            if (prepareResult.Status != MatchRepositoryStatus.Success)
             {
                 return MatchOperationResult<Match>.CreateFailure(
-                    GetStatus(exception.Reason));
+                    MapRepositoryStatus(prepareResult.Status));
             }
-            catch (FriendshipRejectedException exception)
-            {
-                return MatchOperationResult<Match>.CreateFailure(
-                    GetStatus(exception.Reason));
-            }
+
+            preparation = prepareResult.GetValue();
+            TrackCreatedMatch(token, player.AccountId, preparation.Match.Id);
         }
 
         SendInvitationOrCancel(token, player, preparation);
@@ -162,15 +158,8 @@ public sealed class MatchApplicationService
             return playerResult.Status;
         }
 
-        try
-        {
-            _matches.Authorize(playerResult.GetValue().AccountId);
-            return MatchOperationStatus.Success;
-        }
-        catch (MatchRejectedException exception)
-        {
-            return GetStatus(exception.Reason);
-        }
+        MatchRepositoryStatus status = _matches.Authorize(playerResult.GetValue().AccountId);
+        return MapRepositoryStatus(status);
     }
 
     /// <summary>Lists public waiting lobbies available to the caller.</summary>
@@ -182,16 +171,15 @@ public sealed class MatchApplicationService
             return MatchOperationResult<Match[]>.CreateFailure(playerResult.Status);
         }
 
-        try
-        {
-            Match[] matches = _matches.Available(playerResult.GetValue().AccountId);
-            return MatchOperationResult<Match[]>.CreateSuccess(matches);
-        }
-        catch (MatchRejectedException exception)
+        MatchRepositoryResult<Match[]> availableResult = _matches.Available(
+            playerResult.GetValue().AccountId);
+        if (availableResult.Status != MatchRepositoryStatus.Success)
         {
             return MatchOperationResult<Match[]>.CreateFailure(
-                GetStatus(exception.Reason));
+                MapRepositoryStatus(availableResult.Status));
         }
+
+        return MatchOperationResult<Match[]>.CreateSuccess(availableResult.GetValue());
     }
 
     /// <summary>Occupies the second seat and starts a waiting match atomically.</summary>
@@ -215,14 +203,10 @@ public sealed class MatchApplicationService
             && guest != null
             && guest.ExpiresAtUtc > _clock.UtcNow)
         {
-            try
+            MatchRepositoryStatus guestStatus = _matches.ValidateJoinForGuest(normalized);
+            if (guestStatus != MatchRepositoryStatus.Success)
             {
-                _matches.ValidateJoinForGuest(normalized);
-            }
-            catch (MatchRejectedException exception)
-            {
-                return MatchOperationResult<Match>.CreateFailure(
-                    GetStatus(exception.Reason));
+                return MatchOperationResult<Match>.CreateFailure(MapRepositoryStatus(guestStatus));
             }
 
             return MatchOperationResult<Match>.CreateFailure(
@@ -235,19 +219,16 @@ public sealed class MatchApplicationService
             return MatchOperationResult<Match>.CreateFailure(playerResult.Status);
         }
 
-        try
+        MatchRepositoryResult<Match> joinResult = _matches.Join(
+            playerResult.GetValue(),
+            normalized,
+            _clock.UtcNow);
+        if (joinResult.Status != MatchRepositoryStatus.Success)
         {
-            Match match = _matches.Join(
-                playerResult.GetValue(),
-                normalized,
-                _clock.UtcNow);
-            return MatchOperationResult<Match>.CreateSuccess(match);
+            return MatchOperationResult<Match>.CreateFailure(MapRepositoryStatus(joinResult.Status));
         }
-        catch (MatchRejectedException exception)
-        {
-            return MatchOperationResult<Match>.CreateFailure(
-                GetStatus(exception.Reason));
-        }
+
+        return MatchOperationResult<Match>.CreateSuccess(joinResult.GetValue());
     }
 
     /// <summary>Loads confirmed match data for an authorized participant.</summary>
@@ -264,16 +245,16 @@ public sealed class MatchApplicationService
                 MatchOperationStatus.InvalidMatchId);
         }
 
-        try
-        {
-            Match match = _matches.Get(playerResult.GetValue().AccountId, matchId);
-            return MatchOperationResult<Match>.CreateSuccess(match);
-        }
-        catch (MatchRejectedException exception)
+        MatchRepositoryResult<Match> getResult = _matches.Get(
+            playerResult.GetValue().AccountId,
+            matchId);
+        if (getResult.Status != MatchRepositoryStatus.Success)
         {
             return MatchOperationResult<Match>.CreateFailure(
-                GetStatus(exception.Reason));
+                MapRepositoryStatus(getResult.Status));
         }
+
+        return MatchOperationResult<Match>.CreateSuccess(getResult.GetValue());
     }
 
     /// <summary>Changes the turn duration of the caller's waiting match.</summary>
@@ -298,19 +279,17 @@ public sealed class MatchApplicationService
                 MatchOperationStatus.InvalidTurnDuration);
         }
 
-        try
-        {
-            Match match = _matches.ChangeTurnDuration(
-                playerResult.GetValue().AccountId,
-                matchId,
-                seconds);
-            return MatchOperationResult<Match>.CreateSuccess(match);
-        }
-        catch (MatchRejectedException exception)
+        MatchRepositoryResult<Match> changeResult = _matches.ChangeTurnDuration(
+            playerResult.GetValue().AccountId,
+            matchId,
+            seconds);
+        if (changeResult.Status != MatchRepositoryStatus.Success)
         {
             return MatchOperationResult<Match>.CreateFailure(
-                GetStatus(exception.Reason));
+                MapRepositoryStatus(changeResult.Status));
         }
+
+        return MatchOperationResult<Match>.CreateSuccess(changeResult.GetValue());
     }
 
     /// <summary>Cancels a waiting match owned by the caller.</summary>
@@ -326,19 +305,16 @@ public sealed class MatchApplicationService
             return MatchOperationStatus.InvalidMatchId;
         }
 
-        try
+        MatchRepositoryStatus status = _matches.Cancel(playerResult.GetValue().AccountId, matchId);
+        if (status == MatchRepositoryStatus.Success)
         {
-            _matches.Cancel(playerResult.GetValue().AccountId, matchId);
             lock (_lobbySync)
             {
                 RemoveTrackedMatch(token, matchId);
             }
-            return MatchOperationStatus.Success;
         }
-        catch (MatchRejectedException exception)
-        {
-            return GetStatus(exception.Reason);
-        }
+
+        return MapRepositoryStatus(status);
     }
 
     /// <summary>Cancels waiting lobbies created by a closed session.</summary>
@@ -447,7 +423,11 @@ public sealed class MatchApplicationService
 
             try
             {
-                _matches.Cancel(player.AccountId, preparation.Match.Id);
+                MatchRepositoryStatus cancellationStatus = _matches.Cancel(player.AccountId, preparation.Match.Id);
+                if (cancellationStatus != MatchRepositoryStatus.Success && cancellationStatus != MatchRepositoryStatus.MatchNotWaiting)
+                {
+                    throw new InvalidOperationException("Prepared match cancellation rejected: " + cancellationStatus);
+                }
             }
             catch (Exception cancellationException)
             {
@@ -486,34 +466,26 @@ public sealed class MatchApplicationService
                     MatchOperationStatus.MatchNotWaiting);
             }
 
-            try
-            {
-                Match match = _matches.MarkInvitationDelivered(
-                    player.AccountId,
-                    preparation.Match.Id,
-                    _clock.UtcNow);
-                return MatchOperationResult<Match>.CreateSuccess(match);
-            }
-            catch (MatchRejectedException exception)
+            MatchRepositoryResult<Match> deliveredResult = _matches.MarkInvitationDelivered(
+                player.AccountId,
+                preparation.Match.Id,
+                _clock.UtcNow);
+            if (deliveredResult.Status != MatchRepositoryStatus.Success)
             {
                 return MatchOperationResult<Match>.CreateFailure(
-                    GetStatus(exception.Reason));
+                    MapRepositoryStatus(deliveredResult.Status));
             }
+
+            return MatchOperationResult<Match>.CreateSuccess(deliveredResult.GetValue());
         }
     }
 
     private void CancelPreparedMatch(long accountId, long matchId)
     {
-        try
+        MatchRepositoryStatus status = _matches.Cancel(accountId, matchId);
+        if (status != MatchRepositoryStatus.Success && status != MatchRepositoryStatus.MatchNotWaiting)
         {
-            _matches.Cancel(accountId, matchId);
-        }
-        catch (MatchRejectedException exception)
-        {
-            if (exception.Reason != MatchRejection.MatchNotWaiting)
-            {
-                throw;
-            }
+            throw new InvalidOperationException("Failed to cancel prepared match: " + status);
         }
     }
 
@@ -569,22 +541,19 @@ public sealed class MatchApplicationService
         for (int index = 0; index < tracked.Length; index++)
         {
             KeyValuePair<long, long> match = tracked[index];
-            try
+            MatchRepositoryStatus status = _matches.Cancel(match.Value, match.Key);
+            if (status == MatchRepositoryStatus.Success)
             {
-                _matches.Cancel(match.Value, match.Key);
                 cancelled.Add(match.Key);
                 matches.Remove(match.Key);
             }
-            catch (MatchRejectedException exception)
+            else if (status == MatchRepositoryStatus.MatchNotWaiting || status == MatchRepositoryStatus.MatchNotFound)
             {
-                if (exception.Reason == MatchRejection.MatchNotWaiting)
-                {
-                    matches.Remove(match.Key);
-                }
-                else
-                {
-                    throw;
-                }
+                matches.Remove(match.Key);
+            }
+            else
+            {
+                throw new InvalidOperationException("Failed to cancel tracked match: " + status);
             }
         }
 
@@ -597,69 +566,50 @@ public sealed class MatchApplicationService
         return cancelled.ToArray();
     }
 
-    private static MatchOperationStatus GetStatus(MatchRejection reason)
+    private static MatchOperationStatus MapRepositoryStatus(MatchRepositoryStatus status)
     {
-        MatchOperationStatus status = MatchOperationStatus.Unauthorized;
-        if (reason == MatchRejection.InvalidMatchId)
+        MatchOperationStatus operationStatus = MatchOperationStatus.Unauthorized;
+        if (status == MatchRepositoryStatus.Success)
         {
-            status = MatchOperationStatus.InvalidMatchId;
+            operationStatus = MatchOperationStatus.Success;
         }
-        else if (reason == MatchRejection.InvalidConfiguration)
+        else if (status == MatchRepositoryStatus.InactiveAccount)
         {
-            status = MatchOperationStatus.InvalidConfiguration;
+            operationStatus = MatchOperationStatus.InactiveAccount;
         }
-        else if (reason == MatchRejection.InvalidTurnDuration)
+        else if (status == MatchRepositoryStatus.MatchNotFound)
         {
-            status = MatchOperationStatus.InvalidTurnDuration;
+            operationStatus = MatchOperationStatus.MatchNotFound;
         }
-        else if (reason == MatchRejection.MatchNotFound)
+        else if (status == MatchRepositoryStatus.MatchNotWaiting)
         {
-            status = MatchOperationStatus.MatchNotFound;
+            operationStatus = MatchOperationStatus.MatchNotWaiting;
         }
-        else if (reason == MatchRejection.CannotJoinOwnMatch)
+        else if (status == MatchRepositoryStatus.MatchNotInProgress)
         {
-            status = MatchOperationStatus.CannotJoinOwnMatch;
+            operationStatus = MatchOperationStatus.MatchNotInProgress;
         }
-        else if (reason == MatchRejection.InvalidMatchCode)
+        else if (status == MatchRepositoryStatus.CannotJoinOwnMatch)
         {
-            status = MatchOperationStatus.InvalidMatchCode;
+            operationStatus = MatchOperationStatus.CannotJoinOwnMatch;
         }
-        else if (reason == MatchRejection.MatchCodeUnavailable)
+        else if (status == MatchRepositoryStatus.MatchCodeUnavailable)
         {
-            status = MatchOperationStatus.MatchCodeUnavailable;
+            operationStatus = MatchOperationStatus.MatchCodeUnavailable;
         }
-        else if (reason == MatchRejection.MatchNotWaiting)
+        else if (status == MatchRepositoryStatus.Unauthorized)
         {
-            status = MatchOperationStatus.MatchNotWaiting;
+            operationStatus = MatchOperationStatus.Unauthorized;
         }
-        else if (reason == MatchRejection.InactiveAccount)
+        else if (status == MatchRepositoryStatus.FriendAccountUnavailable)
         {
-            status = MatchOperationStatus.InactiveAccount;
+            operationStatus = MatchOperationStatus.FriendAccountUnavailable;
         }
-        else if (reason == MatchRejection.MatchNotInProgress)
+        else if (status == MatchRepositoryStatus.FriendshipNotFound)
         {
-            status = MatchOperationStatus.MatchNotInProgress;
-        }
-
-        return status;
-    }
-
-    private static MatchOperationStatus GetStatus(FriendshipRejection reason)
-    {
-        MatchOperationStatus status = MatchOperationStatus.FriendshipNotFound;
-        if (reason == FriendshipRejection.InvalidAccountId)
-        {
-            status = MatchOperationStatus.InvalidFriendAccountId;
-        }
-        else if (reason == FriendshipRejection.AccountUnavailable)
-        {
-            status = MatchOperationStatus.FriendAccountUnavailable;
-        }
-        else if (reason == FriendshipRejection.InactiveAccount)
-        {
-            status = MatchOperationStatus.InactiveAccount;
+            operationStatus = MatchOperationStatus.FriendshipNotFound;
         }
 
-        return status;
+        return operationStatus;
     }
 }

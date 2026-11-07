@@ -117,29 +117,31 @@ internal sealed class LobbyAuthorizationTests
         internal int AuthorizationCalls { get; private set; }
         internal int AvailableCalls { get; private set; }
 
-        public void Authorize(long accountId)
+        public MatchRepositoryStatus Authorize(long accountId)
         {
             AuthorizationCalls++;
             AuthorizedAccountId = accountId;
             if (!Active)
             {
-                throw new MatchRejectedException(MatchRejection.InactiveAccount);
+                return MatchRepositoryStatus.InactiveAccount;
             }
+
+            return MatchRepositoryStatus.Success;
         }
 
-        public Match[] Available(long accountId)
+        public MatchRepositoryResult<Match[]> Available(long accountId)
         {
             AvailableCalls++;
             throw new InvalidOperationException("Authorization must not enumerate lobbies.");
         }
 
-        public Match Create(
+        public MatchRepositoryResult<Match> Create(
             AuthenticatedSession player, MatchSettings settings, DateTime now)
         {
             throw new NotSupportedException();
         }
 
-        public MatchInvitationPreparation PreparePrivateInvitation(
+        public MatchRepositoryResult<MatchInvitationPreparation> PreparePrivateInvitation(
             AuthenticatedSession player,
             long friendAccountId,
             MatchSettings settings,
@@ -148,32 +150,32 @@ internal sealed class LobbyAuthorizationTests
             throw new NotSupportedException();
         }
 
-        public Match MarkInvitationDelivered(long accountId, long matchId, DateTime now)
+        public MatchRepositoryResult<Match> MarkInvitationDelivered(long accountId, long matchId, DateTime now)
         {
             throw new NotSupportedException();
         }
 
-        public Match Join(AuthenticatedSession player, string code, DateTime now)
+        public MatchRepositoryResult<Match> Join(AuthenticatedSession player, string code, DateTime now)
         {
             throw new NotSupportedException();
         }
 
-        public void ValidateJoinForGuest(string code)
+        public MatchRepositoryStatus ValidateJoinForGuest(string code)
         {
             throw new NotSupportedException();
         }
 
-        public Match Get(long accountId, long matchId)
+        public MatchRepositoryResult<Match> Get(long accountId, long matchId)
         {
             throw new NotSupportedException();
         }
 
-        public Match ChangeTurnDuration(long accountId, long matchId, int seconds)
+        public MatchRepositoryResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
         {
             throw new NotSupportedException();
         }
 
-        public void Cancel(long accountId, long matchId)
+        public MatchRepositoryStatus Cancel(long accountId, long matchId)
         {
             throw new NotSupportedException();
         }
