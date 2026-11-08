@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.IO;
+using System.Text.RegularExpressions;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Verification;
 using ReversiGameSystem.Server.Persistence.Accounts;
@@ -14,6 +15,9 @@ internal sealed class ReviewAccountDatabaseTests : IVerificationEmailSender
     private const string DatabasePrefix = "ReversiReviewAccountTests_";
     private const string ConnectionVariable = "REVERSI_DB_CONNECTION_STRING";
     private const string Password = "Disposable1!";
+    private const int ReviewScriptRegexTimeoutSeconds = 1;
+    private static readonly TimeSpan ReviewScriptRegexTimeout =
+        TimeSpan.FromSeconds(ReviewScriptRegexTimeoutSeconds);
     private readonly Guid _identifier = Guid.NewGuid();
     private readonly Dictionary<string, VerificationEmail> _mail =
         new Dictionary<string, VerificationEmail>(StringComparer.Ordinal);
@@ -300,9 +304,17 @@ INSERT dbo.Friendship VALUES (1,3,3,'PENDING','2026-01-01',NULL,NULL);");
             && (script.Contains("DECLARE @Apply bit = 0;")
                 || script.Contains("DECLARE @Apply bit = 1;")),
             "The fixture parameter interface has changed.");
-        script = System.Text.RegularExpressions.Regex.Replace(script,
-            @"(?im)^[\t ]*USE[\t ]+(?:\[ReversiGameSystem\]|ReversiGameSystem);[\t ]*\r?$", "");
-        TestAssert.IsTrue(!System.Text.RegularExpressions.Regex.IsMatch(script, @"(?im)^\s*USE\s"),
+        script = Regex.Replace(
+            script,
+            @"^[\t ]*USE[\t ]+(?:\[ReversiGameSystem\]|ReversiGameSystem);[\t ]*\r?$",
+            string.Empty,
+            RegexOptions.IgnoreCase | RegexOptions.Multiline,
+            ReviewScriptRegexTimeout);
+        TestAssert.IsTrue(!Regex.IsMatch(
+            script,
+            @"^\s*USE\s",
+            RegexOptions.IgnoreCase | RegexOptions.Multiline,
+            ReviewScriptRegexTimeout),
             "Review fixtures must never change the disposable database connection context.");
         return script.Replace("N'p3p0'", "N'ReviewAlpha'")
             .Replace("N'cesardoc'", "N'ReviewBeta'")

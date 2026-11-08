@@ -40,13 +40,21 @@ jobs:
           dotnet tool install --global dotnet-sonarscanner
           --version 11.2.0
 
+      - name: Install .NET coverage tool
+        run: >-
+          dotnet tool install --global dotnet-coverage
+          --version 18.12.0
+
       - name: Begin SonarQube Cloud analysis
         shell: pwsh
         run: |
           dotnet sonarscanner begin `
             /k:"${{ vars.SONAR_PROJECT_KEY }}" `
             /o:"${{ vars.SONAR_ORGANIZATION }}" `
-            /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" `
+            /d:sonar.cs.vscoveragexml.reportsPaths="coverage.xml" `
+            /d:sonar.tsql.file.suffixes=".sql,.tsql" `
+            /d:sonar.plsql.file.suffixes=".plsql"
 
       - name: Build server
         run: >-
@@ -57,13 +65,14 @@ jobs:
           --no-incremental
           -p:TreatWarningsAsErrors=true
 
-      - name: Run isolated server tests
-        run: >-
-          dotnet run
-          --project
-          tests/ReversiGameSystem.Server.Tests/ReversiGameSystem.Server.Tests.csproj
-          --configuration Release
-          --no-build
+      - name: Run isolated server tests with coverage
+        shell: pwsh
+        run: |
+          $testProject = `
+            "tests/ReversiGameSystem.Server.Tests/ReversiGameSystem.Server.Tests.csproj"
+          $testCommand = `
+            "dotnet run --project $testProject --configuration Release --no-build"
+          dotnet-coverage collect $testCommand -f xml -o coverage.xml
 
       - name: End SonarQube Cloud analysis
         shell: pwsh

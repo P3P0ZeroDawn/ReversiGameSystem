@@ -398,20 +398,16 @@ public sealed class MatchApplicationService
                 throw new InvalidOperationException(
                     "No email sender is configured for match invitations.");
             }
-            string? matchCode = preparation.Match.Code;
+            string matchCode = preparation.Match.Code ?? string.Empty;
             if (string.IsNullOrWhiteSpace(matchCode))
             {
                 throw new InvalidOperationException(
                     "A prepared private match must contain a join code.");
             }
-            string acceptedMatchCode = matchCode
-                ?? throw new InvalidOperationException(
-                    "A prepared private match must contain a join code.");
-
             MatchInvitationEmail email = new MatchInvitationEmail(
                 preparation.FriendEmail,
                 player.Username,
-                acceptedMatchCode);
+                matchCode);
             _emailSender.Send(email);
         }
         catch (Exception deliveryException)
