@@ -52,7 +52,7 @@ internal static class MatchScreenTests
         App app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         app.InitializeComponent();
         SessionClient sessions = new SessionClient(NullLogger<SessionClient>.Instance,
-            () => new Proxy.SessionServiceClient(new NetTcpBinding(SecurityMode.Transport),
+            () => new Proxy.SessionServiceClient(new NetTcpBinding(SecurityMode.None),
                 new EndpointAddress("net.tcp://localhost:18091/ReversiReview/Session")));
         Proxy.AuthenticatedSession alpha = sessions.CompleteLoginAsync("ReviewAlpha", "000001")
             .GetAwaiter().GetResult();

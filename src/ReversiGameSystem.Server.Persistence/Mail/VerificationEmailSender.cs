@@ -81,7 +81,7 @@ public sealed class VerificationEmailSender : IVerificationEmailSender
         MimeMessage message = new MimeMessage();
         message.From.Add(new MailboxAddress(_settings.FromName, _settings.FromAddress));
         message.To.Add(MailboxAddress.Parse(email.RecipientAddress));
-        message.Subject = "Reversi — " + purpose;
+        message.Subject = "Reversi: " + purpose;
         string expires = email.ExpiresAtUtc.ToUniversalTime()
             .ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
         message.Body = new TextPart("plain")

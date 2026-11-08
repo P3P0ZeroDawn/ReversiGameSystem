@@ -25,7 +25,7 @@ must remain scoped to this project when created. No commit or upload is implied.
 
 ## Common working agreements
 
-1. **Read the relevant current files and inspect indices first.** Use the [source index](../README.md) to locate
+1. **Read the relevant current files and inspect indices first.** Use the [source index](../DocumentationIndex.md) to locate
    applicable materials. When consulting any document with a table of contents or an index
    (such as the coding standard or design deliverables), inspect the index first to pinpoint
    the exact section or line range needed. Never load entire multi-thousand-line documents
@@ -77,6 +77,18 @@ must remain scoped to this project when created. No commit or upload is implied.
     or verbatim documentation copies into inter-role communications. Handoffs must report only affected
     files, exact line ranges, observed test outcomes, and unresolved questions. Do not create logs, review documents,
     new architecture deliverables, or update these specifications unless requested.
+13. **Design collaboratively before implementation.** Explain observable behavior, state ownership,
+    execution flow, important alternatives, and verification before a material change. Obtain the
+    team's decision when an alternative changes the design; implementation authority alone does not
+    select that alternative.
+14. **Optimize for project ownership.** Help the human contributor locate, explain, and manually
+    reproduce important changes. Use small guided exercises to verify understanding instead of treating
+    an assistant-written explanation or passing test as sufficient evidence of comprehension.
+15. **Prefer readable, minimal designs.** Apply KISS and DRY, avoid pass-through abstractions and
+    duplicate models, and keep only documentation that has a current reader and purpose. Record newly adopted C#
+    or .NET constructs in the pending standard register before relying on them as team conventions.
+16. **Complete the server before the client.** Finish the agreed server migration and verification
+    service by service before applying the same review approach to client architecture.
 
 ## Task assignment and handoff
 
@@ -106,7 +118,7 @@ repository, not permanent architectural truth or unlimited write permissions.
 | --- | --- |
 | Purpose | Own the requested outcome, task decomposition, integration, and final response. |
 | Activate when | Receiving a task; scale coordination to its complexity. |
-| Sources | `docs/README.md` (source index), applicable entry in `docs/agent-team/Procedures.md` (invoked on-demand), current task request and affected file/symbol list. |
+| Sources | `docs/DocumentationIndex.md` (source index), applicable entry in `docs/agent-team/Procedures.md` (invoked on-demand), current task request and affected file/symbol list. |
 | Capabilities | Inspect files and results; assign work if supported; edit or verify only within authorized task scope. |
 | Ownership | Define file ownership, serialize shared interfaces, preserve user edits, and integrate handoffs. |
 | Procedure | Select context using source index; choose necessary roles; construct compact assignments (micro-context hand-offs with zero redundant context or surrounding code); invoke procedures on-demand; integrate deltas; verify complete outcome. |

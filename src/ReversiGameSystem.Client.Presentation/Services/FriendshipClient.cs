@@ -10,9 +10,12 @@ namespace ReversiGameSystem.Services;
 
 internal sealed class FriendshipClient : IDisposable
 {
+    private const int RequestConcurrencyLimit = 1;
     private readonly ILogger<FriendshipClient> _logger;
     private readonly Func<InstanceContext, Proxy.FriendshipServiceClient> _createClient;
-    private readonly SemaphoreSlim _requests = new(1, 1);
+    private readonly SemaphoreSlim _requests = new SemaphoreSlim(
+        RequestConcurrencyLimit,
+        RequestConcurrencyLimit);
     private readonly object _sync = new();
     private readonly FriendshipSnapshot _snapshot = new();
     private Proxy.FriendshipServiceClient? _client;

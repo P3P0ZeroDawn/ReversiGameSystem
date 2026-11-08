@@ -9,7 +9,7 @@ referencing it rather than maintaining a divergent copy. The
 
 **Use when:** starting a task or when a relevant source changes during work.
 
-1. Locate applicable documents using the [source index](../README.md). If a document contains a table of contents or index, inspect it first to target specific sections or line ranges rather than loading entire files.
+1. Locate applicable documents using the [source index](../DocumentationIndex.md). If a document contains a table of contents or index, inspect it first to target specific sections or line ranges rather than loading entire files.
 2. Read relevant current sections and inspect the actual affected execution path.
 3. Identify the use case, standard rules, academic observations, and design decisions
    that influence this task. Historical sources inform construction without proving
@@ -42,7 +42,7 @@ none is an automatic consequence of implementing a feature.
 **Use when:** authority, rules, state, dependencies, concurrency, or deployment changes.
 
 Consult the [historical SAD](../Design%20Project/Documento-Entrega.md), relevant
-[ADD history](../README.md), [observations](../Academic%20Observations/Observaciones.md),
+[ADD history](../DocumentationIndex.md), [observations](../Academic%20Observations/Observaciones.md),
 affected use cases, and actual dependencies. Trace who makes the authoritative decision,
 owns active state, persists results, and provides UI feedback. Assess compatibility with
 documented client/server separation and deliberate rule-validation duplication where

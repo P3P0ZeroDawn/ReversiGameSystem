@@ -14,7 +14,7 @@ internal static class MatchEndToEndTests
     internal static void TwoPlayers_RealServer_StartsConfirmedBoardAndExchangesChat()
     {
         SessionClient sessions = new(NullLogger<SessionClient>.Instance, () => new Proxy.SessionServiceClient(
-            new NetTcpBinding(SecurityMode.Transport), new EndpointAddress("net.tcp://localhost:18091/ReversiReview/Session")));
+            new NetTcpBinding(SecurityMode.None), new EndpointAddress("net.tcp://localhost:18091/ReversiReview/Session")));
         Proxy.AuthenticatedSession alpha = sessions.CompleteLoginAsync("ReviewAlpha", "000001").GetAwaiter().GetResult();
         Proxy.AuthenticatedSession? beta = null;
         Proxy.GuestSession? guest = null;

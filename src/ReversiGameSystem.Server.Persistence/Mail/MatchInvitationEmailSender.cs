@@ -74,7 +74,7 @@ public sealed class MatchInvitationEmailSender : IMatchInvitationEmailSender
         MimeMessage message = new MimeMessage();
         message.From.Add(new MailboxAddress(_settings.FromName, _settings.FromAddress));
         message.To.Add(MailboxAddress.Parse(email.RecipientEmail));
-        message.Subject = "Reversi — Invitación a partida / Match invitation";
+        message.Subject = "Reversi: Invitación a partida / Match invitation";
         message.Body = new TextPart("plain")
         {
             Text = "Hello / Hola,\n\n"

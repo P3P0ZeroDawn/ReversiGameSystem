@@ -15,9 +15,12 @@ namespace ReversiGameSystem.Services;
 internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceCallback,
     Proxy.IGameplayMatchServiceCallback, Proxy.IMatchChatServiceCallback
 {
+    private const int RequestConcurrencyLimit = 1;
     private readonly string _token;
     private readonly ILogger<RemoteMatchClient> _logger;
-    private readonly SemaphoreSlim _requests = new(1, 1);
+    private readonly SemaphoreSlim _requests = new SemaphoreSlim(
+        RequestConcurrencyLimit,
+        RequestConcurrencyLimit);
     private Proxy.MatchLobbyServiceClient _lobby;
     private Proxy.GameplayMatchServiceClient _gameplay;
     private Proxy.MatchChatServiceClient _chat;
@@ -116,15 +119,12 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
 
     private static NetTcpBinding CreateOverrideBinding()
     {
-        NetTcpBinding binding = new NetTcpBinding(SecurityMode.Transport)
+        NetTcpBinding binding = new NetTcpBinding(SecurityMode.None)
         {
             ReceiveTimeout = TimeSpan.FromHours(1),
             SendTimeout = TimeSpan.FromSeconds(5),
             MaxReceivedMessageSize = 6291456
         };
-        binding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Windows;
-        binding.Security.Transport.ProtectionLevel =
-            System.Net.Security.ProtectionLevel.EncryptAndSign;
         return binding;
     }
 

@@ -83,8 +83,7 @@ internal static class ServerConnectionFactory
             {
                 Host = host
             };
-            EndpointIdentity identity = EndpointIdentity.CreateDnsIdentity("ReversiGameServer");
-            return new EndpointAddress(builder.Uri, identity);
+            return new EndpointAddress(builder.Uri);
         }
 
         if (KnownEndpoints.TryGetValue(
@@ -92,8 +91,7 @@ internal static class ServerConnectionFactory
             out (int Port, string Path) details))
         {
             UriBuilder builder = new UriBuilder("net.tcp", host, details.Port, details.Path);
-            EndpointIdentity identity = EndpointIdentity.CreateDnsIdentity("ReversiGameServer");
-            return new EndpointAddress(builder.Uri, identity);
+            return new EndpointAddress(builder.Uri);
         }
 
         throw new ArgumentException(

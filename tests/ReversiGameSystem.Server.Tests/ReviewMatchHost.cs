@@ -1,7 +1,6 @@
 using System;
 using System.Data.SqlClient;
 using System.IO;
-using System.Net.Security;
 using System.ServiceModel;
 using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Server.Application.Accounts;
@@ -74,15 +73,13 @@ internal static class ReviewMatchHost
 
     private static ServiceHost CreateHost<T>(object service, string address)
     {
-        NetTcpBinding binding = new NetTcpBinding(SecurityMode.Transport)
+        NetTcpBinding binding = new NetTcpBinding(SecurityMode.None)
         {
             OpenTimeout = TimeSpan.FromSeconds(10),
             CloseTimeout = TimeSpan.FromSeconds(5),
             SendTimeout = TimeSpan.FromSeconds(5),
             ReceiveTimeout = TimeSpan.FromSeconds(45)
         };
-        binding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Windows;
-        binding.Security.Transport.ProtectionLevel = ProtectionLevel.EncryptAndSign;
         ServiceHost host = new ServiceHost(service);
         host.AddServiceEndpoint(typeof(T), binding, "net.tcp://localhost:" + address);
         return host;

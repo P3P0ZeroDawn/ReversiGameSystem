@@ -1,5 +1,4 @@
 using System;
-using System.Net.Security;
 using System.ServiceModel;
 using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Services;
@@ -56,9 +55,7 @@ internal static class SessionConnectionTests
 
     private static Proxy.SessionServiceClient CreateProxy()
     {
-        NetTcpBinding binding = new NetTcpBinding(SecurityMode.Transport);
-        binding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Windows;
-        binding.Security.Transport.ProtectionLevel = ProtectionLevel.EncryptAndSign;
+        NetTcpBinding binding = new NetTcpBinding(SecurityMode.None);
         return new Proxy.SessionServiceClient(binding, new EndpointAddress(
             "net.tcp://localhost:8091/ReversiGameSystem/Session"));
     }

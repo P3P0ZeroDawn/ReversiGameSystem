@@ -1,5 +1,4 @@
 using System;
-using System.Net.Security;
 using System.ServiceModel;
 using System.Threading;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -121,13 +120,11 @@ internal static class FriendshipEndToEndTests
 
     private static NetTcpBinding CreateBinding()
     {
-        NetTcpBinding binding = new NetTcpBinding(SecurityMode.Transport)
+        NetTcpBinding binding = new NetTcpBinding(SecurityMode.None)
         {
             OpenTimeout = TimeSpan.FromSeconds(10), CloseTimeout = TimeSpan.FromSeconds(5),
             SendTimeout = TimeSpan.FromSeconds(10), ReceiveTimeout = TimeSpan.FromSeconds(15)
         };
-        binding.Security.Transport.ClientCredentialType = TcpClientCredentialType.Windows;
-        binding.Security.Transport.ProtectionLevel = ProtectionLevel.EncryptAndSign;
         return binding;
     }
 }

@@ -134,3 +134,28 @@ considerar reconexión
 accountsummary en findplayers poco semántico
 joinmatch y joinmatchbycode son el mismo
 onmatchsettingschanged es innecesario (revisar por que esta)
+
+# Revisión del proyecto 5
+
+Return que impacta la legibilidad de código: Return con `{}`, con cuerpos de inicialización VS una simple asignación
+- Clase MatchLobbyService linea 257
+- Porque validar el nulo y no un valor para validación
+	- En que momento si era nulo
+	- En que momento me dice que algo sucedio
+	- Aplicar el razonamiento de los enums con el estado de resultado
+
+En los métodos `TryGetGuesto(Out TipoObjeto _objeto)` porque es necesario que sea un Try y no porque un retorno normal
+
+En las Excepciones propias, razonar porque la necesitamos y porque no el uso de Excepciones del sistema
+- Seguir lanzando excepciones y cachando en la capa de Aplicación? teniendo en cuenta el Manejador centralizado
+
+Definir un mecanismo que permita comprobar la estructura de archivos, flujos verificando que se sigue los patrones definidos (Service, ApplicationService, Repository)
+
+Revisar los nombres ambiguos `Get`
+Revisar números mágicos
+
+Definir:
+- Que patrón de DTO vamos a ocupar
+- Como se estructurara Models y si se separara o no
+- Las excepciones personalizadas, decidir si se van
+- Que patrón estamos ocupando en WPF (MVC, MVVM)

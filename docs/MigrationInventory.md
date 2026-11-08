@@ -1,464 +1,52 @@
-# Inventario de la migración a dos soluciones
+# Inventario actual de migración
 
-Registro de trabajo para reunir cambios de implementación, ajustes de base de datos,
-configuración, verificaciones y documentación que deben conciliarse al cerrar la migración.
-No sustituye el catálogo WCF ni actualiza automáticamente los entregables de diseño o el estándar.
+Este inventario muestra únicamente el estado vigente y el siguiente trabajo. El historial
+de cambios permanece en Git y no se repite aquí.
 
-## Estados
+## Criterio de finalización
 
-- **Implementado:** existe código; las comprobaciones realizadas se indican por separado.
-- **Pendiente:** falta ejecutar, implementar o documentar el cambio descrito.
-- **En curso:** trabajo iniciado, todavía sin aceptación final.
+Un servicio queda migrado cuando su flujo es legible, sigue la estructura descrita en
+`ServerStructure.md`, no contiene capas o modelos duplicados, comunica correctamente los
+fallos esperados y cuenta con verificación proporcional. Todo el servidor se completará
+antes de comenzar la revisión equivalente del cliente.
 
-## 0. Estructura definitiva de las soluciones
+## Estado del servidor
 
-La estructura queda en dos soluciones independientes y nueve proyectos:
-
-| Solución | Proyectos y responsabilidad |
-| --- | --- |
-| `ReversiGameSystem.Client.slnx` | `Client.Presentation`: WPF, validación preventiva y consumo del proxy generado. `Client.Tests`: pruebas del ensamblado cliente real. |
-| `ReversiGameSystem.Server.slnx` | `Domain`: reglas autorizadas; `Server.Application`: casos de uso y puertos; `Server.Contracts`: frontera WCF; `Server.Persistence`: datos, archivos y correo; `Server.ServiceApi`: adaptadores WCF; `Server.Host`: composición y publicación; `Server.Tests`: pruebas del servidor. |
-
-Se retiraron la solución agregada, los proyectos `Contracts` y `LocalRuntime`, y el proyecto
-mixto `ReversiGameSystem.Tests`. Su cobertura vigente se trasladó a las dos suites finales.
-El cliente no referencia proyectos del servidor, Domain ni EF, y las pruebas no compilan
-copias enlazadas de fuentes de producción. Las políticas preventivas del cliente son
-independientes de las validaciones autorizadas del servidor.
-
-La referencia de servicio queda en `Connected Services/Server/Reference.cs`. El script
-`tools/UpdateServiceReference.ps1` compila los contratos, exporta un conjunto de metadatos
-y regenera el proxy con svcutil, sin necesitar un servidor en ejecución. Evita los esquemas
-duplicados de combinar varios MEX; el código generado conserva el formato de la herramienta.
-
-EF se restaura mediante `PackageReference`, sin depender de una carpeta raíz `packages`.
-Se excluyen sus targets heredados de compilación: la extracción portable del EDMX del proyecto
-mantiene explícitos los recursos CSDL/SSDL/MSL.
-
-El cierre de estructura no acredita la implementación de todos los servicios del catálogo.
-Las funciones pendientes se conservan identificadas más abajo; el estándar todavía no se modifica.
-
-## 1. Contratos WCF
-
-| Elemento | Estado | Seguimiento |
+| Funcionalidad | Estado | Siguiente trabajo |
 | --- | --- | --- |
-| Nueve servicios, 44 operaciones y cuatro callbacks con nueve métodos | Implementado | Firmas, datos y faults del catálogo trasladados a C#. |
-| Tipos antiguos de perfil y clasificación sin consumidores | Implementado | Nueve tipos retirados. |
-| Pruebas de contratos | Implementado | Paso anterior: 29 pruebas del servidor y dos del cliente aprobadas; ambas soluciones compilaron. |
-| Acceso heredado y `ServiceFault.IsTransient` | Pendiente | Retirar al migrar sus consumidores y regenerar referencias; evitar romper registro durante el cambio de login. |
-| Invitación privada: `IMatchLobbyService.InviteToMatch` | Pendiente | Diseño documentado en la sección 13.8 del catálogo interno; no se ha agregado a C#, proxy, host ni interfaz. |
+| Manejo global de errores | Implementado | Confirmar su uso uniforme al migrar cada ServiceApi. |
+| Perfil de jugador | Migrado | Añadir o completar pruebas directas de repositorio y revisar reglas transversales finales. |
+| Clasificación | Migrado | Añadir o completar pruebas directas de repositorio y revisar reglas transversales finales. |
+| Sesiones | Parcial | Eliminar APIs propias con `out`, excepciones de rechazo y ceremonia restante. |
+| Verificación y correo | Parcial | Revisar el bloqueo por identidad, nombres, modelos y pruebas de concurrencia. |
+| Partidas y lobby | Parcial | Unificar `MatchResult<T>` y `MatchStatus`, retirar resultados duplicados y excepciones esperadas, y reducir el alcance de los bloqueos. |
+| Chat de partida | Parcial | Alinear resultados, repositorio, callbacks y manejo de errores con la migración de partidas. |
+| Amistades y presencia | Pendiente | Introducir el ApplicationService necesario, separar estado de transporte y simplificar concurrencia y publicación. |
+| Registro de cuenta | Pendiente | Sustituir `UseCase`, `Handler` y Store heredados por el flujo acordado y un repositorio agnóstico a tecnología. |
+| Juego después del lobby | Incompleto | Implementar y migrar las operaciones que actualmente permanecen sin soporte. |
+| Composición del host | Parcial | Uniformar la construcción después de estabilizar todos los servicios. |
 
-## 2. Códigos de verificación y correo
+## Orden acordado
 
-### Decisiones aceptadas
+1. Partidas, lobby y chat.
+2. Amistades y presencia.
+3. Sesiones, verificación y correo.
+4. Registro de cuenta.
+5. Juego y operaciones todavía no soportadas.
+6. Revisión transversal de perfil, clasificación, repositorios y host.
+7. Verificación completa del servidor.
+8. Revisión del cliente con el mismo enfoque.
 
-- Nombres propios del propósito, independientes de SMTP, MailKit o EF; esas tecnologías son
-  detalles de los adaptadores del servidor.
-- Casos de uso separados para inicio de sesión y creación de cuenta; compartir generación,
-  protección, persistencia y envío de códigos.
-- Seis dígitos ASCII generados criptográficamente; preservar ceros iniciales.
-- Vigencia inicial de cinco minutos y máximo de cinco intentos por código.
-- Representación HMAC vinculada al propósito y a los datos autorizados; no guardar el código
-  en claro ni registrarlo junto con contraseñas, secretos o tokens.
-- Uso único; un código nuevo confirmado sustituye al pendiente del mismo proceso.
-- Login: validar contraseña antes de enviar, volver a comprobar cuenta activa al confirmar,
-  y crear sesión únicamente después de verificar el código.
-- Registro: vincular código con nombre y correo; completar registro no abre sesión.
-- Envío mediante MailKit con TLS obligatorio y límite total de cinco segundos para conexión,
-  autenticación y envío. Cancelar la operación real; no limitar solamente la espera del llamador.
-- Confirmar únicamente aceptación del mensaje por el proveedor; no prometer entrega al buzón.
-- Sin colas ni reintentos automáticos en esta primera implementación; SMTP queda fuera de
-  las transacciones SQL y de los bloqueos del estado de partidas.
-- Las firmas WCF permanecen sin `Task` ni `Async`; la E/S interna puede usar asincronía.
+## Evidencia disponible
 
-### Inventario de implementación
+En la revisión del 7 de noviembre de 2026, la solución del servidor compiló, las 198
+pruebas aisladas pasaron y las comprobaciones reales de base de datos de partidas pasaron.
+Esta evidencia corresponde al código revisado en ese momento; cada migración posterior
+debe volver a ejecutar las comprobaciones afectadas.
 
-| ID | Área | Estado | Trabajo y criterio de cierre |
-| --- | --- | --- | --- |
-| COR-01 | Aplicación | Implementado | Generación, vencimiento, asociación y protección compartidos; consumo durable antes de crear sesión. El repositorio acepta una sola de 16 confirmaciones concurrentes en la prueba SQL. |
-| COR-02 | Correo | Implementado | `IVerificationEmailSender` y `VerificationEmailSender`, mensaje de texto bilingüe con propósito y vencimiento, configuración inyectada. Entrega externa todavía pendiente de COR-07. |
-| COR-03 | Configuración | Implementado | `MailSettings` y lector común `EnvironmentSettings`; variables del proceso con prioridad y `.env` local. `.env.example` contiene únicamente ejemplos. |
-| COR-04 | Persistencia | Implementado | `VerificationCodeRepository` reutiliza `VerificationCode` con comandos parametrizados mediante EF y transacciones serializables; SMTP queda fuera de la transacción. |
-| COR-05 | Base de datos | Implementado | Script `database/migrations/20261022_VerificationCodeAttempts.sql`: agrega `identityKey` nullable, `failedAttempts` con default y CHECK de 0 a 5, e índice único filtrado. Aplicado dos veces en BD desechable; conserva filas históricas. Su aplicación en la BD del proyecto sigue pendiente de COR-12. |
-| COR-06 | Modelo EF | Pendiente | Conciliar cambios de esquema con EDMX y regeneración; no modificar a mano las entidades generadas. Registrar si el repositorio usa SQL parametrizado mediante EF. |
-| COR-07 | Proveedor | Pendiente | Configurar host, puerto, seguridad, remitente y credenciales reales mediante entorno. Verificar autenticación y aceptación de un correo de prueba autorizado. |
-| COR-08 | Seguridad | En curso | Ocho escenarios SQL reales verifican uso único, cinco fallos, quinto intento correcto, caducidad exacta, sustitución, propósito/identidad, concurrencia y conservación histórica. Falta definir límite de reenvíos y su comunicación sin inventar reasons ajenos al catálogo. |
-| COR-09 | Fallos | En curso | Prueba real de conexión local detenida verifica cancelación SMTP a los cinco segundos, con tolerancia de planificación de dos segundos. El fallo de envío no sustituye el código anterior. Si el proceso cae después de consumir y antes de crear sesión, el usuario solicita otro código: no se restaura un código consumido ni se crean dos sesiones. Faltan pruebas de caída del proceso y fallo real del proveedor/BD del entorno final. |
-| COR-10 | Diseño | Pendiente | Actualizar posteriormente C-11, dependencias, flujo de ejecución, configuración, política de códigos y tratamiento de fallos en los documentos que el equipo indique. |
-| COR-11 | Operación | Pendiente | Documentar instalación del proveedor, rotación del secreto HMAC, efecto sobre códigos pendientes, despliegue y limpieza de códigos históricos. |
-| COR-12 | Despliegue BD | Pendiente | Revisar restricciones y respaldo del esquema real, aplicar el script en la BD del proyecto y conciliar EDMX. Ninguna prueba de este paso modifica la BD real. |
-| COR-13 | Localización | Pendiente | El mensaje inicial contiene español e inglés. Valorar selección de idioma del correo según la cuenta; el puerto actual no recibe idioma. |
-| COR-14 | Compilación | Implementado | La prueba SQL detectó que los targets heredados podían omitir los metadatos del modelo al compilar con el SDK. El proyecto ahora extrae CSDL/SSDL/MSL del EDMX mediante tareas estándar de MSBuild y los incrusta con nombres explícitos. La prueba de recursos del ensamblado evita una compilación aparentemente correcta sin modelo utilizable. |
+## Límites documentales
 
-### Variables previstas
-
-`REVERSI_MAIL_HOST`, `REVERSI_MAIL_PORT`, `REVERSI_MAIL_SECURITY`,
-`REVERSI_MAIL_USERNAME`, `REVERSI_MAIL_PASSWORD`, `REVERSI_MAIL_FROM_ADDRESS`,
-`REVERSI_MAIL_FROM_NAME` y `REVERSI_VERIFICATION_SECRET`.
-
-El secreto de verificación es independiente de la contraseña del correo y contiene al menos
-32 bytes aleatorios codificados en Base64. Los valores reales permanecen fuera del repositorio
-y del cliente. `REVERSI_MAIL_SECURITY` admite `StartTls` (upgrade obligatorio) o `Tls`
-(cifrado desde la conexión), nunca texto plano. La contraseña es la credencial que autorice
-el proveedor seleccionado. Cambiar el secreto invalida los códigos pendientes.
-
-El despachador admite dos envíos simultáneos y rechaza saturación como falla técnica;
-no crea una cola de trabajo ni comparte bloqueos con partidas. La emisión y sustitución
-se serializan por identidad dentro del proceso servidor, mediante 32 bloqueos acotados.
-La persistencia protege el consumo concurrente también en SQL. Un despliegue con varios
-procesos emisores requeriría coordinar además el orden de emisión entre procesos.
-
-## 3. Migración del inicio y cierre de sesión
-
-| Elemento | Estado | Trabajo y criterio de cierre |
-| --- | --- | --- |
-| Servidor y endpoint de `ISessionService` | Implementado | Solicitud, confirmación, invitado y revocación; `net.tcp` en puerto 8091 con transporte Windows cifrado. Registro heredado conserva puerto 8090. |
-| Consumo desde WPF | Implementado | `SessionClient`, proxy regenerado desde el ensamblado de contratos y diálogos de código. Cerrar sesión conserva estado local si el servidor no confirma revocación. |
-| Login anterior | Implementado | `LoginAsync` retirado del contrato publicado y del adaptador; eliminado `RemoteAccountAccessService`. Se retiraron también `AuthenticationCredentials`, `AuthenticationOutcome`, `AuthenticationStatus` de Server.Contracts y sus mapeos sin consumidores. El contrato heredado conserva únicamente registro. |
-| Dependencia de `LocalRuntime` | Implementado | Proyecto retirado. Registro, perfil propio, imagen, nombre, estadísticas y clasificación pasan por WCF. La cobertura vigente se trasladó; se retiraron `LoginHandler` y `LoginUseCase`, cuyo acceso directo había quedado sin consumidores de producción. |
-| Comprobación completa | En curso | Ambas soluciones compilaron y se verificaron SQL temporal, WCF y proxy real de invitado. Para aceptación de entorno final faltan BD real y proveedor de correo configurados, con login completo desde WPF. |
-
-### Limpieza y diagnóstico por conciliar
-
-- `GuestSessionService` del prototipo y su política local permanecen referenciados por las
-  pruebas cliente ya trasladadas; revisar su retiro junto con el prototipo. No son el mecanismo usado
-  ahora por la pantalla de acceso.
-- Los handlers de autenticación locales y los modelos internos del cliente permanecen donde
-  aún tienen consumidores. `ServiceFault.IsTransient` se conserva por compatibilidad con el
-  registro heredado; no extender ese patrón a servicios nuevos.
-- El proxy se genera con svcutil desde un único conjunto de metadatos, sin avisos de esquemas
-  repetidos. No se editan manualmente sus operaciones o tipos.
-- Los fallos técnicos registran CorrelationId y una cadena acotada de tipos, HResult y
-  ubicaciones de pila; se excluyen Message y Data del proveedor para evitar secretos.
-- Las observaciones independientes sobre diagnóstico, documentación XML y tolerancia del
-  timeout dieron lugar a correcciones. Las verificaciones y correcciones finales del
-  coordinador son autoinspección; no equivalen a otra revisión independiente completa.
-
-## 4. Perfil, clasificación y pendientes funcionales
-
-`PlayerProfileService` publica las cuatro operaciones del catálogo y `LeaderboardService`
-publica la consulta de clasificación. Comparten con sesiones el almacén autenticado del host.
-Los endpoints usan transporte Windows cifrado: registro 8090, sesiones 8091, perfil 8092 y
-clasificación 8093. Los repositorios, imágenes y credenciales permanecen en el servidor.
-
-La imagen viaja como contenido, sin rutas físicas. La escritura valida formato y tamaño,
-genera un nombre interno y compensa el archivo nuevo si falla su asociación en BD. Los
-archivos anteriores se conservan tras reemplazos exitosos; falta definir su recolección
-para evitar acumulación sin interrumpir lecturas concurrentes.
-
-- Registro todavía consume `IAccountAccessService.RegisterAccountAsync`, el contrato
-  temporal preexistente. Falta completar el flujo por código de `IAccountService` y retirar
-  ese endpoint y `ServiceFault.IsTransient`; los contratos nuevos mantienen firmas síncronas.
-- Falta conectar navegación y consulta de perfiles ajenos mediante identificador de cuenta.
-  La lista de amigos ahora utiliza identificadores reales y oculta acciones todavía pendientes.
-  El perfil propio ya usa el servicio real.
-- Las jugadas, la gestión de amistades y las preferencias que siguen como prototipos
-  requieren sus implementaciones remotas. La consulta de amigos, su presencia, el inicio
-  de partida humana y el chat ya están publicados; disponer de los demás contratos en el
-  proxy no los implementa.
-- Las pruebas WCF de perfil y clasificación usan sustitutos de persistencia. Falta validar
-  esos repositorios contra el esquema y datos del entorno final.
-
-## 5. Conciliación pendiente
-
-- Conciliar documentación de diseño, contratos y operación con el inventario realmente entregado.
-  Los diagramas y documentos históricos conservan su carácter de guía de construcción;
-  su actualización requiere el alcance que indique el equipo.
-- Revisar y estabilizar el estándar al terminar todos los pasos, por instrucción del equipo;
-  no modificarlo durante este paso.
-- La corrección del 30 de octubre sustituyó la firma de cuatro parámetros de
-  `IAuthenticatedSessionStore.Create` por `Create(LoginAccount)`, reutilizando la cuenta
-  verificada. Las búsquedas de sesiones autenticadas y de invitados usan `TryGet` y
-  `TryGetGuest`, con consumidores y pruebas adaptados.
-- El diagnóstico del login utiliza el overload `Exception` del logger con una copia segura
-  de la descripción. Conserva tipos originales, HRESULT, ubicaciones y cadena de causas
-  como texto; no conserva el objeto original, sus mensajes ni su `Data`. El objeto de log
-  tiene tipo `Exception` y no representa una nueva excepción lanzada por la aplicación.
-- Se separaron la confirmación del código en WPF y las tareas de invocación y cierre del
-  canal para reducir el tamaño de los métodos. Compilaron ambas soluciones y pasaron
-  122 pruebas del servidor y 133 del cliente; revisión independiente sin hallazgos
-  bloqueantes en ese alcance. No se modificaron contratos WCF ni el estándar.
-
-## Fuentes de referencia
-
-- [Catálogo interno WCF](WcfIntegrationContracts.md), secciones 7, 8, 17, 21 y 23.
-- [Catálogo de entrega](WcfContractsCatalog.md).
-- [Diseño](Design%20Project/Documento-Entrega.md), componente C-11 y separación de responsabilidades.
-- [Reglas de validación](../ValidationRules.md), códigos de verificación.
-- Código actual de composición del servidor, configuración y persistencia.
-
-## Preparación de cuentas para la revisión
-
-El primer paso de la revisión de presencia y lobby conserva el registro remoto temporal
-y el login por código existentes. No incorpora invitaciones ni migra todavía el registro
-al contrato definitivo de cuenta.
-
-- `database/test-data/PrepareReviewFriendship.sql` prepara exclusivamente la amistad de
-  `p3p0` y `cesardoc`. Las cuentas deben existir, estar activas y ser distintas.
-  Con `@Apply = 0` solo muestra la pareja; con `@Apply = 1` inserta o acepta esa amistad,
-  sin modificar otras relaciones. No es una migración del esquema ni un flujo del producto.
-- La pareja de prueba se ajustó por indicación del equipo a `p3p0` y `cesardoc`.
-  Su existencia y estado deben comprobarse con la consulta del script antes de aplicar
-  la amistad. No se generaron contraseñas ni cuentas automáticamente y no se modificó
-  la BD del proyecto.
-- El modo explícito `ReversiGameSystem.Server.Tests.exe --review-accounts` comprobó diez
-  escenarios en una BD LocalDB desechable: registro y persistencia de dos cuentas y sus
-  preferencias, hash con sal, rechazo de contraseña/código incorrectos, dos sesiones
-  distintas, consulta sin escritura, preparación acotada, repetición y rechazo de pareja
-  ausente o idéntica. La variable de conexión se restaura y la BD temporal se elimina.
-- Las pruebas usan los repositorios EF reales y el flujo de sesión real. El envío de correo
-  se sustituye por una captura en memoria y no se prueba la interfaz WPF. El esquema de
-  prueba reproduce el modelo y las restricciones relevantes; no certifica todas las
-  restricciones, triggers o permisos del entorno final.
-
-## Presencia de amigos para la revisión
-
-- `IFriendshipService` publica `OpenFriendshipChannel` y `GetFriends` en
-  `net.tcp://localhost:8094/ReversiGameSystem/Friendship`. Conserva las firmas síncronas
-  del catálogo y los callbacks existentes; el consumidor WPF utiliza el proxy asíncrono.
-- El repositorio EF consulta únicamente amistades aceptadas, vigentes y entre cuentas
-  activas. No publica una lista general de usuarios conectados ni datos privados de cuenta.
-- Una cuenta aparece conectada mientras conserve al menos un canal válido. Cerrar una
-  instancia no desconecta las demás sesiones de esa cuenta. El cierre de sesión revoca su
-  canal; también se comprueban vencimiento, cierre y fallo de comunicación.
-- El cliente conserva el canal al navegar, integra callbacks con la consulta inicial y
-  presenta disponibilidad, error y reintento en la lista de amigos. Oculta las acciones de
-  amistad, perfil ajeno, invitación y chat que este paso no implementa.
-- La consulta de mantenimiento se ejecuta cada diez segundos sin solaparse. El binding de
-  amistad utiliza recepción de 45 segundos y envío de cinco segundos, con transporte
-  Windows cifrado. La detección de una pérdida de red depende de los tiempos de comunicación;
-  no es instantánea. La recuperación después de un fallo se solicita desde la interfaz.
-- Las demás operaciones de amistad devuelven el `ServiceFault` declarado; no simulan éxito.
-  No se necesitan cambios nuevos de esquema para esta consulta y presencia.
-- Verificación: **131 pruebas del servidor y 139 del cliente aprobadas**, además de las
-  diez comprobaciones de cuentas en LocalDB. La regresión cubre el cierre del canal tras
-  un fallo al consultar la relación y su recuperación, así como el cierre durante una
-  consulta de mantenimiento pendiente. Compilaron los proyectos de pruebas y el host;
-  este último usó una salida separada para respetar los archivos del servidor en ejecución.
-- `Server.Tests.exe --friendship-host` y `Client.Tests.exe --friendship-end-to-end`
-  comprobaron dos consumidores reales con el proxy generado, EF y una BD desechable,
-  mediante `net.tcp` protegido en 18091/18094: login de ambas cuentas sintéticas,
-  presencia mutua, callback de desconexión y rechazo de sesión inválida. No se envió correo
-  externo. El host temporal se detuvo y su base se eliminó al terminar.
-- Hubo revisión independiente de producción y corrección del coordinador; las pruebas
-  añadidas y los cambios finales tuvieron autoinspección. No se acredita inspección visual
-  de WPF ni comunicación entre dos computadoras. Para la prueba manual hay que cerrar los
-  procesos anteriores, recompilar y reiniciar. La configuración actual utiliza `localhost`;
-  queda preparar dirección, seguridad y acceso de red para el escenario entre equipos.
-- El alcance siguiente se ajustó posteriormente por decisión del equipo: la unión del
-  segundo jugador inicia la partida y habilita el chat, como se detalla al final del inventario.
-
-## Compatibilidad de propósitos de verificación
-
-La prueba manual del 23 de octubre de 2026 identificó un rechazo al guardar el código de
-login. La restricción real `CK_VerificationCode_Purpose` solo admitía `ACCOUNT_CREATION`
-y `PASSWORD_RESET`; convertir el nombre del enum directamente producía `LOGIN` o
-`REGISTRATION`, que no pertenecían a ese vocabulario.
-
-- El repositorio mapea explícitamente registro a `ACCOUNT_CREATION` y login a `LOGIN`.
-- `database/migrations/20261023_VerificationCodeLoginPurpose.sql` amplía la restricción
-  con `LOGIN` y conserva los dos valores anteriores. Se aplica después del script de
-  intentos, con una cuenta autorizada para modificar el esquema. No elimina registros
-  ni cambia el modelo generado; si existen datos incompatibles, la transacción falla.
-- Las pruebas SQL ahora reproducen también las restricciones reales de propósito y
-  vencimiento. El esquema anterior de las pruebas no incluía esas restricciones, por
-  lo que sus resultados previos no acreditaban esa compatibilidad.
-- La aplicación del script del 22 de octubre fue informada por el equipo y sus columnas
-  se observaron en la consulta de diagnóstico. La nueva migración del 23 de octubre queda
-  preparada para aplicación manual; no se ha ejecutado sobre la BD del proyecto.
-- Verificación de la corrección: compilación sin errores ni advertencias, 121 pruebas del
-  servidor y 11 comprobaciones SQL aprobadas en una BD LocalDB desechable. Estas últimas
-  incluyen el rechazo SQL 547 antes de ampliar la restricción, ambas migraciones aplicadas
-  dos veces, conservación histórica y rechazo de propósitos desconocidos. Revisión
-  independiente de solo lectura sin hallazgos materiales; no acredita el entorno final.
-
-## Evidencia del paso de sesión y correo
-
-- Compilación del servidor con el SDK y del cliente con MSBuild de Visual Studio.
-- Resultado final: **44 pruebas del servidor, ocho escenarios SQL, cuatro pruebas del
-  cliente y una prueba del proxy contra el host real aprobados**. Las compilaciones finales
-  terminaron sin errores ni advertencias del compilador.
-- Pruebas del servidor: contratos, serialización, casos de sesión, WCF real `net.pipe`,
-  protección del código, fallo de envío, configuración y cancelación SMTP contra un socket
-  local detenido. Los casos de sesión usan sustitutos del repositorio y del envío donde
-  no se pretende acreditar una integración real.
-- Modo explícito `ReversiGameSystem.Server.Tests.exe --database`: ocho escenarios contra
-  `VerificationCodeRepository` real. Crea una BD LocalDB con nombre aleatorio validado,
-  prepara el esquema original, aplica dos veces el script, verifica las operaciones y
-  elimina exclusivamente esa BD en `finally`; restaura la variable de conexión del proceso.
-- Cuatro pruebas del cliente: mapeo de sesión, rechazo de token ausente, vencimiento y
-  recursos de los dos idiomas.
-- Modo explícito `ReversiGameSystem.Client.Tests.exe --session-integration`: adaptador y
-  proxy generados reales contra el host temporal, con `net.tcp` y seguridad Windows.
-  Verifica apertura de invitado, fault por nombre duplicado, cierre idempotente y reutilización
-  del nombre con otro token. El host usa configuración ficticia y se detiene al terminar.
-- El proyecto de pruebas cliente referencia su ensamblado cliente real; no agrega referencias
-  al servidor ni compila copias enlazadas del proxy.
-
-El script no está aplicado en la BD del proyecto. No se han usado credenciales reales de
-correo ni se ha acreditado entrega externa o login completo contra BD/proveedor reales.
-La prueba SMTP cubre espera del saludo; faltan escenarios específicos de DNS, TLS y
-autenticación que agoten el presupuesto de entrega. El estándar queda sin modificar.
-
-## Evidencia del cierre de estructura
-
-- Ambas soluciones finales compilaron con MSBuild de Visual Studio, sin errores ni
-  advertencias del compilador. Se verificaron dos soluciones y nueve proyectos.
-- **121 pruebas del servidor y 132 del cliente aprobadas**. La cobertura trasladada usa
-  los ensamblados reales; se sustituyeron pruebas de DTO y runtime retirados por las del
-  catálogo vigente y doce escenarios WCF de registro, perfil y clasificación.
-- Ocho comprobaciones SQL aprobadas en una base LocalDB desechable tras pasar EF a
-  `PackageReference`; no se modificó la BD del proyecto.
-- Ciclo de invitado aprobado mediante el proxy generado contra el host real temporal,
-  con transporte Windows cifrado. El host se detuvo al terminar.
-- La prueba de dependencias y la inspección de la salida del cliente no encontraron
-  ensamblados Server, Domain, LocalRuntime, EF ni MailKit.
-- La regeneración offline del proxy terminó sin errores ni avisos de esquemas duplicados.
-- Se eliminaron fuentes y proyectos retirados, además de sus residuos de compilación.
-  Se preservaron preferencias locales del IDE y respaldos locales fuera de la entrega.
-- Hubo revisión independiente de las fronteras y correcciones posteriores; la integración
-  y comprobación finales del coordinador son autoinspección.
-
-Este cierre habilita trabajar sobre el estándar con la estructura definida. No acredita
-correo externo, login completo con proveedores reales ni la terminación funcional de los
-servicios pendientes indicados en este inventario.
-
-## Inicio remoto de partida humana y chat
-
-- Se conectaron creación, listado y unión a `IMatchLobbyService`. El segundo jugador
-  ocupa el asiento blanco e inicia la partida en la misma transacción; el código deja
-  de admitir uniones. No se agrega otra fase de espera para ambos jugadores.
-- Los endpoints nuevos son `MatchLobby` en 8095, `GameplayMatch` en 8096 y `MatchChat`
-  en 8097, bajo `/ReversiGameSystem`, con transporte Windows cifrado. Se conservan los
-  contratos y el proxy existentes. Las credenciales y entidades EF permanecen en el servidor.
-- Se utilizan las tablas existentes `GameMatch`, `MatchParticipant`, `GameMove`,
-  `ChatMessage`, `ModerationRule`, `ModerationPattern`, `ChatViolation` y `ChatMute`.
-  No se modificaron entidades generadas ni se necesita una migración nueva para este paso.
-  Falta comprobar las restricciones y permisos de estas tablas en el entorno del equipo;
-  el EDMX no contiene las restricciones CHECK del servidor SQL real.
-- La unión y la creación usan transacciones serializables con coordinación SQL. Los
-  mensajes tienen numeración única por partida y se publican después de confirmar su
-  almacenamiento. La moderación reconoce palabras y expresiones completas sin distinguir
-  mayúsculas ni acentos, conserva infracciones por cuenta y aplica diez minutos de silencio
-  tras tres infracciones en 24 horas. Requiere reglas y patrones habilitados en la BD;
-  no se cargó automáticamente una lista de expresiones en la BD del proyecto.
-- El creador puede cancelar durante la espera. Los canales cerrados y sesiones vencidas
-  provocan limpieza; los fallos transitorios de cancelación conservan el seguimiento para
-  reintentar. Como las sesiones son de proceso, el host cancela las partidas `WAITING`
-  anteriores antes de escuchar al reiniciar. Este comportamiento presupone un único host
-  autoritativo sobre la BD; no implementa varios servidores activos simultáneamente.
-- La interfaz carga participantes, asiento, configuración y tablero inicial confirmados.
-  La integración reutiliza `GamePage.xaml`, sus tarjetas, el control de tablero y el
-  panel de chat originales; se retiró la pantalla alternativa creada durante el paso.
-  Concilia callbacks con consultas, conserva la versión más reciente del estado y evita
-  duplicar mensajes recibidos como retorno, callback e historial. Consulta el inicio para
-  recuperarse si se pierde su callback. No reenvía escrituras automáticamente tras un timeout.
-- Alcance actual: cuentas registradas, oponente humano y estadísticas deshabilitadas.
-  Se muestran ambos participantes y el chat. Las jugadas, reloj operativo, abandono remoto,
-  observación e historial de partida quedan pendientes. La vista informa que las jugadas
-  todavía no están disponibles y que volver al menú no abandona la partida. Las operaciones
-  pendientes devuelven el fault técnico declarado; no simulan movimientos locales exitosos.
-- Las pruebas SQL y el host `--match-host` utilizan exclusivamente bases LocalDB
-  desechables y cuentas sintéticas. `--match-database` comprueba unión concurrente,
-  autorización, orden del chat, moderación, cancelación, revocación y limpieza al reiniciar.
-  No se usó correo externo ni se modificó la BD del proyecto. La comunicación entre
-  computadoras requiere todavía comprobación manual.
-- Verificación final de este paso: **142 pruebas del servidor y 141 del cliente
-  aprobadas**, compilación correcta del host y los proyectos de pruebas. El modo
-  `Client.Tests.exe --match-end-to-end` comprobó con el proxy real y transporte Windows
-  dos participantes, inicio por unión, información/asientos/tablero, mensajes en ambos
-  sentidos, historial sin duplicados, moderación, código cancelado y rechazo de terceros
-  registrados e invitados. El host temporal se detuvo y la base desechable se eliminó.
-  Hubo revisión independiente de producción; las correcciones finales del coordinador
-  y sus regresiones tuvieron autoinspección.
-- Corrección de interfaz: se retiró la pantalla alternativa y la ejecución local de
-  jugadas, reloj y abandono de `GamePage`; el flujo remoto utiliza su XAML y control de
-  tablero originales. `Client.Tests.exe --match-screen` comprobó nombres, fichas,
-  tablero sin interacción local, envío desde el compositor y recepción por callback,
-  con el servidor y EF reales en una base desechable. Se renderizó e inspeccionó la
-  pantalla a 1280 × 850 en `en-US` y `es-MX`, incluida la actualización de sus textos
-  dinámicos al cambiar idioma. No acredita todas las resoluciones ni una revisión
-  completa de interacción manual. La prueba y las correcciones finales de recursos
-  y localización fueron autoinspeccionadas por el coordinador.
-- La invitación privada por correo constituye el siguiente paso autorizado. Su diseño se
-  documenta en el apartado siguiente; agregar `InviteToMatch`, la reserva del destinatario,
-  la exclusión del listado y la vigencia ligada a la espera sigue pendiente de implementación.
-
-## Paso 2 pendiente: invitación privada por correo
-
-**Estado: documentado, sin implementar.** La documentación de este paso no modifica código,
-BD, contratos C#, proxy, endpoints, credenciales ni comportamiento de la aplicación.
-
-Especificación de referencia:
-[WcfIntegrationContracts.md, sección 13.8](WcfIntegrationContracts.md#138-ampliación-pendiente-invitación-privada-por-correo).
-El [catálogo resumido](WcfContractsCatalog.md#27-imatchlobbyservice) incluye la ampliación
-marcada expresamente como pendiente.
-
-### Diseño acordado
-
-```csharp
-LobbySnapshot InviteToMatch(
-    string sessionToken,
-    long friendAccountId,
-    MatchConfiguration configuration);
-```
-
-- Botón «Invitar a partida» en la lista inicial de amigos, asociado al identificador
-  estable de la cuenta. Se permite invitar a amigos conectados o desconectados.
-- El servidor valida sesión, amistad aceptada y vigente, cuentas activas y distintas y
-  configuración; crea una partida humana privada y reserva el segundo asiento al amigo.
-- El servidor obtiene el correo registrado y envía creador, código e instrucciones.
-  Reutiliza configuración y credenciales inyectadas por entorno del mailer existente,
-  con contenido específico de invitación y nombres independientes de su tecnología.
-  No se devuelve al cliente el correo del amigo ni se reutiliza `VerificationCode`.
-- Se devuelve la partida en `Waiting` solo tras aceptar el proveedor el envío y confirmar
-  que el creador sigue esperando. Aceptación del proveedor no equivale a entrega en el buzón.
-- La partida no aparece en el listado público, ni siquiera al consultarlo el invitado.
-  El invitado inicia sesión y usa el `JoinMatch` existente con el código. El servidor
-  valida su identidad reservada, disponibilidad y cuentas activas antes de ocupar asiento.
-  Conocer el código sin ser destinatario no autoriza la unión.
-- El código conserva el formato de partida existente, sin duración independiente:
-  vale exactamente durante esa espera. Cancelar, abandonarla, perder el canal o la
-  sesión creadora y reiniciar el host invalidan la espera al confirmarse en el servidor.
-  La detección de desconexión no es instantánea. Otra instancia conectada del creador
-  no mantiene esa invitación. La unión confirmada también invalida el código e inicia
-  la partida; no introduce otra pantalla ni un botón de aceptación/inicio adicional.
-- El correo indica: «Puedes unirte con este código mientras el creador siga esperando».
-  Un mensaje recibido después de la cancelación no recupera la partida.
-- Fallo de envío: cancelar la preparación, invalidar el código y devolver `ServiceFault`
-  correlacionado. No mantener transacciones SQL ni bloqueos del estado durante el envío.
-  No agregar cola, reintento automático ni confirmaciones de éxito anticipadas.
-- Reutilizar `MatchConfiguration`, `LobbySnapshot`, callbacks y faults existentes.
-  `InviteToMatch` agrega `FriendshipFault` a los faults de lobby; los motivos y casos
-  concretos están documentados en 13.8. `CreateMatch` conserva la creación pública.
-
-### Trabajo técnico pendiente
-
-| Área | Cambio a realizar al implementar |
-| --- | --- |
-| Contrato y proxy | Agregar la operación síncrona con tres parámetros, declarar sus cuatro tipos de fault y regenerar el proxy; mantener firmas de listado y unión. |
-| Persistencia | Definir el destinatario durable de la partida y su privacidad; evaluar una referencia opcional como representación mínima, sin darla por aprobada. Preparar migración, claves, restricciones, compatibilidad con partidas públicas y conciliación del EDMX. |
-| Ciclo de espera | Vincular la partida a la sesión creadora y cancelar por salida, cierre, fallo de canal o sesión inválida; coordinar carreras con el envío y la unión. Conservar la cancelación al reiniciar. |
-| Privacidad | Excluir las partidas privadas en las consultas y reservar el asiento en la transacción de unión. Una baja o cambio de cuenta no debe convertirlas en públicas. |
-| Correo | Separar el contenido de invitación del de verificación; reutilizar el transporte y variables de entorno sin exponer direcciones, códigos o secretos en logs. |
-| Fallo parcial | Definir cómo impedir la unión a una preparación no confirmada si falla el correo y también la compensación SQL; no declarar una cancelación que no se guardó. |
-| Respuesta incierta | Resolver la recuperación del resultado si WCF pierde la respuesta después de crear y enviar. Evitar duplicados antes de ofrecer reintentos; no asumir que un timeout deshizo la escritura. |
-| Interfaz | Botón en amigos sin depender de `IsOnline`, apertura de la espera original tras confirmar y entrada mediante el código en las pantallas existentes; errores localizados sin éxito anticipado. |
-
-### Verificaciones que deberá cubrir la implementación
-
-- Amigo desconectado invitado correctamente y amigo conectado con el mismo comportamiento.
-- Rechazo de invitado, cuenta propia, identificador inválido, cuenta inactiva y amistad no vigente.
-- Exclusión de la partida privada del listado para creador, destinatario y terceros;
-  conservación del listado y unión de partidas públicas.
-- Unión exclusiva del destinatario, con código válido, un único segundo asiento y un único
-  inicio ante concurrencia; rechazo de terceros aunque conozcan el código.
-- Invalidez por cancelación, salida de la espera, desconexión detectada, revocación y
-  reinicio; otra instancia de la misma cuenta no prolonga la espera.
-- Fallo, rechazo o timeout del correo; compensación SQL fallida; cancelación durante el
-  envío; mensaje recibido después del cierre; respuesta WCF perdida y prevención de duplicados.
-- Mailer capturado o proveedor de prueba y BD desechable para integración; correo externo
-  únicamente en una prueba autorizada. Pantallas originales y mensajes en ambos idiomas.
-
-Estas son verificaciones previstas: no se han ejecutado para la invitación, porque la
-funcionalidad todavía no está implementada. La documentación del estándar y
-`Documento-Entrega.md` permanecen sin cambios.
+- El catálogo WCF conserva la autoridad sobre contratos y compatibilidad remota.
+- Las observaciones académicas conservan el registro original de cada revisión.
+- Este archivo no describe pasos históricos, comandos de despliegue ni propuestas del
+  estándar.
