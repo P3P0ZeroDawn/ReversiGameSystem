@@ -36,7 +36,7 @@ public sealed class MatchRepository : IMatchRepository
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
-        MatchDatabase.Lock(context, "lobby");
+        MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
         int cancelled = context.Database.ExecuteSqlCommand(
             "UPDATE dbo.GameMatch SET statusCode = 'CANCELLED', endedAtUtc = SYSUTCDATETIME() "
             + "WHERE statusCode = 'WAITING';");
@@ -49,7 +49,7 @@ public sealed class MatchRepository : IMatchRepository
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
-        MatchDatabase.Lock(context, "lobby");
+        MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
         if (!context.Account.Any(account => account.accountId == player.AccountId && account.statusCode == "ACTIVE"))
         {
             return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.InactiveAccount);
@@ -63,8 +63,11 @@ public sealed class MatchRepository : IMatchRepository
         while (context.GameMatch.Any(match => match.matchCode == code));
         GameMatch match = new GameMatch
         {
-            matchCode = code, statusCode = "WAITING", turnDurationSeconds = (short)settings.TurnDurationSeconds,
-            countsTowardStatistics = settings.CountsTowardStatistics, createdAtUtc = now
+            matchCode = code,
+            statusCode = "WAITING",
+            turnDurationSeconds = (short)settings.TurnDurationSeconds,
+            countsTowardStatistics = settings.CountsTowardStatistics,
+            createdAtUtc = now
         };
         match.MatchParticipant1.Add(CreateParticipant(player, 1, now));
         context.GameMatch.Add(match);
@@ -83,7 +86,7 @@ public sealed class MatchRepository : IMatchRepository
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
-        MatchDatabase.Lock(context, "lobby");
+        MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
         if (!context.Account.Any(account => account.accountId == player.AccountId && account.statusCode == "ACTIVE"))
         {
             return MatchRepositoryResult<MatchInvitationPreparation>.CreateFailure(MatchRepositoryStatus.InactiveAccount);
@@ -143,7 +146,7 @@ public sealed class MatchRepository : IMatchRepository
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
-        MatchDatabase.Lock(context, "lobby");
+        MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
         if (!context.Account.Any(account => account.accountId == accountId && account.statusCode == "ACTIVE"))
         {
             return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.InactiveAccount);
@@ -224,7 +227,7 @@ public sealed class MatchRepository : IMatchRepository
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
-        MatchDatabase.Lock(context, "lobby");
+        MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
         if (!context.Account.Any(account => account.accountId == player.AccountId && account.statusCode == "ACTIVE"))
         {
             return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.InactiveAccount);
@@ -335,7 +338,7 @@ public sealed class MatchRepository : IMatchRepository
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
-        MatchDatabase.Lock(context, "lobby");
+        MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
         if (!context.Account.Any(account => account.accountId == accountId && account.statusCode == "ACTIVE"))
         {
             return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.InactiveAccount);
@@ -372,7 +375,7 @@ public sealed class MatchRepository : IMatchRepository
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
-        MatchDatabase.Lock(context, "lobby");
+        MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
         if (!context.Account.Any(account => account.accountId == accountId && account.statusCode == "ACTIVE"))
         {
             return MatchRepositoryStatus.InactiveAccount;
@@ -412,9 +415,13 @@ public sealed class MatchRepository : IMatchRepository
     {
         return new PersistentMatchParticipant
         {
-            seatNumber = seat, accountId = player.AccountId, participantTypeCode = "REGISTERED",
-            displayNameSnapshot = player.Username, pieceColorCode = seat == 1 ? "BLACK" : "WHITE",
-            joinedAtUtc = now, isCreator = seat == 1
+            seatNumber = seat,
+            accountId = player.AccountId,
+            participantTypeCode = "REGISTERED",
+            displayNameSnapshot = player.Username,
+            pieceColorCode = seat == 1 ? "BLACK" : "WHITE",
+            joinedAtUtc = now,
+            isCreator = seat == 1
         };
     }
 

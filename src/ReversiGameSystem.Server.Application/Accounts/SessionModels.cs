@@ -20,7 +20,9 @@ public enum SessionOperationStatus
     /// <summary>An active guest already owns the requested name.</summary>
     GuestNameUnavailable,
     /// <summary>The required session token is absent.</summary>
-    MissingSessionToken
+    MissingSessionToken,
+    /// <summary>The session is absent, expired, revoked, or has the wrong kind.</summary>
+    InvalidSession
 }
 
 /// <summary>Contains an expected session outcome and its successful value.</summary>

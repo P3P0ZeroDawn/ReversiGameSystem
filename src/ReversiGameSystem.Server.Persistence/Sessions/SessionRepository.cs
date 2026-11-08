@@ -106,25 +106,39 @@ public sealed class SessionRepository : ISessionRepository
     }
 
     /// <inheritdoc />
+    public SessionOperationResult<AuthenticatedSession> FindAuthenticated(
+        string sessionToken)
+    {
+        SessionOperationResult<AuthenticatedSession> result;
+        if (string.IsNullOrWhiteSpace(sessionToken)
+            || !_authenticated.TryGetValue(sessionToken, out AuthenticatedSession? active))
+        {
+            result = SessionOperationResult<AuthenticatedSession>.CreateFailure(
+                SessionOperationStatus.InvalidSession);
+        }
+        else if (active.ExpiresAtUtc <= _clock.UtcNow)
+        {
+            _authenticated.TryRemove(sessionToken, out _);
+            result = SessionOperationResult<AuthenticatedSession>.CreateFailure(
+                SessionOperationStatus.InvalidSession);
+        }
+        else
+        {
+            result = SessionOperationResult<AuthenticatedSession>.CreateSuccess(active);
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc />
     public bool TryGet(
         string sessionToken,
         out AuthenticatedSession? session)
     {
-        session = null;
-        if (string.IsNullOrWhiteSpace(sessionToken)
-            || !_authenticated.TryGetValue(sessionToken, out AuthenticatedSession? active))
-        {
-            return false;
-        }
-
-        if (active.ExpiresAtUtc <= _clock.UtcNow)
-        {
-            _authenticated.TryRemove(sessionToken, out _);
-            return false;
-        }
-
-        session = active;
-        return true;
+        SessionOperationResult<AuthenticatedSession> result = FindAuthenticated(sessionToken);
+        bool found = result.Status == SessionOperationStatus.Success;
+        session = found ? result.GetValue() : null;
+        return found;
     }
 
     /// <inheritdoc />

@@ -98,6 +98,11 @@ internal sealed class RecordingSessionRepository : ISessionRepository
         return _inner.TryGet(token, out session);
     }
 
+    public SessionOperationResult<AuthenticatedSession> FindAuthenticated(string token)
+    {
+        return _inner.FindAuthenticated(token);
+    }
+
     public bool TryGetGuest(string token, out GuestSession? session)
     {
         return _inner.TryGetGuest(token, out session);

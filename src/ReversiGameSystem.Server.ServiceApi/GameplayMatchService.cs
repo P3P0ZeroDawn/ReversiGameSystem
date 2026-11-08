@@ -19,7 +19,8 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     private readonly MatchApplicationService _applicationService;
     private readonly ISessionRepository _sessions;
     private readonly MatchBoundary _boundary;
-    private readonly MatchChannels<IGameplayMatchServiceCallback> _channels;
+    private readonly MatchCallbackSubscriptions<IGameplayMatchServiceCallback>
+        _callbackSubscriptions;
     private readonly object _presenceSync = new object();
     private readonly Dictionary<long, Dictionary<int, HashSet<string>>> _participantPresence =
         new Dictionary<long, Dictionary<int, HashSet<string>>>();
@@ -34,7 +35,8 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             ?? throw new ArgumentNullException(nameof(applicationService));
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
         _boundary = new MatchBoundary(logger);
-        _channels = new MatchChannels<IGameplayMatchServiceCallback>(
+        _callbackSubscriptions =
+            new MatchCallbackSubscriptions<IGameplayMatchServiceCallback>(
             AuthorizeChannel,
             RemovePresence,
             logger);
@@ -50,7 +52,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             AuthenticatedSession session = GetSession(sessionToken);
             MatchParticipant participant = match.Participants.Single(
                 current => current.AccountId == session.AccountId);
-            _channels.Register(sessionToken, matchId);
+            _callbackSubscriptions.Register(sessionToken, matchId);
             AddPresence(
                 sessionToken,
                 matchId,
@@ -70,9 +72,12 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             AuthenticatedSession session = GetSession(sessionToken);
             return new MatchInformation
             {
-                MatchId = match.Id, Participants = MatchContractMapper.Participants(match),
+                MatchId = match.Id,
+                Participants = MatchContractMapper.Participants(match),
                 TurnDurationSeconds = match.TurnDurationSeconds,
-                AssignedSeatNumber = match.Participants.Single(player => player.AccountId == session.AccountId).SeatNumber
+                AssignedSeatNumber = match.Participants
+                    .Single(player => player.AccountId == session.AccountId)
+                    .SeatNumber
             };
         });
     }
@@ -123,13 +128,13 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     /// <summary>Removes all match subscriptions for a revoked session.</summary>
     public void RemoveSession(string sessionToken)
     {
-        _channels.RemoveSession(sessionToken);
+        _callbackSubscriptions.RemoveSession(sessionToken);
     }
 
     /// <inheritdoc />
     public void Dispose()
     {
-        _channels.Dispose();
+        _callbackSubscriptions.Dispose();
     }
 
     private Match GetMatch(string sessionToken, long matchId)
@@ -232,7 +237,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
 
     private void PublishPresence(long matchId, KeyValuePair<int, bool>[] snapshot)
     {
-        _channels.Publish(matchId, (token, callback) =>
+        _callbackSubscriptions.Publish(matchId, (token, callback) =>
         {
             for (int index = 0; index < snapshot.Length; index++)
             {

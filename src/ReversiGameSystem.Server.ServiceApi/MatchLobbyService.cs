@@ -3,10 +3,8 @@ using System.Linq;
 using System.ServiceModel;
 using System.Threading;
 using Microsoft.Extensions.Logging;
-using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Contracts.Callbacks;
-using ReversiGameSystem.Server.Contracts.Common;
 using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.Contracts.Matches;
 using ReversiGameSystem.Server.Contracts.Services;
@@ -21,7 +19,8 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
     private static readonly TimeSpan SweepInterval = TimeSpan.FromSeconds(5);
     private readonly MatchApplicationService _applicationService;
     private readonly ILogger<MatchLobbyService> _logger;
-    private readonly MatchChannels<IMatchLobbyServiceCallback> _channels;
+    private readonly MatchCallbackSubscriptions<IMatchLobbyServiceCallback>
+        _callbackSubscriptions;
     private readonly Timer _expiryTimer;
     private int _sweeping;
 
@@ -33,7 +32,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
         _applicationService = applicationService
             ?? throw new ArgumentNullException(nameof(applicationService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _channels = new MatchChannels<IMatchLobbyServiceCallback>(
+        _callbackSubscriptions = new MatchCallbackSubscriptions<IMatchLobbyServiceCallback>(
             AuthorizeChannel, (token, matchId) => Cleanup(token), _logger);
         _expiryTimer = new Timer(_ => SweepExpired(), null, SweepInterval, SweepInterval);
     }
@@ -42,7 +41,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
     public void OpenLobbyChannel(string sessionToken)
     {
         ThrowFailure(_applicationService.Authorize(sessionToken));
-        _channels.Register(sessionToken, 0);
+        _callbackSubscriptions.RegisterForAllMatches(sessionToken);
     }
 
     /// <inheritdoc />
@@ -79,7 +78,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
     public LobbySnapshot JoinMatch(string sessionToken, string matchCode)
     {
         Match match = GetMatch(_applicationService.Join(sessionToken, matchCode));
-        _channels.Publish(match.Id, (recipientToken, callback) =>
+        _callbackSubscriptions.Publish(match.Id, (recipientToken, callback) =>
             PublishStarted(recipientToken, callback, match.Id));
         return MatchContractMapper.Lobby(match);
     }
@@ -148,7 +147,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
     /// <summary>Removes a revoked session and cancels its waiting lobbies.</summary>
     public void RemoveSession(string sessionToken)
     {
-        _channels.RemoveSession(sessionToken);
+        _callbackSubscriptions.RemoveSession(sessionToken);
         Cleanup(sessionToken);
     }
 
@@ -156,7 +155,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
     public void Dispose()
     {
         _expiryTimer.Dispose();
-        _channels.Dispose();
+        _callbackSubscriptions.Dispose();
     }
 
     private void SweepExpired()
@@ -196,7 +195,9 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
 
     private void PublishClosed(long id)
     {
-        _channels.Publish(id, (token, callback) => PublishClosedToParticipant(token, callback, id));
+        _callbackSubscriptions.Publish(
+            id,
+            (token, callback) => PublishClosedToParticipant(token, callback, id));
     }
 
     private void PublishClosedToParticipant(

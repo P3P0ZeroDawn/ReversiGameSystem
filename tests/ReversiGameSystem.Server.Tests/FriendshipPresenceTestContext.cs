@@ -78,6 +78,18 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, ISessionRepos
         return !_expired.ContainsKey(sessionToken ?? string.Empty)
             && _sessions.TryGetValue(sessionToken ?? string.Empty, out session);
     }
+
+    public SessionOperationResult<AuthenticatedSession> FindAuthenticated(string sessionToken)
+    {
+        AuthenticatedSession? session;
+        if (TryGet(sessionToken, out session) && session is not null)
+        {
+            return SessionOperationResult<AuthenticatedSession>.CreateSuccess(session);
+        }
+
+        return SessionOperationResult<AuthenticatedSession>.CreateFailure(
+            SessionOperationStatus.InvalidSession);
+    }
     public AuthenticatedSession Create(LoginAccount account) => throw new NotSupportedException();
 
     public SessionOperationResult<GuestSession> CreateGuest(string displayName)

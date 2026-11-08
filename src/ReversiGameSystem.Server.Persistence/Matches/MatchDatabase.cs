@@ -11,13 +11,25 @@ namespace ReversiGameSystem.Server.Persistence.Matches;
 /// <summary>Transaction-scoped database coordination shared by match and chat stores.</summary>
 internal static class MatchDatabase
 {
-    internal static void Lock(ReversiGameSystemEntities context, string resource)
+    internal const string LobbyLockResource = "lobby";
+    private const int LockTimeoutMilliseconds = 10000;
+    private const int LockUnavailableErrorNumber = 51000;
+    private const int LockUnavailableErrorState = 1;
+    private const string LockResourcePrefix = "Reversi:";
+
+    internal static void AcquireTransactionLock(
+        ReversiGameSystemEntities context,
+        string resource)
     {
         context.Database.ExecuteSqlCommand(
             "DECLARE @result int; EXEC @result = sys.sp_getapplock @Resource=@resource, "
-            + "@LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=10000; "
-            + "IF @result < 0 THROW 51000, 'Match operation lock unavailable.', 1;",
-            new SqlParameter("@resource", "Reversi:" + resource));
+            + "@LockMode='Exclusive', @LockOwner='Transaction', "
+            + "@LockTimeout=@lockTimeout; IF @result < 0 "
+            + "THROW @errorNumber, 'Match operation lock unavailable.', @errorState;",
+            new SqlParameter("@resource", LockResourcePrefix + resource),
+            new SqlParameter("@lockTimeout", LockTimeoutMilliseconds),
+            new SqlParameter("@errorNumber", LockUnavailableErrorNumber),
+            new SqlParameter("@errorState", LockUnavailableErrorState));
     }
 
     internal static void RequireActive(ReversiGameSystemEntities context, long accountId)
@@ -72,7 +84,8 @@ internal static class MatchDatabase
             Participants = match.MatchParticipant1.OrderBy(player => player.seatNumber)
                 .Select(player => new ApplicationMatchParticipant
                 {
-                    SeatNumber = player.seatNumber, AccountId = player.accountId ?? 0,
+                    SeatNumber = player.seatNumber,
+                    AccountId = player.accountId ?? 0,
                     DisplayName = player.displayNameSnapshot
                 }).ToArray()
         };

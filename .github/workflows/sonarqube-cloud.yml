@@ -1,0 +1,72 @@
+name: SonarQube Cloud
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  analyze-server:
+    name: Analyze server
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore server projects
+        run: >-
+          dotnet restore
+          tests/ReversiGameSystem.Server.Tests/ReversiGameSystem.Server.Tests.csproj
+
+      - name: Install SonarScanner for .NET
+        run: >-
+          dotnet tool install --global dotnet-sonarscanner
+          --version 11.2.0
+
+      - name: Begin SonarQube Cloud analysis
+        shell: pwsh
+        run: |
+          dotnet sonarscanner begin `
+            /k:"${{ vars.SONAR_PROJECT_KEY }}" `
+            /o:"${{ vars.SONAR_ORGANIZATION }}" `
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+
+      - name: Build server
+        run: >-
+          dotnet build
+          tests/ReversiGameSystem.Server.Tests/ReversiGameSystem.Server.Tests.csproj
+          --configuration Release
+          --no-restore
+          --no-incremental
+          -p:TreatWarningsAsErrors=true
+
+      - name: Run isolated server tests
+        run: >-
+          dotnet run
+          --project
+          tests/ReversiGameSystem.Server.Tests/ReversiGameSystem.Server.Tests.csproj
+          --configuration Release
+          --no-build
+
+      - name: End SonarQube Cloud analysis
+        shell: pwsh
+        run: |
+          dotnet sonarscanner end `
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}"

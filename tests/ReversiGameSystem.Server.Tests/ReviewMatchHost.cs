@@ -34,7 +34,7 @@ internal static class ReviewMatchHost
             NullLogger<MatchLobbyService>.Instance);
         using GameplayMatchService gameplay = new GameplayMatchService(matches, store,
             NullLogger<GameplayMatchService>.Instance);
-        using MatchChatService chat = new MatchChatService(messages, store,
+        using MatchChatService chat = new MatchChatService(messages,
             NullLogger<MatchChatService>.Instance);
         session.SessionClosed += lobby.RemoveSession;
         session.SessionClosed += gameplay.RemoveSession;

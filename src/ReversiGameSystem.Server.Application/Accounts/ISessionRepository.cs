@@ -13,6 +13,12 @@ public interface ISessionRepository
     /// <returns>The expected guest-session result.</returns>
     public SessionOperationResult<GuestSession> CreateGuest(string displayName);
 
+    /// <summary>Finds an active authenticated session without exposing an output parameter.</summary>
+    /// <param name="sessionToken">The opaque session token.</param>
+    /// <returns>The active session or an invalid-session status.</returns>
+    public SessionOperationResult<AuthenticatedSession> FindAuthenticated(
+        string sessionToken);
+
     /// <summary>Tries to retrieve an active authenticated session.</summary>
     /// <param name="sessionToken">The opaque session token.</param>
     /// <param name="session">The active session, or null when absent.</param>

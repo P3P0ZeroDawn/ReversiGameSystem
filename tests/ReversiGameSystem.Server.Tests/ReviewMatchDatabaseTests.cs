@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Chat;
 using ReversiGameSystem.Server.Application.Matches;
+using ReversiGameSystem.Server.Domain.Chat;
 using ReversiGameSystem.Server.Persistence.Accounts;
 using ReversiGameSystem.Server.Persistence.Chat;
 using ReversiGameSystem.Server.Persistence.Matches;
@@ -36,11 +37,11 @@ internal static class ReviewMatchDatabaseTests
             MatchOperationStatus.CannotJoinOwnMatch,
             matches.Join(alpha, waiting.Code!).Status);
         TestAssert.AreEqual(
-            ChatOperationStatus.MatchNotInProgress,
-            chat.GetHistory(alpha, waiting.Id).Status);
+            ChatStatus.MatchNotInProgress,
+            chat.LoadChatHistory(alpha, waiting.Id).Status);
         TestAssert.AreEqual(
-            ChatOperationStatus.Unauthorized,
-            chat.GetHistory(beta, waiting.Id).Status);
+            ChatStatus.Unauthorized,
+            chat.LoadChatHistory(beta, waiting.Id).Status);
         Join_ConcurrentRequests_RegistersOneSecondSeat(matches, beta, waiting);
         TestAssert.AreEqual("InProgress", matches.Get(alpha, waiting.Id).GetValue().State);
         TestAssert.AreEqual(2, matches.Get(beta, waiting.Id).GetValue().Participants.Length);
@@ -77,15 +78,19 @@ internal static class ReviewMatchDatabaseTests
         ChatApplicationService chat, string token, long id)
     {
         // Arrange / Act
-        Task<ChatOperationResult<ChatMessage>>[] sends = Enumerable.Range(0, 8)
-            .Select(number => Task.Run(() => chat.Send(token, id, "Message " + number))).ToArray();
+        Task<ChatMessageSubmission>[] sends = Enumerable.Range(0, 8)
+            .Select(number => Task.Run(() => chat.SubmitChatMessage(
+                token,
+                id,
+                "Message " + number)))
+            .ToArray();
         Task.WaitAll(sends);
 
         // Assert
         TestAssert.IsTrue(
-            sends.All(task => task.Result.Status == ChatOperationStatus.Success),
+            sends.All(task => task.Result.Status == ChatStatus.Success),
             "Every concurrent message must be accepted.");
-        ChatMessage[] history = chat.GetHistory(token, id).GetValue();
+        ChatMessage[] history = chat.LoadChatHistory(token, id).Messages;
         TestAssert.AreEqual(8, history.Length);
         TestAssert.IsTrue(history.Select(entry => entry.MessageNumber)
             .SequenceEqual(Enumerable.Range(1, 8)), "Concurrent messages must have stable unique numbers.");
@@ -96,32 +101,37 @@ internal static class ReviewMatchDatabaseTests
     {
         // Arrange
         TestAssert.AreEqual(
-            ChatOperationStatus.EmptyMessage,
-            chat.Send(token, id, " ").Status);
+            ChatStatus.EmptyMessage,
+            chat.SubmitChatMessage(token, id, " ").Status);
         TestAssert.AreEqual(
-            ChatOperationStatus.MessageTooLong,
-            chat.Send(token, id, new string('a', 201)).Status);
+            ChatStatus.MessageTooLong,
+            chat.SubmitChatMessage(
+                token,
+                id,
+                new string('a', ChatContentPolicy.MaximumMessageLength + 1)).Status);
 
         // Act / Assert
         for (int attempt = 0; attempt < 3; attempt++)
         {
-            ChatOperationResult<ChatMessage> blocked = chat.Send(
+            ChatMessageSubmission blocked = chat.SubmitChatMessage(
                 token,
                 id,
                 "BLOCKEDWORD!");
             TestAssert.AreEqual(
                 attempt < 2
-                    ? ChatOperationStatus.MessageBlocked
-                    : ChatOperationStatus.PlayerMuted,
+                    ? ChatStatus.MessageBlocked
+                    : ChatStatus.PlayerMuted,
                 blocked.Status);
         }
-        ChatOperationResult<ChatMessage> muted = chat.Send(
+        ChatMessageSubmission muted = chat.SubmitChatMessage(
             token,
             id,
             "Otherwise acceptable");
-        TestAssert.AreEqual(ChatOperationStatus.PlayerMuted, muted.Status);
-        TestAssert.IsTrue(muted.HasMute, "A muted result must contain its durable sanction.");
-        TestAssert.AreEqual(8, chat.GetHistory(token, id).GetValue().Length);
+        TestAssert.AreEqual(ChatStatus.PlayerMuted, muted.Status);
+        TestAssert.IsTrue(
+            muted.Mute is not null,
+            "A muted result must contain its durable sanction.");
+        TestAssert.AreEqual(8, chat.LoadChatHistory(token, id).Messages.Length);
     }
 
     private static void Cancel_RepeatedRequest_InvalidatesCode(

@@ -49,6 +49,8 @@ internal static class Program
         VerificationEmailSenderTests mailTests = new VerificationEmailSenderTests();
         FriendshipPresenceTests presenceTests = new FriendshipPresenceTests();
         ChatContentPolicyTests chatPolicyTests = new ChatContentPolicyTests();
+        ChatApplicationServiceTests chatApplicationTests =
+            new ChatApplicationServiceTests();
         MatchBoundaryTests matchBoundaryTests = new MatchBoundaryTests();
         MatchApplicationServiceLifecycleTests lifecycleTests = new MatchApplicationServiceLifecycleTests();
         LobbyAuthorizationTests lobbyAuthorizationTests = new LobbyAuthorizationTests();
@@ -70,6 +72,11 @@ internal static class Program
             chatPolicyTests.Matches_AccentsCaseAndPunctuation_MatchesCompletePhrase,
             chatPolicyTests.Matches_WordInsideAnotherWord_DoesNotMatch,
             chatPolicyTests.Matches_EmptyPattern_DoesNotBlockEveryMessage,
+            chatApplicationTests.SubmitChatMessage_EmptyContent_RejectsBeforeRepositoryAccess,
+            chatApplicationTests.SubmitChatMessage_ValidContent_ReturnsPersistedMessage,
+            chatApplicationTests.SubmitChatMessage_RepositoryFailure_PropagatesException,
+            chatApplicationTests
+                .CanReceiveMuteNotification_SameAccountSession_AuthorizesRecipient,
             matchBoundaryTests.Gameplay_UnauthorizedParticipant_PreservesDeclaredRejection,
             matchBoundaryTests.Gameplay_InitialState_UsesApplicationSnapshot,
             matchBoundaryTests.Gameplay_UnsupportedWrite_ReturnsDeclaredServiceFault,

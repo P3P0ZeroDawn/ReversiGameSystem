@@ -128,7 +128,7 @@ All handwritten source-code identifiers, comments, XML documentation, and techni
 #### Correct
 
 ```csharp
-int remainingLives = 3;
+int remainingLives = player.RemainingLives;
 bool isBossDefeated = false;
 
 // Prevent the player from moving during the cutscene.
@@ -141,7 +141,7 @@ The handwritten names use English while generated output remains untouched.
 #### Incorrect
 
 ```csharp
-int vidasRestantes = 3;
+int vidasRestantes = player.RemainingLives;
 bool jefeDerrotado = false;
 
 // Prevent player movement during la cinemática.
@@ -185,7 +185,7 @@ Identifiers must use descriptive domain names that communicate intent without in
 #### Correct
 
 ```csharp
-int remainingLives = 3;
+int remainingLives = player.RemainingLives;
 ```
 
 The name states the stored meaning without an unexplained abbreviation.
@@ -193,7 +193,7 @@ The name states the stored meaning without an unexplained abbreviation.
 #### Incorrect
 
 ```csharp
-int rl__ = 3;
+int rl__ = player.RemainingLives;
 ```
 
 The abbreviation hides intent and uses a reserved double underscore pattern.
@@ -708,8 +708,8 @@ Write at most one statement and one variable declaration per line. Enforce share
 #### Correct
 
 ```csharp
-int currentHealth = 100;
-int maximumHealth = 100;
+int currentHealth = player.CurrentHealth;
+int maximumHealth = player.MaximumHealth;
 
 currentHealth -= receivedDamage;
 UpdateHealthBar(currentHealth, maximumHealth);
@@ -720,7 +720,7 @@ Each declaration and statement occupies its own line.
 #### Incorrect
 
 ```csharp
-int currentHealth = 100, maximumHealth = 100; currentHealth -= receivedDamage; UpdateHealthBar(currentHealth, maximumHealth);
+int currentHealth = player.CurrentHealth, maximumHealth = player.MaximumHealth; currentHealth -= receivedDamage; UpdateHealthBar(currentHealth, maximumHealth);
 ```
 
 Multiple declarations and statements are compressed onto one line.
@@ -785,7 +785,7 @@ The method and conditional use Allman braces with explicit block bodies.
 #### Incorrect
 
 ```csharp
-public int DefaultArmor => 10;
+public int DefaultArmor => DefaultArmorValue;
 
 public int CalculateEffectiveArmor(int baseArmor, bool isShieldRaised)
 {
@@ -1147,7 +1147,7 @@ Every member declares the narrowest visibility needed by its callers.
 ```csharp
 class PlayerHealth
 {
-    public int CurrentHealth { get; set; } = 100;
+    public int CurrentHealth { get; set; } = MaximumHealth;
 
     int NormalizeDamage(int damage)
     {
@@ -1631,12 +1631,17 @@ private void OnInventorySlotClick(object sender, RoutedEventArgs eventArgs)
 
 private static int GetRaritySortWeight(ItemRarity rarity)
 {
+    const int UnknownWeight = 0;
+    const int CommonWeight = 1;
+    const int RareWeight = 2;
+    const int LegendaryWeight = 3;
+
     return rarity switch
     {
-        ItemRarity.Common or ItemRarity.Uncommon => 1,
-        ItemRarity.Rare => 2,
-        ItemRarity.Legendary => 3,
-        _ => 0
+        ItemRarity.Common or ItemRarity.Uncommon => CommonWeight,
+        ItemRarity.Rare => RareWeight,
+        ItemRarity.Legendary => LegendaryWeight,
+        _ => UnknownWeight
     };
 }
 ```
@@ -1658,14 +1663,19 @@ private void OnInventorySlotClick(object sender, RoutedEventArgs eventArgs)
 
 private static int GetItemWeight(InventorySlotItem item)
 {
+    const int HighLevelThreshold = 50;
+    const int HighLevelLegendaryWeight = 10;
+    const int LegendaryWeight = 5;
+    const int DefaultWeight = 1;
+
     return item.Rarity switch
     {
         ItemRarity.Legendary => item.Level switch
         {
-            > 50 => 10,
-            _ => 5
+            > HighLevelThreshold => HighLevelLegendaryWeight,
+            _ => LegendaryWeight
         },
-        _ => 1
+        _ => DefaultWeight
     };
 }
 ```
@@ -1933,7 +1943,7 @@ Declare all local variables with an **explicit type** in both production and tes
 ```csharp
 PlayerController playerController = new PlayerController();
 List<Enemy> activeEnemies = new List<Enemy>();
-int remainingLives = 3;
+int remainingLives = player.RemainingLives;
 ```
 
 Each local declaration states its complete type.
@@ -1943,7 +1953,7 @@ Each local declaration states its complete type.
 ```csharp
 var playerController = new PlayerController();
 List<Enemy> activeEnemies = new();
-var remainingLives = 3;
+var remainingLives = player.RemainingLives;
 ```
 
 The declarations rely on `var` and target-typed construction prohibited by this standard.
@@ -2036,7 +2046,10 @@ Use `SemaphoreSlim` with an initial and maximum count of one only when mutual ex
 ```csharp
 public sealed class StateRefresher : IDisposable
 {
-    private readonly SemaphoreSlim _refreshSemaphore = new SemaphoreSlim(1, 1);
+    private const int MutualExclusionPermitCount = 1;
+    private readonly SemaphoreSlim _refreshSemaphore = new SemaphoreSlim(
+        MutualExclusionPermitCount,
+        MutualExclusionPermitCount);
 
     public async Task RefreshAsync(CancellationToken cancellationToken)
     {
@@ -2082,8 +2095,11 @@ Use `Interlocked` for one atomic field update. A sequence of operations that for
 ```csharp
 public bool BeginSweep()
 {
-    int previousValue = Interlocked.Exchange(ref _isSweeping, 1);
-    return previousValue == 0;
+    const int SweepIdle = 0;
+    const int SweepInProgress = 1;
+
+    int previousValue = Interlocked.Exchange(ref _isSweeping, SweepInProgress);
+    return previousValue == SweepIdle;
 }
 ```
 
@@ -2222,7 +2238,10 @@ Prefer standard .NET exception types. Define a custom exception only when no sta
 ```csharp
 public void SetDifficulty(int difficulty)
 {
-    if (difficulty < 1 || difficulty > 5)
+    const int MinimumDifficulty = 1;
+    const int MaximumDifficulty = 5;
+
+    if (difficulty < MinimumDifficulty || difficulty > MaximumDifficulty)
     {
         throw new ArgumentOutOfRangeException(nameof(difficulty));
     }
@@ -2832,7 +2851,8 @@ The secret comes from external configuration and its temporary byte array is cle
 ```csharp
 private static TokenDigestProtector CreateTokenProtector()
 {
-    byte[] fallbackKeyBytes = new byte[32];
+    const int TokenKeySizeInBytes = 32;
+    byte[] fallbackKeyBytes = new byte[TokenKeySizeInBytes];
     return new TokenDigestProtector(fallbackKeyBytes);
 }
 ```
@@ -2887,13 +2907,16 @@ public sealed class DamageCalculatorTests
     public void CalculateDamage_ValidMultiplier_ReturnsScaledDamage()
     {
         // Arrange
+        const int BaseDamage = 20;
+        const int DamageMultiplier = 2;
+        const int ExpectedDamage = 40;
         DamageCalculator calculator = new DamageCalculator();
 
         // Act
-        int actualDamage = calculator.CalculateDamage(20, 2);
+        int actualDamage = calculator.CalculateDamage(BaseDamage, DamageMultiplier);
 
         // Assert
-        Assert.AreEqual(40, actualDamage);
+        Assert.AreEqual(ExpectedDamage, actualDamage);
     }
 }
 ```
@@ -2909,9 +2932,14 @@ public sealed class DamageCalculatorTests
     [TestMethod]
     public void CalculateDamage_TestEverything()
     {
-        File.WriteAllText("damage.txt", "20");
+        const string DamageText = "20";
+        const int DamageMultiplier = 2;
+
+        File.WriteAllText("damage.txt", DamageText);
         DamageCalculator calculator = new DamageCalculator();
-        Console.WriteLine(calculator.CalculateDamage(int.Parse(File.ReadAllText("damage.txt")), 2));
+        Console.WriteLine(calculator.CalculateDamage(
+            int.Parse(File.ReadAllText("damage.txt")),
+            DamageMultiplier));
     }
 }
 ```
@@ -2935,11 +2963,12 @@ public sealed class SaveGameIntegrationTests
         string savePath = Path.GetTempFileName();
         try
         {
+            const int ExpectedPlayerHealth = 75;
             JsonSaveRepository repository = new JsonSaveRepository(savePath);
             SaveGameApplicationService service = new SaveGameApplicationService(repository);
             GameState expectedState = new GameState
             {
-                PlayerHealth = 75
+                PlayerHealth = ExpectedPlayerHealth
             };
 
             // Act
@@ -2947,7 +2976,7 @@ public sealed class SaveGameIntegrationTests
             GameState loadedState = service.Load();
 
             // Assert
-            Assert.AreEqual(75, loadedState.PlayerHealth);
+            Assert.AreEqual(ExpectedPlayerHealth, loadedState.PlayerHealth);
         }
         finally
         {
@@ -2968,14 +2997,16 @@ public sealed class SaveGameIntegrationTests
     [TestMethod]
     public void SaveAndLoad_ValidGameState_RestoresPlayerHealth()
     {
+        const int SavedPlayerHealth = 75;
+
         // Replaces the persistence component with an in-memory stub while claiming
         // to test persistence integration.
-        InMemorySaveRepositoryStub stub = new InMemorySaveRepositoryStub(75);
+        InMemorySaveRepositoryStub stub = new InMemorySaveRepositoryStub(SavedPlayerHealth);
         SaveGameApplicationService service = new SaveGameApplicationService(stub);
 
         GameState loadedState = service.Load();
 
-        Assert.AreEqual(75, loadedState.PlayerHealth);
+        Assert.AreEqual(SavedPlayerHealth, loadedState.PlayerHealth);
     }
 }
 ```
@@ -2996,13 +3027,16 @@ public sealed class PlayerHealthTests
     public void TakeDamage_ValidAmount_DecreasesCurrentHealth()
     {
         // Arrange
-        PlayerHealth playerHealth = new PlayerHealth(100);
+        const int InitialHealth = 100;
+        const int DamageAmount = 30;
+        const int ExpectedHealth = 70;
+        PlayerHealth playerHealth = new PlayerHealth(InitialHealth);
 
         // Act
-        playerHealth.TakeDamage(30);
+        playerHealth.TakeDamage(DamageAmount);
 
         // Assert
-        Assert.AreEqual(70, playerHealth.CurrentHealth);
+        Assert.AreEqual(ExpectedHealth, playerHealth.CurrentHealth);
     }
 }
 ```
@@ -3018,10 +3052,14 @@ public sealed class PlayerHealthTests
     [TestMethod]
     public void TakeDamage_ValidAmount_DecreasesCurrentHealth()
     {
-        PlayerHealth playerHealth = new PlayerHealth(100);
-        playerHealth.TakeDamage(30);
-        playerHealth.TakeDamage(10);
-        Assert.AreEqual(60, playerHealth.CurrentHealth);
+        const int InitialHealth = 100;
+        const int FirstDamageAmount = 30;
+        const int SecondDamageAmount = 10;
+        const int ExpectedHealth = 60;
+        PlayerHealth playerHealth = new PlayerHealth(InitialHealth);
+        playerHealth.TakeDamage(FirstDamageAmount);
+        playerHealth.TakeDamage(SecondDamageAmount);
+        Assert.AreEqual(ExpectedHealth, playerHealth.CurrentHealth);
     }
 }
 ```

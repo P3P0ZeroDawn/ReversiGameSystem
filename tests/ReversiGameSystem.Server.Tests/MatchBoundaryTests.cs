@@ -182,6 +182,19 @@ internal sealed class MatchBoundaryTests
             return sessionToken == "valid";
         }
 
+        public SessionOperationResult<AuthenticatedSession> FindAuthenticated(
+            string sessionToken)
+        {
+            AuthenticatedSession? session;
+            if (TryGet(sessionToken, out session) && session is not null)
+            {
+                return SessionOperationResult<AuthenticatedSession>.CreateSuccess(session);
+            }
+
+            return SessionOperationResult<AuthenticatedSession>.CreateFailure(
+                SessionOperationStatus.InvalidSession);
+        }
+
         public bool TryGetGuest(string sessionToken, out GuestSession? session)
         {
             session = null;

@@ -4,57 +4,68 @@ using System.Linq;
 using System.ServiceModel;
 using System.Threading;
 using Microsoft.Extensions.Logging;
-using ReversiGameSystem.Server.Contracts.Common;
 
 namespace ReversiGameSystem.Server.ServiceApi;
 
-internal sealed class MatchChannels<T> : IDisposable where T : class
+internal class MatchCallbackSubscriptions<TCallback> : IDisposable
+    where TCallback : class
 {
-    private readonly object _gate = new object();
+    private const long AllMatchesSubscription = 0;
+    private readonly object _subscriptionsSync = new object();
     private readonly object _dispatchSync = new object();
-    private readonly List<Subscription> _channels = new List<Subscription>();
+    private readonly List<Subscription> _subscriptions = new List<Subscription>();
     private readonly Queue<Action> _dispatchQueue = new Queue<Action>();
-    private readonly Func<string, long, bool> _authorize;
-    private readonly Action<string, long> _removed;
+    private readonly Func<string, long, bool> _canKeepSubscription;
+    private readonly Action<string, long>? _subscriptionRemoved;
     private readonly ILogger _logger;
-    private readonly Timer _timer;
     private bool _disposed;
     private bool _dispatching;
-    private int _sweeping;
 
-    internal MatchChannels(
-        Func<string, long, bool> authorize,
-        Action<string, long> removed,
+    internal MatchCallbackSubscriptions(
+        Func<string, long, bool> canKeepSubscription,
+        ILogger logger)
+        : this(canKeepSubscription, null, logger)
+    {
+    }
+
+    internal MatchCallbackSubscriptions(
+        Func<string, long, bool> canKeepSubscription,
+        Action<string, long>? subscriptionRemoved,
         ILogger logger)
     {
-        _authorize = authorize ?? throw new ArgumentNullException(nameof(authorize));
-        _removed = removed ?? throw new ArgumentNullException(nameof(removed));
+        _canKeepSubscription = canKeepSubscription
+            ?? throw new ArgumentNullException(nameof(canKeepSubscription));
+        _subscriptionRemoved = subscriptionRemoved;
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _timer = new Timer(_ => Sweep(), null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
     }
 
     internal void Register(string token, long matchId)
     {
-        T callback = OperationContext.Current.GetCallbackChannel<T>();
+        TCallback callback = OperationContext.Current.GetCallbackChannel<TCallback>();
         Subscription channel = new Subscription(token, matchId, callback);
         channel.Terminated = (_, _) => Remove(channel, true);
-        lock (_gate)
+        lock (_subscriptionsSync)
         {
             if (_disposed)
             {
-                throw new ObjectDisposedException(nameof(MatchChannels<T>));
+                throw new ObjectDisposedException(nameof(MatchCallbackSubscriptions<TCallback>));
             }
-            foreach (Subscription old in _channels.Where(item => item.Token == token
+            foreach (Subscription old in _subscriptions.Where(item => item.Token == token
                 && item.MatchId == matchId).ToArray())
             {
-                _channels.Remove(old);
+                _subscriptions.Remove(old);
                 old.Detach();
             }
-            _channels.Add(channel);
+            _subscriptions.Add(channel);
             channel.Communication.Closed += channel.Terminated;
             channel.Communication.Faulted += channel.Terminated;
         }
 
+    }
+
+    internal void RegisterForAllMatches(string token)
+    {
+        Register(token, AllMatchesSubscription);
     }
 
     internal void RemoveSession(string token)
@@ -65,73 +76,80 @@ internal sealed class MatchChannels<T> : IDisposable where T : class
         }
     }
 
-    internal void Publish(long matchId, Action<string, T> send)
+    internal void Publish(long matchId, Action<string, TCallback> send)
     {
         PublishWhere(matchId, (token, _, callback) => send(token, callback));
     }
 
-    internal void PublishAll(Action<string, long, T> send)
+    internal void PublishAll(Action<string, long, TCallback> send)
     {
-        PublishWhere(-1, send);
+        PublishWhere(null, send);
     }
 
-    private void PublishWhere(long matchId, Action<string, long, T> send)
+    private void PublishWhere(
+        long? matchId,
+        Action<string, long, TCallback> send)
     {
-        QueueDispatch(() =>
+        QueueDispatch(() => PublishNow(matchId, send));
+    }
+
+    private void PublishNow(
+        long? matchId,
+        Action<string, long, TCallback> send)
+    {
+        foreach (Subscription channel in Snapshot().Where(item =>
+            !matchId.HasValue
+            || item.MatchId == AllMatchesSubscription
+            || item.MatchId == matchId.Value))
         {
-            foreach (Subscription channel in Snapshot().Where(item => matchId == -1 || item.MatchId == 0
-                || item.MatchId == matchId))
+            try
             {
-                try
-                {
-                    if (!IsValid(channel))
-                    {
-                        Remove(channel, true);
-                        continue;
-                    }
-                    send(channel.Token, channel.MatchId, channel.Callback);
-                }
-                catch (ReversiGameSystem.Server.Application.Matches.MatchRejectedException)
-                {
-                    if (channel.MatchId != 0)
-                    {
-                        Remove(channel, true);
-                    }
-                }
-                catch (ReversiGameSystem.Server.Application.Accounts.SessionRejectedException)
+                if (!IsValid(channel))
                 {
                     Remove(channel, true);
+                    continue;
                 }
-                catch (CommunicationException exception)
+                send(channel.Token, channel.MatchId, channel.Callback);
+            }
+            catch (ReversiGameSystem.Server.Application.Matches.MatchRejectedException)
+            {
+                if (channel.MatchId != AllMatchesSubscription)
                 {
-                    Log("MatchCallback", exception);
                     Remove(channel, true);
-                }
-                catch (TimeoutException exception)
-                {
-                    Log("MatchCallback", exception);
-                    Remove(channel, true);
-                }
-                catch (Exception exception)
-                {
-                    Log("MatchCallback", exception);
                 }
             }
-        });
+            catch (ReversiGameSystem.Server.Application.Accounts.SessionRejectedException)
+            {
+                Remove(channel, true);
+            }
+            catch (CommunicationException exception)
+            {
+                Log("MatchCallback", exception);
+                Remove(channel, true);
+            }
+            catch (TimeoutException exception)
+            {
+                Log("MatchCallback", exception);
+                Remove(channel, true);
+            }
+            catch (Exception exception)
+            {
+                Log("MatchCallback", exception);
+            }
+        }
     }
 
     public void Dispose()
     {
-        lock (_gate)
+        lock (_subscriptionsSync)
         {
             _disposed = true;
-            foreach (Subscription channel in _channels)
+            foreach (Subscription channel in _subscriptions)
             {
                 channel.Detach();
             }
-            _channels.Clear();
+            _subscriptions.Clear();
         }
-        _timer.Dispose();
         lock (_dispatchSync)
         {
             _dispatchQueue.Clear();
@@ -141,61 +159,32 @@ internal sealed class MatchChannels<T> : IDisposable where T : class
     private bool IsValid(Subscription channel)
     {
         return channel.Communication.State == CommunicationState.Opened
-            && _authorize(channel.Token, channel.MatchId);
+            && _canKeepSubscription(channel.Token, channel.MatchId);
     }
 
     private Subscription[] Snapshot()
     {
-        lock (_gate)
+        lock (_subscriptionsSync)
         {
-            return _channels.ToArray();
-        }
-    }
-
-    private void Sweep()
-    {
-        if (Interlocked.Exchange(ref _sweeping, 1) != 0)
-        {
-            return;
-        }
-        try
-        {
-            foreach (Subscription channel in Snapshot())
-            {
-                try
-                {
-                    if (!IsValid(channel))
-                    {
-                        Remove(channel, true);
-                    }
-                }
-                catch (Exception exception)
-                {
-                    Log("MatchChannelSweep", exception);
-                }
-            }
-        }
-        finally
-        {
-            Volatile.Write(ref _sweeping, 0);
+            return _subscriptions.ToArray();
         }
     }
 
     private void Remove(Subscription channel, bool notify)
     {
-        lock (_gate)
+        lock (_subscriptionsSync)
         {
-            if (!_channels.Remove(channel))
+            if (!_subscriptions.Remove(channel))
             {
                 return;
             }
             channel.Detach();
         }
-        if (notify)
+        if (notify && _subscriptionRemoved is not null)
         {
             try
             {
-                _removed(channel.Token, channel.MatchId);
+                _subscriptionRemoved(channel.Token, channel.MatchId);
             }
             catch (Exception exception)
             {
@@ -261,7 +250,7 @@ internal sealed class MatchChannels<T> : IDisposable where T : class
 
     private sealed class Subscription
     {
-        internal Subscription(string token, long matchId, T callback)
+        internal Subscription(string token, long matchId, TCallback callback)
         {
             Token = token;
             MatchId = matchId;
@@ -270,7 +259,7 @@ internal sealed class MatchChannels<T> : IDisposable where T : class
         }
         internal string Token { get; }
         internal long MatchId { get; }
-        internal T Callback { get; }
+        internal TCallback Callback { get; }
         internal ICommunicationObject Communication { get; }
         internal EventHandler? Terminated { get; set; }
         internal void Detach()

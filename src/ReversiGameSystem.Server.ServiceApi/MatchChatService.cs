@@ -1,7 +1,6 @@
 using System;
 using System.ServiceModel;
 using Microsoft.Extensions.Logging;
-using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Chat;
 using ReversiGameSystem.Server.Contracts.Callbacks;
 using ReversiGameSystem.Server.Contracts.Chat;
@@ -13,42 +12,42 @@ namespace ReversiGameSystem.Server.ServiceApi;
 /// <summary>Publishes committed participant messages and moderation outcomes.</summary>
 [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single,
     ConcurrencyMode = ConcurrencyMode.Multiple, UseSynchronizationContext = false)]
-public sealed class MatchChatService : IMatchChatService, IDisposable
+public class MatchChatService : IMatchChatService, IDisposable
 {
     private readonly ChatApplicationService _applicationService;
-    private readonly ISessionRepository _sessions;
-    private readonly MatchChannels<IMatchChatServiceCallback> _channels;
+    private readonly MatchCallbackSubscriptions<IMatchChatServiceCallback>
+        _callbackSubscriptions;
 
     /// <summary>Creates the durable chat service boundary.</summary>
     /// <param name="applicationService">The internal chat application service.</param>
-    /// <param name="sessions">The authenticated session repository.</param>
     /// <param name="logger">The logger used by callback infrastructure.</param>
     public MatchChatService(
         ChatApplicationService applicationService,
-        ISessionRepository sessions,
         ILogger<MatchChatService> logger)
     {
         _applicationService = applicationService
             ?? throw new ArgumentNullException(nameof(applicationService));
-        _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
-        _channels = new MatchChannels<IMatchChatServiceCallback>(
-            AuthorizeChannel,
-            IgnoreRemovedChannel,
+        _callbackSubscriptions =
+            new MatchCallbackSubscriptions<IMatchChatServiceCallback>(
+            (sessionToken, matchId) =>
+                _applicationService.EvaluateParticipantAccess(
+                    sessionToken,
+                    matchId) == ChatStatus.Success,
             logger);
     }
 
     /// <inheritdoc />
     public void OpenChatChannel(string sessionToken, long matchId)
     {
-        ChatOpenResult result = _applicationService.Open(
+        ChatChannelAccess access = _applicationService.PrepareChatChannel(
             sessionToken,
             matchId);
-        ThrowFailure(result.Status);
-        _channels.Register(sessionToken, matchId);
+        ThrowExpectedFault(access.Status);
+        _callbackSubscriptions.Register(sessionToken, matchId);
 
-        if (result.HasActiveMute)
+        if (access.ActiveMute is not null)
         {
-            PublishMute(sessionToken, result.GetActiveMute());
+            PublishMuteNotification(sessionToken, access.ActiveMute);
         }
     }
 
@@ -58,42 +57,40 @@ public sealed class MatchChatService : IMatchChatService, IDisposable
         long matchId,
         string content)
     {
-        ChatOperationResult<ChatMessage> result = _applicationService.Send(
+        ChatMessageSubmission submission = _applicationService.SubmitChatMessage(
             sessionToken,
             matchId,
             content);
-        if (result.Status == ChatOperationStatus.PlayerMuted && result.HasMute)
+        if (submission.Status == ChatStatus.PlayerMuted
+            && submission.Mute is not null)
         {
-            PublishMute(sessionToken, result.GetMute());
+            PublishMuteNotification(sessionToken, submission.Mute);
         }
 
-        ThrowFailure(result.Status, result);
-        ChatMessage message = result.GetValue();
-        MatchChatEntry contractMessage = Map(message);
-        _channels.Publish(matchId, (token, callback) =>
-        {
-            if (_applicationService.Authorize(token, matchId)
-                == ChatOperationStatus.Success)
-            {
-                callback.OnChatMessageReceived(Map(message));
-            }
-        });
+        ThrowExpectedFault(submission.Status, submission.Mute);
+        ChatMessage message = submission.Message
+            ?? throw new InvalidOperationException(
+                "A successful chat submission must contain its message.");
+        MatchChatEntry contractMessage = MapChatEntry(message);
+        _callbackSubscriptions.Publish(
+            matchId,
+            (_, callback) => callback.OnChatMessageReceived(contractMessage));
         return contractMessage;
     }
 
     /// <inheritdoc />
     public MatchChatEntry[] GetChatHistory(string sessionToken, long matchId)
     {
-        ChatOperationResult<ChatMessage[]> result = _applicationService.GetHistory(
+        ChatHistory history = _applicationService.LoadChatHistory(
             sessionToken,
             matchId);
-        ThrowFailure(result.Status, result);
+        ThrowExpectedFault(history.Status);
 
-        ChatMessage[] messages = result.GetValue();
+        ChatMessage[] messages = history.Messages;
         MatchChatEntry[] entries = new MatchChatEntry[messages.Length];
         for (int index = 0; index < messages.Length; index++)
         {
-            entries[index] = Map(messages[index]);
+            entries[index] = MapChatEntry(messages[index]);
         }
 
         return entries;
@@ -102,112 +99,83 @@ public sealed class MatchChatService : IMatchChatService, IDisposable
     /// <summary>Removes chat subscriptions for a revoked session.</summary>
     public void RemoveSession(string sessionToken)
     {
-        _channels.RemoveSession(sessionToken);
+        _callbackSubscriptions.RemoveSession(sessionToken);
     }
 
     /// <inheritdoc />
     public void Dispose()
     {
-        _channels.Dispose();
+        _callbackSubscriptions.Dispose();
     }
 
-    private bool AuthorizeChannel(string token, long matchId)
+    private void PublishMuteNotification(string sessionToken, ChatMute mute)
     {
-        return _applicationService.Authorize(token, matchId)
-            == ChatOperationStatus.Success;
+        _callbackSubscriptions.PublishAll(
+            (recipient, matchId, callback) => SendMuteNotification(
+                sessionToken,
+                recipient,
+                matchId,
+                callback,
+                mute));
     }
 
-    private static void IgnoreRemovedChannel(string token, long matchId)
+    private void SendMuteNotification(
+        string mutedSessionToken,
+        string recipientSessionToken,
+        long matchId,
+        IMatchChatServiceCallback callback,
+        ChatMute mute)
     {
-    }
-
-    private void PublishMute(string sessionToken, ChatMute mute)
-    {
-        _channels.PublishAll((recipient, recipientMatchId, callback) =>
-        {
-            if (!_sessions.TryGet(sessionToken, out AuthenticatedSession? sender)
-                || sender == null
-                || !_sessions.TryGet(recipient, out AuthenticatedSession? receiver)
-                || receiver == null
-                || sender.AccountId != receiver.AccountId)
-            {
-                return;
-            }
-            if (_applicationService.Authorize(recipient, recipientMatchId)
-                != ChatOperationStatus.Success)
-            {
-                return;
-            }
-
-            callback.OnPlayerMuted(new ChatMuteNotification
-            {
-                MatchId = recipientMatchId,
-                StartsAtUtc = mute.StartsAtUtc,
-                EndsAtUtc = mute.EndsAtUtc,
-                ReasonCode = "REPEATED_VIOLATIONS"
-            });
-        });
-    }
-
-    private static void ThrowFailure<T>(
-        ChatOperationStatus status,
-        ChatOperationResult<T> result)
-    {
-        ChatMute? mute = null;
-        if (result.HasMute)
-        {
-            mute = result.GetMute();
-        }
-
-        ThrowFailure(status, mute);
-    }
-
-    private static void ThrowFailure(ChatOperationStatus status)
-    {
-        ThrowFailure(status, null);
-    }
-
-    private static void ThrowFailure(ChatOperationStatus status, ChatMute? mute)
-    {
-        if (status == ChatOperationStatus.Success)
+        if (!_applicationService.CanReceiveMuteNotification(
+            mutedSessionToken,
+            recipientSessionToken,
+            matchId))
         {
             return;
         }
-        if (status == ChatOperationStatus.MissingSessionToken)
-        {
-            throw SessionFaultFactory.Create(SessionFailure.MissingSessionToken);
-        }
-        if (status == ChatOperationStatus.InvalidSession)
-        {
-            throw SessionFaultFactory.Create(SessionFailure.InvalidSession);
-        }
-        if (status == ChatOperationStatus.InactiveAccount)
-        {
-            throw CreateMatchFault(MatchFailure.InactiveAccount);
-        }
-        if (status == ChatOperationStatus.InvalidMatchId)
-        {
-            throw CreateMatchFault(MatchFailure.InvalidMatchId);
-        }
-        if (status == ChatOperationStatus.MatchNotFound)
-        {
-            throw CreateMatchFault(MatchFailure.MatchNotFound);
-        }
-        if (status == ChatOperationStatus.Unauthorized)
-        {
-            throw CreateMatchFault(MatchFailure.Unauthorized);
-        }
-        if (status == ChatOperationStatus.MatchNotInProgress)
-        {
-            throw CreateMatchFault(MatchFailure.MatchNotInProgress);
-        }
 
-        ChatFailure failure = GetChatFailure(status);
-        throw new FaultException<ChatFault>(new ChatFault
+        callback.OnPlayerMuted(new ChatMuteNotification
         {
-            Reason = failure,
-            MuteEndsAtUtc = mute == null ? null : mute.EndsAtUtc
-        }, "The chat message was rejected.");
+            MatchId = matchId,
+            StartsAtUtc = mute.StartsAtUtc,
+            EndsAtUtc = mute.EndsAtUtc,
+            ReasonCode = mute.ReasonCode
+        });
+    }
+
+    private static void ThrowExpectedFault(
+        ChatStatus status,
+        ChatMute? mute = null)
+    {
+        switch (status)
+        {
+            case ChatStatus.Success:
+                return;
+            case ChatStatus.MissingSessionToken:
+                throw SessionFaultFactory.Create(SessionFailure.MissingSessionToken);
+            case ChatStatus.InvalidSession:
+                throw SessionFaultFactory.Create(SessionFailure.InvalidSession);
+            case ChatStatus.InactiveAccount:
+                throw CreateMatchFault(MatchFailure.InactiveAccount);
+            case ChatStatus.InvalidMatchId:
+                throw CreateMatchFault(MatchFailure.InvalidMatchId);
+            case ChatStatus.MatchNotFound:
+                throw CreateMatchFault(MatchFailure.MatchNotFound);
+            case ChatStatus.Unauthorized:
+                throw CreateMatchFault(MatchFailure.Unauthorized);
+            case ChatStatus.MatchNotInProgress:
+                throw CreateMatchFault(MatchFailure.MatchNotInProgress);
+            case ChatStatus.EmptyMessage:
+                throw CreateChatFault(ChatFailure.EmptyMessage, mute);
+            case ChatStatus.MessageTooLong:
+                throw CreateChatFault(ChatFailure.MessageTooLong, mute);
+            case ChatStatus.PlayerMuted:
+                throw CreateChatFault(ChatFailure.PlayerMuted, mute);
+            case ChatStatus.MessageBlocked:
+                throw CreateChatFault(ChatFailure.MessageBlocked, mute);
+            default:
+                throw new ArgumentOutOfRangeException(nameof(status));
+        }
     }
 
     private static FaultException<MatchFault> CreateMatchFault(MatchFailure failure)
@@ -218,26 +186,18 @@ public sealed class MatchChatService : IMatchChatService, IDisposable
         }, "The match request was rejected.");
     }
 
-    private static ChatFailure GetChatFailure(ChatOperationStatus status)
+    private static FaultException<ChatFault> CreateChatFault(
+        ChatFailure failure,
+        ChatMute? mute)
     {
-        ChatFailure failure = ChatFailure.MessageBlocked;
-        if (status == ChatOperationStatus.EmptyMessage)
+        return new FaultException<ChatFault>(new ChatFault
         {
-            failure = ChatFailure.EmptyMessage;
-        }
-        else if (status == ChatOperationStatus.MessageTooLong)
-        {
-            failure = ChatFailure.MessageTooLong;
-        }
-        else if (status == ChatOperationStatus.PlayerMuted)
-        {
-            failure = ChatFailure.PlayerMuted;
-        }
-
-        return failure;
+            Reason = failure,
+            MuteEndsAtUtc = mute?.EndsAtUtc
+        }, "The chat message was rejected.");
     }
 
-    private static MatchChatEntry Map(ChatMessage message)
+    private static MatchChatEntry MapChatEntry(ChatMessage message)
     {
         return new MatchChatEntry
         {

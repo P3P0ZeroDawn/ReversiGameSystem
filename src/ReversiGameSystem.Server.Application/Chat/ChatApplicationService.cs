@@ -1,11 +1,11 @@
 using System;
 using ReversiGameSystem.Server.Application.Accounts;
-using ReversiGameSystem.Server.Application.Matches;
+using ReversiGameSystem.Server.Domain.Chat;
 
 namespace ReversiGameSystem.Server.Application.Chat;
 
 /// <summary>Coordinates authorization, validation, moderation, and chat history.</summary>
-public sealed class ChatApplicationService
+public class ChatApplicationService
 {
     private readonly ISessionRepository _sessions;
     private readonly IChatRepository _chat;
@@ -26,30 +26,24 @@ public sealed class ChatApplicationService
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
     }
 
-    /// <summary>Checks whether a session can keep an open channel for a match.</summary>
+    /// <summary>Evaluates whether a session may access chat for a match.</summary>
     /// <param name="sessionToken">The authenticated session token.</param>
     /// <param name="matchId">The durable match identifier.</param>
-    /// <returns>The expected authorization status.</returns>
-    public ChatOperationStatus Authorize(string sessionToken, long matchId)
+    /// <returns>The expected access status.</returns>
+    public ChatStatus EvaluateParticipantAccess(string sessionToken, long matchId)
     {
-        ChatOperationResult<long> playerResult = GetPlayerAccountId(sessionToken);
-        if (playerResult.Status != ChatOperationStatus.Success)
+        SessionOperationResult<AuthenticatedSession> session =
+            ResolveAuthenticatedSession(sessionToken);
+        ChatStatus status = MapSessionStatus(session.Status);
+        if (status == ChatStatus.Success && matchId <= 0)
         {
-            return playerResult.Status;
+            status = ChatStatus.InvalidMatchId;
         }
-        if (matchId <= 0)
+        else if (status == ChatStatus.Success)
         {
-            return ChatOperationStatus.InvalidMatchId;
-        }
-
-        ChatOperationStatus status = ChatOperationStatus.Success;
-        try
-        {
-            _chat.Authorize(playerResult.GetValue(), matchId);
-        }
-        catch (MatchRejectedException exception)
-        {
-            status = GetStatus(exception.Reason);
+            status = _chat.EvaluateParticipantAccess(
+                session.GetValue().AccountId,
+                matchId);
         }
 
         return status;
@@ -58,196 +52,141 @@ public sealed class ChatApplicationService
     /// <summary>Opens authorized chat access and reports an active account mute.</summary>
     /// <param name="sessionToken">The authenticated session token.</param>
     /// <param name="matchId">The durable match identifier.</param>
-    /// <returns>The expected channel access result.</returns>
-    public ChatOpenResult Open(string sessionToken, long matchId)
+    /// <returns>The expected access result.</returns>
+    public ChatChannelAccess PrepareChatChannel(string sessionToken, long matchId)
     {
-        ChatOperationResult<long> playerResult = GetPlayerAccountId(sessionToken);
-        if (playerResult.Status != ChatOperationStatus.Success)
+        SessionOperationResult<AuthenticatedSession> session =
+            ResolveAuthenticatedSession(sessionToken);
+        if (session.Status != SessionOperationStatus.Success)
         {
-            return ChatOpenResult.CreateFailure(playerResult.Status);
+            return new ChatChannelAccess(MapSessionStatus(session.Status));
         }
         if (matchId <= 0)
         {
-            return ChatOpenResult.CreateFailure(
-                ChatOperationStatus.InvalidMatchId);
+            return new ChatChannelAccess(ChatStatus.InvalidMatchId);
         }
 
-        ChatOpenResult result;
-        long accountId = playerResult.GetValue();
-        try
-        {
-            _chat.Authorize(accountId, matchId);
-            ChatMute? activeMute = null;
-            if (_chat.TryGetMute(accountId, _clock.UtcNow, out ChatMute? mute)
-                && mute != null)
-            {
-                activeMute = mute;
-            }
-
-            result = ChatOpenResult.CreateSuccess(activeMute);
-        }
-        catch (MatchRejectedException exception)
-        {
-            result = ChatOpenResult.CreateFailure(
-                GetStatus(exception.Reason));
-        }
-
-        return result;
+        return _chat.LoadChannelAccess(
+            session.GetValue().AccountId,
+            matchId,
+            _clock.UtcNow);
     }
 
     /// <summary>Validates and durably processes one participant message.</summary>
     /// <param name="sessionToken">The authenticated session token.</param>
     /// <param name="matchId">The durable match identifier.</param>
     /// <param name="content">The proposed message content.</param>
-    /// <returns>The expected message operation result.</returns>
-    public ChatOperationResult<ChatMessage> Send(
+    /// <returns>The expected message result.</returns>
+    public ChatMessageSubmission SubmitChatMessage(
         string sessionToken,
         long matchId,
         string content)
     {
-        ChatOperationResult<long> playerResult = GetPlayerAccountId(sessionToken);
-        if (playerResult.Status != ChatOperationStatus.Success)
+        SessionOperationResult<AuthenticatedSession> session =
+            ResolveAuthenticatedSession(sessionToken);
+        if (session.Status != SessionOperationStatus.Success)
         {
-            return ChatOperationResult<ChatMessage>.CreateFailure(playerResult.Status);
+            return new ChatMessageSubmission(MapSessionStatus(session.Status));
         }
         if (matchId <= 0)
         {
-            return ChatOperationResult<ChatMessage>.CreateFailure(
-                ChatOperationStatus.InvalidMatchId);
+            return new ChatMessageSubmission(ChatStatus.InvalidMatchId);
         }
 
-        string trimmedContent = content == null ? string.Empty : content.Trim();
+        string trimmedContent = content is null ? string.Empty : content.Trim();
         if (trimmedContent.Length == 0)
         {
-            return ChatOperationResult<ChatMessage>.CreateFailure(
-                ChatOperationStatus.EmptyMessage);
+            return new ChatMessageSubmission(ChatStatus.EmptyMessage);
         }
-        if (trimmedContent.Length > 200)
+        if (trimmedContent.Length > ChatContentPolicy.MaximumMessageLength)
         {
-            return ChatOperationResult<ChatMessage>.CreateFailure(
-                ChatOperationStatus.MessageTooLong);
+            return new ChatMessageSubmission(ChatStatus.MessageTooLong);
         }
 
-        ChatOperationResult<ChatMessage> result;
-        try
-        {
-            long accountId = playerResult.GetValue();
-            ChatMessage message = _chat.Send(new ChatMessageSubmission
-            {
-                AccountId = accountId,
-                MatchId = matchId,
-                Content = trimmedContent,
-                NowUtc = _clock.UtcNow
-            });
-            result = ChatOperationResult<ChatMessage>.CreateSuccess(message);
-        }
-        catch (MatchRejectedException exception)
-        {
-            result = ChatOperationResult<ChatMessage>.CreateFailure(
-                GetStatus(exception.Reason));
-        }
-        catch (ChatRejectedException exception)
-        {
-            result = ChatOperationResult<ChatMessage>.CreateFailure(
-                GetStatus(exception.Reason),
-                exception.Mute);
-        }
-
-        return result;
+        return _chat.ProcessMessageSubmission(
+            session.GetValue().AccountId,
+            matchId,
+            trimmedContent,
+            _clock.UtcNow);
     }
 
     /// <summary>Loads the authorized durable conversation in message order.</summary>
     /// <param name="sessionToken">The authenticated session token.</param>
     /// <param name="matchId">The durable match identifier.</param>
-    /// <returns>The expected history operation result.</returns>
-    public ChatOperationResult<ChatMessage[]> GetHistory(
-        string sessionToken,
-        long matchId)
+    /// <returns>The expected history result.</returns>
+    public ChatHistory LoadChatHistory(string sessionToken, long matchId)
     {
-        ChatOperationResult<long> playerResult = GetPlayerAccountId(sessionToken);
-        if (playerResult.Status != ChatOperationStatus.Success)
+        SessionOperationResult<AuthenticatedSession> session =
+            ResolveAuthenticatedSession(sessionToken);
+        if (session.Status != SessionOperationStatus.Success)
         {
-            return ChatOperationResult<ChatMessage[]>.CreateFailure(playerResult.Status);
+            return new ChatHistory(MapSessionStatus(session.Status));
         }
         if (matchId <= 0)
         {
-            return ChatOperationResult<ChatMessage[]>.CreateFailure(
-                ChatOperationStatus.InvalidMatchId);
+            return new ChatHistory(ChatStatus.InvalidMatchId);
         }
 
-        ChatOperationResult<ChatMessage[]> result;
-        try
-        {
-            long accountId = playerResult.GetValue();
-            result = ChatOperationResult<ChatMessage[]>.CreateSuccess(
-                _chat.History(accountId, matchId));
-        }
-        catch (MatchRejectedException exception)
-        {
-            result = ChatOperationResult<ChatMessage[]>.CreateFailure(
-                GetStatus(exception.Reason));
-        }
-
-        return result;
+        return _chat.LoadMessageHistory(session.GetValue().AccountId, matchId);
     }
 
-    private ChatOperationResult<long> GetPlayerAccountId(string token)
+    /// <summary>Checks whether a channel belongs to the muted account and match.</summary>
+    /// <param name="mutedSessionToken">The session that caused the mute.</param>
+    /// <param name="recipientSessionToken">The candidate callback session.</param>
+    /// <param name="matchId">The candidate callback match.</param>
+    /// <returns>True when the callback may receive the mute.</returns>
+    public bool CanReceiveMuteNotification(
+        string mutedSessionToken,
+        string recipientSessionToken,
+        long matchId)
     {
-        if (string.IsNullOrWhiteSpace(token))
+        SessionOperationResult<AuthenticatedSession> mutedSession =
+            ResolveAuthenticatedSession(mutedSessionToken);
+        SessionOperationResult<AuthenticatedSession> recipientSession =
+            ResolveAuthenticatedSession(recipientSessionToken);
+        bool canReceive = mutedSession.Status == SessionOperationStatus.Success
+            && recipientSession.Status == SessionOperationStatus.Success
+            && mutedSession.GetValue().AccountId == recipientSession.GetValue().AccountId;
+        if (canReceive)
         {
-            return ChatOperationResult<long>.CreateFailure(
-                ChatOperationStatus.MissingSessionToken);
-        }
-        if (!_sessions.TryGet(token, out AuthenticatedSession? player)
-            || player == null
-            || player.ExpiresAtUtc <= _clock.UtcNow)
-        {
-            return ChatOperationResult<long>.CreateFailure(
-                ChatOperationStatus.InvalidSession);
+            canReceive = _chat.EvaluateParticipantAccess(
+                recipientSession.GetValue().AccountId,
+                matchId)
+                == ChatStatus.Success;
         }
 
-        return ChatOperationResult<long>.CreateSuccess(player.AccountId);
+        return canReceive;
     }
 
-    private static ChatOperationStatus GetStatus(MatchRejection rejection)
+    private SessionOperationResult<AuthenticatedSession> ResolveAuthenticatedSession(
+        string sessionToken)
     {
-        ChatOperationStatus status = ChatOperationStatus.Unauthorized;
-        if (rejection == MatchRejection.InvalidMatchId)
+        SessionOperationResult<AuthenticatedSession> session;
+        if (string.IsNullOrWhiteSpace(sessionToken))
         {
-            status = ChatOperationStatus.InvalidMatchId;
+            session = SessionOperationResult<AuthenticatedSession>.CreateFailure(
+                SessionOperationStatus.MissingSessionToken);
         }
-        else if (rejection == MatchRejection.MatchNotFound)
+        else
         {
-            status = ChatOperationStatus.MatchNotFound;
-        }
-        else if (rejection == MatchRejection.MatchNotInProgress)
-        {
-            status = ChatOperationStatus.MatchNotInProgress;
-        }
-        else if (rejection == MatchRejection.InactiveAccount)
-        {
-            status = ChatOperationStatus.InactiveAccount;
+            session = _sessions.FindAuthenticated(sessionToken);
         }
 
-        return status;
+        return session;
     }
 
-    private static ChatOperationStatus GetStatus(ChatRejection rejection)
+    private static ChatStatus MapSessionStatus(SessionOperationStatus status)
     {
-        ChatOperationStatus status = ChatOperationStatus.MessageBlocked;
-        if (rejection == ChatRejection.EmptyMessage)
+        ChatStatus chatStatus = ChatStatus.InvalidSession;
+        if (status == SessionOperationStatus.Success)
         {
-            status = ChatOperationStatus.EmptyMessage;
+            chatStatus = ChatStatus.Success;
         }
-        else if (rejection == ChatRejection.MessageTooLong)
+        else if (status == SessionOperationStatus.MissingSessionToken)
         {
-            status = ChatOperationStatus.MessageTooLong;
-        }
-        else if (rejection == ChatRejection.PlayerMuted)
-        {
-            status = ChatOperationStatus.PlayerMuted;
+            chatStatus = ChatStatus.MissingSessionToken;
         }
 
-        return status;
+        return chatStatus;
     }
 }

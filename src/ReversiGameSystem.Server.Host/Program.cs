@@ -66,7 +66,6 @@ internal static class Program
                         new ChatApplicationService(sessions, chatRepository, clock);
                     using MatchChatService matchChatService = new MatchChatService(
                         chatApplicationService,
-                        sessions,
                         loggerFactory.CreateLogger<MatchChatService>());
                     SessionService sessionService = CreateSessionService(
                         loggerFactory.CreateLogger<SessionService>(), sessions, clock);
