@@ -7,6 +7,7 @@
     <RootNamespace>ReversiGameSystem.Server.Tests</RootNamespace>
     <AssemblyName>ReversiGameSystem.Server.Tests</AssemblyName>
     <ProjectGuid>{A1E6F4CC-0DF2-4A8F-93C8-13777F8AA3E2}</ProjectGuid>
+    <SonarQubeTestProject>true</SonarQubeTestProject>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Data" />

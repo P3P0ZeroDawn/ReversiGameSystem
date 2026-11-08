@@ -17,7 +17,7 @@ jobs:
     if: >-
       github.event_name != 'pull_request' ||
       github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: windows-latest
+    runs-on: windows-2025
 
     steps:
       - name: Check out repository
@@ -72,7 +72,31 @@ jobs:
             "tests/ReversiGameSystem.Server.Tests/ReversiGameSystem.Server.Tests.csproj"
           $testCommand = `
             "dotnet run --project $testProject --configuration Release --no-build"
-          dotnet-coverage collect $testCommand -f xml -o coverage.xml
+          dotnet-coverage collect $testCommand -f coverage -o coverage-isolated.coverage
+
+      - name: Start LocalDB
+        shell: pwsh
+        run: sqllocaldb start MSSQLLocalDB
+
+      - name: Run database server tests with coverage
+        shell: pwsh
+        run: |
+          $testProject = `
+            "tests/ReversiGameSystem.Server.Tests/ReversiGameSystem.Server.Tests.csproj"
+          $testCommand = `
+            "dotnet run --project $testProject --configuration Release --no-build -- --match-database"
+          dotnet-coverage collect $testCommand `
+            -f coverage `
+            -o coverage-database.coverage
+
+      - name: Merge server coverage
+        shell: pwsh
+        run: |
+          dotnet-coverage merge `
+            coverage-isolated.coverage `
+            coverage-database.coverage `
+            -f xml `
+            -o coverage.xml
 
       - name: End SonarQube Cloud analysis
         shell: pwsh
