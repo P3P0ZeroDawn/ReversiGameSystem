@@ -37,6 +37,16 @@ antes de comenzar la revisión equivalente del cliente.
 7. Verificación completa del servidor.
 8. Revisión del cliente con el mismo enfoque.
 
+## Trabajo futuro del cliente
+
+- Ante una desconexión, el cliente intentará reconstruir la conexión y volver a abrir sus
+  canales de callback durante un máximo total de 30 segundos.
+- El cliente no reenviará automáticamente comandos cuyo resultado sea desconocido, como el
+  envío de un mensaje. Después de reconectarse, consultará el estado vigente y reconciliará
+  la información antes de permitir otro intento.
+- Si la conexión no se recupera dentro del plazo, el cliente informará la desconexión y
+  abandonará el flujo remoto afectado de forma controlada.
+
 ## Evidencia disponible
 
 En la revisión del 7 de noviembre de 2026, la solución del servidor compiló, las 198
