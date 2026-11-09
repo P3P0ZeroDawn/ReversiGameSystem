@@ -139,21 +139,23 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
 
     private Match GetMatch(string sessionToken, long matchId)
     {
-        MatchOperationResult<Match> result = _applicationService.Get(sessionToken, matchId);
-        if (result.Status == MatchOperationStatus.MissingSessionToken)
+        MatchResult<Match> result = _applicationService.Get(sessionToken, matchId);
+        if (result.Status == MatchStatus.MissingSessionToken)
         {
             throw new SessionRejectedException(SessionRejection.MissingSessionToken);
         }
-        if (result.Status == MatchOperationStatus.InvalidSession)
+        if (result.Status == MatchStatus.InvalidSession)
         {
             throw new SessionRejectedException();
         }
-        if (result.Status != MatchOperationStatus.Success)
+        if (result.Status != MatchStatus.Success)
         {
             throw new MatchRejectedException(GetLegacyRejection(result.Status));
         }
 
-        return result.GetValue();
+        return result.Value
+            ?? throw new InvalidOperationException(
+                "A successful match result must contain its value.");
     }
 
     private bool AuthorizeChannel(string token, long matchId)
@@ -258,30 +260,30 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             .ToArray();
     }
 
-    private static MatchRejection GetLegacyRejection(MatchOperationStatus status)
+    private static MatchRejection GetLegacyRejection(MatchStatus status)
     {
         MatchRejection rejection;
-        if (status == MatchOperationStatus.InvalidMatchId)
+        if (status == MatchStatus.InvalidMatchId)
         {
             rejection = MatchRejection.InvalidMatchId;
         }
-        else if (status == MatchOperationStatus.MatchNotFound)
+        else if (status == MatchStatus.MatchNotFound)
         {
             rejection = MatchRejection.MatchNotFound;
         }
-        else if (status == MatchOperationStatus.MatchNotWaiting)
+        else if (status == MatchStatus.MatchNotWaiting)
         {
             rejection = MatchRejection.MatchNotWaiting;
         }
-        else if (status == MatchOperationStatus.MatchNotInProgress)
+        else if (status == MatchStatus.MatchNotInProgress)
         {
             rejection = MatchRejection.MatchNotInProgress;
         }
-        else if (status == MatchOperationStatus.InactiveAccount)
+        else if (status == MatchStatus.InactiveAccount)
         {
             rejection = MatchRejection.InactiveAccount;
         }
-        else if (status == MatchOperationStatus.Unauthorized)
+        else if (status == MatchStatus.Unauthorized)
         {
             rejection = MatchRejection.Unauthorized;
         }

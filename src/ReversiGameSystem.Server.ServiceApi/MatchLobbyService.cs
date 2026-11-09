@@ -40,7 +40,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
     /// <inheritdoc />
     public void OpenLobbyChannel(string sessionToken)
     {
-        ThrowFailure(_applicationService.Authorize(sessionToken));
+        ThrowFailure(_applicationService.EvaluateLobbyAccess(sessionToken));
         _callbackSubscriptions.RegisterForAllMatches(sessionToken);
     }
 
@@ -69,9 +69,12 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
     /// <inheritdoc />
     public AvailableMatch[] GetAvailableMatches(string sessionToken)
     {
-        MatchOperationResult<Match[]> result = _applicationService.Available(sessionToken);
+        MatchResult<Match[]> result = _applicationService.Available(sessionToken);
         ThrowFailure(result.Status);
-        return result.GetValue().Select(MapAvailableMatch).ToArray();
+        Match[] matches = result.Value
+            ?? throw new InvalidOperationException(
+                "A successful match result must contain its value.");
+        return matches.Select(MapAvailableMatch).ToArray();
     }
 
     /// <inheritdoc />
@@ -89,7 +92,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
         long matchId,
         int turnDurationSeconds)
     {
-        MatchOperationResult<Match> result = _applicationService.ChangeTurnDuration(
+        MatchResult<Match> result = _applicationService.ChangeTurnDuration(
             sessionToken,
             matchId,
             turnDurationSeconds);
@@ -111,15 +114,18 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
 
     private bool AuthorizeChannel(string token, long matchId)
     {
-        return _applicationService.Authorize(token) == MatchOperationStatus.Success;
+        return _applicationService.EvaluateLobbyAccess(token) == MatchStatus.Success;
     }
 
     private void PublishStarted(string token, IMatchLobbyServiceCallback callback, long matchId)
     {
-        MatchOperationResult<Match> result = _applicationService.Get(token, matchId);
-        if (result.Status == MatchOperationStatus.Success)
+        MatchResult<Match> result = _applicationService.Get(token, matchId);
+        if (result.Status == MatchStatus.Success)
         {
-            callback.OnMatchStarted(MatchContractMapper.InitialState(result.GetValue()));
+            Match match = result.Value
+                ?? throw new InvalidOperationException(
+                    "A successful match result must contain its value.");
+            callback.OnMatchStarted(MatchContractMapper.InitialState(match));
         }
     }
 
@@ -205,42 +211,44 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
         IMatchLobbyServiceCallback callback,
         long matchId)
     {
-        MatchOperationResult<Match> result = _applicationService.Get(token, matchId);
-        if (result.Status == MatchOperationStatus.Success)
+        MatchResult<Match> result = _applicationService.Get(token, matchId);
+        if (result.Status == MatchStatus.Success)
         {
             callback.OnLobbyClosed(matchId);
         }
     }
 
-    private static Match GetMatch(MatchOperationResult<Match> result)
+    private static Match GetMatch(MatchResult<Match> result)
     {
         ThrowFailure(result.Status);
-        return result.GetValue();
+        return result.Value
+            ?? throw new InvalidOperationException(
+                "A successful match result must contain its value.");
     }
 
-    private static void ThrowFailure(MatchOperationStatus status)
+    private static void ThrowFailure(MatchStatus status)
     {
-        if (status == MatchOperationStatus.Success)
+        if (status == MatchStatus.Success)
         {
             return;
         }
-        if (status == MatchOperationStatus.MissingSessionToken)
+        if (status == MatchStatus.MissingSessionToken)
         {
             throw SessionFaultFactory.Create(SessionFailure.MissingSessionToken);
         }
-        if (status == MatchOperationStatus.InvalidSession)
+        if (status == MatchStatus.InvalidSession)
         {
             throw SessionFaultFactory.Create(SessionFailure.InvalidSession);
         }
-        if (status == MatchOperationStatus.InvalidFriendAccountId)
+        if (status == MatchStatus.InvalidFriendAccountId)
         {
             throw CreateFriendshipFault(FriendshipFailure.InvalidAccountId);
         }
-        if (status == MatchOperationStatus.FriendAccountUnavailable)
+        if (status == MatchStatus.FriendAccountUnavailable)
         {
             throw CreateFriendshipFault(FriendshipFailure.AccountUnavailable);
         }
-        if (status == MatchOperationStatus.FriendshipNotFound)
+        if (status == MatchStatus.FriendshipNotFound)
         {
             throw CreateFriendshipFault(FriendshipFailure.FriendshipNotFound);
         }
@@ -261,46 +269,46 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
         }, "The friendship request was rejected.");
     }
 
-    private static MatchFailure GetMatchFailure(MatchOperationStatus status)
+    private static MatchFailure GetMatchFailure(MatchStatus status)
     {
         MatchFailure failure = MatchFailure.Unauthorized;
-        if (status == MatchOperationStatus.InactiveAccount)
+        if (status == MatchStatus.InactiveAccount)
         {
             failure = MatchFailure.InactiveAccount;
         }
-        else if (status == MatchOperationStatus.InvalidMatchId)
+        else if (status == MatchStatus.InvalidMatchId)
         {
             failure = MatchFailure.InvalidMatchId;
         }
-        else if (status == MatchOperationStatus.InvalidConfiguration)
+        else if (status == MatchStatus.InvalidConfiguration)
         {
             failure = MatchFailure.InvalidConfiguration;
         }
-        else if (status == MatchOperationStatus.InvalidTurnDuration)
+        else if (status == MatchStatus.InvalidTurnDuration)
         {
             failure = MatchFailure.InvalidTurnDuration;
         }
-        else if (status == MatchOperationStatus.MatchNotFound)
+        else if (status == MatchStatus.MatchNotFound)
         {
             failure = MatchFailure.MatchNotFound;
         }
-        else if (status == MatchOperationStatus.CannotJoinOwnMatch)
+        else if (status == MatchStatus.CannotJoinOwnMatch)
         {
             failure = MatchFailure.CannotJoinOwnMatch;
         }
-        else if (status == MatchOperationStatus.InvalidMatchCode)
+        else if (status == MatchStatus.InvalidMatchCode)
         {
             failure = MatchFailure.InvalidMatchCode;
         }
-        else if (status == MatchOperationStatus.MatchCodeUnavailable)
+        else if (status == MatchStatus.MatchCodeUnavailable)
         {
             failure = MatchFailure.MatchCodeUnavailable;
         }
-        else if (status == MatchOperationStatus.MatchNotWaiting)
+        else if (status == MatchStatus.MatchNotWaiting)
         {
             failure = MatchFailure.MatchNotWaiting;
         }
-        else if (status == MatchOperationStatus.MatchNotInProgress)
+        else if (status == MatchStatus.MatchNotInProgress)
         {
             failure = MatchFailure.MatchNotInProgress;
         }

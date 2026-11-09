@@ -16,12 +16,12 @@ internal sealed class LobbyAuthorizationTests
         AuthorizationContext context = new AuthorizationContext();
 
         // Act
-        MatchOperationStatus status = context.Handler.Authorize(
+        MatchStatus status = context.Handler.EvaluateLobbyAccess(
             context.Player.SessionToken);
 
         // Assert
         TestAssert.AreEqual(context.Player.AccountId, context.Store.AuthorizedAccountId);
-        TestAssert.AreEqual(MatchOperationStatus.Success, status);
+        TestAssert.AreEqual(MatchStatus.Success, status);
         TestAssert.AreEqual(1, context.Store.AuthorizationCalls);
         TestAssert.AreEqual(0, context.Store.AvailableCalls);
     }
@@ -33,13 +33,13 @@ internal sealed class LobbyAuthorizationTests
         context.Sessions.UtcNow = context.Player.ExpiresAtUtc;
 
         // Act
-        MatchOperationStatus status = context.Handler.Authorize(
+        MatchStatus status = context.Handler.EvaluateLobbyAccess(
             context.Player.SessionToken);
 
         // Assert
         TestAssert.AreEqual(0, context.Store.AuthorizationCalls);
         TestAssert.AreEqual(0, context.Store.AvailableCalls);
-        TestAssert.AreEqual(MatchOperationStatus.InvalidSession, status);
+        TestAssert.AreEqual(MatchStatus.InvalidSession, status);
     }
 
     internal void Authorize_RevokedSession_RejectsBeforeAccountQuery()
@@ -49,13 +49,13 @@ internal sealed class LobbyAuthorizationTests
         context.Sessions.Sessions.Revoke(context.Player.SessionToken);
 
         // Act
-        MatchOperationStatus status = context.Handler.Authorize(
+        MatchStatus status = context.Handler.EvaluateLobbyAccess(
             context.Player.SessionToken);
 
         // Assert
         TestAssert.AreEqual(0, context.Store.AuthorizationCalls);
         TestAssert.AreEqual(0, context.Store.AvailableCalls);
-        TestAssert.AreEqual(MatchOperationStatus.InvalidSession, status);
+        TestAssert.AreEqual(MatchStatus.InvalidSession, status);
     }
 
     internal void OpenLobbyChannel_InactiveAccount_ReturnsMatchFaultWithoutListing()
@@ -117,31 +117,31 @@ internal sealed class LobbyAuthorizationTests
         internal int AuthorizationCalls { get; private set; }
         internal int AvailableCalls { get; private set; }
 
-        public MatchRepositoryStatus Authorize(long accountId)
+        public MatchStatus EvaluateLobbyAccess(long accountId)
         {
             AuthorizationCalls++;
             AuthorizedAccountId = accountId;
             if (!Active)
             {
-                return MatchRepositoryStatus.InactiveAccount;
+                return MatchStatus.InactiveAccount;
             }
 
-            return MatchRepositoryStatus.Success;
+            return MatchStatus.Success;
         }
 
-        public MatchRepositoryResult<Match[]> Available(long accountId)
+        public MatchResult<Match[]> Available(long accountId)
         {
             AvailableCalls++;
             throw new InvalidOperationException("Authorization must not enumerate lobbies.");
         }
 
-        public MatchRepositoryResult<Match> Create(
+        public MatchResult<Match> Create(
             AuthenticatedSession player, MatchSettings settings, DateTime now)
         {
             throw new NotSupportedException();
         }
 
-        public MatchRepositoryResult<MatchInvitationPreparation> PreparePrivateInvitation(
+        public MatchResult<MatchInvitationPreparation> PreparePrivateInvitation(
             AuthenticatedSession player,
             long friendAccountId,
             MatchSettings settings,
@@ -150,32 +150,32 @@ internal sealed class LobbyAuthorizationTests
             throw new NotSupportedException();
         }
 
-        public MatchRepositoryResult<Match> MarkInvitationDelivered(long accountId, long matchId, DateTime now)
+        public MatchResult<Match> MarkInvitationDelivered(long accountId, long matchId, DateTime now)
         {
             throw new NotSupportedException();
         }
 
-        public MatchRepositoryResult<Match> Join(AuthenticatedSession player, string code, DateTime now)
+        public MatchResult<Match> Join(AuthenticatedSession player, string code, DateTime now)
         {
             throw new NotSupportedException();
         }
 
-        public MatchRepositoryStatus ValidateJoinForGuest(string code)
+        public MatchStatus ValidateGuestJoin(string code)
         {
             throw new NotSupportedException();
         }
 
-        public MatchRepositoryResult<Match> Get(long accountId, long matchId)
+        public MatchResult<Match> Get(long accountId, long matchId)
         {
             throw new NotSupportedException();
         }
 
-        public MatchRepositoryResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
+        public MatchResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
         {
             throw new NotSupportedException();
         }
 
-        public MatchRepositoryStatus Cancel(long accountId, long matchId)
+        public MatchStatus Cancel(long accountId, long matchId)
         {
             throw new NotSupportedException();
         }

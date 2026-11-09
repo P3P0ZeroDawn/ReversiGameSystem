@@ -16,15 +16,15 @@ namespace ReversiGameSystem.Server.Persistence.Matches;
 public sealed class MatchRepository : IMatchRepository
 {
     /// <inheritdoc />
-    public MatchRepositoryStatus Authorize(long accountId)
+    public MatchStatus EvaluateLobbyAccess(long accountId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         if (!context.Account.Any(account => account.accountId == accountId && account.statusCode == "ACTIVE"))
         {
-            return MatchRepositoryStatus.InactiveAccount;
+            return MatchStatus.InactiveAccount;
         }
 
-        return MatchRepositoryStatus.Success;
+        return MatchStatus.Success;
     }
 
     private const string Alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -45,14 +45,14 @@ public sealed class MatchRepository : IMatchRepository
     }
 
     /// <summary>Creates the waiting lobby and its creator seat atomically.</summary>
-    public MatchRepositoryResult<Match> Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
+    public MatchResult<Match> Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
         MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
         if (!context.Account.Any(account => account.accountId == player.AccountId && account.statusCode == "ACTIVE"))
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.InactiveAccount);
+            return new MatchResult<Match>(MatchStatus.InactiveAccount);
         }
 
         string code;
@@ -74,11 +74,11 @@ public sealed class MatchRepository : IMatchRepository
         context.SaveChanges();
         Match result = MatchDatabase.Map(match);
         transaction.Commit();
-        return MatchRepositoryResult<Match>.CreateSuccess(result);
+        return new MatchResult<Match>(result);
     }
 
     /// <inheritdoc />
-    public MatchRepositoryResult<MatchInvitationPreparation> PreparePrivateInvitation(
+    public MatchResult<MatchInvitationPreparation> PreparePrivateInvitation(
         AuthenticatedSession player,
         long friendAccountId,
         MatchSettings settings,
@@ -89,13 +89,13 @@ public sealed class MatchRepository : IMatchRepository
         MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
         if (!context.Account.Any(account => account.accountId == player.AccountId && account.statusCode == "ACTIVE"))
         {
-            return MatchRepositoryResult<MatchInvitationPreparation>.CreateFailure(MatchRepositoryStatus.InactiveAccount);
+            return new MatchResult<MatchInvitationPreparation>(MatchStatus.InactiveAccount);
         }
 
         Account? friend = context.Account.SingleOrDefault(candidate => candidate.accountId == friendAccountId);
         if (friend == null || friend.statusCode != "ACTIVE")
         {
-            return MatchRepositoryResult<MatchInvitationPreparation>.CreateFailure(MatchRepositoryStatus.FriendAccountUnavailable);
+            return new MatchResult<MatchInvitationPreparation>(MatchStatus.FriendAccountUnavailable);
         }
 
         long minId = Math.Min(player.AccountId, friendAccountId);
@@ -107,7 +107,7 @@ public sealed class MatchRepository : IMatchRepository
             && candidate.endedAtUtc == null);
         if (!areFriends)
         {
-            return MatchRepositoryResult<MatchInvitationPreparation>.CreateFailure(MatchRepositoryStatus.FriendshipNotFound);
+            return new MatchResult<MatchInvitationPreparation>(MatchStatus.FriendshipNotFound);
         }
 
         string code;
@@ -138,18 +138,18 @@ public sealed class MatchRepository : IMatchRepository
         result.IsPrivate = true;
         transaction.Commit();
         MatchInvitationPreparation preparation = new MatchInvitationPreparation(result, friend.emailAddress);
-        return MatchRepositoryResult<MatchInvitationPreparation>.CreateSuccess(preparation);
+        return new MatchResult<MatchInvitationPreparation>(preparation);
     }
 
     /// <inheritdoc />
-    public MatchRepositoryResult<Match> MarkInvitationDelivered(long accountId, long matchId, DateTime now)
+    public MatchResult<Match> MarkInvitationDelivered(long accountId, long matchId, DateTime now)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
         MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
         if (!context.Account.Any(account => account.accountId == accountId && account.statusCode == "ACTIVE"))
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.InactiveAccount);
+            return new MatchResult<Match>(MatchStatus.InactiveAccount);
         }
 
         PersistentMatchParticipant? player = context.MatchParticipant.SingleOrDefault(candidate =>
@@ -157,18 +157,18 @@ public sealed class MatchRepository : IMatchRepository
             && candidate.participantTypeCode == "REGISTERED");
         if (player == null || !player.isCreator)
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.Unauthorized);
+            return new MatchResult<Match>(MatchStatus.Unauthorized);
         }
 
         GameMatch? match = context.GameMatch.SingleOrDefault(candidate => candidate.matchId == matchId);
         if (match == null)
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.MatchNotFound);
+            return new MatchResult<Match>(MatchStatus.MatchNotFound);
         }
 
         if (match.statusCode != "WAITING")
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.MatchNotWaiting);
+            return new MatchResult<Match>(MatchStatus.MatchNotWaiting);
         }
 
         MatchPrivacyRow? privacy = context.Database.SqlQuery<MatchPrivacyRow>(
@@ -177,12 +177,12 @@ public sealed class MatchRepository : IMatchRepository
 
         if (privacy == null || !privacy.IsPrivate || privacy.InvitedAccountId == null)
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.MatchNotWaiting);
+            return new MatchResult<Match>(MatchStatus.MatchNotWaiting);
         }
 
         if (!context.Account.Any(account => account.accountId == privacy.InvitedAccountId.Value && account.statusCode == "ACTIVE"))
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.InactiveAccount);
+            return new MatchResult<Match>(MatchStatus.InactiveAccount);
         }
 
         context.Database.ExecuteSqlCommand(
@@ -193,23 +193,23 @@ public sealed class MatchRepository : IMatchRepository
         Match result = MatchDatabase.Map(match);
         result.IsPrivate = true;
         transaction.Commit();
-        return MatchRepositoryResult<Match>.CreateSuccess(result);
+        return new MatchResult<Match>(result);
     }
 
     /// <summary>Lists joinable waiting lobbies belonging to other players.</summary>
-    public MatchRepositoryResult<Match[]> Available(long accountId)
+    public MatchResult<Match[]> Available(long accountId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         if (!context.Account.Any(account => account.accountId == accountId && account.statusCode == "ACTIVE"))
         {
-            return MatchRepositoryResult<Match[]>.CreateFailure(MatchRepositoryStatus.InactiveAccount);
+            return new MatchResult<Match[]>(MatchStatus.InactiveAccount);
         }
 
         long[] publicMatchIds = context.Database.SqlQuery<long>(
             "SELECT matchId FROM dbo.GameMatch WHERE isPrivate = 0 AND statusCode = 'WAITING'").ToArray();
         if (publicMatchIds.Length == 0)
         {
-            return MatchRepositoryResult<Match[]>.CreateSuccess(Array.Empty<Match>());
+            return new MatchResult<Match[]>(Array.Empty<Match>());
         }
 
         Match[] matches = context.GameMatch.Include(match => match.MatchParticipant1)
@@ -219,25 +219,25 @@ public sealed class MatchRepository : IMatchRepository
                 && !match.MatchParticipant1.Any(player => player.accountId == accountId))
             .OrderBy(match => match.matchId).ToArray().Select(MatchDatabase.Map).ToArray();
 
-        return MatchRepositoryResult<Match[]>.CreateSuccess(matches);
+        return new MatchResult<Match[]>(matches);
     }
 
     /// <summary>Occupies the second seat and starts the waiting match atomically.</summary>
-    public MatchRepositoryResult<Match> Join(AuthenticatedSession player, string code, DateTime now)
+    public MatchResult<Match> Join(AuthenticatedSession player, string code, DateTime now)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
         MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
         if (!context.Account.Any(account => account.accountId == player.AccountId && account.statusCode == "ACTIVE"))
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.InactiveAccount);
+            return new MatchResult<Match>(MatchStatus.InactiveAccount);
         }
 
         GameMatch? match = context.GameMatch.Include(candidate => candidate.MatchParticipant1)
             .SingleOrDefault(candidate => candidate.matchCode == code && candidate.statusCode == "WAITING");
         if (match == null || match.MatchParticipant1.Count != 1)
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.MatchCodeUnavailable);
+            return new MatchResult<Match>(MatchStatus.MatchCodeUnavailable);
         }
 
         MatchPrivacyRow? privacy = context.Database.SqlQuery<MatchPrivacyRow>(
@@ -246,26 +246,26 @@ public sealed class MatchRepository : IMatchRepository
 
         if (privacy != null && privacy.IsPrivate && privacy.InvitationConfirmedAtUtc == null)
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.MatchCodeUnavailable);
+            return new MatchResult<Match>(MatchStatus.MatchCodeUnavailable);
         }
 
         if (match.MatchParticipant1.Any(participant => participant.accountId == player.AccountId))
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.CannotJoinOwnMatch);
+            return new MatchResult<Match>(MatchStatus.CannotJoinOwnMatch);
         }
 
         if (privacy != null && privacy.IsPrivate)
         {
             if (privacy.InvitedAccountId != player.AccountId)
             {
-                return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.Unauthorized);
+                return new MatchResult<Match>(MatchStatus.Unauthorized);
             }
         }
 
         PersistentMatchParticipant creator = match.MatchParticipant1.Single();
         if (!context.Account.Any(account => account.accountId == creator.accountId && account.statusCode == "ACTIVE"))
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.InactiveAccount);
+            return new MatchResult<Match>(MatchStatus.InactiveAccount);
         }
 
         match.MatchParticipant1.Add(CreateParticipant(player, 2, now));
@@ -281,18 +281,18 @@ public sealed class MatchRepository : IMatchRepository
         }
 
         transaction.Commit();
-        return MatchRepositoryResult<Match>.CreateSuccess(result);
+        return new MatchResult<Match>(result);
     }
 
     /// <inheritdoc />
-    public MatchRepositoryStatus ValidateJoinForGuest(string code)
+    public MatchStatus ValidateGuestJoin(string code)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         GameMatch? match = context.GameMatch.SingleOrDefault(candidate =>
             candidate.matchCode == code && candidate.statusCode == "WAITING");
         if (match == null)
         {
-            return MatchRepositoryStatus.MatchCodeUnavailable;
+            return MatchStatus.MatchCodeUnavailable;
         }
 
         MatchPrivacyRow? privacy = context.Database.SqlQuery<MatchPrivacyRow>(
@@ -301,19 +301,19 @@ public sealed class MatchRepository : IMatchRepository
 
         if (privacy != null && privacy.IsPrivate && privacy.InvitationConfirmedAtUtc == null)
         {
-            return MatchRepositoryStatus.MatchCodeUnavailable;
+            return MatchStatus.MatchCodeUnavailable;
         }
 
-        return MatchRepositoryStatus.Unauthorized;
+        return MatchStatus.Unauthorized;
     }
 
     /// <summary>Loads confirmed match data for an authorized participant.</summary>
-    public MatchRepositoryResult<Match> Get(long accountId, long matchId)
+    public MatchResult<Match> Get(long accountId, long matchId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         if (!context.Account.Any(account => account.accountId == accountId && account.statusCode == "ACTIVE"))
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.InactiveAccount);
+            return new MatchResult<Match>(MatchStatus.InactiveAccount);
         }
 
         PersistentMatchParticipant? participant = context.MatchParticipant.SingleOrDefault(candidate =>
@@ -321,27 +321,27 @@ public sealed class MatchRepository : IMatchRepository
             && candidate.participantTypeCode == "REGISTERED");
         if (participant == null)
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.Unauthorized);
+            return new MatchResult<Match>(MatchStatus.Unauthorized);
         }
 
         GameMatch? match = context.GameMatch.SingleOrDefault(candidate => candidate.matchId == matchId);
         if (match == null)
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.MatchNotFound);
+            return new MatchResult<Match>(MatchStatus.MatchNotFound);
         }
 
-        return MatchRepositoryResult<Match>.CreateSuccess(MatchDatabase.Map(match));
+        return new MatchResult<Match>(MatchDatabase.Map(match));
     }
 
     /// <summary>Changes the duration only while the creator still owns a waiting lobby.</summary>
-    public MatchRepositoryResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
+    public MatchResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
         MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
         if (!context.Account.Any(account => account.accountId == accountId && account.statusCode == "ACTIVE"))
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.InactiveAccount);
+            return new MatchResult<Match>(MatchStatus.InactiveAccount);
         }
 
         PersistentMatchParticipant? player = context.MatchParticipant.SingleOrDefault(candidate =>
@@ -349,36 +349,36 @@ public sealed class MatchRepository : IMatchRepository
             && candidate.participantTypeCode == "REGISTERED");
         if (player == null || !player.isCreator)
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.Unauthorized);
+            return new MatchResult<Match>(MatchStatus.Unauthorized);
         }
 
         GameMatch? match = context.GameMatch.SingleOrDefault(candidate => candidate.matchId == matchId);
         if (match == null)
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.MatchNotFound);
+            return new MatchResult<Match>(MatchStatus.MatchNotFound);
         }
 
         if (match.statusCode != "WAITING")
         {
-            return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.MatchNotWaiting);
+            return new MatchResult<Match>(MatchStatus.MatchNotWaiting);
         }
 
         match.turnDurationSeconds = (short)seconds;
         context.SaveChanges();
         Match result = MatchDatabase.Map(match);
         transaction.Commit();
-        return MatchRepositoryResult<Match>.CreateSuccess(result);
+        return new MatchResult<Match>(result);
     }
 
     /// <summary>Cancels a waiting lobby owned by the requesting account.</summary>
-    public MatchRepositoryStatus Cancel(long accountId, long matchId)
+    public MatchStatus Cancel(long accountId, long matchId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
         MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
         if (!context.Account.Any(account => account.accountId == accountId && account.statusCode == "ACTIVE"))
         {
-            return MatchRepositoryStatus.InactiveAccount;
+            return MatchStatus.InactiveAccount;
         }
 
         PersistentMatchParticipant? player = context.MatchParticipant.SingleOrDefault(candidate =>
@@ -386,24 +386,24 @@ public sealed class MatchRepository : IMatchRepository
             && candidate.participantTypeCode == "REGISTERED");
         if (player == null || !player.isCreator)
         {
-            return MatchRepositoryStatus.Unauthorized;
+            return MatchStatus.Unauthorized;
         }
 
         GameMatch? match = context.GameMatch.SingleOrDefault(candidate => candidate.matchId == matchId);
         if (match == null)
         {
-            return MatchRepositoryStatus.MatchNotFound;
+            return MatchStatus.MatchNotFound;
         }
 
         if (match.statusCode != "WAITING" && match.statusCode != "CANCELLED")
         {
-            return MatchRepositoryStatus.MatchNotWaiting;
+            return MatchStatus.MatchNotWaiting;
         }
 
         match.statusCode = "CANCELLED";
         context.SaveChanges();
         transaction.Commit();
-        return MatchRepositoryStatus.Success;
+        return MatchStatus.Success;
     }
 
 

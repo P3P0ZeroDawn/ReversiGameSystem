@@ -86,7 +86,8 @@ internal sealed class MatchInvitationTests
         Match result = handler.Invite(
             creator.SessionToken,
             20,
-            new MatchSettings { TurnDurationSeconds = 40 }).GetValue();
+            new MatchSettings { TurnDurationSeconds = 40 }).Value
+            ?? throw new InvalidOperationException("Match expected.");
 
         // Assert
         TestAssert.AreEqual("Waiting", result.State);
@@ -115,7 +116,8 @@ internal sealed class MatchInvitationTests
         Match result = handler.Invite(
             creator.SessionToken,
             30,
-            new MatchSettings { TurnDurationSeconds = 60 }).GetValue();
+            new MatchSettings { TurnDurationSeconds = 60 }).Value
+            ?? throw new InvalidOperationException("Match expected.");
 
         // Assert
         TestAssert.AreEqual("Waiting", result.State);
@@ -137,13 +139,13 @@ internal sealed class MatchInvitationTests
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
 
         // Act
-        MatchOperationResult<Match> result = handler.Invite(
+        MatchResult<Match> result = handler.Invite(
             guest.SessionToken,
             20,
             new MatchSettings());
 
         // Assert
-        TestAssert.AreEqual(MatchOperationStatus.Unauthorized, result.Status);
+        TestAssert.AreEqual(MatchStatus.Unauthorized, result.Status);
         TestAssert.AreEqual(0, mailer.SentEmails.Count);
     }
 
@@ -160,13 +162,13 @@ internal sealed class MatchInvitationTests
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
 
         // Act
-        MatchOperationResult<Match> result = handler.Invite(
+        MatchResult<Match> result = handler.Invite(
             creator.SessionToken,
             10,
             new MatchSettings());
 
         // Assert
-        TestAssert.AreEqual(MatchOperationStatus.Unauthorized, result.Status);
+        TestAssert.AreEqual(MatchStatus.Unauthorized, result.Status);
         TestAssert.AreEqual(0, mailer.SentEmails.Count);
     }
 
@@ -184,10 +186,10 @@ internal sealed class MatchInvitationTests
 
         // Act & Assert
         TestAssert.AreEqual(
-            MatchOperationStatus.InvalidFriendAccountId,
+            MatchStatus.InvalidFriendAccountId,
             handler.Invite(creator.SessionToken, 0, new MatchSettings()).Status);
         TestAssert.AreEqual(
-            MatchOperationStatus.InvalidFriendAccountId,
+            MatchStatus.InvalidFriendAccountId,
             handler.Invite(creator.SessionToken, -5, new MatchSettings()).Status);
     }
 
@@ -204,13 +206,13 @@ internal sealed class MatchInvitationTests
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
 
         // Act
-        MatchOperationResult<Match> result = handler.Invite(
+        MatchResult<Match> result = handler.Invite(
             creator.SessionToken,
             999,
             new MatchSettings());
 
         // Assert
-        TestAssert.AreEqual(MatchOperationStatus.FriendAccountUnavailable, result.Status);
+        TestAssert.AreEqual(MatchStatus.FriendAccountUnavailable, result.Status);
         TestAssert.AreEqual(0, mailer.SentEmails.Count);
     }
 
@@ -228,13 +230,13 @@ internal sealed class MatchInvitationTests
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
 
         // Act
-        MatchOperationResult<Match> result = handler.Invite(
+        MatchResult<Match> result = handler.Invite(
             creator.SessionToken,
             50,
             new MatchSettings());
 
         // Assert
-        TestAssert.AreEqual(MatchOperationStatus.FriendshipNotFound, result.Status);
+        TestAssert.AreEqual(MatchStatus.FriendshipNotFound, result.Status);
         TestAssert.AreEqual(0, mailer.SentEmails.Count);
     }
 
@@ -254,13 +256,13 @@ internal sealed class MatchInvitationTests
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
 
         // Act
-        MatchOperationResult<Match> result = handler.Invite(
+        MatchResult<Match> result = handler.Invite(
             inactiveCaller.SessionToken,
             20,
             new MatchSettings());
 
         // Assert
-        TestAssert.AreEqual(MatchOperationStatus.InactiveAccount, result.Status);
+        TestAssert.AreEqual(MatchStatus.InactiveAccount, result.Status);
         TestAssert.AreEqual(0, mailer.SentEmails.Count);
     }
 
@@ -278,13 +280,13 @@ internal sealed class MatchInvitationTests
 
         // Act & Assert
         TestAssert.AreEqual(
-            MatchOperationStatus.InvalidTurnDuration,
+            MatchStatus.InvalidTurnDuration,
             handler.Invite(
                 creator.SessionToken,
                 20,
                 new MatchSettings { TurnDurationSeconds = 9 }).Status);
         TestAssert.AreEqual(
-            MatchOperationStatus.InvalidTurnDuration,
+            MatchStatus.InvalidTurnDuration,
             handler.Invite(
                 creator.SessionToken,
                 20,
@@ -304,13 +306,13 @@ internal sealed class MatchInvitationTests
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
 
         // Act
-        MatchOperationResult<Match> result = handler.Invite(
+        MatchResult<Match> result = handler.Invite(
             creator.SessionToken,
             20,
             new MatchSettings { OpponentKind = "System" });
 
         // Assert
-        TestAssert.AreEqual(MatchOperationStatus.InvalidConfiguration, result.Status);
+        TestAssert.AreEqual(MatchStatus.InvalidConfiguration, result.Status);
     }
 
     /// <summary>
@@ -326,13 +328,13 @@ internal sealed class MatchInvitationTests
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
 
         // Act
-        MatchOperationResult<Match> result = handler.Invite(
+        MatchResult<Match> result = handler.Invite(
             creator.SessionToken,
             20,
             new MatchSettings { CountsTowardStatistics = true });
 
         // Assert
-        TestAssert.AreEqual(MatchOperationStatus.InvalidConfiguration, result.Status);
+        TestAssert.AreEqual(MatchStatus.InvalidConfiguration, result.Status);
     }
 
     /// <summary>
@@ -400,13 +402,13 @@ internal sealed class MatchInvitationTests
         };
 
         // Act
-        MatchOperationResult<Match> result = handler.Invite(
+        MatchResult<Match> result = handler.Invite(
             creator.SessionToken,
             20,
             new MatchSettings());
 
         // Assert
-        TestAssert.AreEqual(MatchOperationStatus.MatchNotWaiting, result.Status);
+        TestAssert.AreEqual(MatchStatus.MatchNotWaiting, result.Status);
         TestAssert.AreEqual(1, store.CancelCount);
     }
 
@@ -425,20 +427,23 @@ internal sealed class MatchInvitationTests
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
 
-        handler.Invite(creator.SessionToken, 20, new MatchSettings()).GetValue();
+        _ = handler.Invite(creator.SessionToken, 20, new MatchSettings()).Value;
         AuthenticatedSession otherCreator = CreatePlayer(context, 88, "OtherCreator");
-        handler.Create(otherCreator.SessionToken, new MatchSettings()).GetValue();
+        _ = handler.Create(otherCreator.SessionToken, new MatchSettings()).Value;
 
         // Act & Assert
-        Match[] forCreator = handler.Available(creator.SessionToken).GetValue();
+        Match[] forCreator = handler.Available(creator.SessionToken).Value
+            ?? throw new InvalidOperationException("Matches expected.");
         TestAssert.AreEqual(1, forCreator.Length);
         TestAssert.AreEqual(false, forCreator[0].IsPrivate);
 
-        Match[] forFriend = handler.Available(friend.SessionToken).GetValue();
+        Match[] forFriend = handler.Available(friend.SessionToken).Value
+            ?? throw new InvalidOperationException("Matches expected.");
         TestAssert.AreEqual(1, forFriend.Length);
         TestAssert.AreEqual(false, forFriend[0].IsPrivate);
 
-        Match[] forStranger = handler.Available(stranger.SessionToken).GetValue();
+        Match[] forStranger = handler.Available(stranger.SessionToken).Value
+            ?? throw new InvalidOperationException("Matches expected.");
         TestAssert.AreEqual(1, forStranger.Length);
         TestAssert.AreEqual(false, forStranger[0].IsPrivate);
     }
@@ -459,10 +464,12 @@ internal sealed class MatchInvitationTests
         Match waiting = handler.Invite(
             creator.SessionToken,
             20,
-            new MatchSettings()).GetValue();
+            new MatchSettings()).Value
+            ?? throw new InvalidOperationException("Match expected.");
 
         // Act
-        Match joined = handler.Join(friend.SessionToken, waiting.Code!).GetValue();
+        Match joined = handler.Join(friend.SessionToken, waiting.Code!).Value
+            ?? throw new InvalidOperationException("Match expected.");
 
         // Assert
         TestAssert.AreEqual("InProgress", joined.State);
@@ -487,15 +494,16 @@ internal sealed class MatchInvitationTests
         Match waiting = handler.Invite(
             creator.SessionToken,
             20,
-            new MatchSettings()).GetValue();
+            new MatchSettings()).Value
+            ?? throw new InvalidOperationException("Match expected.");
 
         // Act
-        MatchOperationResult<Match> result = handler.Join(
+        MatchResult<Match> result = handler.Join(
             stranger.SessionToken,
             waiting.Code!);
 
         // Assert
-        TestAssert.AreEqual(MatchOperationStatus.Unauthorized, result.Status);
+        TestAssert.AreEqual(MatchStatus.Unauthorized, result.Status);
     }
 
     /// <summary>
@@ -513,13 +521,14 @@ internal sealed class MatchInvitationTests
         Match waiting = handler.Invite(
             creator.SessionToken,
             20,
-            new MatchSettings()).GetValue();
+            new MatchSettings()).Value
+            ?? throw new InvalidOperationException("Match expected.");
 
         // Act
-        MatchRepositoryStatus status = store.ValidateJoinForGuest(waiting.Code!);
+        MatchStatus status = store.ValidateGuestJoin(waiting.Code!);
 
         // Assert
-        TestAssert.AreEqual(MatchRepositoryStatus.Unauthorized, status);
+        TestAssert.AreEqual(MatchStatus.Unauthorized, status);
     }
 
     /// <summary>
@@ -542,10 +551,10 @@ internal sealed class MatchInvitationTests
         store.Rows[55] = new MockMatchRow { Match = unconfirmed, InvitedAccountId = 20, IsConfirmed = false };
 
         // Act
-        MatchRepositoryResult<Match> result = store.Join(friend, "AB2324", DateTime.UtcNow);
+        MatchResult<Match> result = store.Join(friend, "AB2324", DateTime.UtcNow);
 
         // Assert
-        TestAssert.AreEqual(MatchRepositoryStatus.MatchCodeUnavailable, result.Status);
+        TestAssert.AreEqual(MatchStatus.MatchCodeUnavailable, result.Status);
     }
 
     /// <summary>
@@ -568,10 +577,10 @@ internal sealed class MatchInvitationTests
         store.Rows[56] = new MockMatchRow { Match = cancelled, InvitedAccountId = 20, IsConfirmed = true };
 
         // Act
-        MatchRepositoryResult<Match> result = store.Join(friend, "AB2325", DateTime.UtcNow);
+        MatchResult<Match> result = store.Join(friend, "AB2325", DateTime.UtcNow);
 
         // Assert
-        TestAssert.AreEqual(MatchRepositoryStatus.MatchCodeUnavailable, result.Status);
+        TestAssert.AreEqual(MatchStatus.MatchCodeUnavailable, result.Status);
     }
 
     /// <summary>
@@ -590,15 +599,16 @@ internal sealed class MatchInvitationTests
         Match waiting = handler.Invite(
             creator.SessionToken,
             20,
-            new MatchSettings()).GetValue();
+            new MatchSettings()).Value
+            ?? throw new InvalidOperationException("Match expected.");
 
         // Act
         Task<bool>[] attempts = Enumerable.Range(0, 3).Select(_ => Task.Run(() =>
         {
-            MatchOperationResult<Match> result = handler.Join(
+            MatchResult<Match> result = handler.Join(
                 friend.SessionToken,
                 waiting.Code!);
-            return result.Status == MatchOperationStatus.Success;
+            return result.Status == MatchStatus.Success;
         })).ToArray();
         Task.WaitAll(attempts);
 
@@ -622,7 +632,8 @@ internal sealed class MatchInvitationTests
         Match waiting = handler.Invite(
             creator.SessionToken,
             20,
-            new MatchSettings()).GetValue();
+            new MatchSettings()).Value
+            ?? throw new InvalidOperationException("Match expected.");
 
         // Act
         long[] cancelled = handler.CancelWaitingForSession(creator.SessionToken);
@@ -648,7 +659,8 @@ internal sealed class MatchInvitationTests
         Match waiting = handler.Invite(
             creatorSession1.SessionToken,
             20,
-            new MatchSettings()).GetValue();
+            new MatchSettings()).Value
+            ?? throw new InvalidOperationException("Match expected.");
 
         AuthenticatedSession creatorSession2 = CreatePlayer(context, 10, "AlphaPlayer");
 
@@ -751,15 +763,15 @@ internal sealed class MatchInvitationTests
 
     private sealed class InvitationMockStore : IMatchRepository
     {
-        public MatchRepositoryStatus Authorize(long accountId)
+        public MatchStatus EvaluateLobbyAccess(long accountId)
         {
             if (!Accounts.TryGetValue(accountId, out (string Email, bool IsActive) account)
                 || !account.IsActive)
             {
-                return MatchRepositoryStatus.InactiveAccount;
+                return MatchStatus.InactiveAccount;
             }
 
-            return MatchRepositoryStatus.Success;
+            return MatchStatus.Success;
         }
         private readonly object _sync = new object();
         private long _nextId = 100;
@@ -784,7 +796,7 @@ internal sealed class MatchInvitationTests
             Accounts[accountId] = (email, isActive);
         }
 
-        public MatchRepositoryResult<Match> Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
+        public MatchResult<Match> Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
         {
             lock (_sync)
             {
@@ -808,11 +820,11 @@ internal sealed class MatchInvitationTests
                     }
                 };
                 Rows[id] = new MockMatchRow { Match = match, IsConfirmed = true };
-                return MatchRepositoryResult<Match>.CreateSuccess(match);
+                return new MatchResult<Match>(match);
             }
         }
 
-        public MatchRepositoryResult<Match[]> Available(long accountId)
+        public MatchResult<Match[]> Available(long accountId)
         {
             lock (_sync)
             {
@@ -820,30 +832,30 @@ internal sealed class MatchInvitationTests
                     .Where(row => !row.Match.IsPrivate && row.Match.State == "Waiting")
                     .Select(row => row.Match)
                     .ToArray();
-                return MatchRepositoryResult<Match[]>.CreateSuccess(matches);
+                return new MatchResult<Match[]>(matches);
             }
         }
 
-        public MatchRepositoryResult<Match> Join(AuthenticatedSession player, string code, DateTime now)
+        public MatchResult<Match> Join(AuthenticatedSession player, string code, DateTime now)
         {
             lock (_sync)
             {
                 MockMatchRow? row = Rows.Values.FirstOrDefault(r => r.Match.Code == code);
                 if (row == null || row.Match.State != "Waiting")
                 {
-                    return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.MatchCodeUnavailable);
+                    return new MatchResult<Match>(MatchStatus.MatchCodeUnavailable);
                 }
                 if (row.Match.IsPrivate && !row.IsConfirmed)
                 {
-                    return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.MatchCodeUnavailable);
+                    return new MatchResult<Match>(MatchStatus.MatchCodeUnavailable);
                 }
                 if (row.Match.IsPrivate && row.InvitedAccountId != player.AccountId)
                 {
-                    return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.Unauthorized);
+                    return new MatchResult<Match>(MatchStatus.Unauthorized);
                 }
                 if (row.Match.Participants[0].AccountId == player.AccountId)
                 {
-                    return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.CannotJoinOwnMatch);
+                    return new MatchResult<Match>(MatchStatus.CannotJoinOwnMatch);
                 }
 
                 row.Match.State = "InProgress";
@@ -857,11 +869,11 @@ internal sealed class MatchInvitationTests
                         DisplayName = player.Username
                     }
                 };
-                return MatchRepositoryResult<Match>.CreateSuccess(row.Match);
+                return new MatchResult<Match>(row.Match);
             }
         }
 
-        public MatchRepositoryResult<MatchInvitationPreparation> PreparePrivateInvitation(
+        public MatchResult<MatchInvitationPreparation> PreparePrivateInvitation(
             AuthenticatedSession creator,
             long friendAccountId,
             MatchSettings settings,
@@ -871,23 +883,23 @@ internal sealed class MatchInvitationTests
             {
                 if (Accounts.TryGetValue(creator.AccountId, out (string Email, bool IsActive) creatorInfo) && !creatorInfo.IsActive)
                 {
-                    return MatchRepositoryResult<MatchInvitationPreparation>.CreateFailure(MatchRepositoryStatus.InactiveAccount);
+                    return new MatchResult<MatchInvitationPreparation>(MatchStatus.InactiveAccount);
                 }
                 if (friendAccountId <= 0)
                 {
-                    return MatchRepositoryResult<MatchInvitationPreparation>.CreateFailure(MatchRepositoryStatus.FriendAccountUnavailable);
+                    return new MatchResult<MatchInvitationPreparation>(MatchStatus.FriendAccountUnavailable);
                 }
                 if (friendAccountId == creator.AccountId)
                 {
-                    return MatchRepositoryResult<MatchInvitationPreparation>.CreateFailure(MatchRepositoryStatus.Unauthorized);
+                    return new MatchResult<MatchInvitationPreparation>(MatchStatus.Unauthorized);
                 }
                 if (!Accounts.TryGetValue(friendAccountId, out (string Email, bool IsActive) friendInfo) || !friendInfo.IsActive)
                 {
-                    return MatchRepositoryResult<MatchInvitationPreparation>.CreateFailure(MatchRepositoryStatus.FriendAccountUnavailable);
+                    return new MatchResult<MatchInvitationPreparation>(MatchStatus.FriendAccountUnavailable);
                 }
                 if (!Friendships.Contains((creator.AccountId, friendAccountId)))
                 {
-                    return MatchRepositoryResult<MatchInvitationPreparation>.CreateFailure(MatchRepositoryStatus.FriendshipNotFound);
+                    return new MatchResult<MatchInvitationPreparation>(MatchStatus.FriendshipNotFound);
                 }
 
                 long id = ++_nextId;
@@ -917,11 +929,11 @@ internal sealed class MatchInvitationTests
                 };
 
                 MatchInvitationPreparation preparation = new MatchInvitationPreparation(match, friendInfo.Email);
-                return MatchRepositoryResult<MatchInvitationPreparation>.CreateSuccess(preparation);
+                return new MatchResult<MatchInvitationPreparation>(preparation);
             }
         }
 
-        public MatchRepositoryResult<Match> MarkInvitationDelivered(
+        public MatchResult<Match> MarkInvitationDelivered(
             long accountId,
             long matchId,
             DateTime now)
@@ -930,30 +942,30 @@ internal sealed class MatchInvitationTests
             {
                 if (!Rows.TryGetValue(matchId, out MockMatchRow? row) || row.Match.State != "Waiting")
                 {
-                    return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.MatchNotWaiting);
+                    return new MatchResult<Match>(MatchStatus.MatchNotWaiting);
                 }
 
                 row.IsConfirmed = true;
                 ConfirmedCount++;
-                return MatchRepositoryResult<Match>.CreateSuccess(row.Match);
+                return new MatchResult<Match>(row.Match);
             }
         }
 
-        public MatchRepositoryStatus ValidateJoinForGuest(string matchCode)
+        public MatchStatus ValidateGuestJoin(string matchCode)
         {
             lock (_sync)
             {
                 MockMatchRow? row = Rows.Values.FirstOrDefault(r => r.Match.Code == matchCode);
                 if (row != null && row.Match.IsPrivate)
                 {
-                    return MatchRepositoryStatus.Unauthorized;
+                    return MatchStatus.Unauthorized;
                 }
 
-                return MatchRepositoryStatus.Success;
+                return MatchStatus.Success;
             }
         }
 
-        public MatchRepositoryStatus Cancel(long accountId, long matchId)
+        public MatchStatus Cancel(long accountId, long matchId)
         {
             lock (_sync)
             {
@@ -967,24 +979,24 @@ internal sealed class MatchInvitationTests
                     row.Match.State = "Cancelled";
                 }
 
-                return MatchRepositoryStatus.Success;
+                return MatchStatus.Success;
             }
         }
 
-        public MatchRepositoryResult<Match> Get(long accountId, long matchId)
+        public MatchResult<Match> Get(long accountId, long matchId)
         {
             lock (_sync)
             {
                 if (!Rows.TryGetValue(matchId, out MockMatchRow? row))
                 {
-                    return MatchRepositoryResult<Match>.CreateFailure(MatchRepositoryStatus.MatchNotFound);
+                    return new MatchResult<Match>(MatchStatus.MatchNotFound);
                 }
 
-                return MatchRepositoryResult<Match>.CreateSuccess(row.Match);
+                return new MatchResult<Match>(row.Match);
             }
         }
 
-        public MatchRepositoryResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
+        public MatchResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
         {
             throw new NotSupportedException();
         }

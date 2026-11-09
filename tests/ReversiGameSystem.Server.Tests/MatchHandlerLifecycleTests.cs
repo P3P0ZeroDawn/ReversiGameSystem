@@ -13,7 +13,7 @@ internal sealed class MatchApplicationServiceLifecycleTests
         AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore { FailCancel = true };
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context);
-        handler.Create(player.SessionToken, new MatchSettings()).GetValue();
+        _ = handler.Create(player.SessionToken, new MatchSettings()).Value;
 
         // Act
         TestAssert.Throws<InvalidOperationException>(
@@ -34,7 +34,7 @@ internal sealed class MatchApplicationServiceLifecycleTests
         AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore { FailCancel = true };
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context);
-        handler.Create(player.SessionToken, new MatchSettings()).GetValue();
+        _ = handler.Create(player.SessionToken, new MatchSettings()).Value;
         context.Sessions.Revoke(player.SessionToken);
 
         // Act
@@ -55,7 +55,7 @@ internal sealed class MatchApplicationServiceLifecycleTests
         AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore { Started = true };
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context);
-        handler.Create(player.SessionToken, new MatchSettings()).GetValue();
+        _ = handler.Create(player.SessionToken, new MatchSettings()).Value;
 
         // Act
         long[] cancelled = handler.CancelWaitingForSession(player.SessionToken);
@@ -76,13 +76,13 @@ internal sealed class MatchApplicationServiceLifecycleTests
         context.UtcNow = player.ExpiresAtUtc;
 
         // Act
-        MatchOperationResult<Match> result = handler.Create(
+        MatchResult<Match> result = handler.Create(
             player.SessionToken,
             new MatchSettings());
 
         // Assert
         TestAssert.AreEqual(0, store.CreateAttempts);
-        TestAssert.AreEqual(MatchOperationStatus.InvalidSession, result.Status);
+        TestAssert.AreEqual(MatchStatus.InvalidSession, result.Status);
     }
 
     internal void Invite_DeliveryFailure_CancelsMatchAndThrowsServiceFault()
@@ -112,13 +112,13 @@ internal sealed class MatchApplicationServiceLifecycleTests
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
 
         // Act
-        MatchOperationResult<Match> result = handler.Invite(
+        MatchResult<Match> result = handler.Invite(
             guest.SessionToken,
             100,
             new MatchSettings());
 
         // Assert
-        TestAssert.AreEqual(MatchOperationStatus.Unauthorized, result.Status);
+        TestAssert.AreEqual(MatchStatus.Unauthorized, result.Status);
     }
 
     private static AuthenticatedSession CreatePlayer(SessionTestContext context)
@@ -137,22 +137,22 @@ internal sealed class MatchApplicationServiceLifecycleTests
 
     private sealed class LifecycleStore : IMatchRepository
     {
-        public MatchRepositoryStatus Authorize(long accountId)
+        public MatchStatus EvaluateLobbyAccess(long accountId)
         {
-            return MatchRepositoryStatus.Success;
+            return MatchStatus.Success;
         }
         internal bool FailCancel { get; set; }
         internal bool Started { get; set; }
         internal int CancelAttempts { get; private set; }
         internal int CreateAttempts { get; private set; }
 
-        public MatchRepositoryResult<Match> Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
+        public MatchResult<Match> Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
         {
             CreateAttempts++;
-            return MatchRepositoryResult<Match>.CreateSuccess(new Match { Id = 7 });
+            return new MatchResult<Match>(new Match { Id = 7 });
         }
 
-        public MatchRepositoryStatus Cancel(long accountId, long matchId)
+        public MatchStatus Cancel(long accountId, long matchId)
         {
             CancelAttempts++;
             if (FailCancel)
@@ -161,30 +161,30 @@ internal sealed class MatchApplicationServiceLifecycleTests
             }
             if (Started)
             {
-                return MatchRepositoryStatus.MatchNotWaiting;
+                return MatchStatus.MatchNotWaiting;
             }
 
-            return MatchRepositoryStatus.Success;
+            return MatchStatus.Success;
         }
 
-        public MatchRepositoryResult<Match[]> Available(long accountId)
+        public MatchResult<Match[]> Available(long accountId)
         {
             throw new NotSupportedException();
         }
-        public MatchRepositoryResult<Match> Join(AuthenticatedSession player, string code, DateTime now)
+        public MatchResult<Match> Join(AuthenticatedSession player, string code, DateTime now)
         {
             throw new NotSupportedException();
         }
-        public MatchRepositoryResult<Match> Get(long accountId, long matchId)
+        public MatchResult<Match> Get(long accountId, long matchId)
         {
             throw new NotSupportedException();
         }
-        public MatchRepositoryResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
+        public MatchResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
         {
             throw new NotSupportedException();
         }
 
-        public MatchRepositoryResult<MatchInvitationPreparation> PreparePrivateInvitation(
+        public MatchResult<MatchInvitationPreparation> PreparePrivateInvitation(
             AuthenticatedSession creator,
             long friendAccountId,
             MatchSettings settings,
@@ -208,10 +208,10 @@ internal sealed class MatchApplicationServiceLifecycleTests
                 }
             };
             MatchInvitationPreparation preparation = new MatchInvitationPreparation(match, "friend@example.com");
-            return MatchRepositoryResult<MatchInvitationPreparation>.CreateSuccess(preparation);
+            return new MatchResult<MatchInvitationPreparation>(preparation);
         }
 
-        public MatchRepositoryResult<Match> MarkInvitationDelivered(
+        public MatchResult<Match> MarkInvitationDelivered(
             long accountId,
             long matchId,
             DateTime now)
@@ -233,12 +233,12 @@ internal sealed class MatchApplicationServiceLifecycleTests
                     }
                 }
             };
-            return MatchRepositoryResult<Match>.CreateSuccess(match);
+            return new MatchResult<Match>(match);
         }
 
-        public MatchRepositoryStatus ValidateJoinForGuest(string matchCode)
+        public MatchStatus ValidateGuestJoin(string matchCode)
         {
-            return MatchRepositoryStatus.Success;
+            return MatchStatus.Success;
         }
     }
 }
