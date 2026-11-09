@@ -49,6 +49,7 @@ internal static class Program
         VerificationEmailSenderTests mailTests = new VerificationEmailSenderTests();
         FriendshipPresenceTests presenceTests = new FriendshipPresenceTests();
         ChatContentPolicyTests chatPolicyTests = new ChatContentPolicyTests();
+        ChatModelsTests chatModelsTests = new ChatModelsTests();
         ChatApplicationServiceTests chatApplicationTests =
             new ChatApplicationServiceTests();
         MatchBoundaryTests matchBoundaryTests = new MatchBoundaryTests();
@@ -72,6 +73,10 @@ internal static class Program
             chatPolicyTests.Matches_AccentsCaseAndPunctuation_MatchesCompletePhrase,
             chatPolicyTests.Matches_WordInsideAnotherWord_DoesNotMatch,
             chatPolicyTests.Matches_EmptyPattern_DoesNotBlockEveryMessage,
+            chatModelsTests.ChatChannelAccess_SuccessStatus_RejectsStatusConstructor,
+            chatModelsTests.ChatMessageSubmission_SuccessStatus_RejectsMissingMessage,
+            chatModelsTests.ChatMessageSubmission_PlayerMutedStatus_RejectsMissingMute,
+            chatModelsTests.ChatHistory_SuccessStatus_RejectsMissingMessages,
             chatApplicationTests.SubmitChatMessage_EmptyContent_RejectsBeforeRepositoryAccess,
             chatApplicationTests.SubmitChatMessage_ValidContent_ReturnsPersistedMessage,
             chatApplicationTests.SubmitChatMessage_RepositoryFailure_PropagatesException,

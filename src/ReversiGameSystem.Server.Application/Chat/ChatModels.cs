@@ -67,8 +67,16 @@ public enum ChatStatus
 public class ChatChannelAccess
 {
     /// <summary>Creates a rejected channel access.</summary>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// The status represents successful access.
+    /// </exception>
     public ChatChannelAccess(ChatStatus status)
     {
+        if (status == ChatStatus.Success)
+        {
+            throw new ArgumentOutOfRangeException(nameof(status));
+        }
+
         Status = status;
     }
 
@@ -90,8 +98,16 @@ public class ChatChannelAccess
 public class ChatMessageSubmission
 {
     /// <summary>Creates a rejected message submission.</summary>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// The status requires a message or mute.
+    /// </exception>
     public ChatMessageSubmission(ChatStatus status)
     {
+        if (status == ChatStatus.Success || status == ChatStatus.PlayerMuted)
+        {
+            throw new ArgumentOutOfRangeException(nameof(status));
+        }
+
         Status = status;
     }
 
@@ -123,8 +139,16 @@ public class ChatMessageSubmission
 public class ChatHistory
 {
     /// <summary>Creates a rejected history query.</summary>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// The status represents a successful history query.
+    /// </exception>
     public ChatHistory(ChatStatus status)
     {
+        if (status == ChatStatus.Success)
+        {
+            throw new ArgumentOutOfRangeException(nameof(status));
+        }
+
         Status = status;
         Messages = Array.Empty<ChatMessage>();
     }
