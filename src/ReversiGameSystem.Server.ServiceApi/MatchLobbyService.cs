@@ -5,6 +5,7 @@ using System.Threading;
 using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Contracts.Callbacks;
+using ReversiGameSystem.Server.Contracts.Common;
 using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.Contracts.Matches;
 using ReversiGameSystem.Server.Contracts.Services;
@@ -102,7 +103,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
     /// <inheritdoc />
     public MatchStateSnapshot StartSystemMatch(string sessionToken, long matchId)
     {
-        throw MatchBoundary.Unsupported(nameof(StartSystemMatch));
+        throw ServiceFaultFactory.Create(nameof(StartSystemMatch), CorrelationContext.GetOrCreate());
     }
 
     /// <inheritdoc />

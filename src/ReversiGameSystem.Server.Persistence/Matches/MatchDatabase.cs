@@ -32,38 +32,6 @@ internal static class MatchDatabase
             new SqlParameter("@errorState", LockUnavailableErrorState));
     }
 
-    internal static void RequireActive(ReversiGameSystemEntities context, long accountId)
-    {
-        if (!context.Account.Any(account => account.accountId == accountId && account.statusCode == "ACTIVE"))
-        {
-            throw new MatchRejectedException(MatchRejection.InactiveAccount);
-        }
-    }
-
-    internal static GameMatch RequireMatch(ReversiGameSystemEntities context, long matchId)
-    {
-        GameMatch? match = context.GameMatch.SingleOrDefault(candidate => candidate.matchId == matchId);
-        if (match == null)
-        {
-            throw new MatchRejectedException(MatchRejection.MatchNotFound);
-        }
-        return match;
-    }
-
-    internal static PersistentMatchParticipant RequireParticipant(
-        ReversiGameSystemEntities context, long accountId, long matchId)
-    {
-        RequireActive(context, accountId);
-        PersistentMatchParticipant? participant = context.MatchParticipant.SingleOrDefault(candidate =>
-            candidate.matchId == matchId && candidate.accountId == accountId
-            && candidate.participantTypeCode == "REGISTERED");
-        if (participant == null)
-        {
-            throw new MatchRejectedException(MatchRejection.Unauthorized);
-        }
-        return participant;
-    }
-
     internal static Match Map(GameMatch match)
     {
         if (match.statusCode == "IN_PROGRESS" && match.GameMove.Any())

@@ -11,8 +11,13 @@ ejemplo incorrecto. El estándar permanece agnóstico a proyectos y estructuras 
 
 ## Pendientes
 
-No existen ajustes pendientes. Las decisiones aprobadas hasta esta revisión ya forman
-parte del estándar.
+### 1. Flexibilización de `{Capability}Models.cs` para entidades livianas (Sección 4.11)
+
+- **Sección afectada:** 4.11 (Source File Organization).
+- **Modificación a realizar:** Permitir que los archivos contenedores `{Capability}Models.cs` agrupen no solo modelos pasivos y enumeraciones de estado, sino también entidades de dominio livianas y cohesivas exclusivas de esa capacidad, manteniendo la prohibición estricta sobre tipos `Exception`, interfaces, servicios de aplicación o implementaciones de repositorio.
+- **Motivo / Justificación:**
+  1. **Consistencia estructural:** En la capa de Application, capacidades como `Chat`, `Leaderboards` y `Sessions` agrupan sus modelos y estados en un solo archivo representativo (`*Models.cs`). Obligar a separar una entidad liviana (como `Match`) en un archivo aislado de pocas líneas genera inconsistencia organizativa.
+  2. **Escala y complejidad del proyecto:** Las entidades del sistema poseen un número reducido de objetos y lógica de estado compacta, tanto en el estado actual como en su evolución prevista, por lo que un archivo contenedor por capacidad resulta más mantenible y legible sin incurrir en acoplamiento indebido.
 
 ## Mantenimiento
 

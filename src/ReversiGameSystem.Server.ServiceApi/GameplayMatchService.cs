@@ -6,6 +6,8 @@ using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Contracts.Callbacks;
+using ReversiGameSystem.Server.Contracts.Common;
+using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.Contracts.Matches;
 using ReversiGameSystem.Server.Contracts.Services;
 
@@ -18,14 +20,13 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
 {
     private readonly MatchApplicationService _applicationService;
     private readonly ISessionRepository _sessions;
-    private readonly MatchBoundary _boundary;
-    private readonly MatchCallbackSubscriptions<IGameplayMatchServiceCallback>
-        _callbackSubscriptions;
+    private readonly ILogger<GameplayMatchService> _logger;
+    private readonly MatchCallbackSubscriptions<IGameplayMatchServiceCallback> _callbackSubscriptions;
     private readonly object _presenceSync = new object();
     private readonly Dictionary<long, Dictionary<int, HashSet<string>>> _participantPresence =
         new Dictionary<long, Dictionary<int, HashSet<string>>>();
 
-    /// <summary>Creates the initial match boundary.</summary>
+    /// <summary>Initializes a new instance of the <see cref="GameplayMatchService"/> class.</summary>
     public GameplayMatchService(
         MatchApplicationService applicationService,
         ISessionRepository sessions,
@@ -34,95 +35,96 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         _applicationService = applicationService
             ?? throw new ArgumentNullException(nameof(applicationService));
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
-        _boundary = new MatchBoundary(logger);
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _callbackSubscriptions =
             new MatchCallbackSubscriptions<IGameplayMatchServiceCallback>(
             AuthorizeChannel,
             RemovePresence,
-            logger);
+            _logger);
     }
 
     /// <inheritdoc />
     public void OpenMatchChannel(string sessionToken, long matchId)
     {
-        _boundary.Execute(nameof(OpenMatchChannel), () =>
+        Match match = GetMatch(sessionToken, matchId);
+        AuthenticatedSession session = GetSession(sessionToken);
+        MatchParticipant? participant = match.Participants.FirstOrDefault(
+            current => current.AccountId == session.AccountId);
+        if (participant == null)
         {
-            Match match = GetMatch(sessionToken, matchId);
-            MatchContractMapper.RequireStarted(match);
-            AuthenticatedSession session = GetSession(sessionToken);
-            MatchParticipant participant = match.Participants.Single(
-                current => current.AccountId == session.AccountId);
-            _callbackSubscriptions.Register(sessionToken, matchId);
-            AddPresence(
-                sessionToken,
-                matchId,
-                participant.SeatNumber,
-                match.Participants);
-            return true;
-        });
+            throw CreateMatchFault(MatchFailure.Unauthorized);
+        }
+
+        _callbackSubscriptions.Register(sessionToken, matchId);
+        AddPresence(
+            sessionToken,
+            matchId,
+            participant.SeatNumber,
+            match.Participants);
     }
 
     /// <inheritdoc />
     public MatchInformation GetMatchInformation(string sessionToken, long matchId)
     {
-        return _boundary.Execute(nameof(GetMatchInformation), () =>
+        Match match = GetMatch(sessionToken, matchId);
+        AuthenticatedSession session = GetSession(sessionToken);
+        MatchParticipant? participant = match.Participants.FirstOrDefault(
+            player => player.AccountId == session.AccountId);
+        if (participant == null)
         {
-            Match match = GetMatch(sessionToken, matchId);
-            MatchContractMapper.RequireStarted(match);
-            AuthenticatedSession session = GetSession(sessionToken);
-            return new MatchInformation
-            {
-                MatchId = match.Id,
-                Participants = MatchContractMapper.Participants(match),
-                TurnDurationSeconds = match.TurnDurationSeconds,
-                AssignedSeatNumber = match.Participants
-                    .Single(player => player.AccountId == session.AccountId)
-                    .SeatNumber
-            };
-        });
+            throw CreateMatchFault(MatchFailure.Unauthorized);
+        }
+
+        return new MatchInformation
+        {
+            MatchId = match.Id,
+            Participants = MatchContractMapper.Participants(match),
+            TurnDurationSeconds = match.TurnDurationSeconds,
+            AssignedSeatNumber = participant.SeatNumber
+        };
     }
 
     /// <inheritdoc />
     public MatchStateSnapshot GetMatchState(string sessionToken, long matchId)
     {
-        return _boundary.Execute(nameof(GetMatchState), () =>
-            MatchContractMapper.InitialState(GetMatch(sessionToken, matchId)));
+        Match match = GetMatch(sessionToken, matchId);
+        return MatchContractMapper.InitialState(match);
     }
 
     /// <inheritdoc />
     public MatchStateSnapshot PlacePiece(string sessionToken, PiecePlacement placement)
     {
-        throw MatchBoundary.Unsupported(nameof(PlacePiece));
+        throw CreateUnsupportedFault(nameof(PlacePiece));
     }
 
     /// <inheritdoc />
     public MatchConclusion ForfeitMatch(string sessionToken, long matchId)
     {
-        throw MatchBoundary.Unsupported(nameof(ForfeitMatch));
+        throw CreateUnsupportedFault(nameof(ForfeitMatch));
     }
 
     /// <inheritdoc />
     public MatchStateSnapshot ObserveMatch(string sessionToken, long matchId)
     {
-        throw MatchBoundary.Unsupported(nameof(ObserveMatch));
+        throw CreateUnsupportedFault(nameof(ObserveMatch));
     }
 
     /// <inheritdoc />
     public MatchSummary[] GetMatchHistory(string sessionToken)
     {
-        throw MatchBoundary.Unsupported(nameof(GetMatchHistory));
+        throw CreateUnsupportedFault(nameof(GetMatchHistory));
     }
 
     /// <inheritdoc />
     public MatchDetails GetMatchDetails(string sessionToken, long matchId)
     {
-        throw MatchBoundary.Unsupported(nameof(GetMatchDetails));
+        throw CreateUnsupportedFault(nameof(GetMatchDetails));
     }
 
     /// <inheritdoc />
     public MoveRecord[] GetMoveHistory(string sessionToken, long matchId)
     {
-        throw MatchBoundary.Unsupported(nameof(GetMoveHistory));
+        throw CreateUnsupportedFault(nameof(GetMoveHistory));
     }
 
     /// <summary>Removes all match subscriptions for a revoked session.</summary>
@@ -140,41 +142,24 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     private Match GetMatch(string sessionToken, long matchId)
     {
         MatchResult<Match> result = _applicationService.Get(sessionToken, matchId);
-        if (result.Status == MatchStatus.MissingSessionToken)
-        {
-            throw new SessionRejectedException(SessionRejection.MissingSessionToken);
-        }
-        if (result.Status == MatchStatus.InvalidSession)
-        {
-            throw new SessionRejectedException();
-        }
-        if (result.Status != MatchStatus.Success)
-        {
-            throw new MatchRejectedException(GetLegacyRejection(result.Status));
-        }
+        ThrowFailure(result.Status);
 
-        return result.Value
+        Match match = result.Value
             ?? throw new InvalidOperationException(
                 "A successful match result must contain its value.");
+        MatchContractMapper.RequireStarted(match);
+        return match;
     }
 
     private bool AuthorizeChannel(string token, long matchId)
     {
-        bool isAuthorized = false;
-        try
+        MatchResult<Match> result = _applicationService.Get(token, matchId);
+        if (result.Status != MatchStatus.Success || result.Value == null)
         {
-            Match match = GetMatch(token, matchId);
-            MatchContractMapper.RequireStarted(match);
-            isAuthorized = true;
-        }
-        catch (SessionRejectedException)
-        {
-        }
-        catch (MatchRejectedException)
-        {
+            return false;
         }
 
-        return isAuthorized;
+        return string.Equals(result.Value.State, "InProgress", StringComparison.Ordinal);
     }
 
     private AuthenticatedSession GetSession(string sessionToken)
@@ -182,7 +167,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         if (!_sessions.TryGet(sessionToken, out AuthenticatedSession? session)
             || session == null)
         {
-            throw new SessionRejectedException();
+            throw SessionFaultFactory.Create(SessionFailure.InvalidSession);
         }
 
         return session;
@@ -260,38 +245,62 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             .ToArray();
     }
 
-    private static MatchRejection GetLegacyRejection(MatchStatus status)
+    private static void ThrowFailure(MatchStatus status)
     {
-        MatchRejection rejection;
-        if (status == MatchStatus.InvalidMatchId)
+        if (status == MatchStatus.Success)
         {
-            rejection = MatchRejection.InvalidMatchId;
+            return;
+        }
+        if (status == MatchStatus.MissingSessionToken)
+        {
+            throw SessionFaultFactory.Create(SessionFailure.MissingSessionToken);
+        }
+        if (status == MatchStatus.InvalidSession)
+        {
+            throw SessionFaultFactory.Create(SessionFailure.InvalidSession);
+        }
+
+        MatchFailure failure = GetMatchFailure(status);
+        throw CreateMatchFault(failure);
+    }
+
+    private static MatchFailure GetMatchFailure(MatchStatus status)
+    {
+        MatchFailure failure = MatchFailure.Unauthorized;
+        if (status == MatchStatus.InactiveAccount)
+        {
+            failure = MatchFailure.InactiveAccount;
+        }
+        else if (status == MatchStatus.InvalidMatchId)
+        {
+            failure = MatchFailure.InvalidMatchId;
         }
         else if (status == MatchStatus.MatchNotFound)
         {
-            rejection = MatchRejection.MatchNotFound;
+            failure = MatchFailure.MatchNotFound;
         }
         else if (status == MatchStatus.MatchNotWaiting)
         {
-            rejection = MatchRejection.MatchNotWaiting;
+            failure = MatchFailure.MatchNotWaiting;
         }
         else if (status == MatchStatus.MatchNotInProgress)
         {
-            rejection = MatchRejection.MatchNotInProgress;
-        }
-        else if (status == MatchStatus.InactiveAccount)
-        {
-            rejection = MatchRejection.InactiveAccount;
-        }
-        else if (status == MatchStatus.Unauthorized)
-        {
-            rejection = MatchRejection.Unauthorized;
-        }
-        else
-        {
-            throw new ArgumentOutOfRangeException(nameof(status));
+            failure = MatchFailure.MatchNotInProgress;
         }
 
-        return rejection;
+        return failure;
+    }
+
+    private static FaultException<MatchFault> CreateMatchFault(MatchFailure failure)
+    {
+        return new FaultException<MatchFault>(new MatchFault
+        {
+            Reason = failure
+        }, "The match request was rejected.");
+    }
+
+    private static FaultException<ServiceFault> CreateUnsupportedFault(string operation)
+    {
+        return ServiceFaultFactory.Create(operation, CorrelationContext.GetOrCreate());
     }
 }

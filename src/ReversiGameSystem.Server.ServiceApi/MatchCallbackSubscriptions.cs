@@ -111,13 +111,6 @@ internal class MatchCallbackSubscriptions<TCallback> : IDisposable
                 }
                 send(channel.Token, channel.MatchId, channel.Callback);
             }
-            catch (ReversiGameSystem.Server.Application.Matches.MatchRejectedException)
-            {
-                if (channel.MatchId != AllMatchesSubscription)
-                {
-                    Remove(channel, true);
-                }
-            }
             catch (ReversiGameSystem.Server.Application.Accounts.SessionRejectedException)
             {
                 Remove(channel, true);
