@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using ReversiGameSystem.Server.Application.Leaderboards;
 
 namespace ReversiGameSystem.Server.Tests;
 
 internal sealed class LeaderboardApplicationServiceTests
 {
-    internal void GetAsync_ValidRequest_RanksAndLimitsEntries()
+    internal void Get_ValidRequest_RanksAndLimitsEntries()
     {
         // Arrange
         LeaderboardRepositoryStub repository = new LeaderboardRepositoryStub
@@ -25,7 +24,7 @@ internal sealed class LeaderboardApplicationServiceTests
             new LeaderboardApplicationService(repository);
 
         // Act
-        LeaderboardResult result = applicationService.GetAsync(3).GetAwaiter().GetResult();
+        LeaderboardResult result = applicationService.Get(3);
 
         // Assert
         TestAssert.AreEqual(LeaderboardStatus.Success, result.Status);
@@ -39,7 +38,7 @@ internal sealed class LeaderboardApplicationServiceTests
         TestAssert.AreEqual(0.7d, result.Entries[2].WinRate);
     }
 
-    internal void GetAsync_InvalidMaximum_RejectsBeforeRepositoryAccess()
+    internal void Get_InvalidMaximum_RejectsBeforeRepositoryAccess()
     {
         // Arrange
         LeaderboardRepositoryStub repository = new LeaderboardRepositoryStub();
@@ -47,12 +46,9 @@ internal sealed class LeaderboardApplicationServiceTests
             new LeaderboardApplicationService(repository);
 
         // Act
-        LeaderboardResult belowMinimum = applicationService.GetAsync(0)
-            .GetAwaiter().GetResult();
+        LeaderboardResult belowMinimum = applicationService.Get(0);
         LeaderboardResult aboveMaximum = applicationService
-            .GetAsync(LeaderboardApplicationService.MaximumAllowedEntries + 1)
-            .GetAwaiter()
-            .GetResult();
+            .Get(LeaderboardApplicationService.MaximumAllowedEntries + 1);
 
         // Assert
         TestAssert.AreEqual(
@@ -64,7 +60,7 @@ internal sealed class LeaderboardApplicationServiceTests
         TestAssert.AreEqual(false, repository.WasCalled);
     }
 
-    internal void GetAsync_EmptyRepository_ReturnsSuccessfulEmptyList()
+    internal void Get_EmptyRepository_ReturnsSuccessfulEmptyList()
     {
         // Arrange
         LeaderboardRepositoryStub repository = new LeaderboardRepositoryStub();
@@ -72,8 +68,7 @@ internal sealed class LeaderboardApplicationServiceTests
             new LeaderboardApplicationService(repository);
 
         // Act
-        LeaderboardResult result = applicationService.GetAsync(10)
-            .GetAwaiter().GetResult();
+        LeaderboardResult result = applicationService.Get(10);
 
         // Assert
         TestAssert.AreEqual(LeaderboardStatus.Success, result.Status);
@@ -81,7 +76,7 @@ internal sealed class LeaderboardApplicationServiceTests
         TestAssert.AreEqual(true, repository.WasCalled);
     }
 
-    internal void GetAsync_BoundaryMaximums_AcceptsOneAndOneHundred()
+    internal void Get_BoundaryMaximums_AcceptsOneAndOneHundred()
     {
         // Arrange
         IReadOnlyList<LeaderboardPlayer> players = Enumerable.Range(1, 101)
@@ -104,14 +99,10 @@ internal sealed class LeaderboardApplicationServiceTests
         // Act
         LeaderboardResult minimumResult =
             new LeaderboardApplicationService(minimumRepository)
-            .GetAsync(1)
-            .GetAwaiter()
-            .GetResult();
+            .Get(1);
         LeaderboardResult maximumResult =
             new LeaderboardApplicationService(maximumRepository)
-            .GetAsync(LeaderboardApplicationService.MaximumAllowedEntries)
-            .GetAwaiter()
-            .GetResult();
+            .Get(LeaderboardApplicationService.MaximumAllowedEntries);
 
         // Assert
         TestAssert.AreEqual(LeaderboardStatus.Success, minimumResult.Status);
@@ -120,7 +111,7 @@ internal sealed class LeaderboardApplicationServiceTests
         TestAssert.AreEqual(100, maximumResult.Entries.Count);
     }
 
-    internal void GetAsync_RepositoryFailure_PropagatesException()
+    internal void Get_RepositoryFailure_PropagatesException()
     {
         // Arrange
         LeaderboardApplicationService applicationService =
@@ -129,7 +120,7 @@ internal sealed class LeaderboardApplicationServiceTests
 
         // Act
         InvalidOperationException exception = TestAssert.Throws<InvalidOperationException>(
-            () => applicationService.GetAsync(10).GetAwaiter().GetResult());
+            () => applicationService.Get(10));
 
         // Assert
         TestAssert.AreEqual("Simulated leaderboard repository failure.", exception.Message);
@@ -145,7 +136,7 @@ internal sealed class LeaderboardRepositoryStub : ILeaderboardRepository
     internal IReadOnlyList<LeaderboardPlayer> Players { get; set; } =
         Array.Empty<LeaderboardPlayer>();
 
-    public Task<IReadOnlyList<LeaderboardPlayer>> GetPlayersAsync()
+    public IReadOnlyList<LeaderboardPlayer> GetPlayers()
     {
         WasCalled = true;
         if (ThrowOnGet)
@@ -154,6 +145,6 @@ internal sealed class LeaderboardRepositoryStub : ILeaderboardRepository
                 "Simulated leaderboard repository failure.");
         }
 
-        return Task.FromResult(Players);
+        return Players;
     }
 }

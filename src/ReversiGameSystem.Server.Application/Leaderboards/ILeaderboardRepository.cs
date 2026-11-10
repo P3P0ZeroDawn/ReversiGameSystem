@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace ReversiGameSystem.Server.Application.Leaderboards;
 
@@ -10,5 +9,5 @@ public interface ILeaderboardRepository
 {
     /// <summary>Retrieves active players and their counted match statistics.</summary>
     /// <returns>The persisted player statistics.</returns>
-    public Task<IReadOnlyList<LeaderboardPlayer>> GetPlayersAsync();
+    public IReadOnlyList<LeaderboardPlayer> GetPlayers();
 }

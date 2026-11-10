@@ -1,7 +1,5 @@
 using System.Collections.Generic;
-using System.Data.Entity;
 using System.Linq;
-using System.Threading.Tasks;
 using ReversiGameSystem.Server.Application.Leaderboards;
 using ReversiGameSystem.Server.Persistence.Model;
 
@@ -17,15 +15,15 @@ public sealed class LeaderboardRepository : ILeaderboardRepository
     private const string WinResultCode = "WIN";
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<LeaderboardPlayer>> GetPlayersAsync()
+    public IReadOnlyList<LeaderboardPlayer> GetPlayers()
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
-        List<LeaderboardAccount> accounts = await LoadAccountsAsync(context);
-        List<PlayerResultCount> resultCounts = await LoadResultCountsAsync(context);
+        List<LeaderboardAccount> accounts = LoadAccounts(context);
+        List<PlayerResultCount> resultCounts = LoadResultCounts(context);
         return CreatePlayers(accounts, resultCounts);
     }
 
-    private static Task<List<LeaderboardAccount>> LoadAccountsAsync(
+    private static List<LeaderboardAccount> LoadAccounts(
         ReversiGameSystemEntities context)
     {
         return context.Account
@@ -37,10 +35,10 @@ public sealed class LeaderboardRepository : ILeaderboardRepository
                 Username = account.username,
                 ProfileImageUri = account.profileImageUri
             })
-            .ToListAsync();
+            .ToList();
     }
 
-    private static Task<List<PlayerResultCount>> LoadResultCountsAsync(
+    private static List<PlayerResultCount> LoadResultCounts(
         ReversiGameSystemEntities context)
     {
         return context.MatchParticipant
@@ -60,7 +58,7 @@ public sealed class LeaderboardRepository : ILeaderboardRepository
                 ResultCode = group.Key.resultCode,
                 Count = group.Count()
             })
-            .ToListAsync();
+            .ToList();
     }
 
     private static IReadOnlyList<LeaderboardPlayer> CreatePlayers(

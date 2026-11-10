@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.ServiceModel;
 using ReversiGameSystem.Server.Application.Leaderboards;
@@ -29,9 +30,24 @@ public sealed class LeaderboardService : ILeaderboardService
     /// <inheritdoc />
     public ContractEntry[] GetLeaderboard(int maximumEntries)
     {
-        LeaderboardResult result = _applicationService.GetAsync(maximumEntries)
-            .GetAwaiter().GetResult();
-        if (result.Status == LeaderboardStatus.InvalidMaximumEntries)
+        LeaderboardResult result = _applicationService.Get(maximumEntries);
+        ThrowFailure(result.Status);
+
+        IReadOnlyList<ApplicationEntry> entries = result.Entries
+            ?? throw new InvalidOperationException(
+                "A successful leaderboard result must contain entries.");
+
+        return entries.Select(MapEntry).ToArray();
+    }
+
+    private static void ThrowFailure(LeaderboardStatus status)
+    {
+        if (status == LeaderboardStatus.Success)
+        {
+            return;
+        }
+
+        if (status == LeaderboardStatus.InvalidMaximumEntries)
         {
             throw new FaultException<LeaderboardFault>(new LeaderboardFault
             {
@@ -39,7 +55,10 @@ public sealed class LeaderboardService : ILeaderboardService
             }, "The leaderboard request was rejected.");
         }
 
-        return result.Entries.Select(MapEntry).ToArray();
+        throw new FaultException<LeaderboardFault>(new LeaderboardFault
+        {
+            Reason = LeaderboardFailure.InvalidMaximumEntries
+        }, "The leaderboard request was rejected.");
     }
 
     private static ContractEntry MapEntry(ApplicationEntry entry)

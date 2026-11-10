@@ -65,11 +65,11 @@ internal static class LegacyTestSuite
             new LeaderboardApplicationServiceTests();
         return new Action[]
         {
-            tests.GetAsync_ValidRequest_RanksAndLimitsEntries,
-            tests.GetAsync_InvalidMaximum_RejectsBeforeRepositoryAccess,
-            tests.GetAsync_EmptyRepository_ReturnsSuccessfulEmptyList,
-            tests.GetAsync_BoundaryMaximums_AcceptsOneAndOneHundred,
-            tests.GetAsync_RepositoryFailure_PropagatesException,
+            tests.Get_ValidRequest_RanksAndLimitsEntries,
+            tests.Get_InvalidMaximum_RejectsBeforeRepositoryAccess,
+            tests.Get_EmptyRepository_ReturnsSuccessfulEmptyList,
+            tests.Get_BoundaryMaximums_AcceptsOneAndOneHundred,
+            tests.Get_RepositoryFailure_PropagatesException,
         };
     }
 

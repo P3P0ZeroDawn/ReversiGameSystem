@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace ReversiGameSystem.Server.Application.Leaderboards;
 
@@ -28,7 +27,7 @@ public sealed class LeaderboardApplicationService
     /// <summary>Retrieves, orders, and limits the global leaderboard.</summary>
     /// <param name="maximumEntries">The maximum number of entries to return.</param>
     /// <returns>The application result.</returns>
-    public async Task<LeaderboardResult> GetAsync(int maximumEntries)
+    public LeaderboardResult Get(int maximumEntries)
     {
         if (maximumEntries < 1 || maximumEntries > MaximumAllowedEntries)
         {
@@ -36,7 +35,7 @@ public sealed class LeaderboardApplicationService
         }
 
         IReadOnlyList<LeaderboardPlayer> players =
-            await _leaderboardRepository.GetPlayersAsync();
+            _leaderboardRepository.GetPlayers();
         List<LeaderboardPlayer> rankedPlayers = players
             .OrderByDescending(player => player.Wins)
             .ThenByDescending(CalculateWinRate)
@@ -44,9 +43,7 @@ public sealed class LeaderboardApplicationService
             .Take(maximumEntries)
             .ToList();
 
-        return new LeaderboardResult(
-            LeaderboardStatus.Success,
-            CreateEntries(rankedPlayers));
+        return new LeaderboardResult(CreateEntries(rankedPlayers));
     }
 
     private static IReadOnlyList<LeaderboardEntry> CreateEntries(

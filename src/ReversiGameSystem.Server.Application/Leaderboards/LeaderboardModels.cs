@@ -9,16 +9,32 @@ namespace ReversiGameSystem.Server.Application.Leaderboards;
 public sealed class LeaderboardResult
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="LeaderboardResult"/> class.
+    /// Initializes a successful leaderboard result with its ordered entries.
     /// </summary>
-    /// <param name="status">The application result status.</param>
     /// <param name="entries">The ordered leaderboard entries.</param>
-    public LeaderboardResult(
-        LeaderboardStatus status,
-        IReadOnlyList<LeaderboardEntry>? entries = null)
+    /// <exception cref="ArgumentNullException">The entries list is null.</exception>
+    public LeaderboardResult(IReadOnlyList<LeaderboardEntry> entries)
     {
+        Entries = entries ?? throw new ArgumentNullException(nameof(entries));
+        Status = LeaderboardStatus.Success;
+    }
+
+    /// <summary>
+    /// Initializes a rejected leaderboard result with its actionable status.
+    /// </summary>
+    /// <param name="status">The failure status.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The status represents success.</exception>
+    public LeaderboardResult(LeaderboardStatus status)
+    {
+        if (status == LeaderboardStatus.Success)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(status),
+                "A rejected leaderboard result cannot specify success status.");
+        }
+
         Status = status;
-        Entries = entries ?? Array.Empty<LeaderboardEntry>();
+        Entries = Array.Empty<LeaderboardEntry>();
     }
 
     /// <summary>Gets the application result status.</summary>
