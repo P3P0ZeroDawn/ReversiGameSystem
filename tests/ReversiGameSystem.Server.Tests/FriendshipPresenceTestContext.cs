@@ -35,6 +35,9 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, ISessionRepos
     internal readonly Exception RepositoryFailure =
         new InvalidOperationException("private-provider-diagnostic");
     internal readonly FriendshipService Service;
+    internal readonly AccountPresenceRegistry PresenceRegistry;
+    internal readonly FriendshipSubscriptions Subscriptions;
+    internal readonly FriendshipApplicationService ApplicationService;
 
     internal FriendshipPresenceTestContext() : this(NullLogger<FriendshipService>.Instance)
     {
@@ -42,7 +45,10 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, ISessionRepos
 
     internal FriendshipPresenceTestContext(ILogger<FriendshipService> logger)
     {
-        Service = new FriendshipService(this, this, logger);
+        PresenceRegistry = new AccountPresenceRegistry();
+        Subscriptions = new FriendshipSubscriptions();
+        ApplicationService = new FriendshipApplicationService(this, this);
+        Service = new FriendshipService(ApplicationService, PresenceRegistry, Subscriptions, logger);
         _host = new ServiceHost(Service, _address);
         _host.AddServiceEndpoint(typeof(IFriendshipService), Binding(), string.Empty);
         _host.Open();
@@ -51,9 +57,11 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, ISessionRepos
         AddSession("stranger", 3);
     }
 
-    internal void AddSession(string token, long accountId) =>
+    internal void AddSession(string token, long accountId)
+    {
         _sessions[token] = new AuthenticatedSession(token, accountId,
             "Player" + accountId, "unused", "en-US", DateTime.UtcNow.AddHours(1));
+    }
 
     internal FriendshipPresenceTestClient Connect(string token)
     {
@@ -70,8 +78,16 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, ISessionRepos
         return client;
     }
 
-    public void Revoke(string sessionToken) => _sessions.TryRemove(sessionToken, out _);
-    internal void Expire(string token) => _expired[token] = true;
+    public void Revoke(string sessionToken)
+    {
+        _sessions.TryRemove(sessionToken, out _);
+    }
+
+    internal void Expire(string token)
+    {
+        _expired[token] = true;
+    }
+
     public bool TryGet(string sessionToken, out AuthenticatedSession? session)
     {
         session = null;
@@ -90,7 +106,11 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, ISessionRepos
         return SessionOperationResult<AuthenticatedSession>.CreateFailure(
             SessionOperationStatus.InvalidSession);
     }
-    public AuthenticatedSession Create(LoginAccount account) => throw new NotSupportedException();
+
+    public AuthenticatedSession Create(LoginAccount account)
+    {
+        throw new NotSupportedException();
+    }
 
     public SessionOperationResult<GuestSession> CreateGuest(string displayName)
     {
@@ -109,14 +129,28 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, ISessionRepos
         {
             throw RepositoryFailure;
         }
+
         return !Inactive;
     }
 
     public FriendAccount[] GetFriends(long accountId)
     {
         System.Threading.Interlocked.Increment(ref FriendshipReads);
-        if (accountId == 1) { return new[] { new FriendAccount(2, "Player2", true) }; }
-        if (accountId == 2) { return new[] { new FriendAccount(1, "Player1", false) }; }
+        if (FailRepository)
+        {
+            throw RepositoryFailure;
+        }
+
+        if (accountId == 1)
+        {
+            return new[] { new FriendAccount(2, "Player2", true) };
+        }
+
+        if (accountId == 2)
+        {
+            return new[] { new FriendAccount(1, "Player1", false) };
+        }
+
         return Array.Empty<FriendAccount>();
     }
 
@@ -128,21 +162,57 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, ISessionRepos
             System.Threading.Interlocked.Increment(ref FailedRelationshipChecks);
             throw new InvalidOperationException("Private relationship provider diagnostic");
         }
+
         return FriendshipActive && !Inactive && ((accountId == 1 && friendAccountId == 2)
             || (accountId == 2 && friendAccountId == 1));
     }
 
+    public long[] ReadConfirmedFriendIds(long accountId)
+    {
+        System.Threading.Interlocked.Increment(ref RelationshipChecks);
+        if (FailRelationshipChecks)
+        {
+            System.Threading.Interlocked.Increment(ref FailedRelationshipChecks);
+            throw new InvalidOperationException("Private relationship provider diagnostic");
+        }
+
+        if (!FriendshipActive || Inactive)
+        {
+            return Array.Empty<long>();
+        }
+
+        if (accountId == 1)
+        {
+            return new[] { 2L };
+        }
+
+        if (accountId == 2)
+        {
+            return new[] { 1L };
+        }
+
+        return Array.Empty<long>();
+    }
+
     public void Dispose()
     {
-        foreach (FriendshipPresenceTestClient client in _clients) { client.Dispose(); }
+        foreach (FriendshipPresenceTestClient client in _clients)
+        {
+            client.Dispose();
+        }
+
         _host.Abort();
         Service.Dispose();
     }
 
-    internal static NetNamedPipeBinding Binding() => new NetNamedPipeBinding(NetNamedPipeSecurityMode.None)
+    internal static NetNamedPipeBinding Binding()
     {
-        SendTimeout = TimeSpan.FromSeconds(2), CloseTimeout = TimeSpan.FromSeconds(2)
-    };
+        return new NetNamedPipeBinding(NetNamedPipeSecurityMode.None)
+        {
+            SendTimeout = TimeSpan.FromSeconds(2),
+            CloseTimeout = TimeSpan.FromSeconds(2)
+        };
+    }
 }
 
 [CallbackBehavior(ConcurrencyMode = ConcurrencyMode.Multiple, UseSynchronizationContext = false)]
@@ -160,13 +230,29 @@ internal sealed class FriendshipPresenceTestClient : IFriendshipServiceCallback,
         Channel = _factory.CreateChannel();
     }
 
-    internal int Count(long accountId, FriendChange change) =>
-        _changes.Count(item => item.Item1 == accountId && item.Item2 == change);
-    internal void Close() => ((ICommunicationObject)Channel).Close();
-    public void OnFriendRequestReceived(FriendRequest request) { }
-    public void OnFriendRequestResponded(string requestId, bool accepted) { }
-    public void OnFriendChanged(long accountId, FriendChange change) =>
+    internal int Count(long accountId, FriendChange change)
+    {
+        return _changes.Count(item => item.Item1 == accountId && item.Item2 == change);
+    }
+
+    internal void Close()
+    {
+        ((ICommunicationObject)Channel).Close();
+    }
+
+    public void OnFriendRequestReceived(FriendRequest request)
+    {
+    }
+
+    public void OnFriendRequestResponded(string requestId, bool accepted)
+    {
+    }
+
+    public void OnFriendChanged(long accountId, FriendChange change)
+    {
         _changes.Enqueue(Tuple.Create(accountId, change));
+    }
+
     public void Dispose()
     {
         ((ICommunicationObject)Channel).Abort();

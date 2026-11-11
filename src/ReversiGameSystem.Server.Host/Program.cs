@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Chat;
+using ReversiGameSystem.Server.Application.Friendships;
 using ReversiGameSystem.Server.Application.Leaderboards;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Application.Players;
@@ -41,8 +42,15 @@ internal static class Program
             {
                 SystemUtcClock clock = new SystemUtcClock();
                 SessionRepository sessions = new SessionRepository(clock);
-                using (FriendshipService friendship = new FriendshipService(sessions,
-                    new FriendRepository(), loggerFactory.CreateLogger<FriendshipService>()))
+                AccountPresenceRegistry presenceRegistry = new AccountPresenceRegistry();
+                FriendshipSubscriptions friendshipSubscriptions = new FriendshipSubscriptions();
+                FriendshipApplicationService friendshipApplicationService =
+                    new FriendshipApplicationService(sessions, new FriendRepository());
+                using (FriendshipService friendship = new FriendshipService(
+                    friendshipApplicationService,
+                    presenceRegistry,
+                    friendshipSubscriptions,
+                    loggerFactory.CreateLogger<FriendshipService>()))
                 {
                     MatchInvitationEmailSender matchInvitationEmailSender =
                         new MatchInvitationEmailSender(MailSettings.Load());

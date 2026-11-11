@@ -2,6 +2,7 @@ using System;
 using System.ServiceModel;
 using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Friendships;
 using ReversiGameSystem.Server.Contracts.Services;
 using ReversiGameSystem.Server.Persistence.Friendships;
 using ReversiGameSystem.Server.ServiceApi;
@@ -20,8 +21,15 @@ internal static class ReviewPresenceHost
         SessionService session = new SessionService(
             applicationService,
             NullLogger<SessionService>.Instance);
-        using FriendshipService friendship = new FriendshipService(sessions,
-            new FriendRepository(), NullLogger<FriendshipService>.Instance);
+        AccountPresenceRegistry presenceRegistry = new AccountPresenceRegistry();
+        FriendshipSubscriptions friendshipSubscriptions = new FriendshipSubscriptions();
+        FriendshipApplicationService friendshipApplicationService =
+            new FriendshipApplicationService(sessions, new FriendRepository());
+        using FriendshipService friendship = new FriendshipService(
+            friendshipApplicationService,
+            presenceRegistry,
+            friendshipSubscriptions,
+            NullLogger<FriendshipService>.Instance);
         session.SessionClosed += friendship.RemoveSession;
         ServiceHost sessionHost = new ServiceHost(session);
         ServiceHost friendshipHost = new ServiceHost(friendship);

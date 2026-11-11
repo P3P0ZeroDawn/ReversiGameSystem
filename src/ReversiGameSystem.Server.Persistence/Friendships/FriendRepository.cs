@@ -64,4 +64,23 @@ public sealed class FriendRepository : IFriendshipRepository
                     && caller.statusCode == ActiveStatus && friend.statusCode == ActiveStatus
                 select relationship).Any();
     }
+
+    /// <inheritdoc />
+    public long[] ReadConfirmedFriendIds(long accountId)
+    {
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        return (from relationship in context.Friendship.AsNoTracking()
+                join caller in context.Account on accountId equals caller.accountId
+                join friend in context.Account on
+                    (relationship.accountIdA == accountId
+                        ? relationship.accountIdB : relationship.accountIdA) equals friend.accountId
+                where (relationship.accountIdA == accountId
+                        || relationship.accountIdB == accountId)
+                    && relationship.statusCode == AcceptedStatus
+                    && relationship.endedAtUtc == null
+                    && friend.accountId != accountId
+                    && caller.statusCode == ActiveStatus && friend.statusCode == ActiveStatus
+                select friend.accountId)
+            .ToArray();
+    }
 }
