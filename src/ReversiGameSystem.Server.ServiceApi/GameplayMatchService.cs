@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.ServiceModel;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
@@ -13,22 +14,24 @@ using ReversiGameSystem.Server.Contracts.Services;
 
 namespace ReversiGameSystem.Server.ServiceApi;
 
-/// <summary>Exposes authorized initial match information without simulating gameplay writes.</summary>
+/// <summary>Publishes authoritative active match gameplay and handles client placement requests.</summary>
 [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single,
     ConcurrencyMode = ConcurrencyMode.Multiple, UseSynchronizationContext = false)]
 public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
 {
-    private readonly MatchApplicationService _applicationService;
+    private static readonly TimeSpan TimeoutTickInterval = TimeSpan.FromSeconds(1);
+    private readonly GameplayMatchApplicationService _applicationService;
     private readonly ISessionRepository _sessions;
     private readonly ILogger<GameplayMatchService> _logger;
     private readonly MatchCallbackSubscriptions<IGameplayMatchServiceCallback> _callbackSubscriptions;
     private readonly object _presenceSync = new object();
     private readonly Dictionary<long, Dictionary<int, HashSet<string>>> _participantPresence =
         new Dictionary<long, Dictionary<int, HashSet<string>>>();
+    private readonly Timer _timeoutTimer;
 
     /// <summary>Initializes a new instance of the <see cref="GameplayMatchService"/> class.</summary>
     public GameplayMatchService(
-        MatchApplicationService applicationService,
+        GameplayMatchApplicationService applicationService,
         ISessionRepository sessions,
         ILogger<GameplayMatchService> logger)
     {
@@ -41,90 +44,255 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             AuthorizeChannel,
             RemovePresence,
             _logger);
+        _timeoutTimer = new Timer(OnTimeoutTick, null, TimeoutTickInterval, TimeoutTickInterval);
     }
 
     /// <inheritdoc />
     public void OpenMatchChannel(string sessionToken, long matchId)
     {
-        Match match = GetMatch(sessionToken, matchId);
-        AuthenticatedSession session = GetSession(sessionToken);
-        MatchParticipant? participant = match.Participants.FirstOrDefault(
-            current => current.AccountId == session.AccountId);
-        if (participant == null)
+        try
         {
-            throw CreateMatchFault(MatchFailure.Unauthorized);
-        }
+            MatchResult<Match> result = _applicationService.GetMatchInformation(sessionToken, matchId);
+            ThrowFailure(result.Status);
 
-        _callbackSubscriptions.Register(sessionToken, matchId);
-        AddPresence(
-            sessionToken,
-            matchId,
-            participant.SeatNumber,
-            match.Participants);
+            Match match = result.Value
+                ?? throw new InvalidOperationException("A successful match result must contain its value.");
+            MatchContractMapper.RequireStarted(match);
+
+            AuthenticatedSession session = GetSession(sessionToken);
+            MatchParticipant? participant = match.Participants.FirstOrDefault(
+                current => current.AccountId == session.AccountId);
+            if (participant == null)
+            {
+                throw CreateMatchFault(MatchFailure.Unauthorized);
+            }
+
+            _callbackSubscriptions.Register(sessionToken, matchId);
+            AddPresence(
+                sessionToken,
+                matchId,
+                participant.SeatNumber,
+                match.Participants);
+        }
+        catch (FaultException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "A technical failure occurred in OpenMatchChannel.");
+            throw CreateServiceFault(nameof(OpenMatchChannel));
+        }
     }
 
     /// <inheritdoc />
     public MatchInformation GetMatchInformation(string sessionToken, long matchId)
     {
-        Match match = GetMatch(sessionToken, matchId);
-        AuthenticatedSession session = GetSession(sessionToken);
-        MatchParticipant? participant = match.Participants.FirstOrDefault(
-            player => player.AccountId == session.AccountId);
-        if (participant == null)
+        try
         {
-            throw CreateMatchFault(MatchFailure.Unauthorized);
-        }
+            MatchResult<Match> result = _applicationService.GetMatchInformation(sessionToken, matchId);
+            ThrowFailure(result.Status);
 
-        return new MatchInformation
+            Match match = result.Value
+                ?? throw new InvalidOperationException("A successful match result must contain its value.");
+            AuthenticatedSession session = GetSession(sessionToken);
+            MatchParticipant? participant = match.Participants.FirstOrDefault(
+                player => player.AccountId == session.AccountId);
+            if (participant == null)
+            {
+                throw CreateMatchFault(MatchFailure.Unauthorized);
+            }
+
+            return new MatchInformation
+            {
+                MatchId = match.Id,
+                Participants = MatchContractMapper.Participants(match),
+                TurnDurationSeconds = match.TurnDurationSeconds,
+                AssignedSeatNumber = participant.SeatNumber
+            };
+        }
+        catch (FaultException)
         {
-            MatchId = match.Id,
-            Participants = MatchContractMapper.Participants(match),
-            TurnDurationSeconds = match.TurnDurationSeconds,
-            AssignedSeatNumber = participant.SeatNumber
-        };
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "A technical failure occurred in GetMatchInformation.");
+            throw CreateServiceFault(nameof(GetMatchInformation));
+        }
     }
 
     /// <inheritdoc />
     public MatchStateSnapshot GetMatchState(string sessionToken, long matchId)
     {
-        Match match = GetMatch(sessionToken, matchId);
-        return MatchContractMapper.InitialState(match);
+        try
+        {
+            MatchResult<Match> result = _applicationService.GetMatchState(sessionToken, matchId);
+            ThrowFailure(result.Status);
+
+            Match match = result.Value
+                ?? throw new InvalidOperationException("A successful match result must contain its value.");
+            return MatchContractMapper.State(match);
+        }
+        catch (FaultException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "A technical failure occurred in GetMatchState.");
+            throw CreateServiceFault(nameof(GetMatchState));
+        }
     }
 
     /// <inheritdoc />
     public MatchStateSnapshot PlacePiece(string sessionToken, PiecePlacement placement)
     {
-        throw CreateUnsupportedFault(nameof(PlacePiece));
+        try
+        {
+            MatchPlacement? domainPlacement = MapPlacement(placement);
+            if (domainPlacement == null)
+            {
+                throw CreateMatchFault(MatchFailure.MissingPlacement);
+            }
+
+            MatchResult<Match> result = _applicationService.PlacePiece(sessionToken, domainPlacement);
+            ThrowFailure(result.Status);
+
+            Match match = result.Value
+                ?? throw new InvalidOperationException("A successful match result must contain its value.");
+            MatchStateSnapshot snapshot = MatchContractMapper.State(match);
+            PublishMatchStateChanged(match.Id, snapshot);
+            return snapshot;
+        }
+        catch (FaultException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "A technical failure occurred in PlacePiece.");
+            throw CreateServiceFault(nameof(PlacePiece));
+        }
     }
 
     /// <inheritdoc />
     public MatchConclusion ForfeitMatch(string sessionToken, long matchId)
     {
-        throw CreateUnsupportedFault(nameof(ForfeitMatch));
+        try
+        {
+            MatchResult<Match> result = _applicationService.ForfeitMatch(sessionToken, matchId);
+            ThrowFailure(result.Status);
+
+            Match match = result.Value
+                ?? throw new InvalidOperationException("A successful match result must contain its value.");
+            MatchStateSnapshot snapshot = MatchContractMapper.State(match);
+            PublishMatchStateChanged(match.Id, snapshot);
+            return MatchContractMapper.Conclusion(match);
+        }
+        catch (FaultException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "A technical failure occurred in ForfeitMatch.");
+            throw CreateServiceFault(nameof(ForfeitMatch));
+        }
     }
 
     /// <inheritdoc />
     public MatchStateSnapshot ObserveMatch(string sessionToken, long matchId)
     {
-        throw CreateUnsupportedFault(nameof(ObserveMatch));
+        try
+        {
+            MatchResult<Match> result = _applicationService.ObserveMatch(sessionToken, matchId);
+            ThrowFailure(result.Status);
+
+            Match match = result.Value
+                ?? throw new InvalidOperationException("A successful match result must contain its value.");
+            _callbackSubscriptions.Register(sessionToken, matchId);
+            return MatchContractMapper.State(match);
+        }
+        catch (FaultException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "A technical failure occurred in ObserveMatch.");
+            throw CreateServiceFault(nameof(ObserveMatch));
+        }
     }
 
     /// <inheritdoc />
     public MatchSummary[] GetMatchHistory(string sessionToken)
     {
-        throw CreateUnsupportedFault(nameof(GetMatchHistory));
+        try
+        {
+            AuthenticatedSession session = GetSession(sessionToken);
+            MatchResult<Match[]> result = _applicationService.GetMatchHistory(sessionToken);
+            ThrowFailure(result.Status);
+
+            Match[] matches = result.Value
+                ?? throw new InvalidOperationException("A successful match result must contain its value.");
+            return matches.Select(match => MatchContractMapper.Summary(match, session.AccountId)).ToArray();
+        }
+        catch (FaultException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "A technical failure occurred in GetMatchHistory.");
+            throw CreateServiceFault(nameof(GetMatchHistory));
+        }
     }
 
     /// <inheritdoc />
     public MatchDetails GetMatchDetails(string sessionToken, long matchId)
     {
-        throw CreateUnsupportedFault(nameof(GetMatchDetails));
+        try
+        {
+            MatchResult<Match> result = _applicationService.GetMatchDetails(sessionToken, matchId);
+            ThrowFailure(result.Status);
+
+            Match match = result.Value
+                ?? throw new InvalidOperationException("A successful match result must contain its value.");
+            return MatchContractMapper.Details(match);
+        }
+        catch (FaultException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "A technical failure occurred in GetMatchDetails.");
+            throw CreateServiceFault(nameof(GetMatchDetails));
+        }
     }
 
     /// <inheritdoc />
     public MoveRecord[] GetMoveHistory(string sessionToken, long matchId)
     {
-        throw CreateUnsupportedFault(nameof(GetMoveHistory));
+        try
+        {
+            MatchResult<MatchMove[]> result = _applicationService.GetMoveHistory(sessionToken, matchId);
+            ThrowFailure(result.Status);
+
+            MatchMove[] moves = result.Value
+                ?? throw new InvalidOperationException("A successful match result must contain its value.");
+            return moves.Select(MatchContractMapper.Move).ToArray();
+        }
+        catch (FaultException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "A technical failure occurred in GetMoveHistory.");
+            throw CreateServiceFault(nameof(GetMoveHistory));
+        }
     }
 
     /// <summary>Removes all match subscriptions for a revoked session.</summary>
@@ -136,24 +304,39 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
+        _timeoutTimer.Dispose();
         _callbackSubscriptions.Dispose();
     }
 
-    private Match GetMatch(string sessionToken, long matchId)
+    private void OnTimeoutTick(object? state)
     {
-        MatchResult<Match> result = _applicationService.Get(sessionToken, matchId);
-        ThrowFailure(result.Status);
+        try
+        {
+            Match[] transitionedMatches = _applicationService.ProcessTurnTimeouts();
+            for (int i = 0; i < transitionedMatches.Length; i++)
+            {
+                Match match = transitionedMatches[i];
+                MatchStateSnapshot snapshot = MatchContractMapper.State(match);
+                PublishMatchStateChanged(match.Id, snapshot);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "An error occurred while processing turn timeouts.");
+        }
+    }
 
-        Match match = result.Value
-            ?? throw new InvalidOperationException(
-                "A successful match result must contain its value.");
-        MatchContractMapper.RequireStarted(match);
-        return match;
+    private void PublishMatchStateChanged(long matchId, MatchStateSnapshot snapshot)
+    {
+        _callbackSubscriptions.Publish(matchId, (token, callback) =>
+        {
+            callback.OnMatchStateChanged(snapshot);
+        });
     }
 
     private bool AuthorizeChannel(string token, long matchId)
     {
-        MatchResult<Match> result = _applicationService.Get(token, matchId);
+        MatchResult<Match> result = _applicationService.GetMatchState(token, matchId);
         if (result.Status != MatchStatus.Success || result.Value == null)
         {
             return false;
@@ -164,6 +347,11 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
 
     private AuthenticatedSession GetSession(string sessionToken)
     {
+        if (string.IsNullOrWhiteSpace(sessionToken))
+        {
+            throw SessionFaultFactory.Create(SessionFailure.MissingSessionToken);
+        }
+
         if (!_sessions.TryGet(sessionToken, out AuthenticatedSession? session)
             || session == null)
         {
@@ -245,6 +433,20 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             .ToArray();
     }
 
+    private static MatchPlacement? MapPlacement(PiecePlacement? placement)
+    {
+        if (placement == null)
+        {
+            return null;
+        }
+
+        return new MatchPlacement(
+            placement.MatchId,
+            placement.ExpectedMatchStateVersion,
+            placement.Row,
+            placement.Column);
+    }
+
     private static void ThrowFailure(MatchStatus status)
     {
         if (status == MatchStatus.Success)
@@ -266,29 +468,33 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
 
     private static MatchFailure GetMatchFailure(MatchStatus status)
     {
-        MatchFailure failure = MatchFailure.Unauthorized;
-        if (status == MatchStatus.InactiveAccount)
+        switch (status)
         {
-            failure = MatchFailure.InactiveAccount;
+            case MatchStatus.InactiveAccount:
+                return MatchFailure.InactiveAccount;
+            case MatchStatus.InvalidMatchId:
+                return MatchFailure.InvalidMatchId;
+            case MatchStatus.MatchNotFound:
+                return MatchFailure.MatchNotFound;
+            case MatchStatus.MatchNotWaiting:
+                return MatchFailure.MatchNotWaiting;
+            case MatchStatus.MatchNotInProgress:
+                return MatchFailure.MatchNotInProgress;
+            case MatchStatus.MissingPlacement:
+                return MatchFailure.MissingPlacement;
+            case MatchStatus.InvalidMatchStateVersion:
+                return MatchFailure.InvalidMatchStateVersion;
+            case MatchStatus.StaleMatchStateVersion:
+                return MatchFailure.StaleMatchStateVersion;
+            case MatchStatus.NotPlayersTurn:
+                return MatchFailure.NotPlayersTurn;
+            case MatchStatus.InvalidPosition:
+                return MatchFailure.InvalidPosition;
+            case MatchStatus.SpectatingUnavailable:
+                return MatchFailure.SpectatingUnavailable;
+            default:
+                return MatchFailure.Unauthorized;
         }
-        else if (status == MatchStatus.InvalidMatchId)
-        {
-            failure = MatchFailure.InvalidMatchId;
-        }
-        else if (status == MatchStatus.MatchNotFound)
-        {
-            failure = MatchFailure.MatchNotFound;
-        }
-        else if (status == MatchStatus.MatchNotWaiting)
-        {
-            failure = MatchFailure.MatchNotWaiting;
-        }
-        else if (status == MatchStatus.MatchNotInProgress)
-        {
-            failure = MatchFailure.MatchNotInProgress;
-        }
-
-        return failure;
     }
 
     private static FaultException<MatchFault> CreateMatchFault(MatchFailure failure)
@@ -299,7 +505,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         }, "The match request was rejected.");
     }
 
-    private static FaultException<ServiceFault> CreateUnsupportedFault(string operation)
+    private static FaultException<ServiceFault> CreateServiceFault(string operation)
     {
         return ServiceFaultFactory.Create(operation, CorrelationContext.GetOrCreate());
     }

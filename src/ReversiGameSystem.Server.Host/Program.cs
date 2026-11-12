@@ -62,11 +62,14 @@ internal static class Program
                         matchRepository,
                         clock,
                         matchInvitationEmailSender);
+                    GameplayMatchApplicationService gameplayMatchApplicationService =
+                        new GameplayMatchApplicationService(sessions, matchRepository, clock);
+                    matchApplicationService.MatchStarted += gameplayMatchApplicationService.TrackStartedMatch;
                     using MatchLobbyService matchLobbyService = new MatchLobbyService(
                         matchApplicationService,
                         loggerFactory.CreateLogger<MatchLobbyService>());
                     using GameplayMatchService gameplayMatchService = new GameplayMatchService(
-                        matchApplicationService,
+                        gameplayMatchApplicationService,
                         sessions,
                         loggerFactory.CreateLogger<GameplayMatchService>());
                     ChatRepository chatRepository = new ChatRepository();

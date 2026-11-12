@@ -22,8 +22,10 @@ internal static class ReviewMatchDatabaseTests
     {
         // Arrange
         ReviewMatchHost.PrepareSchema();
-        string alpha = sessions.CompleteLogin("ReviewAlpha", "000001")
-            .GetValue().SessionToken;
+        AuthenticatedSession alphaSession = sessions.CompleteLogin("ReviewAlpha", "000001")
+            .GetValue();
+        string alpha = alphaSession.SessionToken;
+        long alphaAccountId = alphaSession.AccountId;
         string beta = sessions.CompleteLogin("ReviewBeta", "000002")
             .GetValue().SessionToken;
         MatchApplicationService matches = new MatchApplicationService(store, new MatchRepository(), new SystemUtcClock());
@@ -54,6 +56,7 @@ internal static class ReviewMatchDatabaseTests
             ?? throw new InvalidOperationException("Matches expected.")).Length);
         Send_ConcurrentRequests_AssignsUniqueOrderedNumbers(chat, alpha, waiting.Id);
         Moderate_RepeatedMessages_CommitsAccountMute(chat, alpha, waiting.Id);
+        Gameplay_RealMovePersistence_UpdatesBoardAndHistory(new MatchRepository(), alphaAccountId, waiting.Id);
         Cancel_RepeatedRequest_InvalidatesCode(matches, alpha, beta);
         Restart_AbandonedWaitingMatch_InvalidatesCode(matches, alpha, beta);
         Join_InactiveCreator_RejectsWithoutOccupyingSecondSeat(matches, alpha, beta);
@@ -225,5 +228,46 @@ internal static class ReviewMatchDatabaseTests
         command.CommandText = "UPDATE dbo.Account SET statusCode=@status WHERE username=N'ReviewAlpha'";
         command.Parameters.AddWithValue("@status", status);
         TestAssert.AreEqual(1, command.ExecuteNonQuery());
+    }
+
+    private static void Gameplay_RealMovePersistence_UpdatesBoardAndHistory(
+        MatchRepository repository,
+        long accountId,
+        long matchId)
+    {
+        MatchMove move = new MatchMove
+        {
+            MoveNumber = 1,
+            SeatNumber = 1,
+            Row = 2,
+            Column = 3,
+            PlayedAtUtc = DateTime.UtcNow,
+            Origin = "Player"
+        };
+        MatchStatus moveStatus = repository.SaveMove(matchId, move, 0, 2, DateTime.UtcNow);
+        TestAssert.AreEqual(MatchStatus.Success, moveStatus);
+
+        Match loaded = repository.Get(accountId, matchId).Value
+            ?? throw new InvalidOperationException("Match expected.");
+        TestAssert.AreEqual(1, loaded.Moves.Count);
+        TestAssert.AreEqual(2, loaded.CurrentTurnSeatNumber);
+        TestAssert.AreEqual(1, loaded.LastMove?.FlippedPieceCount);
+        TestAssert.AreEqual(1, loaded.Board[(2 * 8) + 3]);
+
+        MatchStatus concludeStatus = repository.ConcludeMatch(
+            matchId,
+            "NORMAL",
+            1,
+            null,
+            4,
+            1,
+            DateTime.UtcNow);
+        TestAssert.AreEqual(MatchStatus.Success, concludeStatus);
+
+        MatchResult<Match[]> history = repository.GetMatchHistory(accountId);
+        TestAssert.AreEqual(MatchStatus.Success, history.Status);
+        TestAssert.IsTrue(
+            history.Value != null && history.Value.Any(m => m.Id == matchId && m.State == "Finished" && m.WinnerSeatNumber == 1),
+            "Expected historical match to reflect completed state and winner.");
     }
 }

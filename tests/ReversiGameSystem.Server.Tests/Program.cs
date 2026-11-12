@@ -57,6 +57,7 @@ internal static class Program
         LobbyAuthorizationTests lobbyAuthorizationTests = new LobbyAuthorizationTests();
         ServiceErrorBehaviorTests errorBehaviorTests = new ServiceErrorBehaviorTests();
         ReversiDomainTests reversiTests = new ReversiDomainTests();
+        GameplayApplicationServiceTests gameplayTests = new GameplayApplicationServiceTests();
         System.Collections.Generic.List<Action> tests =
             new System.Collections.Generic.List<Action>
         {
@@ -66,6 +67,24 @@ internal static class Program
             reversiTests.ApplyMove_ValidMove_PlacesDiscAndFlipsBracketedCells,
             reversiTests.ApplyMove_MultiDirectionalCaptures_FlipsAllLines,
             reversiTests.HasValidMoves_EvaluatesBoardAvailabilityAccurately,
+            gameplayTests.TrackStartedMatch_InitializesBoardAndTurnCorrectly,
+            gameplayTests.PlacePiece_MissingPlacement_ReturnsMissingPlacement,
+            gameplayTests.PlacePiece_NegativeVersion_ReturnsInvalidMatchStateVersion,
+            gameplayTests.PlacePiece_InvalidSession_ReturnsInvalidSession,
+            gameplayTests.PlacePiece_NotPlayersTurn_ReturnsNotPlayersTurn,
+            gameplayTests.PlacePiece_StaleVersion_ReturnsStaleMatchStateVersion,
+            gameplayTests.PlacePiece_InvalidPosition_ReturnsInvalidPosition,
+            gameplayTests.PlacePiece_ValidMove_FlipsPiecesAdvancesTurnAndSavesMove,
+            gameplayTests.PlacePiece_ResetsConsecutiveTimeoutCount,
+            gameplayTests.ForfeitMatch_NonParticipant_ReturnsUnauthorized,
+            gameplayTests.ForfeitMatch_Participant_ConcludesMatchWithAbandonment,
+            gameplayTests.ForfeitMatch_AlreadyFinished_IsIdempotent,
+            gameplayTests.ProcessTurnTimeouts_TurnNotExpired_DoesNothing,
+            gameplayTests.ProcessTurnTimeouts_SingleTimeout_PlaysAutomaticMoveAndIncrementsTimeout,
+            gameplayTests.ProcessTurnTimeouts_ThreeConsecutiveTimeouts_ConcludesMatchWithInactivity,
+            gameplayTests.ObserveMatch_InProgress_ReturnsActiveMatch,
+            gameplayTests.ObserveMatch_FinishedMatch_ReturnsSpectatingUnavailable,
+            gameplayTests.GetMoveHistory_ReturnsOrderedMoves,
             lobbyAuthorizationTests.Authorize_LiveSession_ChecksAccountWithoutListingMatches,
             lobbyAuthorizationTests.Authorize_ExpiredSession_RejectsBeforeAccountQuery,
             lobbyAuthorizationTests.Authorize_RevokedSession_RejectsBeforeAccountQuery,

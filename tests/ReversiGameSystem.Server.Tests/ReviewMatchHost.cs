@@ -25,14 +25,18 @@ internal static class ReviewMatchHost
     {
         PrepareSchema();
         SystemUtcClock clock = new SystemUtcClock();
-        MatchApplicationService matches = new MatchApplicationService(store, new MatchRepository(), clock);
+        MatchRepository matchRepository = new MatchRepository();
+        MatchApplicationService matches = new MatchApplicationService(store, matchRepository, clock);
+        GameplayMatchApplicationService gameplayMatches =
+            new GameplayMatchApplicationService(store, matchRepository, clock);
+        matches.MatchStarted += gameplayMatches.TrackStartedMatch;
         ChatApplicationService messages = new ChatApplicationService(store, new ChatRepository(), clock);
         SessionService session = new SessionService(
             applicationService,
             NullLogger<SessionService>.Instance);
         using MatchLobbyService lobby = new MatchLobbyService(matches,
             NullLogger<MatchLobbyService>.Instance);
-        using GameplayMatchService gameplay = new GameplayMatchService(matches, store,
+        using GameplayMatchService gameplay = new GameplayMatchService(gameplayMatches, store,
             NullLogger<GameplayMatchService>.Instance);
         using MatchChatService chat = new MatchChatService(messages,
             NullLogger<MatchChatService>.Instance);

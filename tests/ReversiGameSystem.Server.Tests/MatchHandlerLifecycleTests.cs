@@ -240,5 +240,50 @@ internal sealed class MatchApplicationServiceLifecycleTests
         {
             return MatchStatus.Success;
         }
+
+        public MatchStatus SaveMove(
+            long matchId,
+            MatchMove move,
+            int consecutiveTimeouts,
+            int nextTurnSeatNumber,
+            DateTime turnStartedAtUtc)
+        {
+            throw new NotSupportedException();
+        }
+
+        public MatchStatus SaveMoveAndConclude(
+            long matchId,
+            MatchMove move,
+            int consecutiveTimeouts,
+            string endReason,
+            int? winnerSeatNumber,
+            int blackPieceCount,
+            int whitePieceCount,
+            DateTime endedAtUtc)
+        {
+            throw new NotSupportedException();
+        }
+
+        public MatchStatus ConcludeMatch(
+            long matchId,
+            string endReason,
+            int? winnerSeatNumber,
+            int? abandoningSeatNumber,
+            int blackPieceCount,
+            int whitePieceCount,
+            DateTime endedAtUtc)
+        {
+            throw new NotSupportedException();
+        }
+
+        public MatchResult<Match[]> GetMatchHistory(long accountId)
+        {
+            throw new NotSupportedException();
+        }
+
+        public MatchResult<Match> GetForObservation(long accountId, long matchId)
+        {
+            throw new NotSupportedException();
+        }
     }
 }

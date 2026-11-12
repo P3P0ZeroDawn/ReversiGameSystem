@@ -40,7 +40,7 @@ internal sealed class MatchBoundaryTests
 
     internal void Gameplay_UnsupportedWrite_ReturnsDeclaredServiceFault()
     {
-        using GameplayMatchService service = CreateGameplay(new BoundaryStore());
+        using GameplayMatchService service = CreateGameplay(new BoundaryStore { FailStorage = true });
         FaultException<ServiceFault> failure = TestAssert.Throws<FaultException<ServiceFault>>(
             () => service.PlacePiece("valid", new PiecePlacement { MatchId = 7 }));
         TestAssert.AreEqual("GAMEPLAY_OPERATION_FAILURE", failure.Detail.FailureCode);
@@ -153,8 +153,9 @@ internal sealed class MatchBoundaryTests
     private static GameplayMatchService CreateGameplay(BoundaryStore store)
     {
         BoundarySessions sessions = new BoundarySessions();
-        return new GameplayMatchService(new MatchApplicationService(sessions, store, new BoundaryClock()),
-            sessions, NullLogger<GameplayMatchService>.Instance);
+        GameplayMatchApplicationService applicationService =
+            new GameplayMatchApplicationService(sessions, store, new BoundaryClock());
+        return new GameplayMatchService(applicationService, sessions, NullLogger<GameplayMatchService>.Instance);
     }
 
     private sealed class BoundaryMailer : IMatchInvitationEmailSender
@@ -209,6 +210,7 @@ internal sealed class MatchBoundaryTests
             throw new InvalidOperationException("private storage failure");
         }
         internal bool AllowRead { get; set; }
+        internal bool FailStorage { get; set; }
         public MatchResult<Match> Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
         {
             throw new NotSupportedException();
@@ -231,6 +233,11 @@ internal sealed class MatchBoundaryTests
         }
         public MatchResult<Match> Get(long accountId, long matchId)
         {
+            if (FailStorage)
+            {
+                throw new InvalidOperationException("private storage failure");
+            }
+
             if (!AllowRead)
             {
                 return new MatchResult<Match>(MatchStatus.Unauthorized);
@@ -327,6 +334,51 @@ internal sealed class MatchBoundaryTests
             }
 
             return MatchStatus.Success;
+        }
+
+        public MatchStatus SaveMove(
+            long matchId,
+            MatchMove move,
+            int consecutiveTimeouts,
+            int nextTurnSeatNumber,
+            DateTime turnStartedAtUtc)
+        {
+            throw new NotSupportedException();
+        }
+
+        public MatchStatus SaveMoveAndConclude(
+            long matchId,
+            MatchMove move,
+            int consecutiveTimeouts,
+            string endReason,
+            int? winnerSeatNumber,
+            int blackPieceCount,
+            int whitePieceCount,
+            DateTime endedAtUtc)
+        {
+            throw new NotSupportedException();
+        }
+
+        public MatchStatus ConcludeMatch(
+            long matchId,
+            string endReason,
+            int? winnerSeatNumber,
+            int? abandoningSeatNumber,
+            int blackPieceCount,
+            int whitePieceCount,
+            DateTime endedAtUtc)
+        {
+            throw new NotSupportedException();
+        }
+
+        public MatchResult<Match[]> GetMatchHistory(long accountId)
+        {
+            throw new NotSupportedException();
+        }
+
+        public MatchResult<Match> GetForObservation(long accountId, long matchId)
+        {
+            throw new NotSupportedException();
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
 using System.Data.SqlClient;
@@ -160,7 +161,10 @@ public sealed class MatchRepository : IMatchRepository
             return new MatchResult<Match>(MatchStatus.Unauthorized);
         }
 
-        GameMatch? match = context.GameMatch.SingleOrDefault(candidate => candidate.matchId == matchId);
+        GameMatch? match = context.GameMatch
+            .Include(candidate => candidate.MatchParticipant1)
+            .Include(candidate => candidate.GameMove)
+            .SingleOrDefault(candidate => candidate.matchId == matchId);
         if (match == null)
         {
             return new MatchResult<Match>(MatchStatus.MatchNotFound);
@@ -311,20 +315,26 @@ public sealed class MatchRepository : IMatchRepository
     public MatchResult<Match> Get(long accountId, long matchId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
-        if (!context.Account.Any(account => account.accountId == accountId && account.statusCode == "ACTIVE"))
+        if (accountId > 0)
         {
-            return new MatchResult<Match>(MatchStatus.InactiveAccount);
+            if (!context.Account.Any(account => account.accountId == accountId && account.statusCode == "ACTIVE"))
+            {
+                return new MatchResult<Match>(MatchStatus.InactiveAccount);
+            }
+
+            PersistentMatchParticipant? participant = context.MatchParticipant.SingleOrDefault(candidate =>
+                candidate.matchId == matchId && candidate.accountId == accountId
+                && candidate.participantTypeCode == "REGISTERED");
+            if (participant == null)
+            {
+                return new MatchResult<Match>(MatchStatus.Unauthorized);
+            }
         }
 
-        PersistentMatchParticipant? participant = context.MatchParticipant.SingleOrDefault(candidate =>
-            candidate.matchId == matchId && candidate.accountId == accountId
-            && candidate.participantTypeCode == "REGISTERED");
-        if (participant == null)
-        {
-            return new MatchResult<Match>(MatchStatus.Unauthorized);
-        }
-
-        GameMatch? match = context.GameMatch.SingleOrDefault(candidate => candidate.matchId == matchId);
+        GameMatch? match = context.GameMatch
+            .Include(candidate => candidate.MatchParticipant1)
+            .Include(candidate => candidate.GameMove)
+            .SingleOrDefault(candidate => candidate.matchId == matchId);
         if (match == null)
         {
             return new MatchResult<Match>(MatchStatus.MatchNotFound);
@@ -352,7 +362,10 @@ public sealed class MatchRepository : IMatchRepository
             return new MatchResult<Match>(MatchStatus.Unauthorized);
         }
 
-        GameMatch? match = context.GameMatch.SingleOrDefault(candidate => candidate.matchId == matchId);
+        GameMatch? match = context.GameMatch
+            .Include(candidate => candidate.MatchParticipant1)
+            .Include(candidate => candidate.GameMove)
+            .SingleOrDefault(candidate => candidate.matchId == matchId);
         if (match == null)
         {
             return new MatchResult<Match>(MatchStatus.MatchNotFound);
@@ -389,7 +402,10 @@ public sealed class MatchRepository : IMatchRepository
             return MatchStatus.Unauthorized;
         }
 
-        GameMatch? match = context.GameMatch.SingleOrDefault(candidate => candidate.matchId == matchId);
+        GameMatch? match = context.GameMatch
+            .Include(candidate => candidate.MatchParticipant1)
+            .Include(candidate => candidate.GameMove)
+            .SingleOrDefault(candidate => candidate.matchId == matchId);
         if (match == null)
         {
             return MatchStatus.MatchNotFound;
@@ -404,6 +420,272 @@ public sealed class MatchRepository : IMatchRepository
         context.SaveChanges();
         transaction.Commit();
         return MatchStatus.Success;
+    }
+
+    /// <inheritdoc />
+    public MatchStatus SaveMove(
+        long matchId,
+        MatchMove move,
+        int consecutiveTimeouts,
+        int nextTurnSeatNumber,
+        DateTime turnStartedAtUtc)
+    {
+        if (move == null)
+        {
+            throw new ArgumentNullException(nameof(move));
+        }
+
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
+        MatchDatabase.AcquireTransactionLock(context, MatchDatabase.MatchLockResource(matchId));
+
+        GameMatch? match = context.GameMatch.SingleOrDefault(candidate => candidate.matchId == matchId);
+        if (match == null)
+        {
+            return MatchStatus.MatchNotFound;
+        }
+
+        if (match.statusCode != "IN_PROGRESS")
+        {
+            return MatchStatus.MatchNotInProgress;
+        }
+
+        GameMove entity = new GameMove
+        {
+            matchId = matchId,
+            moveNumber = move.MoveNumber,
+            seatNumber = (byte)move.SeatNumber,
+            rowIndex = (byte)move.Row,
+            columnIndex = (byte)move.Column,
+            moveSourceCode = string.Equals(move.Origin, "Timeout", StringComparison.OrdinalIgnoreCase) ? "TIMEOUT" : "PLAYER",
+            playedAtUtc = move.PlayedAtUtc
+        };
+        context.GameMove.Add(entity);
+
+        PersistentMatchParticipant? participant = context.MatchParticipant.SingleOrDefault(candidate =>
+            candidate.matchId == matchId && candidate.seatNumber == (byte)move.SeatNumber);
+        if (participant != null)
+        {
+            participant.consecutiveTimeoutCount = (byte)consecutiveTimeouts;
+        }
+
+        match.currentTurnSeatNumber = (byte)nextTurnSeatNumber;
+        match.turnStartedAtUtc = turnStartedAtUtc;
+
+        context.SaveChanges();
+        transaction.Commit();
+        return MatchStatus.Success;
+    }
+
+    /// <inheritdoc />
+    public MatchStatus SaveMoveAndConclude(
+        long matchId,
+        MatchMove move,
+        int consecutiveTimeouts,
+        string endReason,
+        int? winnerSeatNumber,
+        int blackPieceCount,
+        int whitePieceCount,
+        DateTime endedAtUtc)
+    {
+        if (move == null)
+        {
+            throw new ArgumentNullException(nameof(move));
+        }
+
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
+        MatchDatabase.AcquireTransactionLock(context, MatchDatabase.MatchLockResource(matchId));
+
+        GameMatch? match = context.GameMatch.SingleOrDefault(candidate => candidate.matchId == matchId);
+        if (match == null)
+        {
+            return MatchStatus.MatchNotFound;
+        }
+
+        if (match.statusCode != "IN_PROGRESS")
+        {
+            return MatchStatus.MatchNotInProgress;
+        }
+
+        GameMove entity = new GameMove
+        {
+            matchId = matchId,
+            moveNumber = move.MoveNumber,
+            seatNumber = (byte)move.SeatNumber,
+            rowIndex = (byte)move.Row,
+            columnIndex = (byte)move.Column,
+            moveSourceCode = string.Equals(move.Origin, "Timeout", StringComparison.OrdinalIgnoreCase) ? "TIMEOUT" : "PLAYER",
+            playedAtUtc = move.PlayedAtUtc
+        };
+        context.GameMove.Add(entity);
+
+        PersistentMatchParticipant? participant = context.MatchParticipant.SingleOrDefault(candidate =>
+            candidate.matchId == matchId && candidate.seatNumber == (byte)move.SeatNumber);
+        if (participant != null)
+        {
+            participant.consecutiveTimeoutCount = (byte)consecutiveTimeouts;
+        }
+
+        match.statusCode = "FINISHED";
+        match.endReasonCode = endReason;
+        match.endedAtUtc = endedAtUtc;
+        match.currentTurnSeatNumber = null;
+        match.turnStartedAtUtc = null;
+        context.SaveChanges();
+
+        foreach (PersistentMatchParticipant current in match.MatchParticipant1)
+        {
+            if (current.seatNumber == 1)
+            {
+                current.finalPieceCount = (byte)blackPieceCount;
+            }
+            else if (current.seatNumber == 2)
+            {
+                current.finalPieceCount = (byte)whitePieceCount;
+            }
+
+            if (!winnerSeatNumber.HasValue)
+            {
+                current.resultCode = "DRAW";
+            }
+            else if (current.seatNumber == (byte)winnerSeatNumber.Value)
+            {
+                current.resultCode = "WIN";
+            }
+            else
+            {
+                current.resultCode = "LOSS";
+            }
+        }
+
+        context.SaveChanges();
+        transaction.Commit();
+        return MatchStatus.Success;
+    }
+
+    /// <inheritdoc />
+    public MatchStatus ConcludeMatch(
+        long matchId,
+        string endReason,
+        int? winnerSeatNumber,
+        int? abandoningSeatNumber,
+        int blackPieceCount,
+        int whitePieceCount,
+        DateTime endedAtUtc)
+    {
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
+        MatchDatabase.AcquireTransactionLock(context, MatchDatabase.MatchLockResource(matchId));
+
+        GameMatch? match = context.GameMatch.SingleOrDefault(candidate => candidate.matchId == matchId);
+        if (match == null)
+        {
+            return MatchStatus.MatchNotFound;
+        }
+
+        if (match.statusCode == "FINISHED")
+        {
+            return MatchStatus.Success;
+        }
+
+        if (match.statusCode != "IN_PROGRESS")
+        {
+            return MatchStatus.MatchNotInProgress;
+        }
+
+        match.statusCode = "FINISHED";
+        match.endReasonCode = endReason;
+        match.endedAtUtc = endedAtUtc;
+        match.currentTurnSeatNumber = null;
+        match.turnStartedAtUtc = null;
+        context.SaveChanges();
+
+        foreach (PersistentMatchParticipant current in match.MatchParticipant1)
+        {
+            if (current.seatNumber == 1)
+            {
+                current.finalPieceCount = (byte)blackPieceCount;
+            }
+            else if (current.seatNumber == 2)
+            {
+                current.finalPieceCount = (byte)whitePieceCount;
+            }
+
+            if (abandoningSeatNumber.HasValue && current.seatNumber == (byte)abandoningSeatNumber.Value)
+            {
+                current.resultCode = "ABANDONED";
+            }
+            else if (!winnerSeatNumber.HasValue)
+            {
+                current.resultCode = "DRAW";
+            }
+            else if (winnerSeatNumber.HasValue && current.seatNumber == (byte)winnerSeatNumber.Value)
+            {
+                current.resultCode = "WIN";
+            }
+            else
+            {
+                current.resultCode = "LOSS";
+            }
+        }
+
+        context.SaveChanges();
+        transaction.Commit();
+        return MatchStatus.Success;
+    }
+
+    /// <inheritdoc />
+    public MatchResult<Match[]> GetMatchHistory(long accountId)
+    {
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        if (!context.Account.Any(account => account.accountId == accountId && account.statusCode == "ACTIVE"))
+        {
+            return new MatchResult<Match[]>(MatchStatus.InactiveAccount);
+        }
+
+        GameMatch[] matches = context.GameMatch
+            .Include(candidate => candidate.MatchParticipant1)
+            .Include(candidate => candidate.GameMove)
+            .Where(candidate => candidate.MatchParticipant1.Any(player =>
+                player.accountId == accountId && player.participantTypeCode == "REGISTERED")
+                && candidate.statusCode == "FINISHED")
+            .OrderByDescending(candidate => candidate.createdAtUtc)
+            .ToArray();
+
+        List<Match> results = new List<Match>(matches.Length);
+        for (int i = 0; i < matches.Length; i++)
+        {
+            results.Add(MatchDatabase.Map(matches[i]));
+        }
+
+        return new MatchResult<Match[]>(results.ToArray());
+    }
+
+    /// <inheritdoc />
+    public MatchResult<Match> GetForObservation(long accountId, long matchId)
+    {
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        if (accountId > 0 && !context.Account.Any(account => account.accountId == accountId && account.statusCode == "ACTIVE"))
+        {
+            return new MatchResult<Match>(MatchStatus.InactiveAccount);
+        }
+
+        GameMatch? match = context.GameMatch
+            .Include(candidate => candidate.MatchParticipant1)
+            .Include(candidate => candidate.GameMove)
+            .SingleOrDefault(candidate => candidate.matchId == matchId);
+        if (match == null)
+        {
+            return new MatchResult<Match>(MatchStatus.MatchNotFound);
+        }
+
+        if (match.statusCode != "IN_PROGRESS")
+        {
+            return new MatchResult<Match>(MatchStatus.SpectatingUnavailable);
+        }
+
+        return new MatchResult<Match>(MatchDatabase.Map(match));
     }
 
 
