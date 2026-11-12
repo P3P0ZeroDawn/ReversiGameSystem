@@ -247,12 +247,30 @@ internal static class ReviewMatchDatabaseTests
         MatchStatus moveStatus = repository.SaveMove(matchId, move, 0, 2, DateTime.UtcNow);
         TestAssert.AreEqual(MatchStatus.Success, moveStatus);
 
+        MatchMove timeoutMove = new MatchMove
+        {
+            MoveNumber = 2,
+            SeatNumber = 2,
+            Row = 2,
+            Column = 2,
+            PlayedAtUtc = DateTime.UtcNow,
+            Origin = "Timeout"
+        };
+        MatchStatus timeoutStatus = repository.SaveMove(
+            matchId,
+            timeoutMove,
+            1,
+            1,
+            DateTime.UtcNow);
+        TestAssert.AreEqual(MatchStatus.Success, timeoutStatus);
+
         Match loaded = repository.Get(accountId, matchId).Value
             ?? throw new InvalidOperationException("Match expected.");
-        TestAssert.AreEqual(1, loaded.Moves.Count);
-        TestAssert.AreEqual(2, loaded.CurrentTurnSeatNumber);
+        TestAssert.AreEqual(2, loaded.Moves.Count);
+        TestAssert.AreEqual(1, loaded.CurrentTurnSeatNumber);
         TestAssert.AreEqual(1, loaded.LastMove?.FlippedPieceCount);
-        TestAssert.AreEqual(1, loaded.Board[(2 * 8) + 3]);
+        TestAssert.AreEqual("Timeout", loaded.LastMove?.Origin);
+        TestAssert.AreEqual(2, loaded.Board[(2 * 8) + 2]);
 
         MatchStatus concludeStatus = repository.ConcludeMatch(
             matchId,

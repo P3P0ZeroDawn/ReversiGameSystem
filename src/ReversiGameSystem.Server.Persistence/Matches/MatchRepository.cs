@@ -450,29 +450,31 @@ public sealed class MatchRepository : IMatchRepository
             return MatchStatus.MatchNotInProgress;
         }
 
-        GameMove entity = new GameMove
-        {
-            matchId = matchId,
-            moveNumber = move.MoveNumber,
-            seatNumber = (byte)move.SeatNumber,
-            rowIndex = (byte)move.Row,
-            columnIndex = (byte)move.Column,
-            moveSourceCode = string.Equals(move.Origin, "Timeout", StringComparison.OrdinalIgnoreCase) ? "TIMEOUT" : "PLAYER",
-            playedAtUtc = move.PlayedAtUtc
-        };
-        context.GameMove.Add(entity);
-
-        PersistentMatchParticipant? participant = context.MatchParticipant.SingleOrDefault(candidate =>
-            candidate.matchId == matchId && candidate.seatNumber == (byte)move.SeatNumber);
-        if (participant != null)
-        {
-            participant.consecutiveTimeoutCount = (byte)consecutiveTimeouts;
-        }
-
-        match.currentTurnSeatNumber = (byte)nextTurnSeatNumber;
-        match.turnStartedAtUtc = turnStartedAtUtc;
-
-        context.SaveChanges();
+        InsertMove(context, matchId, move);
+        context.Database.ExecuteSqlCommand(
+            "UPDATE dbo.MatchParticipant SET consecutiveTimeoutCount = @consecutiveTimeouts "
+            + "WHERE matchId = @matchId AND seatNumber = @seatNumber",
+            new SqlParameter("@consecutiveTimeouts", SqlDbType.TinyInt)
+            {
+                Value = (byte)consecutiveTimeouts
+            },
+            new SqlParameter("@matchId", matchId),
+            new SqlParameter("@seatNumber", SqlDbType.TinyInt)
+            {
+                Value = (byte)move.SeatNumber
+            });
+        context.Database.ExecuteSqlCommand(
+            "UPDATE dbo.GameMatch SET currentTurnSeatNumber = @nextTurnSeatNumber, "
+            + "turnStartedAtUtc = @turnStartedAtUtc WHERE matchId = @matchId",
+            new SqlParameter("@nextTurnSeatNumber", SqlDbType.TinyInt)
+            {
+                Value = (byte)nextTurnSeatNumber
+            },
+            new SqlParameter("@turnStartedAtUtc", SqlDbType.DateTime2)
+            {
+                Value = turnStartedAtUtc
+            },
+            new SqlParameter("@matchId", matchId));
         transaction.Commit();
         return MatchStatus.Success;
     }
@@ -508,60 +510,82 @@ public sealed class MatchRepository : IMatchRepository
             return MatchStatus.MatchNotInProgress;
         }
 
-        GameMove entity = new GameMove
-        {
-            matchId = matchId,
-            moveNumber = move.MoveNumber,
-            seatNumber = (byte)move.SeatNumber,
-            rowIndex = (byte)move.Row,
-            columnIndex = (byte)move.Column,
-            moveSourceCode = string.Equals(move.Origin, "Timeout", StringComparison.OrdinalIgnoreCase) ? "TIMEOUT" : "PLAYER",
-            playedAtUtc = move.PlayedAtUtc
-        };
-        context.GameMove.Add(entity);
-
-        PersistentMatchParticipant? participant = context.MatchParticipant.SingleOrDefault(candidate =>
-            candidate.matchId == matchId && candidate.seatNumber == (byte)move.SeatNumber);
-        if (participant != null)
-        {
-            participant.consecutiveTimeoutCount = (byte)consecutiveTimeouts;
-        }
-
-        match.statusCode = "FINISHED";
-        match.endReasonCode = endReason;
-        match.endedAtUtc = endedAtUtc;
-        match.currentTurnSeatNumber = null;
-        match.turnStartedAtUtc = null;
-        context.SaveChanges();
-
-        foreach (PersistentMatchParticipant current in match.MatchParticipant1)
-        {
-            if (current.seatNumber == 1)
+        InsertMove(context, matchId, move);
+        context.Database.ExecuteSqlCommand(
+            "UPDATE dbo.MatchParticipant SET "
+            + "consecutiveTimeoutCount = CASE WHEN seatNumber = @actingSeatNumber "
+            + "THEN @consecutiveTimeouts ELSE consecutiveTimeoutCount END, "
+            + "finalPieceCount = CASE WHEN seatNumber = 1 THEN @blackPieceCount "
+            + "WHEN seatNumber = 2 THEN @whitePieceCount ELSE finalPieceCount END, "
+            + "resultCode = CASE WHEN @winnerSeatNumber IS NULL THEN 'DRAW' "
+            + "WHEN seatNumber = @winnerSeatNumber THEN 'WIN' ELSE 'LOSS' END "
+            + "WHERE matchId = @matchId",
+            new SqlParameter("@actingSeatNumber", SqlDbType.TinyInt)
             {
-                current.finalPieceCount = (byte)blackPieceCount;
-            }
-            else if (current.seatNumber == 2)
+                Value = (byte)move.SeatNumber
+            },
+            new SqlParameter("@consecutiveTimeouts", SqlDbType.TinyInt)
             {
-                current.finalPieceCount = (byte)whitePieceCount;
-            }
-
-            if (!winnerSeatNumber.HasValue)
+                Value = (byte)consecutiveTimeouts
+            },
+            new SqlParameter("@blackPieceCount", SqlDbType.TinyInt)
             {
-                current.resultCode = "DRAW";
-            }
-            else if (current.seatNumber == (byte)winnerSeatNumber.Value)
+                Value = (byte)blackPieceCount
+            },
+            new SqlParameter("@whitePieceCount", SqlDbType.TinyInt)
             {
-                current.resultCode = "WIN";
-            }
-            else
+                Value = (byte)whitePieceCount
+            },
+            new SqlParameter("@winnerSeatNumber", SqlDbType.TinyInt)
             {
-                current.resultCode = "LOSS";
-            }
-        }
-
-        context.SaveChanges();
+                Value = winnerSeatNumber.HasValue
+                    ? (object)(byte)winnerSeatNumber.Value
+                    : DBNull.Value
+            },
+            new SqlParameter("@matchId", matchId));
+        context.Database.ExecuteSqlCommand(
+            "UPDATE dbo.GameMatch SET statusCode = 'FINISHED', endReasonCode = @endReason, "
+            + "endedAtUtc = @endedAtUtc, currentTurnSeatNumber = NULL, turnStartedAtUtc = NULL "
+            + "WHERE matchId = @matchId",
+            new SqlParameter("@endReason", endReason),
+            new SqlParameter("@endedAtUtc", SqlDbType.DateTime2)
+            {
+                Value = endedAtUtc
+            },
+            new SqlParameter("@matchId", matchId));
         transaction.Commit();
         return MatchStatus.Success;
+    }
+
+    private static void InsertMove(
+        ReversiGameSystemEntities context,
+        long matchId,
+        MatchMove move)
+    {
+        context.Database.ExecuteSqlCommand(
+            "INSERT dbo.GameMove "
+            + "(matchId, moveNumber, seatNumber, rowIndex, columnIndex, moveSourceCode, playedAtUtc) "
+            + "VALUES (@matchId, @moveNumber, @seatNumber, @rowIndex, @columnIndex, "
+            + "@moveSourceCode, @playedAtUtc)",
+            new SqlParameter("@matchId", matchId),
+            new SqlParameter("@moveNumber", move.MoveNumber),
+            new SqlParameter("@seatNumber", SqlDbType.TinyInt)
+            {
+                Value = (byte)move.SeatNumber
+            },
+            new SqlParameter("@rowIndex", SqlDbType.TinyInt)
+            {
+                Value = (byte)move.Row
+            },
+            new SqlParameter("@columnIndex", SqlDbType.TinyInt)
+            {
+                Value = (byte)move.Column
+            },
+            new SqlParameter("@moveSourceCode", MatchDatabase.MoveSourceCode(move.Origin)),
+            new SqlParameter("@playedAtUtc", SqlDbType.DateTime2)
+            {
+                Value = move.PlayedAtUtc
+            });
     }
 
     /// <inheritdoc />

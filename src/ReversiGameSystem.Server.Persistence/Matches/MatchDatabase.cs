@@ -13,6 +13,10 @@ namespace ReversiGameSystem.Server.Persistence.Matches;
 /// <summary>Transaction-scoped database coordination shared by match and chat stores.</summary>
 internal static class MatchDatabase
 {
+    private const string ManualMoveSourceCode = "MANUAL";
+    private const string SystemMoveSourceCode = "SYSTEM_AUTOMATIC";
+    private const string TimeoutMoveSourceCode = "TIMEOUT_AUTOMATIC";
+
     internal const string LobbyLockResource = "lobby";
     private const int LockTimeoutMilliseconds = 10000;
     private const int LockUnavailableErrorNumber = 51000;
@@ -107,7 +111,7 @@ internal static class MatchDatabase
                     Column = entity.columnIndex,
                     PlayedAtUtc = DateTime.SpecifyKind(entity.playedAtUtc, DateTimeKind.Utc),
                     FlippedPieceCount = flipped.Length,
-                    Origin = entity.moveSourceCode == "TIMEOUT" ? "Timeout" : "Player"
+                    Origin = MoveOrigin(entity.moveSourceCode)
                 };
                 moves.Add(moveModel);
             }
@@ -119,5 +123,35 @@ internal static class MatchDatabase
         }
 
         return mapped;
+    }
+
+    internal static string MoveSourceCode(string origin)
+    {
+        string sourceCode = ManualMoveSourceCode;
+        if (string.Equals(origin, "Timeout", StringComparison.OrdinalIgnoreCase))
+        {
+            sourceCode = TimeoutMoveSourceCode;
+        }
+        else if (string.Equals(origin, "System", StringComparison.OrdinalIgnoreCase))
+        {
+            sourceCode = SystemMoveSourceCode;
+        }
+
+        return sourceCode;
+    }
+
+    private static string MoveOrigin(string sourceCode)
+    {
+        string origin = "Player";
+        if (string.Equals(sourceCode, TimeoutMoveSourceCode, StringComparison.OrdinalIgnoreCase))
+        {
+            origin = "Timeout";
+        }
+        else if (string.Equals(sourceCode, SystemMoveSourceCode, StringComparison.OrdinalIgnoreCase))
+        {
+            origin = "System";
+        }
+
+        return origin;
     }
 }

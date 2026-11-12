@@ -30,7 +30,9 @@ ALTER TABLE dbo.GameMatch ADD FOREIGN KEY(matchId,currentTurnSeatNumber)
 CREATE TABLE dbo.GameMove (
  matchId bigint NOT NULL, moveNumber int NOT NULL,
  seatNumber tinyint NOT NULL, rowIndex tinyint NOT NULL, columnIndex tinyint NOT NULL,
- moveSourceCode varchar(30) NOT NULL, playedAtUtc datetime2(3) NOT NULL,
+ moveSourceCode varchar(30) NOT NULL CHECK(moveSourceCode IN
+  ('MANUAL','SYSTEM_AUTOMATIC','TIMEOUT_AUTOMATIC')),
+ playedAtUtc datetime2(3) NOT NULL,
  PRIMARY KEY(matchId,moveNumber),
  FOREIGN KEY(matchId,seatNumber) REFERENCES dbo.MatchParticipant(matchId,seatNumber));
 CREATE TABLE dbo.ChatMessage (
