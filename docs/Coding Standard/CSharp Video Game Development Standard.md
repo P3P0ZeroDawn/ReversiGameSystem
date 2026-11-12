@@ -603,54 +603,47 @@ Prefixes and suffixes are restricted to meanings established by .NET guidelines 
 | Private/internal instance field | Prefix `_` (`_currentHealth`). |
 | Mutable private static / thread-static field | Prefix `s_` / `t_` (`s_instanceCount`, `t_requestId`). |
 | Application service / repository | Suffix `ApplicationService` / `Repository`. |
-| Asynchronous method | Suffix `Async` (`LoadEnemiesAsync`). |
+| Asynchronous method | Use `Async` when synchronous and asynchronous alternatives coexist. |
 | Custom exception | Suffix `Exception` (`InventoryFullException`). |
 | Custom event payload | Suffix `EventArgs` (`ItemEquippedEventArgs`). |
 | Custom delegates | Suffix `EventHandler` or `Callback`. |
 
 - Class prefixes such as `C` and suffixes such as `Enum`, `Delegate`, `Impl`, `Ex`, and `New` are prohibited (`CA1711`).
-- Methods returning `Task`, `Task<T>`, `ValueTask`, or `ValueTask<T>` must end with `Async` unless constrained by an explicit WCF `[OperationContract]` wire signature. Synchronous methods must never end with `Async` and must not wrap asynchronous calls through blocking operations (`.Result`, `.Wait()`, or `.GetAwaiter().GetResult()`).
+- Methods returning `Task`, `Task<T>`, `ValueTask`, or `ValueTask<T>` should use the
+  `Async` suffix when synchronous and asynchronous alternatives coexist. A cohesive
+  abstraction that exposes only asynchronous operations and has no synchronous alternative
+  may omit the suffix. The selected convention must remain consistent throughout that
+  abstraction. Event handlers, framework overrides, generated members, and external contract
+  signatures retain their required names. Synchronous methods must never end with `Async` and
+  must not wrap asynchronous calls through blocking operations (`.Result`, `.Wait()`, or
+  `.GetAwaiter().GetResult()`) (Microsoft, 2025b).
 
 #### Correct
 
 ```csharp
-public interface IDamageable
+public interface IMatchChannel
 {
-    void TakeDamage(int damage);
-}
+    Task SendMessage(string content);
 
-public sealed class EnemyWaveLoader
-{
-    private int _remainingEnemies;
-
-    public Task LoadWaveAsync(int waveNumber)
-    {
-        _remainingEnemies = waveNumber;
-        return Task.CompletedTask;
-    }
+    Task CloseChannel();
 }
 ```
 
-The interface and asynchronous method use suffixes with defined meanings.
+The suffix is omitted consistently because the abstraction exposes only asynchronous
+operations.
 
 #### Incorrect
 
 ```csharp
-public interface DamageableInterface
+public interface IMatchChannel
 {
-    void TakeDamage(int damage);
-}
+    Task SendMessageAsync(string content);
 
-public sealed class CEnemyWaveLoaderImpl
-{
-    public void LoadWaveAsync(Task loadingTask)
-    {
-        loadingTask.GetAwaiter().GetResult();
-    }
+    Task CloseChannel();
 }
 ```
 
-The type uses prohibited affixes and the method blocks an asynchronous task.
+The abstraction mixes two naming conventions without offering synchronous alternatives.
 
 ### 3.17 WPF Controls, Resource Keys, and Client Asset Files
 

@@ -19,6 +19,9 @@ public sealed class MatchApplicationService
         new HashSet<string>(StringComparer.Ordinal);
     private readonly object _lobbySync = new object();
 
+    /// <summary>Notifies observers when a waiting match transitions to active gameplay.</summary>
+    public event Action<Match>? MatchStarted;
+
     /// <summary>Creates the match application service without invitation delivery.</summary>
     public MatchApplicationService(
         ISessionRepository sessions,
@@ -218,7 +221,17 @@ public sealed class MatchApplicationService
         AuthenticatedSession player = playerResult.Value
             ?? throw new InvalidOperationException(
                 "A successful match result must contain its value.");
-        return _matches.Join(player, normalized, _clock.UtcNow);
+        MatchResult<Match> joinResult = _matches.Join(player, normalized, _clock.UtcNow);
+        if (joinResult.Status == MatchStatus.Success && joinResult.Value != null)
+        {
+            Action<Match>? handler = MatchStarted;
+            if (handler != null)
+            {
+                handler(joinResult.Value);
+            }
+        }
+
+        return joinResult;
     }
 
     /// <summary>Loads confirmed match data for an authorized participant.</summary>
