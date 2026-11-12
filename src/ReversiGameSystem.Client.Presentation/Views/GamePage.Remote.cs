@@ -25,6 +25,7 @@ public partial class GamePage
     };
     private RemoteMatchInformation? _remoteInformation;
     private bool _remoteLoading;
+    private bool _remotePlacing;
     private bool _remoteSending;
     private bool _remoteChatReady;
     private DateTime? _remoteMutedUntil;
@@ -36,15 +37,13 @@ public partial class GamePage
         _remoteMatchId = matchId;
         _remoteGuestName = guestName;
         InitializeComponent();
-        // This path never constructs a local match, subscribes board input, or starts turn timers.
+        // The server owns match state. Local rules only identify selectable positions.
         sendMessageButton.IsEnabled = false;
         refreshRemoteMatchButton.Visibility = Visibility.Visible;
         creatorConnectionTextBlock.Visibility = Visibility.Visible;
         opponentConnectionTextBlock.Visibility = Visibility.Visible;
         leaveMatchButton.SetBinding(ContentControl.ContentProperty,
             new Binding("[RemoteMatch_CloseView]") { Source = LocalizationManager.Instance });
-        turnTimeTextBlock.SetBinding(TextBlock.TextProperty,
-            new Binding("[RemoteMatch_MovesUnavailable]") { Source = LocalizationManager.Instance });
         turnTimeTextBlock.TextWrapping = TextWrapping.Wrap;
         if (guestName != null)
         {
@@ -64,6 +63,7 @@ public partial class GamePage
         _remoteClient.MessagesChanged += OnRemoteMessagesChanged;
         _remoteClient.ParticipantConnectionChanged += OnParticipantConnectionChanged;
         _remoteClient.Muted += OnRemoteMuted;
+        gameBoardControl.SquareSelected += OnRemoteSquareSelected;
         await LoadRemoteMatch();
         if (IsLoaded)
         {
@@ -79,6 +79,7 @@ public partial class GamePage
         _remoteClient.MessagesChanged -= OnRemoteMessagesChanged;
         _remoteClient.ParticipantConnectionChanged -= OnParticipantConnectionChanged;
         _remoteClient.Muted -= OnRemoteMuted;
+        gameBoardControl.SquareSelected -= OnRemoteSquareSelected;
         _remoteChatReady = false;
         sendMessageButton.IsEnabled = false;
     }
@@ -208,9 +209,76 @@ public partial class GamePage
                 ConfirmedBoardCell.White => 'W',
                 _ => '.'
             }).ToArray())).ToArray();
-        gameBoardControl.ShowBoard(ReversiBoard.FromRows(rows),
-            _remoteInformation.AssignedSeatNumber == 2 ? DiscColor.White : DiscColor.Black);
+        ReversiBoard board = ReversiBoard.FromRows(rows);
+        DiscColor localColor = _remoteInformation.AssignedSeatNumber == 2
+            ? DiscColor.White
+            : DiscColor.Black;
+        bool canPlace = !_remotePlacing
+            && state.State == ConfirmedMatchState.InProgress
+            && state.CurrentTurnSeatNumber == _remoteInformation.AssignedSeatNumber;
+        if (canPlace)
+        {
+            gameBoardControl.ShowInteractiveBoard(
+                board,
+                localColor,
+                board.GetValidMoves(localColor));
+        }
+        else
+        {
+            gameBoardControl.ShowBoard(board, localColor);
+        }
+        turnTimeTextBlock.Text = string.Format(
+            localization["MatchInformation_TurnTimeFormat"],
+            _remoteInformation.TurnDurationSeconds);
         RenderParticipantConnections();
+    }
+
+    private async void OnRemoteSquareSelected(
+        object? sender,
+        BoardSquareSelectedEventArgs e)
+    {
+        if (_remotePlacing
+            || _remoteInformation?.AssignedSeatNumber == null
+            || !_remoteClient.HasMatchState(_remoteMatchId))
+        {
+            return;
+        }
+
+        MatchStateSnapshot confirmedState = _remoteClient.ReadMatchState(_remoteMatchId);
+        if (confirmedState.CurrentTurnSeatNumber != _remoteInformation.AssignedSeatNumber)
+        {
+            return;
+        }
+
+        _remotePlacing = true;
+        RenderRemoteMatch();
+        MatchResult<MatchStateSnapshot> placement = await _remoteClient.PlacePiece(
+            confirmedState,
+            e.Position.Row,
+            e.Position.Column);
+        if (placement.Status == MatchStatus.Success)
+        {
+            _remoteStatusKey = null;
+        }
+        else if (placement.Status == MatchStatus.StaleMatchStateVersion
+            || placement.Status == MatchStatus.NotPlayersTurn)
+        {
+            await LoadRemoteMatch();
+        }
+        else
+        {
+            _remoteStatusKey = RemoteMatchMessages.Key(placement.Status);
+            if (IsLoaded)
+            {
+                _dialogService.ShowWarning(this, "Game_Title", _remoteStatusKey);
+            }
+        }
+        _remotePlacing = false;
+        if (IsLoaded)
+        {
+            RenderRemoteMatch();
+            UpdateRemoteStatus();
+        }
     }
 
     private string RemotePlayerName(int seat)

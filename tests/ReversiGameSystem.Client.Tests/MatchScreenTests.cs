@@ -100,7 +100,20 @@ internal static class MatchScreenTests
             {
                 TestAssert.AreEqual(true, ((BitmapSource)piece.Source).PixelWidth > 0);
             }
-            TestAssert.AreEqual(false, Control<Grid>(board, "interactionGrid").IsHitTestVisible);
+            Grid interaction = Control<Grid>(board, "interactionGrid");
+            TestAssert.AreEqual(true, interaction.IsHitTestVisible);
+            TestAssert.AreEqual(4, interaction.Children.Cast<Border>()
+                .Count(square => square.Child != null));
+
+            MatchStateSnapshot confirmedState = first.ReadMatchState(waiting.MatchId);
+            Task<MatchResult<MatchStateSnapshot>> placementRequest = first.PlacePiece(
+                confirmedState,
+                2,
+                3);
+            PumpUntil(() => placementRequest.IsCompleted);
+            MatchResult<MatchStateSnapshot> placement = placementRequest.GetAwaiter().GetResult();
+            TestAssert.AreEqual(MatchStatus.Success, placement.Status);
+            PumpUntil(() => Control<Grid>(board, "piecesGrid").Children.Count == 5);
 
             // Act: send through the existing composer, then receive the other player's callback.
             Control<TextBox>(page, "chatMessageTextBox").Text = "Hello from the original screen";
@@ -118,7 +131,7 @@ internal static class MatchScreenTests
                 LocalizationManager.Instance.CultureName = culture;
                 page.UpdateLayout();
                 PumpUntil(() => messages.Items.Count == 2);
-                TestAssert.AreEqual(string.Format(LocalizationManager.Instance["Game_ScoreFormat"], 2),
+                TestAssert.AreEqual(string.Format(LocalizationManager.Instance["Game_ScoreFormat"], 4),
                     Control<TextBlock>(page, "creatorScoreTextBlock").Text);
                 TestAssert.AreEqual(true, messages.Items.Cast<object>().Any(item =>
                     item.ToString().Contains("Reply from the second player")));

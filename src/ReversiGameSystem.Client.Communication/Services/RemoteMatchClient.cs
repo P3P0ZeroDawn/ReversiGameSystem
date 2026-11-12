@@ -29,6 +29,12 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
             { Proxy.MatchFailure.Unauthorized, MatchStatus.Unauthorized },
             { Proxy.MatchFailure.MatchNotWaiting, MatchStatus.MatchNotWaiting },
             { Proxy.MatchFailure.MatchNotInProgress, MatchStatus.MatchNotInProgress },
+            { Proxy.MatchFailure.MissingPlacement, MatchStatus.MissingPlacement },
+            { Proxy.MatchFailure.InvalidMatchStateVersion, MatchStatus.InvalidMatchStateVersion },
+            { Proxy.MatchFailure.StaleMatchStateVersion, MatchStatus.StaleMatchStateVersion },
+            { Proxy.MatchFailure.NotPlayersTurn, MatchStatus.NotPlayersTurn },
+            { Proxy.MatchFailure.InvalidPosition, MatchStatus.InvalidPosition },
+            { Proxy.MatchFailure.SpectatingUnavailable, MatchStatus.SpectatingUnavailable },
             { Proxy.MatchFailure.InactiveAccount, MatchStatus.InactiveAccount }
         };
     private readonly string _token;
@@ -288,6 +294,38 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
             {
                 await OpenGameplayChannel(id);
                 return await _gameplay.GetMatchStateAsync(_token, id);
+            });
+            return MapState(state);
+        });
+        if (result.Status == MatchStatus.Success && result.Value != null)
+        {
+            StoreState(result.Value);
+        }
+        return result;
+    }
+
+    internal async Task<MatchResult<MatchStateSnapshot>> PlacePiece(
+        MatchStateSnapshot confirmedState,
+        int row,
+        int column)
+    {
+        if (confirmedState == null)
+        {
+            throw new ArgumentNullException(nameof(confirmedState));
+        }
+
+        MatchResult<MatchStateSnapshot> result = await Request(async () =>
+        {
+            Proxy.MatchStateSnapshot state = await Execute(() => PrepareGameplay(), async () =>
+            {
+                await OpenGameplayChannel(confirmedState.MatchId);
+                return await _gameplay.PlacePieceAsync(_token, new Proxy.PiecePlacement
+                {
+                    MatchId = confirmedState.MatchId,
+                    Row = row,
+                    Column = column,
+                    ExpectedMatchStateVersion = confirmedState.Version
+                });
             });
             return MapState(state);
         });
