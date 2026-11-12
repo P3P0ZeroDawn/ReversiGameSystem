@@ -24,7 +24,7 @@ public partial class MatchHistoryPage : Page
     public MatchHistoryPage()
     {
         InitializeComponent();
-        _playerName = AccountPreviewState.Username
+        _playerName = ClientRuntime.CurrentSession.Username
             ?? LocalizationManager.Instance["Game_DefaultPlayerName"];
         _matchService = new MatchInformationService(_playerName);
         LoadHistory();

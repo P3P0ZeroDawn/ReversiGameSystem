@@ -13,36 +13,32 @@ internal static class ProfilePicturePolicy
     internal const long MaximumFileBytes = ProfileImagePolicy.MaximumFileBytes;
     internal const int MaximumDimension = ProfileImagePolicy.MaximumDimension;
 
-    internal static bool TryCreatePreview(
+    internal static BitmapSource? CreatePreview(
         string path,
-        out BitmapSource? preview,
         int previewWidth = 128)
     {
-        preview = null;
+        BitmapSource? preview = null;
         if (!HasSupportedExtension(path))
         {
-            return false;
+            return preview;
         }
 
-        if (!TryGetSupportedFile(path, out FileInfo? file)
-            || file == null
-            || !TryValidateImageContent(file))
+        FileInfo? file = GetSupportedFile(path);
+        if (file == null || !HasValidImageContent(file))
         {
-            return false;
+            return preview;
         }
 
-        return TryLoadPreview(file.FullName, previewWidth, out preview);
+        return LoadPreview(file.FullName, previewWidth);
     }
 
-    private static bool TryGetSupportedFile(string path, out FileInfo? file)
+    private static FileInfo? GetSupportedFile(string path)
     {
-        file = null;
-        bool isSuccessful;
+        FileInfo? file = null;
         try
         {
             FileInfo candidate = new FileInfo(path);
             file = HasSupportedFileSize(candidate) ? candidate : null;
-            isSuccessful = file != null;
         }
         catch (Exception exception) when (exception is IOException
                                             or UnauthorizedAccessException
@@ -50,13 +46,13 @@ internal static class ProfilePicturePolicy
                                             or NotSupportedException
                                             or ArgumentException)
         {
-            isSuccessful = false;
+            file = null;
         }
 
-        return isSuccessful;
+        return file;
     }
 
-    private static bool TryValidateImageContent(FileInfo file)
+    private static bool HasValidImageContent(FileInfo file)
     {
         bool isValid;
         try
@@ -74,17 +70,12 @@ internal static class ProfilePicturePolicy
         return isValid;
     }
 
-    private static bool TryLoadPreview(
-        string path,
-        int previewWidth,
-        out BitmapSource? preview)
+    private static BitmapSource? LoadPreview(string path, int previewWidth)
     {
-        preview = null;
-        bool isLoaded;
+        BitmapSource? preview = null;
         try
         {
-            preview = CreatePreview(path, previewWidth);
-            isLoaded = true;
+            preview = DecodePreview(path, previewWidth);
         }
         catch (Exception exception) when (exception is IOException
                                             or UnauthorizedAccessException
@@ -93,10 +84,10 @@ internal static class ProfilePicturePolicy
                                             or FormatException
                                             or InvalidOperationException)
         {
-            isLoaded = false;
+            preview = null;
         }
 
-        return isLoaded;
+        return preview;
     }
 
     private static bool HasSupportedExtension(string path)
@@ -134,7 +125,7 @@ internal static class ProfilePicturePolicy
         }
     }
 
-    private static BitmapSource CreatePreview(string path, int previewWidth)
+    private static BitmapSource DecodePreview(string path, int previewWidth)
     {
         BitmapImage image = new BitmapImage();
         image.BeginInit();

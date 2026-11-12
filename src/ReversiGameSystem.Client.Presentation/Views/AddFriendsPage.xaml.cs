@@ -21,7 +21,7 @@ public partial class AddFriendsPage : Page
     public AddFriendsPage()
     {
         InitializeComponent();
-        string requesterUsername = AccountPreviewState.Username
+        string requesterUsername = ClientRuntime.CurrentSession.Username
             ?? LocalizationManager.Instance["Game_DefaultPlayerName"];
         _friendRequestService = FriendshipPreviewState.GetService(requesterUsername);
         LoadCandidates();

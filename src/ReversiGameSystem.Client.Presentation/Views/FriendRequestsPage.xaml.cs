@@ -25,7 +25,7 @@ public partial class FriendRequestsPage : Page
     public FriendRequestsPage()
     {
         InitializeComponent();
-        string username = AccountPreviewState.Username
+        string username = ClientRuntime.CurrentSession.Username
             ?? LocalizationManager.Instance["Game_DefaultPlayerName"];
         FriendshipStore store = FriendshipPreviewState.GetStore(username);
         _friendRequestsService = new FriendRequestsService(username, store);

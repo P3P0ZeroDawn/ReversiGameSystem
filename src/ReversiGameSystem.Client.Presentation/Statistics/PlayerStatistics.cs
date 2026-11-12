@@ -28,9 +28,15 @@ internal sealed class PlayerStatistics
 
     internal int Draws { get; }
 
-    internal int MatchesPlayed => Wins + Losses + Draws;
+    internal int MatchesPlayed
+    {
+        get { return Wins + Losses + Draws; }
+    }
 
-    internal double WinRate => MatchesPlayed == 0 ? 0 : (double)Wins / MatchesPlayed;
+    internal double WinRate
+    {
+        get { return MatchesPlayed == 0 ? 0 : (double)Wins / MatchesPlayed; }
+    }
 
     internal static PlayerStatistics FromCompletedMatches(
         IEnumerable<CompletedMatchOutcome> outcomes)

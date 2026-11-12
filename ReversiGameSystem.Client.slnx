@@ -1,4 +1,6 @@
 <Solution>
+  <Project Path="src/ReversiGameSystem.Client.Communication/ReversiGameSystem.Client.Communication.csproj" Id="2e1cf20a-62d8-486f-b09b-4b19889fa8d4" />
   <Project Path="src/ReversiGameSystem.Client.Presentation/ReversiGameSystem.Client.Presentation.csproj" Id="cb6d4e9a-855b-41d1-ba1d-38330a1dd21c" />
+  <Project Path="src/ReversiGameSystem.Client.Validation/ReversiGameSystem.Client.Validation.csproj" Id="a9c4a934-99c2-4d12-b962-35ee514aae46" />
   <Project Path="tests/ReversiGameSystem.Client.Tests/ReversiGameSystem.Client.Tests.csproj" Id="d4d27cb2-3b12-4c32-9058-2be953e01385" />
 </Solution>

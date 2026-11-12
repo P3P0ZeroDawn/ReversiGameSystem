@@ -22,12 +22,11 @@ internal sealed class ProfileImageSelectionService
         _dialogService = dialogService;
     }
 
-    internal bool TrySelect(
+    internal ProfileImageSelection? Select(
         DependencyObject source,
-        string resourcePrefix,
-        out ProfileImageSelection? selection)
+        string resourcePrefix)
     {
-        selection = null;
+        ProfileImageSelection? selection = null;
         OpenFileDialog fileDialog = new OpenFileDialog
         {
             Title = _localization[resourcePrefix + "_SelectProfileImageTitle"],
@@ -41,17 +40,17 @@ internal sealed class ProfileImageSelectionService
         bool? selected = owner == null ? fileDialog.ShowDialog() : fileDialog.ShowDialog(owner);
         if (selected != true)
         {
-            return false;
+            return selection;
         }
 
-        if (!ProfilePicturePolicy.TryCreatePreview(fileDialog.FileName, out BitmapSource? preview)
-            || preview == null)
+        BitmapSource? preview = ProfilePicturePolicy.CreatePreview(fileDialog.FileName);
+        if (preview == null)
         {
             _dialogService.ShowWarning(
                 source,
                 resourcePrefix + "_ImageNotSupportedTitle",
                 resourcePrefix + "_ImageNotSupportedMessage");
-            return false;
+            return selection;
         }
 
         if (!_dialogService.Confirm(
@@ -59,11 +58,11 @@ internal sealed class ProfileImageSelectionService
             "ProfileImageModification_ConfirmationTitle",
             "ProfileImageModification_ConfirmationMessage"))
         {
-            return false;
+            return selection;
         }
 
         selection = new ProfileImageSelection(fileDialog.FileName, preview);
-        return true;
+        return selection;
     }
 }
 

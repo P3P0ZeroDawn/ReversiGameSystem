@@ -5,20 +5,27 @@ namespace ReversiGameSystem.Services;
 
 internal static class ClientRuntime
 {
+    internal static ClientSession CurrentSession { get; } = new ClientSession();
+
     private static RemoteMatchClient? _match;
     private static string? _matchToken;
 
     internal static RemoteMatchClient GetMatchClient(bool guest)
     {
-        string? token = guest ? SessionState.GuestToken : AccountPreviewState.SessionToken;
+        string token = CurrentSession.SessionToken
+            ?? throw new InvalidOperationException("A player session is required.");
         if (string.IsNullOrWhiteSpace(token))
         {
             throw new InvalidOperationException("A valid player session is required.");
         }
+        if (CurrentSession.IsGuest != guest)
+        {
+            throw new InvalidOperationException("The requested player type does not match the session.");
+        }
         if (_match == null || _matchToken != token)
         {
             _match?.Dispose();
-            _match = new RemoteMatchClient(token!, Logging.Value.CreateLogger<RemoteMatchClient>());
+            _match = new RemoteMatchClient(token, Logging.Value.CreateLogger<RemoteMatchClient>());
             _matchToken = token;
         }
         return _match;
@@ -37,11 +44,30 @@ internal static class ClientRuntime
     private static readonly Lazy<LeaderboardClient> Leaderboard =
         new Lazy<LeaderboardClient>(CreateLeaderboardService);
 
-    internal static FriendshipClient FriendshipService => Friendship.Value;
-    internal static AccountClient AccountService => Account.Value;
-    internal static PlayerProfileClient ProfileService => Profile.Value;
-    internal static LeaderboardClient LeaderboardService => Leaderboard.Value;
-    internal static SessionClient SessionService => Session.Value;
+    internal static FriendshipClient FriendshipService
+    {
+        get { return Friendship.Value; }
+    }
+
+    internal static AccountClient AccountService
+    {
+        get { return Account.Value; }
+    }
+
+    internal static PlayerProfileClient ProfileService
+    {
+        get { return Profile.Value; }
+    }
+
+    internal static LeaderboardClient LeaderboardService
+    {
+        get { return Leaderboard.Value; }
+    }
+
+    internal static SessionClient SessionService
+    {
+        get { return Session.Value; }
+    }
 
     internal static void Dispose()
     {

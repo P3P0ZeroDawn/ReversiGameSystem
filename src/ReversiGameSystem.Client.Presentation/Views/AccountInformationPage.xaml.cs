@@ -1,13 +1,11 @@
 using System;
 using System.IO;
-using System.ServiceModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Validation;
-using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Views;
 
@@ -57,7 +55,7 @@ public partial class AccountInformationPage : Page
         InitializeComponent();
         Loaded += OnLoaded;
         _returnTarget = returnTarget;
-        string currentUsername = AccountPreviewState.Username
+        string currentUsername = ClientRuntime.CurrentSession.Username
             ?? LocalizationManager.Instance["Game_DefaultPlayerName"];
         _profileUsername = profileUsername ?? currentUsername;
         _isOwnProfile = ownProfileRequested || string.Equals(
@@ -75,19 +73,19 @@ public partial class AccountInformationPage : Page
             return;
         }
 
-        if (AccountPreviewState.Username != null)
+        if (ClientRuntime.CurrentSession.Username != null)
         {
-            usernameTextBlock.Text = AccountPreviewState.Username;
+            usernameTextBlock.Text = ClientRuntime.CurrentSession.Username;
         }
 
-        if (AccountPreviewState.Email != null)
+        if (ClientRuntime.CurrentSession.Email != null)
         {
-            emailTextBlock.Text = AccountPreviewState.Email;
+            emailTextBlock.Text = ClientRuntime.CurrentSession.Email;
         }
 
-        if (AccountPreviewState.ProfilePicture != null)
+        if (ClientRuntime.CurrentSession.ProfilePicture != null)
         {
-            profilePictureButton.Background = new ImageBrush(AccountPreviewState.ProfilePicture)
+            profilePictureButton.Background = new ImageBrush(ClientRuntime.CurrentSession.ProfilePicture)
             {
                 Stretch = Stretch.UniformToFill
             };
@@ -98,7 +96,7 @@ public partial class AccountInformationPage : Page
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         Loaded -= OnLoaded;
-        string? sessionToken = AccountPreviewState.SessionToken;
+        string? sessionToken = ClientRuntime.CurrentSession.SessionToken;
         if (!_isOwnProfile
             || sessionToken == null
             || string.IsNullOrWhiteSpace(sessionToken))
@@ -106,32 +104,52 @@ public partial class AccountInformationPage : Page
             return;
         }
 
+        ProfileResult<PlayerProfile> profileResult =
+            await ClientRuntime.ProfileService.GetPlayerProfile(sessionToken);
+        if (profileResult.Status != ProfileStatus.Success)
+        {
+            ShowProfileLoadError(profileResult.Status == ProfileStatus.ServiceUnavailable);
+            return;
+        }
+        PlayerProfile profile = profileResult.Value
+            ?? throw new InvalidOperationException(
+                "A successful profile result must contain its value.");
+        ApplyProfile(profile);
+        if (!profile.HasProfileImage)
+        {
+            return;
+        }
+        ProfileResult<ProfileImageContent> imageResult =
+            await ClientRuntime.ProfileService.GetProfileImage(sessionToken);
+        if (imageResult.Status != ProfileStatus.Success)
+        {
+            ShowProfileLoadError(imageResult.Status == ProfileStatus.ServiceUnavailable);
+            return;
+        }
         try
         {
-            Proxy.PlayerProfile profile = await ClientRuntime.ProfileService.GetPlayerProfileAsync(sessionToken);
-            ApplyProfile(profile);
-            if (profile.HasProfileImage)
+            System.Windows.Media.Imaging.BitmapSource? bitmap =
+                ProfileImageModificationService.Decode(imageResult.Value);
+            if (bitmap != null)
             {
-                Proxy.ImageContent? image = await ClientRuntime.ProfileService.GetProfileImageAsync(sessionToken);
-                System.Windows.Media.Imaging.BitmapSource? bitmap = ProfileImageModificationService.Decode(image);
-                if (bitmap != null)
+                ClientRuntime.CurrentSession.UpdateProfilePicture(bitmap);
+                profilePictureButton.Background = new ImageBrush(bitmap)
                 {
-                    AccountPreviewState.UpdateProfilePicture(bitmap);
-                    profilePictureButton.Background = new ImageBrush(bitmap) { Stretch = Stretch.UniformToFill };
-                }
+                    Stretch = Stretch.UniformToFill
+                };
             }
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception)
-            || exception is IOException or NotSupportedException or ArgumentException or FormatException)
+        catch (Exception exception) when (exception is IOException
+            or NotSupportedException or ArgumentException or FormatException)
         {
-            ShowProfileLoadError(exception is not FaultException && (exception is CommunicationException or TimeoutException));
+            ShowProfileLoadError(false);
         }
     }
 
-    private void ApplyProfile(Proxy.PlayerProfile profile)
+    private void ApplyProfile(PlayerProfile profile)
     {
-        AccountPreviewState.UpdateUsername(profile.Account.Username);
-        usernameTextBlock.Text = profile.Account.Username;
+        ClientRuntime.CurrentSession.UpdateUsername(profile.Username);
+        usernameTextBlock.Text = profile.Username;
         playerStatisticsControl.SetStatistics(profile.Statistics);
     }
 
@@ -173,7 +191,7 @@ public partial class AccountInformationPage : Page
 
     private async void OnModifyUsernameClick(object sender, RoutedEventArgs e)
     {
-        string currentUsername = AccountPreviewState.Username
+        string currentUsername = ClientRuntime.CurrentSession.Username
             ?? LocalizationManager.Instance["AccountInformation_UnavailableValue"];
         TextInputDialogOptions options = new TextInputDialogOptions(
             "UsernameModification_DialogTitle",
@@ -196,37 +214,26 @@ public partial class AccountInformationPage : Page
                 continue;
             }
 
-            try
+            modifyUsernameButton.IsEnabled = false;
+            ProfileStatus status = await ClientRuntime.ProfileService.ChangeUsername(
+                ClientRuntime.CurrentSession.SessionToken ?? string.Empty, username);
+            modifyUsernameButton.IsEnabled = true;
+            if (status != ProfileStatus.Success)
             {
-                modifyUsernameButton.IsEnabled = false;
-                await ClientRuntime.ProfileService.ChangeUsernameAsync(
-                    AccountPreviewState.SessionToken ?? string.Empty, username);
-            }
-            catch (FaultException<Proxy.ProfileFault> fault)
-            {
-                if (fault.Detail.Reason == Proxy.ProfileFailure.UsernameUnavailable
-                    || fault.Detail.Reason == Proxy.ProfileFailure.InvalidUsername)
+                if (status == ProfileStatus.UsernameUnavailable
+                    || status == ProfileStatus.InvalidUsername)
                 {
-                    string prefix = fault.Detail.Reason == Proxy.ProfileFailure.UsernameUnavailable
+                    string prefix = status == ProfileStatus.UsernameUnavailable
                         ? "AccountCreation_UsernameAlreadyTaken" : "UsernameModification_InvalidFormat";
                     _dialogService.ShowWarning(this, prefix + "Title", prefix + "Message");
                 }
                 else
                 {
-                    ShowProfileLoadError(false);
+                    ShowProfileLoadError(status == ProfileStatus.ServiceUnavailable);
                 }
                 return;
             }
-            catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
-            {
-                ShowProfileLoadError(exception is not FaultException && (exception is CommunicationException or TimeoutException));
-                return;
-            }
-            finally
-            {
-                modifyUsernameButton.IsEnabled = true;
-            }
-            AccountPreviewState.UpdateUsername(username);
+            ClientRuntime.CurrentSession.UpdateUsername(username);
             usernameTextBlock.Text = username;
             _dialogService.ShowInformation(
                 this,
@@ -260,9 +267,9 @@ public partial class AccountInformationPage : Page
 
     private async void OnProfilePictureClick(object sender, RoutedEventArgs e)
     {
-        if (!_profileImageSelectionService.TrySelect(
-            this, "AccountInformation", out ProfileImageSelection? selection)
-            || selection == null)
+        ProfileImageSelection? selection = _profileImageSelectionService.Select(
+            this, "AccountInformation");
+        if (selection == null)
         {
             return;
         }
@@ -270,14 +277,25 @@ public partial class AccountInformationPage : Page
         try
         {
             profilePictureButton.IsEnabled = false;
-            await _profileImageService.SaveAsync(AccountPreviewState.SessionToken ?? string.Empty, selection.FilePath);
+            ProfileStatus status = await _profileImageService.Save(
+                ClientRuntime.CurrentSession.SessionToken ?? string.Empty,
+                selection.FilePath);
+            if (status != ProfileStatus.Success)
+            {
+                string prefix = status == ProfileStatus.ServiceUnavailable
+                    ? "ProfileImageModification_ServerConnectionFailed"
+                    : "ProfileImageModification_PersistenceError";
+                _dialogService.ShowError(this, prefix + "Title", prefix + "Message");
+                return;
+            }
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception)
-            || exception is IOException or UnauthorizedAccessException or NotSupportedException)
+        catch (Exception exception) when (exception is IOException
+            or UnauthorizedAccessException or NotSupportedException)
         {
-            string prefix = exception is not FaultException && (exception is CommunicationException or TimeoutException)
-                ? "ProfileImageModification_ServerConnectionFailed" : "ProfileImageModification_PersistenceError";
-            _dialogService.ShowError(this, prefix + "Title", prefix + "Message");
+            _dialogService.ShowError(
+                this,
+                "ProfileImageModification_PersistenceErrorTitle",
+                "ProfileImageModification_PersistenceErrorMessage");
             return;
         }
         finally
@@ -285,7 +303,7 @@ public partial class AccountInformationPage : Page
             profilePictureButton.IsEnabled = true;
         }
 
-        AccountPreviewState.UpdateProfilePicture(selection.Preview);
+        ClientRuntime.CurrentSession.UpdateProfilePicture(selection.Preview);
         profilePictureButton.Background = new ImageBrush(selection.Preview)
         {
             Stretch = Stretch.UniformToFill
@@ -348,7 +366,7 @@ public partial class AccountInformationPage : Page
         switch (result)
         {
             case AccountDeactivationResult.Success:
-                AccountPreviewState.Clear();
+                ClientRuntime.CurrentSession.Clear();
                 _dialogService.ShowInformation(
                     this,
                     "AccountDeactivation_SuccessTitle",

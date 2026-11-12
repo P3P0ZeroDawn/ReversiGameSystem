@@ -1,7 +1,6 @@
 using System;
 using System.Globalization;
 using System.Resources;
-using System.ServiceModel;
 using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Services;
 using Proxy = ReversiGameSystem.ServerProxy;
@@ -19,9 +18,24 @@ internal static class RemoteMatchClientTests
         client.StateChanged += _ => stateChanges++;
         client.MessagesChanged += _ => messageChanges++;
         client.ParticipantConnectionChanged += _ => presenceChanges++;
-        client.OnMatchStarted(new Proxy.MatchStateSnapshot { MatchId = 7, MatchStateVersion = 3 });
-        client.OnMatchStateChanged(new Proxy.MatchStateSnapshot { MatchId = 7, MatchStateVersion = 2 });
-        client.OnMatchStateChanged(new Proxy.MatchStateSnapshot { MatchId = 7, MatchStateVersion = 3 });
+        client.OnMatchStarted(new Proxy.MatchStateSnapshot
+        {
+            MatchId = 7,
+            MatchStateVersion = 3,
+            Board = Array.Empty<Proxy.BoardCellState>()
+        });
+        client.OnMatchStateChanged(new Proxy.MatchStateSnapshot
+        {
+            MatchId = 7,
+            MatchStateVersion = 2,
+            Board = Array.Empty<Proxy.BoardCellState>()
+        });
+        client.OnMatchStateChanged(new Proxy.MatchStateSnapshot
+        {
+            MatchId = 7,
+            MatchStateVersion = 3,
+            Board = Array.Empty<Proxy.BoardCellState>()
+        });
         client.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 7, MessageNumber = 2, Content = "second" });
         client.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 7, MessageNumber = 1, Content = "first" });
         client.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 7, MessageNumber = 2, Content = "second" });
@@ -31,8 +45,9 @@ internal static class RemoteMatchClientTests
         TestAssert.AreEqual(1, stateChanges);
         TestAssert.AreEqual(3, messageChanges);
         TestAssert.AreEqual(2, presenceChanges);
-        TestAssert.AreEqual(true, client.TryReadState(7, out Proxy.MatchStateSnapshot? state));
-        TestAssert.AreEqual(3L, state!.MatchStateVersion);
+        TestAssert.AreEqual(true, client.HasMatchState(7));
+        MatchStateSnapshot state = client.ReadMatchState(7);
+        TestAssert.AreEqual(3L, state.Version);
         TestAssert.AreEqual(2, client.ReadMessages(7).Length);
         TestAssert.AreEqual("first", client.ReadMessages(7)[0].Content);
         TestAssert.AreEqual(1, client.ReadMessages(8).Length);
@@ -62,11 +77,10 @@ internal static class RemoteMatchClientTests
                 TestAssert.AreEqual(false, string.IsNullOrWhiteSpace(resources.GetString(key, CultureInfo.GetCultureInfo(culture))));
             }
         }
-        TestAssert.AreEqual("JoinMatch_MatchCodeNotAvailableMessage", RemoteMatchMessages.Key(
-            new FaultException<Proxy.MatchFault>(new Proxy.MatchFault { Reason = Proxy.MatchFailure.MatchCodeUnavailable })));
-        TestAssert.AreEqual("RemoteMatch_ConnectionFailed", RemoteMatchMessages.Key(new TimeoutException()));
-        TestAssert.AreEqual("RemoteMatch_ServerFailure", RemoteMatchMessages.Key(
-            new FaultException<Proxy.ServiceFault>(new Proxy.ServiceFault())));
+        TestAssert.AreEqual("JoinMatch_MatchCodeNotAvailableMessage",
+            RemoteMatchMessages.Key(MatchStatus.MatchCodeUnavailable));
+        TestAssert.AreEqual("RemoteMatch_ConnectionFailed",
+            RemoteMatchMessages.Key(MatchStatus.ServiceUnavailable));
     }
 
     internal static RemoteMatchClient Create(string token) => new(token, new MatchEndpoints

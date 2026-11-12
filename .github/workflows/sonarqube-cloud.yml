@@ -12,8 +12,8 @@ permissions:
   contents: read
 
 jobs:
-  analyze-server:
-    name: Analyze server
+  analyze-solution:
+    name: Analyze solution
     if: >-
       github.event_name != 'pull_request' ||
       github.event.pull_request.head.repo.full_name == github.repository
@@ -34,6 +34,11 @@ jobs:
         run: >-
           dotnet restore
           tests/ReversiGameSystem.Server.Tests/ReversiGameSystem.Server.Tests.csproj
+
+      - name: Restore client projects
+        run: >-
+          dotnet restore
+          tests/ReversiGameSystem.Client.Tests/ReversiGameSystem.Client.Tests.csproj
 
       - name: Install SonarScanner for .NET
         run: >-
@@ -65,6 +70,15 @@ jobs:
           --no-incremental
           -p:TreatWarningsAsErrors=true
 
+      - name: Build client
+        run: >-
+          dotnet build
+          tests/ReversiGameSystem.Client.Tests/ReversiGameSystem.Client.Tests.csproj
+          --configuration Release
+          --no-restore
+          --no-incremental
+          -p:TreatWarningsAsErrors=true
+
       - name: Run isolated server tests with coverage
         shell: pwsh
         run: |
@@ -89,12 +103,22 @@ jobs:
             -f coverage `
             -o coverage-database.coverage
 
-      - name: Merge server coverage
+      - name: Run client tests with coverage
+        shell: pwsh
+        run: |
+          $testProject = `
+            "tests/ReversiGameSystem.Client.Tests/ReversiGameSystem.Client.Tests.csproj"
+          $testCommand = `
+            "dotnet run --project $testProject --configuration Release --no-build"
+          dotnet-coverage collect $testCommand -f coverage -o coverage-client.coverage
+
+      - name: Merge solution coverage
         shell: pwsh
         run: |
           dotnet-coverage merge `
             coverage-isolated.coverage `
             coverage-database.coverage `
+            coverage-client.coverage `
             -f xml `
             -o coverage.xml
 

@@ -1,10 +1,9 @@
 using System;
-using System.ServiceModel;
 using System.Threading.Tasks;
-using Proxy = ReversiGameSystem.ServerProxy;
 using System.Windows;
 using System.Windows.Controls;
 using ReversiGameSystem.Localization;
+using ReversiGameSystem.Presentation.Authentication;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Validation;
 
@@ -16,12 +15,18 @@ namespace ReversiGameSystem.Views;
 public partial class LoginScreenPage : Page
 {
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
+    private readonly LoginViewModel _viewModel;
 
     /// <summary>
     /// Initializes the sign-in page.
     /// </summary>
-    public LoginScreenPage()
+    public LoginScreenPage() : this(new LoginViewModel(ClientRuntime.SessionService))
     {
+    }
+
+    internal LoginScreenPage(LoginViewModel viewModel)
+    {
+        _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         InitializeComponent();
     }
 
@@ -38,31 +43,28 @@ public partial class LoginScreenPage : Page
     private async void OnLoginClick(object sender, RoutedEventArgs e)
     {
         string login = loginTextBox.Text.Trim();
-        if (string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(passwordBox.Password))
-        {
-            _dialogService.ShowWarning(
-                this,
-                "LoginScreen_MissingCredentialsTitle",
-                "LoginScreen_MissingCredentialsMessage");
-            return;
-        }
-
         SetSessionActionsEnabled(false);
         try
         {
-            await ClientRuntime.SessionService.RequestLoginCodeAsync(login, passwordBox.Password);
-            passwordBox.Clear();
-            await ConfirmLoginAsync(login);
-        }
-        catch (FaultException<Proxy.SessionFault> fault)
-        {
-            ShowSessionRejection(fault.Detail.Reason);
-        }
-        catch (Exception exception) when (exception is CommunicationException or TimeoutException
-            or System.Runtime.Serialization.SerializationException or InvalidOperationException)
-        {
-            ShowLoginError("LoginScreen_ServiceUnavailableTitle",
-                "LoginScreen_ServiceUnavailableMessage");
+            SessionStatus status = await _viewModel.RequestLoginCode(
+                login,
+                passwordBox.Password);
+            if (status == SessionStatus.Success)
+            {
+                passwordBox.Clear();
+                await ConfirmLogin(login);
+            }
+            else if (status == SessionStatus.MissingCredentials)
+            {
+                _dialogService.ShowWarning(
+                    this,
+                    "LoginScreen_MissingCredentialsTitle",
+                    "LoginScreen_MissingCredentialsMessage");
+            }
+            else
+            {
+                ShowSessionRejection(status);
+            }
         }
         finally
         {
@@ -70,7 +72,7 @@ public partial class LoginScreenPage : Page
         }
     }
 
-    private async Task ConfirmLoginAsync(string login)
+    private async Task ConfirmLogin(string login)
     {
         TextInputDialogOptions options = new TextInputDialogOptions(
             "LoginScreen_VerificationCodeDialogTitle",
@@ -82,44 +84,26 @@ public partial class LoginScreenPage : Page
         };
         while (_dialogService.TryGetText(this, options, out string code))
         {
-            try
+            SessionResult<AuthenticatedAccountSession> result =
+                await _viewModel.CompleteLogin(login, code);
+            if (result.Status == SessionStatus.Success)
             {
-                Proxy.AuthenticatedSession session =
-                    await ClientRuntime.SessionService.CompleteLoginAsync(login, code);
-                HandleLoginOutcome(AuthenticationOutcomeMapper.Map(session));
+                AuthenticatedAccountSession session = result.Value
+                    ?? throw new InvalidOperationException(
+                        "A successful session result must contain its value.");
+                ClientRuntime.CurrentSession.StartAuthenticated(session);
+                NavigationService?.Navigate(new MainMenuPage());
                 return;
             }
-            catch (FaultException<Proxy.SessionFault> fault) when (
-                fault.Detail.Reason == Proxy.SessionFailure.InvalidVerificationCode)
+
+            if (result.Status == SessionStatus.InvalidVerificationCode)
             {
                 ShowLoginError("LoginScreen_InvalidCodeTitle", "LoginScreen_InvalidCodeMessage");
+                continue;
             }
-        }
-    }
 
-    private void HandleLoginOutcome(AuthenticationOutcome outcome)
-    {
-        switch (outcome.Status)
-        {
-            case AuthenticationStatus.Success when outcome.Session != null:
-                AccountPreviewState.Start(outcome.Session);
-                NavigationService?.Navigate(new MainMenuPage());
-                break;
-            case AuthenticationStatus.InvalidCredentials:
-                ShowLoginError(
-                    "LoginScreen_InvalidCredentialsTitle",
-                    "LoginScreen_InvalidCredentialsMessage");
-                break;
-            case AuthenticationStatus.InactiveAccount:
-                ShowLoginError(
-                    "LoginScreen_AccountInactiveTitle",
-                    "LoginScreen_AccountInactiveMessage");
-                break;
-            default:
-                ShowLoginError(
-                    "LoginScreen_ServiceUnavailableTitle",
-                    "LoginScreen_ServiceUnavailableMessage");
-                break;
+            ShowSessionRejection(result.Status);
+            return;
         }
     }
 
@@ -143,35 +127,21 @@ public partial class LoginScreenPage : Page
         {
             while (_dialogService.TryGetText(this, options, out string guestName))
             {
-                try
+                SessionResult<GuestAccountSession> result =
+                    await _viewModel.OpenGuestSession(guestName);
+                if (result.Status == SessionStatus.Success)
                 {
-                    Proxy.GuestSession session =
-                        await ClientRuntime.SessionService.OpenGuestSessionAsync(guestName.Trim());
-                    if (string.IsNullOrWhiteSpace(session.SessionToken)
-                        || string.IsNullOrWhiteSpace(session.DisplayName)
-                        || session.ExpiresAtUtc <= DateTime.UtcNow)
-                    {
-                        throw new System.Runtime.Serialization.SerializationException(
-                            "The guest session is invalid.");
-                    }
-
-                    SessionState.GuestToken = session.SessionToken;
-                    AccountPreviewState.Clear();
+                    GuestAccountSession session = result.Value
+                        ?? throw new InvalidOperationException(
+                            "A successful guest session result must contain its value.");
+                    ClientRuntime.CurrentSession.StartGuest(session);
                     NavigationService?.Navigate(new MainMenuPage(session.DisplayName));
                     return;
                 }
-                catch (FaultException<Proxy.SessionFault> fault)
-                {
-                    ShowSessionRejection(fault.Detail.Reason);
-                    options.InitialText = guestName;
-                }
+
+                ShowSessionRejection(result.Status);
+                options.InitialText = guestName;
             }
-        }
-        catch (Exception exception) when (exception is CommunicationException or TimeoutException
-            or System.Runtime.Serialization.SerializationException or InvalidOperationException)
-        {
-            ShowLoginError("GuestAccess_SessionCreationErrorTitle",
-                "GuestAccess_SessionCreationErrorMessage");
         }
         finally
         {
@@ -187,21 +157,21 @@ public partial class LoginScreenPage : Page
         forgotPasswordButton.IsEnabled = enabled;
     }
 
-    private void ShowSessionRejection(Proxy.SessionFailure reason)
+    private void ShowSessionRejection(SessionStatus reason)
     {
         (string title, string message) = reason switch
         {
-            Proxy.SessionFailure.InvalidCredentials =>
+            SessionStatus.InvalidCredentials =>
                 ("LoginScreen_InvalidCredentialsTitle", "LoginScreen_InvalidCredentialsMessage"),
-            Proxy.SessionFailure.InactiveAccount =>
+            SessionStatus.InactiveAccount =>
                 ("LoginScreen_AccountInactiveTitle", "LoginScreen_AccountInactiveMessage"),
-            Proxy.SessionFailure.InvalidVerificationCode =>
+            SessionStatus.InvalidVerificationCode =>
                 ("LoginScreen_InvalidCodeTitle", "LoginScreen_InvalidCodeMessage"),
-            Proxy.SessionFailure.ExpiredVerificationCode =>
+            SessionStatus.ExpiredVerificationCode =>
                 ("LoginScreen_ExpiredCodeTitle", "LoginScreen_ExpiredCodeMessage"),
-            Proxy.SessionFailure.InvalidGuestName =>
+            SessionStatus.InvalidGuestName =>
                 ("GuestAccess_InvalidNameTitle", "GuestAccess_InvalidNameMessage"),
-            Proxy.SessionFailure.GuestNameUnavailable =>
+            SessionStatus.GuestNameUnavailable =>
                 ("GuestAccess_NameAlreadyInUseTitle", "GuestAccess_NameAlreadyInUseMessage"),
             _ => ("LoginScreen_ServiceUnavailableTitle", "LoginScreen_ServiceUnavailableMessage")
         };

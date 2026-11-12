@@ -1,12 +1,10 @@
 using System;
 using System.ComponentModel;
 using System.Globalization;
-using System.ServiceModel;
 using System.Windows;
 using System.Windows.Controls;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
-using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Views;
 
@@ -16,7 +14,7 @@ namespace ReversiGameSystem.Views;
 public partial class PlayerStatisticsControl : UserControl
 {
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
-    private Proxy.PlayerStatistics? _statistics;
+    private ProfileStatistics? _statistics;
     private string? _playerId;
 
     /// <summary>
@@ -65,7 +63,7 @@ public partial class PlayerStatisticsControl : UserControl
         }
     }
 
-    internal void SetStatistics(Proxy.PlayerStatistics statistics)
+    internal void SetStatistics(ProfileStatistics statistics)
     {
         _statistics = statistics ?? throw new ArgumentNullException(nameof(statistics));
         ShowStatistics();
@@ -82,7 +80,7 @@ public partial class PlayerStatisticsControl : UserControl
             return;
         }
 
-        string? sessionToken = AccountPreviewState.SessionToken;
+        string? sessionToken = ClientRuntime.CurrentSession.SessionToken;
         if (sessionToken == null || string.IsNullOrWhiteSpace(sessionToken))
         {
             _dialogService.ShowError(
@@ -93,22 +91,22 @@ public partial class PlayerStatisticsControl : UserControl
         }
 
         ClearStatistics();
-        try
+        IsEnabled = false;
+        ProfileResult<PlayerProfile> result =
+            await ClientRuntime.ProfileService.GetPlayerProfile(sessionToken);
+        IsEnabled = true;
+        if (result.Status == ProfileStatus.Success)
         {
-            IsEnabled = false;
-            Proxy.PlayerProfile profile = await ClientRuntime.ProfileService.GetPlayerProfileAsync(sessionToken);
+            PlayerProfile profile = result.Value
+                ?? throw new InvalidOperationException(
+                    "A successful profile result must contain its value.");
             SetStatistics(profile.Statistics);
+            return;
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
-        {
-            string resourcePrefix = exception is not FaultException && (exception is CommunicationException or TimeoutException)
-                ? "PlayerStatistics_ServerConnectionFailed" : "PlayerStatistics_RetrievalError";
-            _dialogService.ShowError(this, resourcePrefix + "Title", resourcePrefix + "Message");
-        }
-        finally
-        {
-            IsEnabled = true;
-        }
+        string resourcePrefix = result.Status == ProfileStatus.ServiceUnavailable
+            ? "PlayerStatistics_ServerConnectionFailed"
+            : "PlayerStatistics_RetrievalError";
+        _dialogService.ShowError(this, resourcePrefix + "Title", resourcePrefix + "Message");
     }
 
     private void ClearStatistics()

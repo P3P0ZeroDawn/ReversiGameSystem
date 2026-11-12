@@ -93,5 +93,5 @@ generated_code = true
 generated_code = true
 dotnet_diagnostic.CS1591.severity = none
 
-[src/ReversiGameSystem.Client.Presentation/Connected Services/**/Reference.cs]
+[src/ReversiGameSystem.Client.Communication/Connected Services/**/Reference.cs]
 generated_code = true

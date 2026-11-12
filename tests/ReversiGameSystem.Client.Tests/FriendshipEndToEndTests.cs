@@ -17,20 +17,18 @@ internal static class FriendshipEndToEndTests
         SessionClient secondSession = CreateSessionClient();
         using FriendshipClient first = CreateFriendshipClient();
         using FriendshipClient second = CreateFriendshipClient();
-        Proxy.AuthenticatedSession? alpha = null;
-        Proxy.AuthenticatedSession? beta = null;
+        AuthenticatedAccountSession? alpha = null;
+        AuthenticatedAccountSession? beta = null;
         try
         {
-            alpha = firstSession.CompleteLoginAsync("ReviewAlpha", "000001")
-                .GetAwaiter().GetResult();
-            beta = secondSession.CompleteLoginAsync("ReviewBeta", "000002")
-                .GetAwaiter().GetResult();
-            AssertSingleFriend(first.GetFriendsAsync(alpha.SessionToken)
-                .GetAwaiter().GetResult(), "ReviewBeta", false);
+            alpha = Authenticate(firstSession, "ReviewAlpha", "000001");
+            beta = Authenticate(secondSession, "ReviewBeta", "000002");
+            AssertSingleFriend(first.GetFriends(alpha.SessionToken)
+                .GetAwaiter().GetResult().Friends, "ReviewBeta", false);
 
             // Act
-            Proxy.FriendSummary[] betaFriends = second.GetFriendsAsync(beta.SessionToken)
-                .GetAwaiter().GetResult();
+            FriendSummary[] betaFriends = second.GetFriends(beta.SessionToken)
+                .GetAwaiter().GetResult().Friends;
 
             // Assert
             AssertSingleFriend(betaFriends, "ReviewAlpha", true);
@@ -48,14 +46,14 @@ internal static class FriendshipEndToEndTests
             {
                 if (beta != null)
                 {
-                    secondSession.CloseSessionAsync(beta.SessionToken).GetAwaiter().GetResult();
+                    secondSession.CloseSession(beta.SessionToken).GetAwaiter().GetResult();
                 }
             }
             finally
             {
                 if (alpha != null)
                 {
-                    firstSession.CloseSessionAsync(alpha.SessionToken).GetAwaiter().GetResult();
+                    firstSession.CloseSession(alpha.SessionToken).GetAwaiter().GetResult();
                 }
             }
         }
@@ -68,7 +66,7 @@ internal static class FriendshipEndToEndTests
         AssertSingleFriend(observer.GetSnapshot(), "ReviewBeta", true);
 
         // Act
-        session.CloseSessionAsync(token).GetAwaiter().GetResult();
+        session.CloseSession(token).GetAwaiter().GetResult();
 
         // Assert
         WaitForPresence(observer, false);
@@ -81,11 +79,11 @@ internal static class FriendshipEndToEndTests
         using FriendshipClient invalid = CreateFriendshipClient();
 
         // Act
-        FaultException<Proxy.SessionFault> fault = TestAssert.Throws<FaultException<Proxy.SessionFault>>(
-            () => invalid.GetFriendsAsync("synthetic-invalid-session").GetAwaiter().GetResult());
+        FriendshipResult result = invalid.GetFriends("synthetic-invalid-session")
+            .GetAwaiter().GetResult();
 
         // Assert
-        TestAssert.AreEqual(Proxy.SessionFailure.InvalidSession, fault.Detail.Reason);
+        TestAssert.AreEqual(FriendshipStatus.InvalidSession, result.Status);
         TestAssert.AreEqual(false, invalid.IsConnected);
     }
 
@@ -94,18 +92,18 @@ internal static class FriendshipEndToEndTests
         // Read the local snapshot only: success requires a delivered duplex notification.
         TestAssert.AreEqual(true, SpinWait.SpinUntil(() =>
         {
-            Proxy.FriendSummary[] friends = observer.GetSnapshot();
-            return friends.Length == 1 && friends[0].Account.Username == "ReviewBeta"
+            FriendSummary[] friends = observer.GetSnapshot();
+            return friends.Length == 1 && friends[0].Username == "ReviewBeta"
                 && friends[0].IsOnline == online;
         }, TimeSpan.FromSeconds(10)));
         AssertSingleFriend(observer.GetSnapshot(), "ReviewBeta", online);
     }
 
-    private static void AssertSingleFriend(Proxy.FriendSummary[] friends, string username, bool online)
+    private static void AssertSingleFriend(FriendSummary[] friends, string username, bool online)
     {
         TestAssert.AreEqual(1, friends.Length);
-        TestAssert.AreEqual(username, friends[0].Account.Username);
-        TestAssert.AreEqual(true, friends[0].Account.AccountId > 0);
+        TestAssert.AreEqual(username, friends[0].Username);
+        TestAssert.AreEqual(true, friends[0].AccountId > 0);
         TestAssert.AreEqual(online, friends[0].IsOnline);
     }
 
@@ -118,12 +116,26 @@ internal static class FriendshipEndToEndTests
             context, CreateBinding(), new EndpointAddress(
                 "net.tcp://localhost:18094/ReversiReview/Friendship")));
 
+    private static AuthenticatedAccountSession Authenticate(
+        SessionClient sessions,
+        string login,
+        string verificationCode)
+    {
+        SessionResult<AuthenticatedAccountSession> result = sessions.CompleteLogin(
+            login,
+            verificationCode).GetAwaiter().GetResult();
+        TestAssert.AreEqual(SessionStatus.Success, result.Status);
+        return TestAssert.IsNotNull(result.Value);
+    }
+
     private static NetTcpBinding CreateBinding()
     {
         NetTcpBinding binding = new NetTcpBinding(SecurityMode.None)
         {
-            OpenTimeout = TimeSpan.FromSeconds(10), CloseTimeout = TimeSpan.FromSeconds(5),
-            SendTimeout = TimeSpan.FromSeconds(10), ReceiveTimeout = TimeSpan.FromSeconds(15)
+            OpenTimeout = TimeSpan.FromSeconds(10),
+            CloseTimeout = TimeSpan.FromSeconds(5),
+            SendTimeout = TimeSpan.FromSeconds(10),
+            ReceiveTimeout = TimeSpan.FromSeconds(15)
         };
         return binding;
     }

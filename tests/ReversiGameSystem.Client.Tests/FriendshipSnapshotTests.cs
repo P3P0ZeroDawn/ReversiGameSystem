@@ -9,7 +9,7 @@ internal static class FriendshipSnapshotTests
     {
         FriendshipSnapshot snapshot = new();
         snapshot.BeginRefresh();
-        snapshot.Change(2, Proxy.FriendChange.Connected);
+        snapshot.Change(2, FriendChange.Connected);
         snapshot.CompleteRefresh(new[] { Bob(false) });
         TestAssert.AreEqual(true, snapshot.Read()[0].IsOnline);
     }
@@ -18,7 +18,7 @@ internal static class FriendshipSnapshotTests
     {
         FriendshipSnapshot snapshot = new();
         snapshot.BeginRefresh();
-        snapshot.Change(2, Proxy.FriendChange.Removed);
+        snapshot.Change(2, FriendChange.Removed);
         snapshot.CompleteRefresh(new[] { Bob(true) });
         TestAssert.AreEqual(0, snapshot.Read().Length);
     }
@@ -27,18 +27,17 @@ internal static class FriendshipSnapshotTests
     {
         FriendshipSnapshot snapshot = new();
         snapshot.BeginRefresh();
-        snapshot.Change(2, Proxy.FriendChange.Connected);
-        snapshot.Change(2, Proxy.FriendChange.Disconnected);
+        snapshot.Change(2, FriendChange.Connected);
+        snapshot.Change(2, FriendChange.Disconnected);
         snapshot.CompleteRefresh(new[] { Bob(true) });
-        Proxy.FriendSummary[] first = snapshot.Read();
+        FriendSummary[] first = snapshot.Read();
         TestAssert.AreEqual(false, first[0].IsOnline);
         first[0].IsOnline = true;
-        first[0].Account.Username = "Modified";
         TestAssert.AreEqual(false, snapshot.Read()[0].IsOnline);
-        TestAssert.AreEqual("Bob", snapshot.Read()[0].Account.Username);
-        snapshot.Change(2, Proxy.FriendChange.Connected);
+        TestAssert.AreEqual("Bob", snapshot.Read()[0].Username);
+        snapshot.Change(2, FriendChange.Connected);
         TestAssert.AreEqual(true, snapshot.Read()[0].IsOnline);
-        snapshot.Change(2, Proxy.FriendChange.Removed);
+        snapshot.Change(2, FriendChange.Removed);
         TestAssert.AreEqual(0, snapshot.Read().Length);
     }
 

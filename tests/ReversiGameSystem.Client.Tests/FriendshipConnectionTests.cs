@@ -28,7 +28,8 @@ internal static class FriendshipConnectionTests
             host.Open();
             using FriendshipClient client = new(NullLogger<FriendshipClient>.Instance,
                 context => new Proxy.FriendshipServiceClient(context, CreateBinding(), new EndpointAddress(address)));
-            TestAssert.AreEqual(false, client.GetFriendsAsync("test-session").GetAwaiter().GetResult()[0].IsOnline);
+            TestAssert.AreEqual(false, client.GetFriends("test-session")
+                .GetAwaiter().GetResult().Friends[0].IsOnline);
             TestAssert.AreEqual(true, Guid.TryParse(service.LastCorrelationId, out _));
             TestAssert.IsNotNull(service.Callback).OnFriendChanged(2, Proxy.FriendChange.Connected);
             TestAssert.AreEqual(true, SpinWait.SpinUntil(
@@ -40,12 +41,12 @@ internal static class FriendshipConnectionTests
             TestAssert.AreEqual(true, SpinWait.SpinUntil(
                 () => client.GetSnapshot().Length == 0, TimeSpan.FromSeconds(5)));
             service.RejectSession = true;
-            FaultException<Proxy.SessionFault> fault = TestAssert.Throws<FaultException<Proxy.SessionFault>>(
-                () => client.GetFriendsAsync("test-session").GetAwaiter().GetResult());
-            TestAssert.AreEqual(Proxy.SessionFailure.InvalidSession, fault.Detail.Reason);
+            FriendshipResult rejected = client.GetFriends("test-session").GetAwaiter().GetResult();
+            TestAssert.AreEqual(FriendshipStatus.InvalidSession, rejected.Status);
             TestAssert.AreEqual(false, client.IsConnected);
             service.RejectSession = false;
-            TestAssert.AreEqual(1, client.GetFriendsAsync("test-session").GetAwaiter().GetResult().Length);
+            TestAssert.AreEqual(1, client.GetFriends("test-session")
+                .GetAwaiter().GetResult().Friends.Length);
             client.Close();
             TestAssert.AreEqual(false, client.IsConnected);
             TestAssert.AreEqual(0, client.GetSnapshot().Length);
@@ -74,7 +75,7 @@ internal static class FriendshipConnectionTests
             using FriendshipClient client = new(NullLogger<FriendshipClient>.Instance,
                 context => new Proxy.FriendshipServiceClient(
                     context, CreateBinding(), new EndpointAddress(address)));
-            client.GetFriendsAsync("test-session").GetAwaiter().GetResult();
+            client.GetFriends("test-session").GetAwaiter().GetResult();
             TestAssert.AreEqual(true, client.IsConnected);
             TestAssert.AreEqual(1, client.GetSnapshot().Length);
 
@@ -82,7 +83,7 @@ internal static class FriendshipConnectionTests
             using ManualResetEventSlim release = new();
             service.RequestStarted = started;
             service.ContinueRequest = release;
-            Task refresh = client.GetFriendsAsync("test-session");
+            Task refresh = client.GetFriends("test-session");
             TestAssert.AreEqual(true, started.Wait(TimeSpan.FromSeconds(5)));
             Task close = Task.Run(() => client.Close());
             TestAssert.AreEqual(false, close.Wait(TimeSpan.FromMilliseconds(100)));

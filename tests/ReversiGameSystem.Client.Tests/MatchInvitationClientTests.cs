@@ -2,11 +2,8 @@ using System;
 using System.Globalization;
 using System.Resources;
 using System.ServiceModel;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
-using ReversiGameSystem.Validation;
 using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Client.Tests;
@@ -62,7 +59,7 @@ internal sealed class MatchInvitationClientTests
             new Proxy.FriendshipFault { Reason = Proxy.FriendshipFailure.AccountUnavailable });
 
         // Act
-        string key = RemoteMatchMessages.Key(fault);
+        string key = RemoteMatchMessages.Key(MatchStatus.AccountUnavailable);
 
         // Assert
         TestAssert.AreEqual("InviteMatch_AccountUnavailableMessage", key);
@@ -78,7 +75,7 @@ internal sealed class MatchInvitationClientTests
             new Proxy.FriendshipFault { Reason = Proxy.FriendshipFailure.FriendshipNotFound });
 
         // Act
-        string key = RemoteMatchMessages.Key(fault);
+        string key = RemoteMatchMessages.Key(MatchStatus.FriendshipNotFound);
 
         // Assert
         TestAssert.AreEqual("InviteMatch_FriendshipNotFoundMessage", key);
@@ -94,7 +91,7 @@ internal sealed class MatchInvitationClientTests
             new Proxy.FriendshipFault { Reason = Proxy.FriendshipFailure.InvalidAccountId });
 
         // Act
-        string key = RemoteMatchMessages.Key(fault);
+        string key = RemoteMatchMessages.Key(MatchStatus.InvalidAccountId);
 
         // Assert
         TestAssert.AreEqual("InviteMatch_InvalidAccountIdMessage", key);
@@ -110,7 +107,7 @@ internal sealed class MatchInvitationClientTests
             new Proxy.FriendshipFault { Reason = Proxy.FriendshipFailure.InactiveAccount });
 
         // Act
-        string key = RemoteMatchMessages.Key(fault);
+        string key = RemoteMatchMessages.Key(MatchStatus.InactiveAccount);
 
         // Assert
         TestAssert.AreEqual("InviteMatch_InactiveAccountMessage", key);
@@ -126,7 +123,7 @@ internal sealed class MatchInvitationClientTests
             new Proxy.MatchFault { Reason = Proxy.MatchFailure.Unauthorized });
 
         // Act
-        string key = RemoteMatchMessages.Key(fault);
+        string key = RemoteMatchMessages.Key(MatchStatus.Unauthorized);
 
         // Assert
         TestAssert.AreEqual("InviteMatch_UnauthorizedMessage", key);
@@ -142,7 +139,7 @@ internal sealed class MatchInvitationClientTests
             new Proxy.MatchFault { Reason = Proxy.MatchFailure.InactiveAccount });
 
         // Act
-        string key = RemoteMatchMessages.Key(fault);
+        string key = RemoteMatchMessages.Key(MatchStatus.InactiveAccount);
 
         // Assert
         TestAssert.AreEqual("InviteMatch_InactiveAccountMessage", key);
@@ -158,7 +155,7 @@ internal sealed class MatchInvitationClientTests
             new Proxy.MatchFault { Reason = Proxy.MatchFailure.MatchNotWaiting });
 
         // Act
-        string key = RemoteMatchMessages.Key(fault);
+        string key = RemoteMatchMessages.Key(MatchStatus.MatchNotWaiting);
 
         // Assert
         TestAssert.AreEqual("InviteMatch_MatchNotWaitingMessage", key);
@@ -174,8 +171,8 @@ internal sealed class MatchInvitationClientTests
         CommunicationException communication = new CommunicationException();
 
         // Act
-        string timeoutKey = RemoteMatchMessages.Key(timeout);
-        string communicationKey = RemoteMatchMessages.Key(communication);
+        string timeoutKey = RemoteMatchMessages.Key(MatchStatus.ServiceUnavailable);
+        string communicationKey = RemoteMatchMessages.Key(MatchStatus.ServiceUnavailable);
 
         // Assert
         TestAssert.AreEqual("RemoteMatch_ConnectionFailed", timeoutKey);
@@ -255,23 +252,17 @@ internal sealed class MatchInvitationClientTests
     {
         // Arrange
         RemoteMatchClient client = RemoteMatchClientTests.Create("test-token");
-        bool failed = false;
-
-        // Act & Assert
+        // Act
         try
         {
-            Task<Proxy.LobbySnapshot> task = client.InviteAsync(100, 40);
-            task.GetAwaiter().GetResult();
-        }
-        catch (CommunicationException)
-        {
-            failed = true;
+            MatchResult<LobbySnapshot> result = client.InviteToMatch(100, 40)
+                .GetAwaiter().GetResult();
+            TestAssert.AreEqual(MatchStatus.ServiceUnavailable, result.Status);
         }
         finally
         {
             client.Dispose();
         }
-        TestAssert.AreEqual(true, failed);
     }
 }
 

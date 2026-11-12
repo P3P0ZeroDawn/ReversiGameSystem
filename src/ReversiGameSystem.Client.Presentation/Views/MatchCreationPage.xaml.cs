@@ -56,21 +56,21 @@ public partial class MatchCreationPage : Page
         }
 
         IsEnabled = false;
-        try
+        RemoteMatchClient client = ClientRuntime.GetMatchClient(_guestName != null);
+        MatchResult<LobbySnapshot> result = await client.CreateMatch(turnTimeSeconds);
+        if (result.Status == MatchStatus.Success)
         {
-            RemoteMatchClient client = ClientRuntime.GetMatchClient(_guestName != null);
-            ServerProxy.LobbySnapshot lobby = await client.CreateAsync(turnTimeSeconds);
+            LobbySnapshot lobby = result.Value
+                ?? throw new InvalidOperationException(
+                    "A successful match result must contain its value.");
             NavigationService?.Navigate(new WaitingForOpponentPage(client, lobby, _guestName));
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        else
         {
             _dialogService.ShowError(this, "MatchCreation_PersistenceErrorTitle",
-                RemoteMatchMessages.Key(exception, _guestName != null));
+                RemoteMatchMessages.Key(result.Status, _guestName != null));
         }
-        finally
-        {
-            IsEnabled = true;
-        }
+        IsEnabled = true;
     }
 
     private void OnCancelClick(object sender, RoutedEventArgs e)

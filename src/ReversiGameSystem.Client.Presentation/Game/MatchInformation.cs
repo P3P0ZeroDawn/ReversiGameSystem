@@ -92,5 +92,8 @@ internal sealed class MatchInformation
 
     internal MatchEndReason? EndReason { get; }
 
-    internal ReversiBoard LatestBoard => BoardFrames[BoardFrames.Count - 1];
+    internal ReversiBoard LatestBoard
+    {
+        get { return BoardFrames[BoardFrames.Count - 1]; }
+    }
 }

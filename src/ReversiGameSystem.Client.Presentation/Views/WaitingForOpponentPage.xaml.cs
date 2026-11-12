@@ -1,11 +1,9 @@
 using System;
-using System.ServiceModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
-using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Views;
 
@@ -13,14 +11,18 @@ namespace ReversiGameSystem.Views;
 public partial class WaitingForOpponentPage : Page
 {
     private readonly RemoteMatchClient _client;
-    private readonly Proxy.LobbySnapshot _lobby;
+    private readonly LobbySnapshot _lobby;
     private readonly string? _guestName;
-    private readonly DialogService _dialogs = new(LocalizationManager.Instance);
-    private readonly DispatcherTimer _keepalive = new() { Interval = TimeSpan.FromSeconds(15) };
+    private readonly DialogService _dialogs =
+        new DialogService(LocalizationManager.Instance);
+    private readonly DispatcherTimer _keepalive = new DispatcherTimer
+    {
+        Interval = TimeSpan.FromSeconds(15)
+    };
     private bool _navigated;
     private bool _refreshing;
 
-    internal WaitingForOpponentPage(RemoteMatchClient client, Proxy.LobbySnapshot lobby, string? guestName)
+    internal WaitingForOpponentPage(RemoteMatchClient client, LobbySnapshot lobby, string? guestName)
     {
         InitializeComponent();
         _client = client;
@@ -42,9 +44,9 @@ public partial class WaitingForOpponentPage : Page
         _client.StateChanged += OnState;
         _client.LobbyClosed += OnClosed;
         _keepalive.Start();
-        if (_client.TryReadState(_lobby.MatchId, out Proxy.MatchStateSnapshot? cached))
+        if (_client.HasMatchState(_lobby.MatchId))
         {
-            OnState(cached!);
+            OnState(_client.ReadMatchState(_lobby.MatchId));
         }
     }
 
@@ -55,9 +57,9 @@ public partial class WaitingForOpponentPage : Page
         _client.LobbyClosed -= OnClosed;
     }
 
-    private void OnState(Proxy.MatchStateSnapshot state)
+    private void OnState(MatchStateSnapshot state)
     {
-        if (state.MatchId != _lobby.MatchId || state.State != Proxy.MatchState.InProgress)
+        if (state.MatchId != _lobby.MatchId || state.State != ConfirmedMatchState.InProgress)
         {
             return;
         }
@@ -93,32 +95,39 @@ public partial class WaitingForOpponentPage : Page
             return;
         }
         _refreshing = true;
-        try
+        MatchResult<RemoteAvailableMatch[]> availableResult =
+            await _client.LoadAvailableMatches();
+        MatchResult<RemoteMatchInformation> informationResult =
+            await _client.LoadRemoteMatchInformation(_lobby.MatchId);
+        MatchResult<MatchStateSnapshot> stateResult =
+            await _client.LoadMatchState(_lobby.MatchId);
+        if (stateResult.Status == MatchStatus.Success && stateResult.Value != null)
         {
-            await _client.ListAsync();
-            await _client.LoadInformationAsync(_lobby.MatchId);
-            Proxy.MatchStateSnapshot state = await _client.LoadStateAsync(_lobby.MatchId);
-            OnState(state);
+            OnState(stateResult.Value);
         }
-        catch (FaultException<Proxy.MatchFault> fault)
-            when (fault.Detail.Reason == Proxy.MatchFailure.MatchNotInProgress)
+        else if (stateResult.Status == MatchStatus.MatchNotInProgress)
         {
             // A confirmed waiting lobby remains on this screen until the server starts it.
         }
-        catch (FaultException<Proxy.MatchFault> fault)
-            when (fault.Detail.Reason == Proxy.MatchFailure.MatchNotWaiting)
+        else if (stateResult.Status == MatchStatus.MatchNotWaiting
+            || informationResult.Status == MatchStatus.MatchNotWaiting)
         {
             ReturnToMenu();
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        else if (availableResult.Status != MatchStatus.Success
+            || informationResult.Status != MatchStatus.Success
+            || stateResult.Status != MatchStatus.Success)
         {
             _keepalive.Stop();
-            _dialogs.ShowError(this, "AvailableMatches_ServerConnectionFailedTitle", RemoteMatchMessages.Key(exception, _guestName != null));
+            MatchStatus failure = stateResult.Status != MatchStatus.Success
+                ? stateResult.Status
+                : informationResult.Status != MatchStatus.Success
+                    ? informationResult.Status
+                    : availableResult.Status;
+            _dialogs.ShowError(this, "AvailableMatches_ServerConnectionFailedTitle",
+                RemoteMatchMessages.Key(failure, _guestName != null));
         }
-        finally
-        {
-            _refreshing = false;
-        }
+        _refreshing = false;
     }
 
     private void OnRefreshClick(object sender, RoutedEventArgs args)
@@ -130,19 +139,17 @@ public partial class WaitingForOpponentPage : Page
     private async void OnCancelClick(object sender, RoutedEventArgs args)
     {
         IsEnabled = false;
-        try
+        MatchStatus status = await _client.CancelMatch(_lobby.MatchId);
+        if (status == MatchStatus.Success)
         {
-            await _client.CancelAsync(_lobby.MatchId);
             ReturnToMenu();
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        else
         {
-            _dialogs.ShowError(this, "JoinMatch_PersistenceErrorTitle", RemoteMatchMessages.Key(exception, _guestName != null));
+            _dialogs.ShowError(this, "JoinMatch_PersistenceErrorTitle",
+                RemoteMatchMessages.Key(status, _guestName != null));
         }
-        finally
-        {
-            IsEnabled = true;
-        }
+        IsEnabled = true;
     }
 
     private void ReturnToMenu()
@@ -162,6 +169,10 @@ public partial class WaitingForOpponentPage : Page
             UpdateTurnTimeText();
         }
     }
-    private void UpdateTurnTimeText() => turnTimeTextBlock.Text = string.Format(
-        LocalizationManager.Instance["WaitingForOpponent_TurnTimeFormat"], _lobby.Configuration.TurnDurationSeconds);
+    private void UpdateTurnTimeText()
+    {
+        turnTimeTextBlock.Text = string.Format(
+            LocalizationManager.Instance["WaitingForOpponent_TurnTimeFormat"],
+            _lobby.TurnDurationSeconds);
+    }
 }

@@ -171,8 +171,8 @@ public partial class ReversiBoardControl : UserControl
         DiscColor localPlayerColor)
     {
         ImageSource source = color == localPlayerColor
-            && AccountPreviewState.ProfilePicture != null
-                ? AccountPreviewState.ProfilePicture
+            && ClientRuntime.CurrentSession.ProfilePicture != null
+                ? ClientRuntime.CurrentSession.ProfilePicture
                 : CreateImageSource("/Assets/Images/DefaultProfilePicture.png");
         Grid pieceGrid = new Grid { Width = PieceSize, Height = PieceSize };
         pieceGrid.Children.Add(new Ellipse

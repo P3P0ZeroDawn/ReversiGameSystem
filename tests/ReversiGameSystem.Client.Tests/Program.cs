@@ -37,14 +37,18 @@ internal static class Program
                 + "[--session-integration|--friendship-end-to-end|--match-end-to-end|--match-screen]");
             return 2;
         }
-        AuthenticationOutcomeMapperTests mapperTests =
-            new AuthenticationOutcomeMapperTests();
+        SessionModelsTests sessionModelsTests = new SessionModelsTests();
         MatchInvitationClientTests invitationTests =
             new MatchInvitationClientTests();
         ServerConnectionFactoryTests connectionFactoryTests =
             new ServerConnectionFactoryTests();
+        AccountCreationViewModelTests accountCreationTests =
+            new AccountCreationViewModelTests();
         Action[] tests =
         {
+            accountCreationTests.CreateAccount_MissingInformation_DoesNotCallServer,
+            accountCreationTests.CreateAccount_ValidInput_NormalizesAndCallsServer,
+            accountCreationTests.CreateAccount_ConcurrentSubmission_ReturnsSubmissionInProgress,
             RemoteMatchClientTests.Callbacks_StaleVersionsAndDuplicateMessages_PreserveConfirmedState,
             RemoteMatchClientTests.Faults_SupportedCultures_ResolveLocalizedRecoveryAndRejectionMessages,
             ClientArchitectureTests.Assemblies_RuntimeReferences_ExcludeServerAndPersistence,
@@ -55,10 +59,10 @@ internal static class Program
             FriendshipLocalizationTests.Presence_SupportedCultures_ContainStatusAndRecoveryMessages,
             FriendshipConnectionTests.GeneratedProxy_ReceivesPresenceAndPropagatesTypedSessionFault,
             FriendshipConnectionTests.Keepalive_CloseWhileRefreshPending_DoesNotReopenChannel,
-            mapperTests.Map_SuccessfulOutcome_PreservesSession,
-            mapperTests.Map_ExpiredSession_RejectsResponse,
-            mapperTests.Map_MissingToken_RejectsResponse,
-            mapperTests.SessionMessages_SupportedCultures_AreAvailable,
+            sessionModelsTests.SuccessfulResult_PreservesSession,
+            sessionModelsTests.FailureResult_DoesNotContainSession,
+            sessionModelsTests.SuccessStatusWithoutValue_IsRejected,
+            sessionModelsTests.SessionMessages_SupportedCultures_AreAvailable,
             invitationTests.RemoteMatchMessages_FriendshipFaultAccountUnavailable_ResolvesExpectedResourceKey,
             invitationTests.RemoteMatchMessages_FriendshipFaultFriendshipNotFound_ResolvesExpectedResourceKey,
             invitationTests.RemoteMatchMessages_FriendshipFaultInvalidAccountId_ResolvesExpectedResourceKey,

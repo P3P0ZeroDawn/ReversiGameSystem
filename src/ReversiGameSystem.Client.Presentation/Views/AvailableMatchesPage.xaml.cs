@@ -28,7 +28,7 @@ public partial class AvailableMatchesPage : Page
     public AvailableMatchesPage()
     {
         InitializeComponent();
-        Loaded += async (_, _) => await LoadMatchesAsync();
+        Loaded += async (_, _) => await LoadMatches();
     }
 
     /// <summary>
@@ -76,12 +76,12 @@ public partial class AvailableMatchesPage : Page
                 ShowJoinWarning("InvalidMatchCode");
                 continue;
             }
-            await JoinRemoteAsync(code);
+            await JoinRemoteMatch(code);
             return;
         }
     }
 
-    private async Task LoadMatchesAsync()
+    private async Task LoadMatches()
     {
         if (_loading)
         {
@@ -91,29 +91,27 @@ public partial class AvailableMatchesPage : Page
         IsEnabled = false;
         LocalizationManager localization = LocalizationManager.Instance;
         List<AvailableMatchItem> items = new List<AvailableMatchItem>();
-        ServerProxy.AvailableMatch[] matches;
-        try
+        MatchResult<RemoteAvailableMatch[]> result =
+            await ClientRuntime.GetMatchClient(_guestName != null).LoadAvailableMatches();
+        _loading = false;
+        IsEnabled = true;
+        if (result.Status != MatchStatus.Success)
         {
-            matches = await ClientRuntime.GetMatchClient(_guestName != null).ListAsync();
-        }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
-        {
+            string messageKey = RemoteMatchMessages.Key(result.Status, _guestName != null);
             availableMatchesItemsControl.ItemsSource = null;
-            emptyMatchesTextBlock.SetBinding(TextBlock.TextProperty, new Binding("[" + RemoteMatchMessages.Key(exception, _guestName != null) + "]")
+            emptyMatchesTextBlock.SetBinding(TextBlock.TextProperty, new Binding("[" + messageKey + "]")
             { Source = localization });
             _dialogService.ShowError(this, "AvailableMatches_RetrievalErrorTitle",
-                RemoteMatchMessages.Key(exception, _guestName != null));
+                messageKey);
             return;
         }
-        finally
-        {
-            _loading = false;
-            IsEnabled = true;
-        }
+        RemoteAvailableMatch[] matches = result.Value
+            ?? throw new InvalidOperationException(
+                "A successful match result must contain its value.");
 
         emptyMatchesTextBlock.SetBinding(TextBlock.TextProperty, new Binding("[AvailableMatches_EmptyMessage]")
         { Source = localization });
-        foreach (ServerProxy.AvailableMatch match in matches)
+        foreach (RemoteAvailableMatch match in matches)
         {
             items.Add(new AvailableMatchItem
             {
@@ -132,7 +130,7 @@ public partial class AvailableMatchesPage : Page
 
     private void OnRefreshMatchesClick(object sender, RoutedEventArgs e)
     {
-        _ = LoadMatchesAsync();
+        _ = LoadMatches();
     }
 
     private async void OnJoinMatchClick(object sender, RoutedEventArgs e)
@@ -158,28 +156,28 @@ public partial class AvailableMatchesPage : Page
             return;
         }
 
-        await JoinRemoteAsync(matchId);
+        await JoinRemoteMatch(matchId);
     }
 
-    private async Task JoinRemoteAsync(string code)
+    private async Task JoinRemoteMatch(string code)
     {
         IsEnabled = false;
-        try
+        RemoteMatchClient client = ClientRuntime.GetMatchClient(_guestName != null);
+        MatchResult<LobbySnapshot> result = await client.JoinMatch(code);
+        if (result.Status == MatchStatus.Success)
         {
-            RemoteMatchClient client = ClientRuntime.GetMatchClient(_guestName != null);
-            ServerProxy.LobbySnapshot lobby = await client.JoinAsync(code);
+            LobbySnapshot lobby = result.Value
+                ?? throw new InvalidOperationException(
+                    "A successful match result must contain its value.");
             NavigationService?.Navigate(new GamePage(client, lobby.MatchId, _guestName));
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        else
         {
             _dialogService.ShowError(this, "JoinMatch_PersistenceErrorTitle",
-                RemoteMatchMessages.Key(exception, _guestName != null));
-            await LoadMatchesAsync();
+                RemoteMatchMessages.Key(result.Status, _guestName != null));
+            await LoadMatches();
         }
-        finally
-        {
-            IsEnabled = true;
-        }
+        IsEnabled = true;
     }
 
     private void ShowJoinWarning(string resourceName)
@@ -210,7 +208,7 @@ public partial class AvailableMatchesPage : Page
         if (LocalizationManager.Instance.CultureName != previousCulture)
         {
             UpdateGuestIdentity();
-            _ = LoadMatchesAsync();
+            _ = LoadMatches();
         }
     }
 

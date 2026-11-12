@@ -7,6 +7,7 @@
     <RootNamespace>ReversiGameSystem.Client.Tests</RootNamespace>
     <AssemblyName>ReversiGameSystem.Client.Tests</AssemblyName>
     <ProjectGuid>{D4D27CB2-3B12-4C32-9058-2BE953E01385}</ProjectGuid>
+    <SonarQubeTestProject>true</SonarQubeTestProject>
     <AppConfig>..\..\src\ReversiGameSystem.Client.Presentation\App.config</AppConfig>
   </PropertyGroup>
   <ItemGroup>
@@ -16,5 +17,7 @@
     <Reference Include="WindowsBase" />
     <Reference Include="System.Xaml" />
     <ProjectReference Include="..\..\src\ReversiGameSystem.Client.Presentation\ReversiGameSystem.Client.Presentation.csproj" />
+    <ProjectReference Include="..\..\src\ReversiGameSystem.Client.Communication\ReversiGameSystem.Client.Communication.csproj" />
+    <ProjectReference Include="..\..\src\ReversiGameSystem.Client.Validation\ReversiGameSystem.Client.Validation.csproj" />
   </ItemGroup>
 </Project>

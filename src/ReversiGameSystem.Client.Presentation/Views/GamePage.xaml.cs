@@ -19,7 +19,7 @@ public partial class GamePage : Page
 
     private async void OnSendMessageClick(object sender, RoutedEventArgs e)
     {
-        await SendRemoteChatMessageAsync();
+        await SendRemoteChatMessage();
     }
 
     private async void OnChatMessageKeyDown(object sender, KeyEventArgs e)
@@ -27,7 +27,7 @@ public partial class GamePage : Page
         if (e.Key == Key.Enter)
         {
             e.Handled = true;
-            await SendRemoteChatMessageAsync();
+            await SendRemoteChatMessage();
         }
     }
 

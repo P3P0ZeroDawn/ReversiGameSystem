@@ -33,7 +33,8 @@ internal static class MatchScreenTests
             {
                 failure = exception;
             }
-        }) { IsBackground = true };
+        })
+        { IsBackground = true };
         ui.SetApartmentState(ApartmentState.STA);
         ui.Start();
         if (!ui.Join(TimeSpan.FromSeconds(55)))
@@ -54,27 +55,35 @@ internal static class MatchScreenTests
         SessionClient sessions = new SessionClient(NullLogger<SessionClient>.Instance,
             () => new Proxy.SessionServiceClient(new NetTcpBinding(SecurityMode.None),
                 new EndpointAddress("net.tcp://localhost:18091/ReversiReview/Session")));
-        Proxy.AuthenticatedSession alpha = sessions.CompleteLoginAsync("ReviewAlpha", "000001")
-            .GetAwaiter().GetResult();
-        Proxy.AuthenticatedSession beta = sessions.CompleteLoginAsync("ReviewBeta", "000002")
-            .GetAwaiter().GetResult();
+        AuthenticatedAccountSession alpha = Authenticate(sessions, "ReviewAlpha", "000001");
+        AuthenticatedAccountSession beta = Authenticate(sessions, "ReviewBeta", "000002");
         using RemoteMatchClient first = RemoteMatchClientTests.Create(alpha.SessionToken);
         using RemoteMatchClient second = RemoteMatchClientTests.Create(beta.SessionToken);
         Window window = new Window
         {
-            Width = 1280, Height = 850, ShowInTaskbar = false,
-            WindowStartupLocation = WindowStartupLocation.Manual, Left = -20000, Top = -20000
+            Width = 1280,
+            Height = 850,
+            ShowInTaskbar = false,
+            WindowStartupLocation = WindowStartupLocation.Manual,
+            Left = -20000,
+            Top = -20000
         };
         try
         {
-            Proxy.LobbySnapshot waiting = first.CreateAsync(40).GetAwaiter().GetResult();
-            second.JoinAsync(waiting.MatchCode).GetAwaiter().GetResult();
-            second.LoadStateAsync(waiting.MatchId).GetAwaiter().GetResult();
+            MatchResult<LobbySnapshot> creation = first.CreateMatch(40).GetAwaiter().GetResult();
+            TestAssert.AreEqual(MatchStatus.Success, creation.Status);
+            LobbySnapshot waiting = TestAssert.IsNotNull(creation.Value);
+            second.JoinMatch(waiting.MatchCode).GetAwaiter().GetResult();
+            second.LoadMatchState(waiting.MatchId).GetAwaiter().GetResult();
             SynchronizationContext.SetSynchronizationContext(
                 new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));
             GamePage page = new GamePage(first, waiting.MatchId, null);
-            window.Content = new Frame { Content = page, NavigationUIVisibility =
-                System.Windows.Navigation.NavigationUIVisibility.Hidden };
+            window.Content = new Frame
+            {
+                Content = page,
+                NavigationUIVisibility =
+                System.Windows.Navigation.NavigationUIVisibility.Hidden
+            };
             window.Show();
             Button send = Control<Button>(page, "sendMessageButton");
             ListBox messages = Control<ListBox>(page, "chatMessagesListBox");
@@ -99,8 +108,8 @@ internal static class MatchScreenTests
             PumpUntil(() => messages.Items.Cast<object>().Any(item =>
                 item.ToString().Contains("Hello from the original screen"))
                 && Control<TextBox>(page, "chatMessageTextBox").Text.Length == 0);
-            AwaitUi(second.OpenChatAsync(waiting.MatchId));
-            AwaitUi(second.SendAsync(waiting.MatchId, "Reply from the second player"));
+            AwaitUi(second.OpenChatChannel(waiting.MatchId));
+            AwaitUi(second.SendChatMessage(waiting.MatchId, "Reply from the second player"));
             PumpUntil(() => messages.Items.Count == 2);
 
             // Assert: preserve the same screen and render both supported languages.
@@ -121,10 +130,22 @@ internal static class MatchScreenTests
         {
             window.Close();
             SynchronizationContext.SetSynchronizationContext(null);
-            sessions.CloseSessionAsync(beta.SessionToken).GetAwaiter().GetResult();
-            sessions.CloseSessionAsync(alpha.SessionToken).GetAwaiter().GetResult();
+            sessions.CloseSession(beta.SessionToken).GetAwaiter().GetResult();
+            sessions.CloseSession(alpha.SessionToken).GetAwaiter().GetResult();
             app.Shutdown();
         }
+    }
+
+    private static AuthenticatedAccountSession Authenticate(
+        SessionClient sessions,
+        string login,
+        string verificationCode)
+    {
+        SessionResult<AuthenticatedAccountSession> result = sessions.CompleteLogin(
+            login,
+            verificationCode).GetAwaiter().GetResult();
+        TestAssert.AreEqual(SessionStatus.Success, result.Status);
+        return TestAssert.IsNotNull(result.Value);
     }
 
     private static T Control<T>(FrameworkElement owner, string name) where T : FrameworkElement =>

@@ -56,9 +56,15 @@ internal sealed class MatchSession
 
     internal DiscColor LocalPlayerColor { get; }
 
-    internal string LocalPlayerName => LocalPlayerColor == DiscColor.Black
-        ? CreatorName
-        : OpponentName ?? string.Empty;
+    internal string LocalPlayerName
+    {
+        get
+        {
+            return LocalPlayerColor == DiscColor.Black
+                ? CreatorName
+                : OpponentName ?? string.Empty;
+        }
+    }
 
     internal string? OpponentName { get; private set; }
 
@@ -74,7 +80,10 @@ internal sealed class MatchSession
 
     internal DiscColor CurrentTurnColor { get; private set; }
 
-    internal IReadOnlyList<MatchMove> Moves => _moves;
+    internal IReadOnlyList<MatchMove> Moves
+    {
+        get { return _moves; }
+    }
 
     internal MatchEndReason? EndReason { get; private set; }
 

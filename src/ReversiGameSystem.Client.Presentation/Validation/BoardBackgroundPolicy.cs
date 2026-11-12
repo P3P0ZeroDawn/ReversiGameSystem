@@ -10,8 +10,8 @@ internal static class BoardBackgroundPolicy
     internal const long MaximumFileBytes = ProfilePicturePolicy.MaximumFileBytes;
     internal const int MaximumDimension = ProfilePicturePolicy.MaximumDimension;
 
-    internal static bool TryCreatePreview(string path, out BitmapSource? preview)
+    internal static BitmapSource? CreatePreview(string path)
     {
-        return ProfilePicturePolicy.TryCreatePreview(path, out preview, 512);
+        return ProfilePicturePolicy.CreatePreview(path, 512);
     }
 }

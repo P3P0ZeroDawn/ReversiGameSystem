@@ -2,7 +2,6 @@ using System;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
-using System.ServiceModel;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -12,7 +11,6 @@ using System.Windows.Threading;
 using ReversiGameSystem.Game;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
-using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Views;
 
@@ -25,7 +23,7 @@ public partial class GamePage
     {
         Interval = TimeSpan.FromSeconds(15)
     };
-    private Proxy.MatchInformation? _remoteInformation;
+    private RemoteMatchInformation? _remoteInformation;
     private bool _remoteLoading;
     private bool _remoteSending;
     private bool _remoteChatReady;
@@ -66,7 +64,7 @@ public partial class GamePage
         _remoteClient.MessagesChanged += OnRemoteMessagesChanged;
         _remoteClient.ParticipantConnectionChanged += OnParticipantConnectionChanged;
         _remoteClient.Muted += OnRemoteMuted;
-        await LoadRemoteMatchAsync();
+        await LoadRemoteMatch();
         if (IsLoaded)
         {
             _remoteRefreshTimer.Start();
@@ -104,15 +102,15 @@ public partial class GamePage
 
     private async void OnRemoteRefreshTick(object? sender, EventArgs e)
     {
-        await LoadRemoteMatchAsync();
+        await LoadRemoteMatch();
     }
 
     private async void OnRefreshRemoteMatchClick(object sender, RoutedEventArgs e)
     {
-        await LoadRemoteMatchAsync();
+        await LoadRemoteMatch();
     }
 
-    private async Task LoadRemoteMatchAsync()
+    private async Task LoadRemoteMatch()
     {
         if (_remoteLoading)
         {
@@ -120,39 +118,60 @@ public partial class GamePage
         }
         _remoteLoading = true;
         refreshRemoteMatchButton.IsEnabled = false;
-        try
+        MatchResult<RemoteMatchInformation> informationResult =
+            await _remoteClient.LoadRemoteMatchInformation(_remoteMatchId);
+        MatchResult<MatchStateSnapshot> stateResult =
+            await _remoteClient.LoadMatchState(_remoteMatchId);
+        if (informationResult.Status == MatchStatus.Success
+            && stateResult.Status == MatchStatus.Success)
         {
-            _remoteInformation = await _remoteClient.LoadInformationAsync(_remoteMatchId);
-            await _remoteClient.LoadStateAsync(_remoteMatchId);
+            _remoteInformation = informationResult.Value
+                ?? throw new InvalidOperationException(
+                    "A successful match result must contain its value.");
             if (!IsLoaded)
             {
+                _remoteLoading = false;
+                refreshRemoteMatchButton.IsEnabled = true;
                 return;
             }
             RenderRemoteMatch();
             if (_remoteGuestName == null)
             {
-                await _remoteClient.OpenChatAsync(_remoteMatchId);
-                await _remoteClient.RefreshChatAsync(_remoteMatchId);
-                _remoteChatReady = IsLoaded;
-                RenderRemoteMessages();
+                MatchStatus openStatus = await _remoteClient.OpenChatChannel(_remoteMatchId);
+                MatchStatus refreshStatus = openStatus == MatchStatus.Success
+                    ? await _remoteClient.RefreshChat(_remoteMatchId)
+                    : openStatus;
+                _remoteChatReady = IsLoaded && refreshStatus == MatchStatus.Success;
+                if (_remoteChatReady)
+                {
+                    RenderRemoteMessages();
+                }
+                else
+                {
+                    _remoteStatusKey = RemoteMatchMessages.Key(
+                        refreshStatus, _remoteGuestName != null);
+                }
             }
-            _remoteStatusKey = null;
+            if (_remoteGuestName != null || _remoteChatReady)
+            {
+                _remoteStatusKey = null;
+            }
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        else
         {
             _remoteChatReady = false;
-            _remoteStatusKey = RemoteMatchMessages.Key(exception, _remoteGuestName != null);
+            MatchStatus failure = informationResult.Status != MatchStatus.Success
+                ? informationResult.Status
+                : stateResult.Status;
+            _remoteStatusKey = RemoteMatchMessages.Key(failure, _remoteGuestName != null);
         }
-        finally
-        {
-            _remoteLoading = false;
-            refreshRemoteMatchButton.IsEnabled = true;
-            sendMessageButton.IsEnabled = IsLoaded && _remoteChatReady && !_remoteSending;
-            UpdateRemoteStatus();
-        }
+        _remoteLoading = false;
+        refreshRemoteMatchButton.IsEnabled = true;
+        sendMessageButton.IsEnabled = IsLoaded && _remoteChatReady && !_remoteSending;
+        UpdateRemoteStatus();
     }
 
-    private void OnRemoteStateChanged(Proxy.MatchStateSnapshot state)
+    private void OnRemoteStateChanged(MatchStateSnapshot state)
     {
         if (state.MatchId == _remoteMatchId)
         {
@@ -168,12 +187,11 @@ public partial class GamePage
 
     private void RenderRemoteMatch()
     {
-        if (_remoteInformation == null
-            || !_remoteClient.TryReadState(_remoteMatchId, out Proxy.MatchStateSnapshot? state)
-            || state == null)
+        if (_remoteInformation == null || !_remoteClient.HasMatchState(_remoteMatchId))
         {
             return;
         }
+        MatchStateSnapshot state = _remoteClient.ReadMatchState(_remoteMatchId);
         LocalizationManager localization = LocalizationManager.Instance;
         creatorNameTextBlock.Text = RemotePlayerName(1);
         opponentNameTextBlock.Text = RemotePlayerName(2);
@@ -186,8 +204,8 @@ public partial class GamePage
         string[] rows = Enumerable.Range(0, ReversiBoard.Size).Select(row => new string(
             state.Board.Skip(row * ReversiBoard.Size).Take(ReversiBoard.Size).Select(cell => cell switch
             {
-                Proxy.BoardCellState.Black => 'B',
-                Proxy.BoardCellState.White => 'W',
+                ConfirmedBoardCell.Black => 'B',
+                ConfirmedBoardCell.White => 'W',
                 _ => '.'
             }).ToArray())).ToArray();
         gameBoardControl.ShowBoard(ReversiBoard.FromRows(rows),
@@ -265,7 +283,7 @@ public partial class GamePage
             return;
         }
         chatMessagesListBox.Items.Clear();
-        foreach (Proxy.MatchChatEntry message in _remoteClient.ReadMessages(_remoteMatchId))
+        foreach (MatchChatMessage message in _remoteClient.ReadMessages(_remoteMatchId))
         {
             chatMessagesListBox.Items.Add(string.Format(LocalizationManager.Instance["Chat_MessageFormat"],
                 RemotePlayerName(message.SenderSeatNumber), message.Content));
@@ -277,7 +295,7 @@ public partial class GamePage
         chatMessagesListBox.ScrollIntoView(chatMessagesListBox.Items[chatMessagesListBox.Items.Count - 1]);
     }
 
-    private void OnRemoteMuted(Proxy.ChatMuteNotification mute)
+    private void OnRemoteMuted(RemoteChatMute mute)
     {
         if (mute.MatchId == _remoteMatchId)
         {
@@ -301,7 +319,7 @@ public partial class GamePage
             : _remoteStatusKey == null ? string.Empty : LocalizationManager.Instance[_remoteStatusKey];
     }
 
-    private async Task SendRemoteChatMessageAsync()
+    private async Task SendRemoteChatMessage()
     {
         if (_remoteSending || !_remoteChatReady || _remoteGuestName != null)
         {
@@ -321,9 +339,10 @@ public partial class GamePage
         _remoteSending = true;
         sendMessageButton.IsEnabled = false;
         chatMessageTextBox.IsEnabled = false;
-        try
+        ChatSubmission submission =
+            await _remoteClient.SendChatMessage(_remoteMatchId, content);
+        if (submission.Status == MatchStatus.Success)
         {
-            await _remoteClient.SendAsync(_remoteMatchId, content);
             if (IsLoaded)
             {
                 chatMessageTextBox.Clear();
@@ -331,29 +350,27 @@ public partial class GamePage
                 RenderRemoteMessages();
             }
         }
-        catch (FaultException<Proxy.ChatFault> fault) when (fault.Detail.Reason == Proxy.ChatFailure.PlayerMuted)
+        else if (submission.Status == MatchStatus.PlayerMuted)
         {
-            _remoteMutedUntil = fault.Detail.MuteEndsAtUtc;
+            _remoteMutedUntil = submission.MuteEndsAtUtc;
             if (IsLoaded)
             {
                 HandleChatSendFailure(ChatSendResult.PlayerMuted, _remoteMutedUntil);
             }
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        else
         {
-            _remoteStatusKey = RemoteMatchMessages.Key(exception, _remoteGuestName != null);
+            _remoteStatusKey = RemoteMatchMessages.Key(
+                submission.Status, _remoteGuestName != null);
             if (IsLoaded)
             {
                 _dialogService.ShowError(this, "Game_ChatTitle", _remoteStatusKey);
             }
         }
-        finally
-        {
-            _remoteSending = false;
-            chatMessageTextBox.IsEnabled = true;
-            sendMessageButton.IsEnabled = IsLoaded && _remoteChatReady;
-            UpdateRemoteStatus();
-        }
+        _remoteSending = false;
+        chatMessageTextBox.IsEnabled = true;
+        sendMessageButton.IsEnabled = IsLoaded && _remoteChatReady;
+        UpdateRemoteStatus();
     }
 
     private void ShowRemoteInstructions()

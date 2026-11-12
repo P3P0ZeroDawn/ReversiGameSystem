@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.ServiceModel;
 using System.Windows;
 using System.Windows.Controls;
 using ReversiGameSystem.Game;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
-using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Views;
 
@@ -16,6 +14,8 @@ namespace ReversiGameSystem.Views;
 /// </summary>
 public partial class MainMenuPage : Page
 {
+    private const int LeaderboardEntryLimit = 10;
+
     private readonly string? _guestName;
     private readonly DialogService _dialogService =
         new DialogService(LocalizationManager.Instance);
@@ -53,34 +53,32 @@ public partial class MainMenuPage : Page
         if (_guestName == null)
         {
             SubscribeFriends();
-            await LoadFriendsAsync();
+            await LoadFriends();
         }
 
         if (!_leaderboardLoaded)
         {
-            await LoadLeaderboardAsync();
+            await LoadLeaderboard();
         }
     }
 
-    private async System.Threading.Tasks.Task LoadLeaderboardAsync()
+    private async System.Threading.Tasks.Task LoadLeaderboard()
     {
         _leaderboardLoaded = true;
-        Proxy.LeaderboardEntry[] entries;
-        try
-        {
-            entries = await ClientRuntime.LeaderboardService.GetLeaderboardAsync(10);
-        }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        LeaderboardResult result = await ClientRuntime.LeaderboardService.GetLeaderboard(
+            LeaderboardEntryLimit);
+        if (result.Status != LeaderboardStatus.Success)
         {
             _leaderboardLoaded = false;
             ShowLeaderboardError();
             return;
         }
+        LeaderboardEntry[] entries = result.Entries;
 
         CultureInfo culture = CultureInfo.GetCultureInfo(
             LocalizationManager.Instance.CultureName);
         List<LeaderboardItem> items = new List<LeaderboardItem>();
-        foreach (Proxy.LeaderboardEntry entry in entries)
+        foreach (LeaderboardEntry entry in entries)
         {
             items.Add(CreateLeaderboardItem(entry, culture));
         }
@@ -92,13 +90,13 @@ public partial class MainMenuPage : Page
     }
 
     private static LeaderboardItem CreateLeaderboardItem(
-        Proxy.LeaderboardEntry entry,
+        LeaderboardEntry entry,
         CultureInfo culture)
     {
         return new LeaderboardItem
         {
             Position = "#" + entry.Position.ToString("N0", culture),
-            Username = entry.Account.Username,
+            Username = entry.Username,
             WinsText = string.Format(
                 culture,
                 LocalizationManager.Instance["MainMenu_TopWinnersWinsFormat"],
@@ -137,7 +135,7 @@ public partial class MainMenuPage : Page
         }
     }
 
-    private async System.Threading.Tasks.Task LoadFriendsAsync()
+    private async System.Threading.Tasks.Task LoadFriends()
     {
         if (_friendsLoading)
         {
@@ -146,48 +144,50 @@ public partial class MainMenuPage : Page
         _friendsLoading = true;
         refreshFriendsButton.IsEnabled = false;
         friendsStatusTextBlock.Text = LocalizationManager.Instance["Friends_Loading"];
-        try
-        {
-            await ClientRuntime.FriendshipService.GetFriendsAsync(
-                AccountPreviewState.SessionToken ?? string.Empty);
-            if (IsLoaded)
-            {
-                RenderFriends();
-            }
-        }
-        catch (FaultException<Proxy.SessionFault>)
+        FriendshipResult result = await ClientRuntime.FriendshipService.GetFriends(
+            ClientRuntime.CurrentSession.SessionToken ?? string.Empty);
+        if (result.Status == FriendshipStatus.InvalidSession)
         {
             ShowFriendsUnavailable("Friends_SessionUnavailable");
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception)
-            || exception is ArgumentException)
+        else if (result.Status == FriendshipStatus.ServiceUnavailable)
         {
             ShowFriendsUnavailable("Friends_PresenceUnavailable");
         }
-        finally
-        {
-            _friendsLoading = false;
-            refreshFriendsButton.IsEnabled = true;
-        }
-    }
-
-    private async void OnRefreshFriendsClick(object sender, RoutedEventArgs e) => await LoadFriendsAsync();
-
-    private void OnFriendsChanged() => Dispatcher.BeginInvoke(new Action(() =>
-    {
-        if (_friendsSubscribed && !_friendsLoading)
+        else if (IsLoaded)
         {
             RenderFriends();
         }
-    }));
+        _friendsLoading = false;
+        refreshFriendsButton.IsEnabled = true;
+    }
 
-    private void OnFriendshipConnectionLost() => Dispatcher.BeginInvoke(new Action(() =>
+    private async void OnRefreshFriendsClick(object sender, RoutedEventArgs e)
     {
-        if (_friendsSubscribed)
+        await LoadFriends();
+    }
+
+    private void OnFriendsChanged()
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
         {
-            ShowFriendsUnavailable("Friends_PresenceUnavailable");
-        }
-    }));
+            if (_friendsSubscribed && !_friendsLoading)
+            {
+                RenderFriends();
+            }
+        }));
+    }
+
+    private void OnFriendshipConnectionLost()
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (_friendsSubscribed)
+            {
+                ShowFriendsUnavailable("Friends_PresenceUnavailable");
+            }
+        }));
+    }
 
     private void ShowFriendsUnavailable(string key)
     {
@@ -204,7 +204,7 @@ public partial class MainMenuPage : Page
             return;
         }
         List<FriendItem> items = new List<FriendItem>();
-        foreach (Proxy.FriendSummary friend in ClientRuntime.FriendshipService.GetSnapshot())
+        foreach (FriendSummary friend in ClientRuntime.FriendshipService.GetSnapshot())
         {
             items.Add(new FriendItem(friend));
         }
@@ -256,21 +256,22 @@ public partial class MainMenuPage : Page
         }
 
         IsEnabled = false;
-        try
+        RemoteMatchClient client = ClientRuntime.GetMatchClient(guest: false);
+        MatchResult<LobbySnapshot> result =
+            await client.InviteToMatch(friendAccountId, turnDurationSeconds);
+        if (result.Status == MatchStatus.Success)
         {
-            RemoteMatchClient client = ClientRuntime.GetMatchClient(guest: false);
-            Proxy.LobbySnapshot lobby = await client.InviteAsync(friendAccountId, turnDurationSeconds);
+            LobbySnapshot lobby = result.Value
+                ?? throw new InvalidOperationException(
+                    "A successful match result must contain its value.");
             NavigationService?.Navigate(new WaitingForOpponentPage(client, lobby, guestName: null));
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        else
         {
             _dialogService.ShowError(this, "InviteMatch_ErrorTitle",
-                RemoteMatchMessages.Key(exception, guest: false));
+                RemoteMatchMessages.Key(result.Status, guest: false));
         }
-        finally
-        {
-            IsEnabled = true;
-        }
+        IsEnabled = true;
     }
 
     private void OnCreateGameClick(object sender, RoutedEventArgs e)
@@ -295,28 +296,22 @@ public partial class MainMenuPage : Page
     private async void OnLogoutClick(object sender, RoutedEventArgs e)
     {
         IsEnabled = false;
-        try
+        string? token = ClientRuntime.CurrentSession.SessionToken;
+        SessionStatus status = SessionStatus.Success;
+        if (token != null && !string.IsNullOrWhiteSpace(token))
         {
-            string? token = AccountPreviewState.SessionToken ?? SessionState.GuestToken;
-            if (token != null && !string.IsNullOrWhiteSpace(token))
-            {
-                await ClientRuntime.SessionService.CloseSessionAsync(token);
-            }
+            status = await ClientRuntime.SessionService.CloseSession(token);
         }
-        catch (System.Exception exception) when (exception is System.ServiceModel.CommunicationException
-            or System.TimeoutException or System.InvalidOperationException)
+        if (status == SessionStatus.ServiceUnavailable)
         {
             _dialogService.ShowError(this, "Session_CloseFailedTitle", "Session_CloseFailedMessage");
+            IsEnabled = true;
             return;
         }
-        finally
-        {
-            IsEnabled = true;
-        }
+        IsEnabled = true;
 
         ClientRuntime.FriendshipService.Close();
-        SessionState.GuestToken = null;
-        AccountPreviewState.Clear();
+        ClientRuntime.CurrentSession.Clear();
         NavigationService?.Navigate(new LoginScreenPage());
     }
 
@@ -357,7 +352,7 @@ public partial class MainMenuPage : Page
             {
                 RenderFriends();
             }
-            await LoadLeaderboardAsync();
+            await LoadLeaderboard();
         }
     }
 

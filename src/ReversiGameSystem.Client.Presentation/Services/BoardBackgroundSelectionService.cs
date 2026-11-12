@@ -45,8 +45,8 @@ internal sealed class BoardBackgroundSelectionService
             return false;
         }
 
-        if (!BoardBackgroundPolicy.TryCreatePreview(fileDialog.FileName, out preview)
-            || preview == null)
+        preview = BoardBackgroundPolicy.CreatePreview(fileDialog.FileName);
+        if (preview == null)
         {
             _dialogService.ShowWarning(
                 source,

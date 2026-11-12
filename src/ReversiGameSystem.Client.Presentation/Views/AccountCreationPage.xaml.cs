@@ -4,9 +4,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using ReversiGameSystem.Localization;
+using ReversiGameSystem.Presentation.AccountCreation;
 using ReversiGameSystem.Services;
-using ReversiGameSystem.Validation;
-using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Views;
 
@@ -17,13 +16,20 @@ public partial class AccountCreationPage : Page
 {
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
     private readonly ProfileImageSelectionService _profileImageSelectionService;
+    private readonly AccountCreationViewModel _viewModel;
     private ProfileImageSelection? _pendingProfileImage;
 
     /// <summary>
     /// Initializes the account creation page.
     /// </summary>
     public AccountCreationPage()
+        : this(new AccountCreationViewModel(ClientRuntime.AccountService))
     {
+    }
+
+    internal AccountCreationPage(AccountCreationViewModel viewModel)
+    {
+        _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         InitializeComponent();
         _profileImageSelectionService = new ProfileImageSelectionService(
             LocalizationManager.Instance, _dialogService);
@@ -31,9 +37,9 @@ public partial class AccountCreationPage : Page
 
     private void OnProfilePictureClick(object sender, RoutedEventArgs e)
     {
-        if (!_profileImageSelectionService.TrySelect(
-            this, "AccountCreation", out ProfileImageSelection? selection)
-            || selection == null)
+        ProfileImageSelection? selection = _profileImageSelectionService.Select(
+            this, "AccountCreation");
+        if (selection == null)
         {
             return;
         }
@@ -47,27 +53,18 @@ public partial class AccountCreationPage : Page
 
     private async void OnCreateAccountClick(object sender, RoutedEventArgs e)
     {
-        string email = emailTextBox.Text.Trim();
-
-        if (!ValidateForm(email))
+        if (_viewModel.IsSubmitting)
         {
             return;
         }
 
-        Proxy.AccountRegistrationCredentials credentials = new Proxy.AccountRegistrationCredentials
-        {
-            Username = usernameTextBox.Text.Trim(),
-            EmailAddress = email,
-            Password = passwordBox.Password,
-            PreferredLocaleCode = LocalizationManager.Instance.CultureName
-        };
         createAccountButton.IsEnabled = false;
         try
         {
-            credentials.ProfileImage = await CreateProfileImageUploadAsync();
-            Proxy.AccountRegistrationOutcome response = await ClientRuntime.AccountService
-                .RegisterAccountAsync(credentials);
-            HandleCreateAccountResponse(response, email);
+            CopyFormToViewModel();
+            _viewModel.ProfileImage = await CreateProfileImageUpload();
+            AccountCreationStatus status = await _viewModel.CreateAccount();
+            HandleCreateAccountResponse(status, _viewModel.EmailAddress);
         }
         catch (Exception exception) when (exception is IOException
             or UnauthorizedAccessException or NotSupportedException)
@@ -75,61 +72,22 @@ public partial class AccountCreationPage : Page
             _dialogService.ShowWarning(
                 this, "AccountCreation_ImageNotSupportedTitle", "AccountCreation_ImageNotSupportedMessage");
         }
-        catch (System.ServiceModel.FaultException<Proxy.ServiceFault>)
-        {
-            _dialogService.ShowError(this, "AccountCreation_PersistenceErrorTitle", "AccountCreation_PersistenceErrorMessage");
-        }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
-        {
-            ShowServiceUnavailable();
-        }
         finally
         {
             createAccountButton.IsEnabled = true;
         }
     }
 
-    private bool ValidateForm(string email)
+    private void CopyFormToViewModel()
     {
-        string password = passwordBox.Password;
-        string confirmation = confirmPasswordBox.Password;
-
-        if (HasMissingRequiredInformation())
-        {
-            ShowValidationWarning("MissingRequiredInformation");
-            return false;
-        }
-
-        if (UsernamePolicy.Validate(usernameTextBox.Text.Trim()) != UsernameValidationError.None)
-        {
-            ShowValidationWarning("InvalidUsernameFormat");
-            return false;
-        }
-
-        EmailValidationError emailError = EmailPolicy.Validate(email);
-        if (emailError != EmailValidationError.None)
-        {
-            ShowEmailValidationWarning(emailError);
-            return false;
-        }
-
-        if (!string.Equals(password, confirmation, StringComparison.Ordinal))
-        {
-            ShowValidationWarning("PasswordMismatch");
-            return false;
-        }
-
-        PasswordValidationError passwordError = PasswordPolicy.Validate(password);
-        if (passwordError != PasswordValidationError.None)
-        {
-            ShowPasswordValidationWarning(passwordError);
-            return false;
-        }
-
-        return true;
+        _viewModel.Username = usernameTextBox.Text;
+        _viewModel.EmailAddress = emailTextBox.Text;
+        _viewModel.Password = passwordBox.Password;
+        _viewModel.PasswordConfirmation = confirmPasswordBox.Password;
+        _viewModel.LocaleCode = LocalizationManager.Instance.CultureName;
     }
 
-    private async System.Threading.Tasks.Task<Proxy.ProfileImageContent?> CreateProfileImageUploadAsync()
+    private async System.Threading.Tasks.Task<ProfileImageContent?> CreateProfileImageUpload()
     {
         string? imagePath = _pendingProfileImage?.FilePath;
         if (imagePath == null)
@@ -137,49 +95,81 @@ public partial class AccountCreationPage : Page
             return null;
         }
 
-        Proxy.ImageContent upload = await System.Threading.Tasks.Task.Run(
+        ProfileImageContent upload = await System.Threading.Tasks.Task.Run(
             () => ProfileImageModificationService.ReadUpload(imagePath));
-        return new Proxy.ProfileImageContent
-        {
-            Content = upload.Content,
-            MediaType = upload.MediaType
-        };
+        return upload;
     }
 
-    private void HandleCreateAccountResponse(Proxy.AccountRegistrationOutcome response, string email)
+    private void HandleCreateAccountResponse(AccountCreationStatus status, string email)
     {
-        switch (response.Status)
+        switch (status)
         {
-            case Proxy.AccountRegistrationStatus.Success:
+            case AccountCreationStatus.Success:
                 _dialogService.ShowInformation(
                     this,
                     "AccountCreation_SuccessTitle",
                     "AccountCreation_SuccessMessage");
                 NavigationService?.Navigate(new LoginScreenPage(email));
                 break;
-            case Proxy.AccountRegistrationStatus.UsernameUnavailable:
+            case AccountCreationStatus.MissingRequiredInformation:
+                ShowValidationWarning("MissingRequiredInformation");
+                break;
+            case AccountCreationStatus.UsernameUnavailable:
                 _dialogService.ShowWarning(
                     this,
                     "AccountCreation_UsernameAlreadyTakenTitle",
                     "AccountCreation_UsernameAlreadyTakenMessage");
                 break;
-            case Proxy.AccountRegistrationStatus.EmailUnavailable:
+            case AccountCreationStatus.EmailUnavailable:
                 _dialogService.ShowWarning(
                     this,
                     "AccountCreation_EmailAlreadyTakenTitle",
                     "AccountCreation_EmailAlreadyTakenMessage");
                 break;
-            case Proxy.AccountRegistrationStatus.InvalidUsername:
+            case AccountCreationStatus.InvalidUsername:
                 ShowValidationWarning("InvalidUsernameFormat");
                 break;
-            case Proxy.AccountRegistrationStatus.InvalidEmail:
-                ShowEmailValidationWarning(EmailValidationError.InvalidStructure);
+            case AccountCreationStatus.EmailTooLong:
+                ShowEmailValidationWarning("AccountCreation_EmailTooLongMessage");
                 break;
-            case Proxy.AccountRegistrationStatus.InvalidProfileImage:
+            case AccountCreationStatus.InvalidEmailLocalPart:
+                ShowEmailValidationWarning("AccountCreation_InvalidEmailNameMessage");
+                break;
+            case AccountCreationStatus.InvalidEmailDomain:
+                ShowEmailValidationWarning("AccountCreation_InvalidEmailDomainMessage");
+                break;
+            case AccountCreationStatus.InvalidEmailFormat:
+                ShowEmailValidationWarning("AccountCreation_InvalidEmailFormatMessage");
+                break;
+            case AccountCreationStatus.PasswordMismatch:
+                ShowValidationWarning("PasswordMismatch");
+                break;
+            case AccountCreationStatus.InvalidProfileImage:
                 _dialogService.ShowWarning(this, "AccountCreation_ImageNotSupportedTitle", "AccountCreation_ImageNotSupportedMessage");
                 break;
-            case Proxy.AccountRegistrationStatus.InvalidPassword:
-                ShowPasswordValidationWarning(PasswordValidationError.UnsupportedCharacter);
+            case AccountCreationStatus.PasswordTooShort:
+                ShowPasswordValidationWarning("AccountCreation_PasswordTooShortMessage");
+                break;
+            case AccountCreationStatus.PasswordTooLong:
+                ShowPasswordValidationWarning("AccountCreation_PasswordTooLongMessage");
+                break;
+            case AccountCreationStatus.PasswordMissingUppercase:
+                ShowPasswordValidationWarning("AccountCreation_PasswordMissingUppercaseMessage");
+                break;
+            case AccountCreationStatus.PasswordMissingLowercase:
+                ShowPasswordValidationWarning("AccountCreation_PasswordMissingLowercaseMessage");
+                break;
+            case AccountCreationStatus.PasswordMissingDigit:
+                ShowPasswordValidationWarning("AccountCreation_PasswordMissingDigitMessage");
+                break;
+            case AccountCreationStatus.PasswordMissingSymbol:
+                ShowPasswordValidationWarning("AccountCreation_PasswordMissingSymbolMessage");
+                break;
+            case AccountCreationStatus.PasswordUnsupportedCharacters:
+                ShowPasswordValidationWarning("AccountCreation_PasswordUnsupportedCharactersMessage");
+                break;
+            case AccountCreationStatus.ServiceUnavailable:
+                ShowServiceUnavailable();
                 break;
             default:
                 _dialogService.ShowError(
@@ -198,14 +188,6 @@ public partial class AccountCreationPage : Page
             "AccountCreation_ServerConnectionFailedMessage");
     }
 
-    private bool HasMissingRequiredInformation()
-    {
-        return string.IsNullOrWhiteSpace(usernameTextBox.Text)
-            || string.IsNullOrWhiteSpace(emailTextBox.Text)
-            || string.IsNullOrWhiteSpace(passwordBox.Password)
-            || string.IsNullOrWhiteSpace(confirmPasswordBox.Password);
-    }
-
     private void ShowValidationWarning(string alertName)
     {
         _dialogService.ShowWarning(
@@ -214,34 +196,13 @@ public partial class AccountCreationPage : Page
             $"AccountCreation_{alertName}Message");
     }
 
-    private void ShowEmailValidationWarning(EmailValidationError error)
+    private void ShowEmailValidationWarning(string messageKey)
     {
-        string messageKey = error switch
-        {
-            EmailValidationError.TooLong => "AccountCreation_EmailTooLongMessage",
-            EmailValidationError.InvalidLocalPart => "AccountCreation_InvalidEmailNameMessage",
-            EmailValidationError.InvalidDomain => "AccountCreation_InvalidEmailDomainMessage",
-            _ => "AccountCreation_InvalidEmailFormatMessage"
-        };
-
         _dialogService.ShowWarning(this, "AccountCreation_InvalidEmailFormatTitle", messageKey);
     }
 
-    private void ShowPasswordValidationWarning(PasswordValidationError error)
+    private void ShowPasswordValidationWarning(string messageKey)
     {
-        string messageKey = error switch
-        {
-            PasswordValidationError.TooShort => "AccountCreation_PasswordTooShortMessage",
-            PasswordValidationError.TooLong => "AccountCreation_PasswordTooLongMessage",
-            PasswordValidationError.MissingUppercaseLetter =>
-                "AccountCreation_PasswordMissingUppercaseMessage",
-            PasswordValidationError.MissingLowercaseLetter =>
-                "AccountCreation_PasswordMissingLowercaseMessage",
-            PasswordValidationError.MissingDigit => "AccountCreation_PasswordMissingDigitMessage",
-            PasswordValidationError.MissingSymbol => "AccountCreation_PasswordMissingSymbolMessage",
-            _ => "AccountCreation_PasswordUnsupportedCharactersMessage"
-        };
-
         _dialogService.ShowWarning(this, "AccountCreation_InvalidPasswordFormatTitle", messageKey);
     }
 
