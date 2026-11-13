@@ -53,11 +53,31 @@ jobs:
       - name: Begin SonarQube Cloud analysis
         shell: pwsh
         run: |
+          $exclusions = @(
+            "**/Connected Services/**/Reference.cs",
+            "**/*.Designer.cs",
+            "src/ReversiGameSystem.Server.Persistence/Model/Database_model*.cs",
+            "src/ReversiGameSystem.Server.Persistence/Model/Account.cs",
+            "src/ReversiGameSystem.Server.Persistence/Model/AccountSettings.cs",
+            "src/ReversiGameSystem.Server.Persistence/Model/ChatMessage.cs",
+            "src/ReversiGameSystem.Server.Persistence/Model/ChatMute.cs",
+            "src/ReversiGameSystem.Server.Persistence/Model/ChatViolation.cs",
+            "src/ReversiGameSystem.Server.Persistence/Model/Friendship.cs",
+            "src/ReversiGameSystem.Server.Persistence/Model/GameMatch.cs",
+            "src/ReversiGameSystem.Server.Persistence/Model/GameMove.cs",
+            "src/ReversiGameSystem.Server.Persistence/Model/MatchParticipant.cs",
+            "src/ReversiGameSystem.Server.Persistence/Model/ModerationPattern.cs",
+            "src/ReversiGameSystem.Server.Persistence/Model/ModerationRule.cs",
+            "src/ReversiGameSystem.Server.Persistence/Model/SupportedLocale.cs",
+            "src/ReversiGameSystem.Server.Persistence/Model/VerificationCode.cs"
+          ) -join ","
+
           dotnet sonarscanner begin `
             /k:"${{ vars.SONAR_PROJECT_KEY }}" `
             /o:"${{ vars.SONAR_ORGANIZATION }}" `
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}" `
             /d:sonar.cs.vscoveragexml.reportsPaths="coverage.xml" `
+            /d:sonar.exclusions="$exclusions" `
             /d:sonar.tsql.file.suffixes=".sql,.tsql" `
             /d:sonar.plsql.file.suffixes=".plsql"
 
