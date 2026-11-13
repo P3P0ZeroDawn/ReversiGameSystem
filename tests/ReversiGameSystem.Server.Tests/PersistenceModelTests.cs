@@ -1,13 +1,16 @@
 using System;
 using System.Data.Entity.Core.Metadata.Edm;
 using System.Data.Entity.Infrastructure;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Persistence.Model;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class PersistenceModelTests
+[TestClass]
+public sealed class PersistenceModelTests
 {
-    internal void CreateContext_ValidEnvironment_LoadsEmbeddedModel()
+    [TestMethod]
+    public void CreateContext_ValidEnvironment_LoadsEmbeddedModel()
     {
         // Arrange
         const string variableName = "REVERSI_DB_CONNECTION_STRING";

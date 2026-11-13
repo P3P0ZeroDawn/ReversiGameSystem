@@ -1,13 +1,16 @@
 using System;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Chat;
 using ReversiGameSystem.Server.Persistence.Sessions;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class ChatApplicationServiceTests
+[TestClass]
+public sealed class ChatApplicationServiceTests
 {
-    internal void SubmitChatMessage_EmptyContent_RejectsBeforeRepositoryAccess()
+    [TestMethod]
+    public void SubmitChatMessage_EmptyContent_RejectsBeforeRepositoryAccess()
     {
         ChatTestContext context = new ChatTestContext();
 
@@ -20,7 +23,8 @@ internal sealed class ChatApplicationServiceTests
         TestAssert.AreEqual(0, context.Repository.SubmissionCalls);
     }
 
-    internal void SubmitChatMessage_ValidContent_ReturnsPersistedMessage()
+    [TestMethod]
+    public void SubmitChatMessage_ValidContent_ReturnsPersistedMessage()
     {
         ChatTestContext context = new ChatTestContext();
         ChatMessage expected = new ChatMessage
@@ -44,7 +48,8 @@ internal sealed class ChatApplicationServiceTests
         TestAssert.AreEqual(1, context.Repository.SubmissionCalls);
     }
 
-    internal void SubmitChatMessage_RepositoryFailure_PropagatesException()
+    [TestMethod]
+    public void SubmitChatMessage_RepositoryFailure_PropagatesException()
     {
         ChatTestContext context = new ChatTestContext();
         context.Repository.ThrowOnSubmission = true;
@@ -56,7 +61,8 @@ internal sealed class ChatApplicationServiceTests
                 "Hello"));
     }
 
-    internal void CanReceiveMuteNotification_SameAccountSession_AuthorizesRecipient()
+    [TestMethod]
+    public void CanReceiveMuteNotification_SameAccountSession_AuthorizesRecipient()
     {
         ChatTestContext context = new ChatTestContext();
         AuthenticatedSession secondSession = context.Sessions.Create(

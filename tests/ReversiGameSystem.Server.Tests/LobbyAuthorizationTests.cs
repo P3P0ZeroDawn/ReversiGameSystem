@@ -1,6 +1,7 @@
 using System;
 using System.ServiceModel;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Contracts.Faults;
@@ -8,9 +9,11 @@ using ReversiGameSystem.Server.ServiceApi;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class LobbyAuthorizationTests
+[TestClass]
+public sealed class LobbyAuthorizationTests
 {
-    internal void Authorize_LiveSession_ChecksAccountWithoutListingMatches()
+    [TestMethod]
+    public void Authorize_LiveSession_ChecksAccountWithoutListingMatches()
     {
         // Arrange
         AuthorizationContext context = new AuthorizationContext();
@@ -26,7 +29,8 @@ internal sealed class LobbyAuthorizationTests
         TestAssert.AreEqual(0, context.Store.AvailableCalls);
     }
 
-    internal void Authorize_ExpiredSession_RejectsBeforeAccountQuery()
+    [TestMethod]
+    public void Authorize_ExpiredSession_RejectsBeforeAccountQuery()
     {
         // Arrange
         AuthorizationContext context = new AuthorizationContext();
@@ -42,7 +46,8 @@ internal sealed class LobbyAuthorizationTests
         TestAssert.AreEqual(MatchStatus.InvalidSession, status);
     }
 
-    internal void Authorize_RevokedSession_RejectsBeforeAccountQuery()
+    [TestMethod]
+    public void Authorize_RevokedSession_RejectsBeforeAccountQuery()
     {
         // Arrange
         AuthorizationContext context = new AuthorizationContext();
@@ -58,7 +63,8 @@ internal sealed class LobbyAuthorizationTests
         TestAssert.AreEqual(MatchStatus.InvalidSession, status);
     }
 
-    internal void OpenLobbyChannel_InactiveAccount_ReturnsMatchFaultWithoutListing()
+    [TestMethod]
+    public void OpenLobbyChannel_InactiveAccount_ReturnsMatchFaultWithoutListing()
     {
         // Arrange
         AuthorizationContext context = new AuthorizationContext();
@@ -76,7 +82,8 @@ internal sealed class LobbyAuthorizationTests
         TestAssert.AreEqual(0, context.Store.AvailableCalls);
     }
 
-    internal void OpenLobbyChannel_MissingToken_ReturnsSessionFaultBeforeAccountQuery()
+    [TestMethod]
+    public void OpenLobbyChannel_MissingToken_ReturnsSessionFaultBeforeAccountQuery()
     {
         // Arrange
         AuthorizationContext context = new AuthorizationContext();

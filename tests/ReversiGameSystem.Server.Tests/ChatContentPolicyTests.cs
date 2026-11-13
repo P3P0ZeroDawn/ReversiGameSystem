@@ -1,10 +1,13 @@
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Domain.Chat;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class ChatContentPolicyTests
+[TestClass]
+public sealed class ChatContentPolicyTests
 {
-    internal void Matches_AccentsCaseAndPunctuation_MatchesCompletePhrase()
+    [TestMethod]
+    public void Matches_AccentsCaseAndPunctuation_MatchesCompletePhrase()
     {
         // Arrange
         const string content = "A message: PÁLÁBRA, PROHIBIDA!";
@@ -16,7 +19,8 @@ internal sealed class ChatContentPolicyTests
         TestAssert.IsTrue(matches, "Moderation must normalize diacritics, case, and separators.");
     }
 
-    internal void Matches_WordInsideAnotherWord_DoesNotMatch()
+    [TestMethod]
+    public void Matches_WordInsideAnotherWord_DoesNotMatch()
     {
         // Arrange
         const string content = "An unblockedword fragment";
@@ -28,7 +32,8 @@ internal sealed class ChatContentPolicyTests
         TestAssert.IsTrue(!matches, "A substring must not count as a complete prohibited word.");
     }
 
-    internal void Matches_EmptyPattern_DoesNotBlockEveryMessage()
+    [TestMethod]
+    public void Matches_EmptyPattern_DoesNotBlockEveryMessage()
     {
         // Arrange
         const string content = "ordinary message";

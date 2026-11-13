@@ -1,13 +1,16 @@
 using System;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Persistence.Accounts;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class CreateAccountHandlerTests
+[TestClass]
+public sealed class CreateAccountHandlerTests
 {
-    internal void ExecuteAsync_ValidRequest_StoresAccount()
+    [TestMethod]
+    public void ExecuteAsync_ValidRequest_StoresAccount()
     {
         // Arrange
         AccountRegistrationStoreStub accountStore = new AccountRegistrationStoreStub
@@ -48,7 +51,8 @@ internal sealed class CreateAccountHandlerTests
         TestAssert.AreEqual(registeredAtUtc, accountStore.Registration?.RegisteredAtUtc);
     }
 
-    internal void ExecuteAsync_MissingRequiredValue_ReturnsInvalidRequest()
+    [TestMethod]
+    public void ExecuteAsync_MissingRequiredValue_ReturnsInvalidRequest()
     {
         // Arrange
         AccountRegistrationStoreStub accountStore = new AccountRegistrationStoreStub();
@@ -72,7 +76,8 @@ internal sealed class CreateAccountHandlerTests
         TestAssert.AreEqual<string?>(null, passwordHasher.HashedPassword);
     }
 
-    internal void ExecuteAsync_InvalidFields_ReturnSpecificOutcomes()
+    [TestMethod]
+    public void ExecuteAsync_InvalidFields_ReturnSpecificOutcomes()
     {
         // Arrange
         CreateAccountHandler handler = CreateHandler(
@@ -104,7 +109,8 @@ internal sealed class CreateAccountHandlerTests
         TestAssert.AreEqual(CreateAccountOutcome.InvalidPassword, invalidPassword.Outcome);
     }
 
-    internal void ExecuteAsync_InvalidProfileImage_ReturnsInvalidRequest()
+    [TestMethod]
+    public void ExecuteAsync_InvalidProfileImage_ReturnsInvalidRequest()
     {
         // Arrange
         ProfileImageStoreStub imageStore = new ProfileImageStoreStub();
@@ -130,7 +136,8 @@ internal sealed class CreateAccountHandlerTests
         TestAssert.AreEqual(false, imageStore.SaveWasCalled);
     }
 
-    internal void ExecuteAsync_DuplicateUsername_RemovesStoredImage()
+    [TestMethod]
+    public void ExecuteAsync_DuplicateUsername_RemovesStoredImage()
     {
         // Arrange
         AccountRegistrationStoreStub accountStore = new AccountRegistrationStoreStub
@@ -161,7 +168,8 @@ internal sealed class CreateAccountHandlerTests
         TestAssert.AreEqual("profile-images/test.png", imageStore.DeletedImageUri);
     }
 
-    internal void ExecuteAsync_UnsupportedLocale_ReturnsInvalidRequest()
+    [TestMethod]
+    public void ExecuteAsync_UnsupportedLocale_ReturnsInvalidRequest()
     {
         // Arrange
         AccountRegistrationStoreStub accountStore = new AccountRegistrationStoreStub
@@ -187,7 +195,8 @@ internal sealed class CreateAccountHandlerTests
         TestAssert.AreEqual(CreateAccountOutcome.InvalidRequest, result.Outcome);
     }
 
-    internal void PasswordHasher_HashAndVerify_UsesSaltedPbkdf2()
+    [TestMethod]
+    public void PasswordHasher_HashAndVerify_UsesSaltedPbkdf2()
     {
         // Arrange
         Pbkdf2PasswordHasher hasher = new Pbkdf2PasswordHasher();

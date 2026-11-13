@@ -1,12 +1,15 @@
 using System;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.ServiceApi;
 
 namespace ReversiGameSystem.Server.Tests;
 
 /// <summary>Checks that technical context survives without copying provider secrets.</summary>
-internal static class FailureDiagnosticsTests
+[TestClass]
+public sealed class FailureDiagnosticsTests
 {
-    internal static void Describe_NestedProviderFailure_ExcludesMessagesAndPrivateData()
+    [TestMethod]
+    public void Describe_NestedProviderFailure_ExcludesMessagesAndPrivateData()
     {
         // Arrange
         Exception cause = new TimeoutException("private-provider-message");

@@ -1,12 +1,15 @@
 using System.Linq;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Persistence.Verification;
 
 namespace ReversiGameSystem.Server.Tests;
 
 /// <summary>Guards against successful builds that omit the runtime persistence model.</summary>
-internal static class ModelResourcesTests
+[TestClass]
+public sealed class ModelResourcesTests
 {
-    internal static void Assembly_RequiredRuntimeModel_IsEmbedded()
+    [TestMethod]
+    public void Assembly_RequiredRuntimeModel_IsEmbedded()
     {
         // Arrange
         string[] required =

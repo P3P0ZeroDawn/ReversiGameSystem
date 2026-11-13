@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Contracts.Accounts;
 using ReversiGameSystem.Server.Contracts.Chat;
 using ReversiGameSystem.Server.Contracts.Common;
@@ -15,12 +16,14 @@ namespace ReversiGameSystem.Server.Tests;
 /// <summary>
 /// Checks optional values, images, social data and typed business failures in transit.
 /// </summary>
-internal sealed class CommunicationSerializationTests
+[TestClass]
+public sealed class CommunicationSerializationTests
 {
     private static readonly DateTime TimestampUtc =
         new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc);
 
-    internal void NewAccount_ProfileImage_PreservesContentAndVerificationData()
+    [TestMethod]
+    public void NewAccount_ProfileImage_PreservesContentAndVerificationData()
     {
         // Arrange
         NewAccount account = new NewAccount
@@ -52,7 +55,8 @@ internal sealed class CommunicationSerializationTests
             "Image bytes changed during transport.");
     }
 
-    internal void NewAccount_AbsentProfileImage_PreservesNull()
+    [TestMethod]
+    public void NewAccount_AbsentProfileImage_PreservesNull()
     {
         // Arrange
         NewAccount account = new NewAccount { ProfileImage = null };
@@ -64,7 +68,8 @@ internal sealed class CommunicationSerializationTests
         TestAssert.AreEqual<ImageContent?>(null, result.ProfileImage);
     }
 
-    internal void PlayerPreferences_LocalZone_PreservesZoneAndBackground()
+    [TestMethod]
+    public void PlayerPreferences_LocalZone_PreservesZoneAndBackground()
     {
         // Arrange
         PlayerPreferences preferences = new PlayerPreferences
@@ -85,7 +90,8 @@ internal sealed class CommunicationSerializationTests
         TestAssert.AreEqual(true, result.UseCustomBoardBackground);
     }
 
-    internal void GuestSession_RoundTrip_PreservesConfirmedIdentityAndExpiry()
+    [TestMethod]
+    public void GuestSession_RoundTrip_PreservesConfirmedIdentityAndExpiry()
     {
         // Arrange
         GuestSession session = new GuestSession
@@ -105,7 +111,8 @@ internal sealed class CommunicationSerializationTests
         TestAssert.AreEqual(DateTimeKind.Utc, result.ExpiresAtUtc.Kind);
     }
 
-    internal void FriendRequest_RoundTrip_PreservesRequestAndBothAccounts()
+    [TestMethod]
+    public void FriendRequest_RoundTrip_PreservesRequestAndBothAccounts()
     {
         // Arrange
         FriendRequest request = new FriendRequest
@@ -128,7 +135,8 @@ internal sealed class CommunicationSerializationTests
         TestAssert.AreEqual(TimestampUtc, result.CreatedAtUtc);
     }
 
-    internal void MatchChatEntry_RoundTrip_PreservesCompositeIdentityAndUnicode()
+    [TestMethod]
+    public void MatchChatEntry_RoundTrip_PreservesCompositeIdentityAndUnicode()
     {
         // Arrange
         MatchChatEntry message = new MatchChatEntry
@@ -151,7 +159,8 @@ internal sealed class CommunicationSerializationTests
         TestAssert.AreEqual(TimestampUtc, result.SentAtUtc);
     }
 
-    internal void ChatFault_MutedAndBlocked_PreservesOptionalMuteExpiry()
+    [TestMethod]
+    public void ChatFault_MutedAndBlocked_PreservesOptionalMuteExpiry()
     {
         // Arrange
         ChatFault[] faults = new[]
@@ -170,7 +179,8 @@ internal sealed class CommunicationSerializationTests
         TestAssert.AreEqual<DateTime?>(null, result[1].MuteEndsAtUtc);
     }
 
-    internal void ChatMuteNotification_RoundTrip_PreservesAccountSanctionWindow()
+    [TestMethod]
+    public void ChatMuteNotification_RoundTrip_PreservesAccountSanctionWindow()
     {
         // Arrange
         ChatMuteNotification mute = new ChatMuteNotification
@@ -191,7 +201,8 @@ internal sealed class CommunicationSerializationTests
         TestAssert.AreEqual(mute.EndsAtUtc, result.EndsAtUtc);
     }
 
-    internal void BusinessFaults_EveryCatalogReason_RoundTripsTypedReason()
+    [TestMethod]
+    public void BusinessFaults_EveryCatalogReason_RoundTripsTypedReason()
     {
         // Arrange
         Type[] types = new[]

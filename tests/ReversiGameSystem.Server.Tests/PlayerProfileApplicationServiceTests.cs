@@ -1,15 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Players;
 
 namespace ReversiGameSystem.Server.Tests;
 
 /// <summary>Verifies the player profile application operations in isolation.</summary>
-internal sealed class PlayerProfileApplicationServiceTests
+[TestClass]
+public sealed class PlayerProfileApplicationServiceTests
 {
-    internal void GetAsync_CurrentPlayer_ReturnsCalculatedStatistics()
+    [TestMethod]
+    public void GetAsync_CurrentPlayer_ReturnsCalculatedStatistics()
     {
         PlayerProfileSessionStoreStub sessions = new PlayerProfileSessionStoreStub
         {
@@ -41,7 +44,8 @@ internal sealed class PlayerProfileApplicationServiceTests
         TestAssert.AreEqual(7d / 12d, result.Profile?.WinRate);
     }
 
-    internal void GetAsync_PublicProfile_VerifiesCallerThenUsesTargetAccount()
+    [TestMethod]
+    public void GetAsync_PublicProfile_VerifiesCallerThenUsesTargetAccount()
     {
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         profiles.Profiles.Add(42, new PlayerProfile(42, "PlayerOne", null, 1, 0, 0));
@@ -61,7 +65,8 @@ internal sealed class PlayerProfileApplicationServiceTests
         TestAssert.AreEqual(0d, result.Profile?.WinRate);
     }
 
-    internal void GetAsync_InvalidInput_RejectsBeforeRepositoryAccess()
+    [TestMethod]
+    public void GetAsync_InvalidInput_RejectsBeforeRepositoryAccess()
     {
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         PlayerProfileApplicationService applicationService = CreateService(
@@ -80,7 +85,8 @@ internal sealed class PlayerProfileApplicationServiceTests
         TestAssert.AreEqual(0, profiles.AccountIds.Count);
     }
 
-    internal void GetAsync_InvalidSession_PrecedesInvalidTargetAccount()
+    [TestMethod]
+    public void GetAsync_InvalidSession_PrecedesInvalidTargetAccount()
     {
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         PlayerProfileApplicationService applicationService = CreateService(
@@ -94,7 +100,8 @@ internal sealed class PlayerProfileApplicationServiceTests
         TestAssert.AreEqual(0, profiles.AccountIds.Count);
     }
 
-    internal void GetAsync_UnknownSession_RejectsBeforeRepositoryAccess()
+    [TestMethod]
+    public void GetAsync_UnknownSession_RejectsBeforeRepositoryAccess()
     {
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         PlayerProfileApplicationService applicationService = CreateService(
@@ -110,7 +117,8 @@ internal sealed class PlayerProfileApplicationServiceTests
         TestAssert.AreEqual(0, profiles.AccountIds.Count);
     }
 
-    internal void GetAsync_InactiveCaller_DoesNotReadRequestedTarget()
+    [TestMethod]
+    public void GetAsync_InactiveCaller_DoesNotReadRequestedTarget()
     {
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         PlayerProfileApplicationService applicationService = CreateService(
@@ -125,7 +133,8 @@ internal sealed class PlayerProfileApplicationServiceTests
         TestAssert.AreEqual(42L, profiles.AccountIds[0]);
     }
 
-    internal void GetAsync_MissingTarget_ReturnsAccountNotFound()
+    [TestMethod]
+    public void GetAsync_MissingTarget_ReturnsAccountNotFound()
     {
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         profiles.Profiles.Add(42, new PlayerProfile(42, "PlayerOne", null, 1, 0, 0));
@@ -140,7 +149,8 @@ internal sealed class PlayerProfileApplicationServiceTests
         TestAssert.AreEqual(2, profiles.AccountIds.Count);
     }
 
-    internal void GetAsync_RepositoryFailure_PropagatesException()
+    [TestMethod]
+    public void GetAsync_RepositoryFailure_PropagatesException()
     {
         PlayerProfileApplicationService applicationService = CreateService(
             new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
@@ -151,7 +161,8 @@ internal sealed class PlayerProfileApplicationServiceTests
                 .GetAwaiter().GetResult());
     }
 
-    internal void ChangeUsernameAsync_ValidUsername_NormalizesAndUpdatesCaller()
+    [TestMethod]
+    public void ChangeUsernameAsync_ValidUsername_NormalizesAndUpdatesCaller()
     {
         PlayerProfileRepositoryStub profiles = CreateActiveProfiles();
         PlayerProfileApplicationService applicationService = CreateService(
@@ -167,7 +178,8 @@ internal sealed class PlayerProfileApplicationServiceTests
         TestAssert.AreEqual("NewPlayer", profiles.ChangedUsername);
     }
 
-    internal void ChangeUsernameAsync_UnavailableUsername_ReturnsExpectedStatus()
+    [TestMethod]
+    public void ChangeUsernameAsync_UnavailableUsername_ReturnsExpectedStatus()
     {
         PlayerProfileRepositoryStub profiles = CreateActiveProfiles();
         profiles.ChangeUsernameStatus = ProfileRepositoryUpdateStatus.UsernameUnavailable;
@@ -182,7 +194,8 @@ internal sealed class PlayerProfileApplicationServiceTests
         TestAssert.AreEqual(ProfileOperationStatus.UsernameUnavailable, status);
     }
 
-    internal void UpdateImageAsync_AssociationFailure_RemovesStoredImageAndPropagates()
+    [TestMethod]
+    public void UpdateImageAsync_AssociationFailure_RemovesStoredImageAndPropagates()
     {
         PlayerProfileRepositoryStub profiles = CreateActiveProfiles();
         profiles.ThrowOnSetImage = true;

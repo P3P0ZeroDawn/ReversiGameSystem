@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Runtime.Serialization;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Contracts.Accounts;
 using ReversiGameSystem.Server.Contracts.Common;
 using ReversiGameSystem.Server.Contracts.Leaderboards;
@@ -11,9 +12,11 @@ namespace ReversiGameSystem.Server.Tests;
 /// <summary>
 /// Verifies retained account access contracts and the revised profile and leaderboard data.
 /// </summary>
-internal sealed class ContractSerializationTests
+[TestClass]
+public sealed class ContractSerializationTests
 {
-    internal void AuthenticatedSession_RoundTrip_PreservesAccountAndExpiry()
+    [TestMethod]
+    public void AuthenticatedSession_RoundTrip_PreservesAccountAndExpiry()
     {
         // Arrange
         AuthenticatedSession original = CreateAuthenticatedSession();
@@ -29,7 +32,8 @@ internal sealed class ContractSerializationTests
         TestAssert.AreEqual(original.ExpiresAtUtc, session.ExpiresAtUtc);
     }
 
-    internal void AccountRegistrationCredentials_RoundTrip_PreservesProfileImage()
+    [TestMethod]
+    public void AccountRegistrationCredentials_RoundTrip_PreservesProfileImage()
     {
         // Arrange
         AccountRegistrationCredentials credentials = CreateRegistrationCredentials();
@@ -46,7 +50,8 @@ internal sealed class ContractSerializationTests
         TestAssert.AreEqual(3, image.Content.Length);
     }
 
-    internal void PlayerProfile_RoundTrip_PreservesStatistics()
+    [TestMethod]
+    public void PlayerProfile_RoundTrip_PreservesStatistics()
     {
         // Arrange
         PlayerProfile profile = CreatePlayerProfile();
@@ -62,7 +67,8 @@ internal sealed class ContractSerializationTests
         TestAssert.AreEqual(0.6, result.Statistics.WinRate);
     }
 
-    internal void LeaderboardEntry_RoundTrip_PreservesPositions()
+    [TestMethod]
+    public void LeaderboardEntry_RoundTrip_PreservesPositions()
     {
         // Arrange
         LeaderboardEntry[] standings = CreateLeaderboardEntries();
@@ -77,7 +83,8 @@ internal sealed class ContractSerializationTests
         TestAssert.AreEqual(6, result[0].Wins);
     }
 
-    internal void ServiceFault_RoundTrip_PreservesDiagnosticData()
+    [TestMethod]
+    public void ServiceFault_RoundTrip_PreservesDiagnosticData()
     {
         // Arrange
         ServiceFault fault = new ServiceFault

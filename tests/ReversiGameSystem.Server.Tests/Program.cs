@@ -58,6 +58,7 @@ internal static class Program
         ServiceErrorBehaviorTests errorBehaviorTests = new ServiceErrorBehaviorTests();
         ReversiDomainTests reversiTests = new ReversiDomainTests();
         GameplayApplicationServiceTests gameplayTests = new GameplayApplicationServiceTests();
+        PlayerBoundaryTests playerBoundaryTests = new PlayerBoundaryTests();
         System.Collections.Generic.List<Action> tests =
             new System.Collections.Generic.List<Action>
         {
@@ -171,7 +172,7 @@ internal static class Program
             codeTests.Protect_DifferentIdentity_BindsCodeToAccountAndPurpose,
             mailTests.Load_ProcessConfiguration_ValidatesPortAndRequiresEncryption,
             mailTests.Send_LocalServerWithheldBanner_CancelsWithinDeliveryBudget,
-            FailureDiagnosticsTests.Describe_NestedProviderFailure_ExcludesMessagesAndPrivateData,
+            new FailureDiagnosticsTests().Describe_NestedProviderFailure_ExcludesMessagesAndPrivateData,
             DiagnosticFormatterTests.Run,
             presenceTests.DuplexChannels_PublishPresenceAndOwnFriendSnapshot,
             presenceTests.MultipleSessions_StayOnlineUntilLastRevocation,
@@ -184,24 +185,24 @@ internal static class Program
             presenceTests.ExpiredReceiver_ReceivesNoCallbacks,
             presenceTests.ExpirySweep_PublishesDisconnection,
             presenceTests.EndedFriendship_ReceivesNoPresenceCallbacks,
-            PlayerBoundaryTests.RegisterAccount_ThroughWcf_MapsCredentialsAndOutcome,
-            PlayerBoundaryTests.GetProfile_ThroughWcf_MapsIdentityAndStatistics,
-            PlayerBoundaryTests.GetProfile_MissingAndInvalidSessionThroughWcf_ReturnsTypedFaults,
-            PlayerBoundaryTests.GetProfile_InactiveCallerRequestingAnotherAccount_RejectsThroughWcf,
-            PlayerBoundaryTests.GetProfile_InvalidTargetThroughWcf_ReturnsTypedFault,
-            PlayerBoundaryTests.GetProfile_MissingTargetThroughWcf_ReturnsTypedFault,
-            PlayerBoundaryTests.GetProfile_RepositoryFailureThroughWcf_ReturnsServiceFault,
-            PlayerBoundaryTests.GetImage_AbsentImageThroughWcf_ReturnsNull,
-            PlayerBoundaryTests.GetImage_PresentImageThroughWcf_ReturnsContent,
-            PlayerBoundaryTests.GetImage_ReadFailureThroughWcf_ReturnsServiceFault,
-            PlayerBoundaryTests.ChangeUsername_ThroughWcf_NormalizesAndUpdatesOnlyCaller,
-            PlayerBoundaryTests.ChangeUsername_UnavailableThroughWcf_ReturnsTypedFault,
-            PlayerBoundaryTests.UpdateImage_InvalidThroughWcf_ReturnsTypedFault,
-            PlayerBoundaryTests.UpdateImage_AssociationFailureThroughWcf_RemovesNewImage,
-            PlayerBoundaryTests.GetLeaderboard_ThroughWcf_MapsOrderedEntries,
-            PlayerBoundaryTests.GetLeaderboard_InvalidLimitThroughWcf_ReturnsTypedFault,
-            PlayerBoundaryTests.GetLeaderboard_UnavailableThroughWcf_ReturnsServiceFault,
-            ModelResourcesTests.Assembly_RequiredRuntimeModel_IsEmbedded
+            playerBoundaryTests.RegisterAccount_ThroughWcf_MapsCredentialsAndOutcome,
+            playerBoundaryTests.GetProfile_ThroughWcf_MapsIdentityAndStatistics,
+            playerBoundaryTests.GetProfile_MissingAndInvalidSessionThroughWcf_ReturnsTypedFaults,
+            playerBoundaryTests.GetProfile_InactiveCallerRequestingAnotherAccount_RejectsThroughWcf,
+            playerBoundaryTests.GetProfile_InvalidTargetThroughWcf_ReturnsTypedFault,
+            playerBoundaryTests.GetProfile_MissingTargetThroughWcf_ReturnsTypedFault,
+            playerBoundaryTests.GetProfile_RepositoryFailureThroughWcf_ReturnsServiceFault,
+            playerBoundaryTests.GetImage_AbsentImageThroughWcf_ReturnsNull,
+            playerBoundaryTests.GetImage_PresentImageThroughWcf_ReturnsContent,
+            playerBoundaryTests.GetImage_ReadFailureThroughWcf_ReturnsServiceFault,
+            playerBoundaryTests.ChangeUsername_ThroughWcf_NormalizesAndUpdatesOnlyCaller,
+            playerBoundaryTests.ChangeUsername_UnavailableThroughWcf_ReturnsTypedFault,
+            playerBoundaryTests.UpdateImage_InvalidThroughWcf_ReturnsTypedFault,
+            playerBoundaryTests.UpdateImage_AssociationFailureThroughWcf_RemovesNewImage,
+            playerBoundaryTests.GetLeaderboard_ThroughWcf_MapsOrderedEntries,
+            playerBoundaryTests.GetLeaderboard_InvalidLimitThroughWcf_ReturnsTypedFault,
+            playerBoundaryTests.GetLeaderboard_UnavailableThroughWcf_ReturnsServiceFault,
+            new ModelResourcesTests().Assembly_RequiredRuntimeModel_IsEmbedded
         };
         tests.AddRange(MatchInvitationTests.CreateTests());
         return tests.ToArray();

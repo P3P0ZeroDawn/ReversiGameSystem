@@ -1,6 +1,7 @@
 using System;
 using System.ServiceModel;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Contracts.Faults;
@@ -11,9 +12,11 @@ using ReversiGameSystem.Server.Persistence.Sessions;
 namespace ReversiGameSystem.Server.Tests;
 
 /// <summary>Verifies application rejections and technical failures at the match boundary.</summary>
-internal sealed class MatchBoundaryTests
+[TestClass]
+public sealed class MatchBoundaryTests
 {
-    internal void Gameplay_UnauthorizedParticipant_PreservesDeclaredRejection()
+    [TestMethod]
+    public void Gameplay_UnauthorizedParticipant_PreservesDeclaredRejection()
     {
         BoundaryStore store = new BoundaryStore();
         using GameplayMatchService service = CreateGameplay(store);
@@ -22,7 +25,8 @@ internal sealed class MatchBoundaryTests
         TestAssert.AreEqual(MatchFailure.Unauthorized, failure.Detail.Reason);
     }
 
-    internal void Gameplay_InitialState_UsesApplicationSnapshot()
+    [TestMethod]
+    public void Gameplay_InitialState_UsesApplicationSnapshot()
     {
         BoundaryStore store = new BoundaryStore { AllowRead = true };
         using GameplayMatchService service = CreateGameplay(store);
@@ -37,7 +41,8 @@ internal sealed class MatchBoundaryTests
         TestAssert.AreEqual(2, state.WhitePieceCount);
     }
 
-    internal void Gameplay_StoreFailure_PropagatesToGlobalHandler()
+    [TestMethod]
+    public void Gameplay_StoreFailure_PropagatesToGlobalHandler()
     {
         BoundaryStore store = new BoundaryStore { FailStorage = true };
         using GameplayMatchService service = CreateGameplay(store);
@@ -48,7 +53,8 @@ internal sealed class MatchBoundaryTests
             "The service must preserve the technical failure for ServiceErrorBehavior.");
     }
 
-    internal void Lobby_StoreFailure_PropagatesToGlobalHandler()
+    [TestMethod]
+    public void Lobby_StoreFailure_PropagatesToGlobalHandler()
     {
         // Arrange
         BoundaryStore store = new BoundaryStore();
@@ -63,7 +69,8 @@ internal sealed class MatchBoundaryTests
             "The service must preserve the technical failure for ServiceErrorBehavior.");
     }
 
-    internal void Lobby_InviteToMatch_GuestSession_ReturnsMatchFaultUnauthorized()
+    [TestMethod]
+    public void Lobby_InviteToMatch_GuestSession_ReturnsMatchFaultUnauthorized()
     {
         // Arrange
         BoundaryStore store = new BoundaryStore();
@@ -79,7 +86,8 @@ internal sealed class MatchBoundaryTests
         TestAssert.AreEqual(MatchFailure.Unauthorized, failure.Detail.Reason);
     }
 
-    internal void Lobby_InviteToMatch_SelfInvitation_ReturnsMatchFaultUnauthorized()
+    [TestMethod]
+    public void Lobby_InviteToMatch_SelfInvitation_ReturnsMatchFaultUnauthorized()
     {
         // Arrange
         BoundaryStore store = new BoundaryStore();
@@ -93,7 +101,8 @@ internal sealed class MatchBoundaryTests
         TestAssert.AreEqual(MatchFailure.Unauthorized, failure.Detail.Reason);
     }
 
-    internal void Lobby_InviteToMatch_InvalidFriendId_ReturnsFriendshipFaultInvalidAccountId()
+    [TestMethod]
+    public void Lobby_InviteToMatch_InvalidFriendId_ReturnsFriendshipFaultInvalidAccountId()
     {
         // Arrange
         BoundaryStore store = new BoundaryStore();
@@ -107,7 +116,8 @@ internal sealed class MatchBoundaryTests
         TestAssert.AreEqual(FriendshipFailure.InvalidAccountId, failure.Detail.Reason);
     }
 
-    internal void Lobby_InviteToMatch_AccountUnavailable_ReturnsFriendshipFaultAccountUnavailable()
+    [TestMethod]
+    public void Lobby_InviteToMatch_AccountUnavailable_ReturnsFriendshipFaultAccountUnavailable()
     {
         // Arrange
         BoundaryStore store = new BoundaryStore();
@@ -121,7 +131,8 @@ internal sealed class MatchBoundaryTests
         TestAssert.AreEqual(FriendshipFailure.AccountUnavailable, failure.Detail.Reason);
     }
 
-    internal void Lobby_InviteToMatch_FriendshipNotFound_ReturnsFriendshipFaultFriendshipNotFound()
+    [TestMethod]
+    public void Lobby_InviteToMatch_FriendshipNotFound_ReturnsFriendshipFaultFriendshipNotFound()
     {
         // Arrange
         BoundaryStore store = new BoundaryStore();
@@ -135,7 +146,8 @@ internal sealed class MatchBoundaryTests
         TestAssert.AreEqual(FriendshipFailure.FriendshipNotFound, failure.Detail.Reason);
     }
 
-    internal void Lobby_InviteToMatch_StoreFailure_PropagatesToGlobalHandler()
+    [TestMethod]
+    public void Lobby_InviteToMatch_StoreFailure_PropagatesToGlobalHandler()
     {
         // Arrange
         BoundaryStore store = new BoundaryStore();

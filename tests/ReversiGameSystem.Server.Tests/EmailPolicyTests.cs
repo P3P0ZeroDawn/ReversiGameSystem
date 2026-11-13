@@ -1,11 +1,14 @@
 using System;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Domain.Accounts;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class EmailPolicyTests
+[TestClass]
+public sealed class EmailPolicyTests
 {
-    internal void Validate_OrdinaryAddress_ReturnsNone()
+    [TestMethod]
+    public void Validate_OrdinaryAddress_ReturnsNone()
     {
         // Arrange
         string email = "player@example.com";
@@ -17,7 +20,8 @@ internal sealed class EmailPolicyTests
         TestAssert.AreEqual(EmailValidationError.None, actual);
     }
 
-    internal void Validate_TaggedAddress_ReturnsNone()
+    [TestMethod]
+    public void Validate_TaggedAddress_ReturnsNone()
     {
         // Arrange
         string email = "first.last+tag@example.co.uk";
@@ -29,7 +33,8 @@ internal sealed class EmailPolicyTests
         TestAssert.AreEqual(EmailValidationError.None, actual);
     }
 
-    internal void Validate_InternationalizedDomain_ReturnsNone()
+    [TestMethod]
+    public void Validate_InternationalizedDomain_ReturnsNone()
     {
         // Arrange
         string email = "player@bücher.de";
@@ -41,7 +46,8 @@ internal sealed class EmailPolicyTests
         TestAssert.AreEqual(EmailValidationError.None, actual);
     }
 
-    internal void Validate_AddressAtMaximumLength_ReturnsNone()
+    [TestMethod]
+    public void Validate_AddressAtMaximumLength_ReturnsNone()
     {
         // Arrange
         string label = new string('a', 61);
@@ -54,7 +60,8 @@ internal sealed class EmailPolicyTests
         TestAssert.AreEqual(EmailValidationError.None, actual);
     }
 
-    internal void Validate_AddressAboveMaximumLength_ReturnsTooLong()
+    [TestMethod]
+    public void Validate_AddressAboveMaximumLength_ReturnsTooLong()
     {
         // Arrange
         string email = new string('a', 250) + "@example.com";
@@ -66,7 +73,8 @@ internal sealed class EmailPolicyTests
         TestAssert.AreEqual(EmailValidationError.TooLong, actual);
     }
 
-    internal void Validate_MissingAtSign_ReturnsInvalidStructure()
+    [TestMethod]
+    public void Validate_MissingAtSign_ReturnsInvalidStructure()
     {
         // Arrange
         string email = "player.example.com";
@@ -78,7 +86,8 @@ internal sealed class EmailPolicyTests
         TestAssert.AreEqual(EmailValidationError.InvalidStructure, actual);
     }
 
-    internal void Validate_MultipleAtSigns_ReturnsInvalidStructure()
+    [TestMethod]
+    public void Validate_MultipleAtSigns_ReturnsInvalidStructure()
     {
         // Arrange
         string email = "player@@example.com";
@@ -90,7 +99,8 @@ internal sealed class EmailPolicyTests
         TestAssert.AreEqual(EmailValidationError.InvalidStructure, actual);
     }
 
-    internal void Validate_ConsecutiveLocalDots_ReturnsInvalidLocalPart()
+    [TestMethod]
+    public void Validate_ConsecutiveLocalDots_ReturnsInvalidLocalPart()
     {
         // Arrange
         string email = "first..last@example.com";
@@ -102,7 +112,8 @@ internal sealed class EmailPolicyTests
         TestAssert.AreEqual(EmailValidationError.InvalidLocalPart, actual);
     }
 
-    internal void Validate_DisplayName_ReturnsInvalidLocalPart()
+    [TestMethod]
+    public void Validate_DisplayName_ReturnsInvalidLocalPart()
     {
         // Arrange
         string email = "Player <player@example.com>";
@@ -114,7 +125,8 @@ internal sealed class EmailPolicyTests
         TestAssert.AreEqual(EmailValidationError.InvalidLocalPart, actual);
     }
 
-    internal void Validate_LocalPartAboveMaximum_ReturnsInvalidLocalPart()
+    [TestMethod]
+    public void Validate_LocalPartAboveMaximum_ReturnsInvalidLocalPart()
     {
         // Arrange
         string email = new string('a', 65) + "@example.com";
@@ -126,7 +138,8 @@ internal sealed class EmailPolicyTests
         TestAssert.AreEqual(EmailValidationError.InvalidLocalPart, actual);
     }
 
-    internal void Validate_AccentedLocalPart_ReturnsInvalidLocalPart()
+    [TestMethod]
+    public void Validate_AccentedLocalPart_ReturnsInvalidLocalPart()
     {
         // Arrange
         string email = "josé@example.com";
@@ -138,7 +151,8 @@ internal sealed class EmailPolicyTests
         TestAssert.AreEqual(EmailValidationError.InvalidLocalPart, actual);
     }
 
-    internal void Validate_SingleLabelDomain_ReturnsInvalidDomain()
+    [TestMethod]
+    public void Validate_SingleLabelDomain_ReturnsInvalidDomain()
     {
         // Arrange
         string email = "player@localhost";
@@ -150,7 +164,8 @@ internal sealed class EmailPolicyTests
         TestAssert.AreEqual(EmailValidationError.InvalidDomain, actual);
     }
 
-    internal void Validate_HyphenAtDomainStart_ReturnsInvalidDomain()
+    [TestMethod]
+    public void Validate_HyphenAtDomainStart_ReturnsInvalidDomain()
     {
         // Arrange
         string email = "player@-example.com";
@@ -162,7 +177,8 @@ internal sealed class EmailPolicyTests
         TestAssert.AreEqual(EmailValidationError.InvalidDomain, actual);
     }
 
-    internal void Validate_ConsecutiveDomainDots_ReturnsInvalidDomain()
+    [TestMethod]
+    public void Validate_ConsecutiveDomainDots_ReturnsInvalidDomain()
     {
         // Arrange
         string email = "player@example..com";
@@ -174,7 +190,8 @@ internal sealed class EmailPolicyTests
         TestAssert.AreEqual(EmailValidationError.InvalidDomain, actual);
     }
 
-    internal void Validate_TrailingDomainDot_ReturnsInvalidDomain()
+    [TestMethod]
+    public void Validate_TrailingDomainDot_ReturnsInvalidDomain()
     {
         // Arrange
         string email = "player@example.com.";
@@ -186,7 +203,8 @@ internal sealed class EmailPolicyTests
         TestAssert.AreEqual(EmailValidationError.InvalidDomain, actual);
     }
 
-    internal void Validate_DomainLabelAboveMaximum_ReturnsInvalidDomain()
+    [TestMethod]
+    public void Validate_DomainLabelAboveMaximum_ReturnsInvalidDomain()
     {
         // Arrange
         string email = "player@" + new string('a', 64) + ".com";

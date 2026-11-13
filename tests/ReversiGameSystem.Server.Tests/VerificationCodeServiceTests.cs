@@ -1,15 +1,18 @@
 using System;
 using System.Linq;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Verification;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class VerificationCodeServiceTests
+[TestClass]
+public sealed class VerificationCodeServiceTests
 {
     private static VerificationIdentity Identity =>
         VerificationIdentity.ForLogin(42, "player@example.com");
 
-    internal void Request_ValidIdentity_DeliversSixDigitsWithFiveMinuteExpiry()
+    [TestMethod]
+    public void Request_ValidIdentity_DeliversSixDigitsWithFiveMinuteExpiry()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -28,7 +31,8 @@ internal sealed class VerificationCodeServiceTests
             "The persisted digest must authenticate the delivered code and its identity.");
     }
 
-    internal void Request_DeliveryTimeout_DoesNotReplacePendingCode()
+    [TestMethod]
+    public void Request_DeliveryTimeout_DoesNotReplacePendingCode()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -47,7 +51,8 @@ internal sealed class VerificationCodeServiceTests
             "Failed delivery must preserve pending state.");
     }
 
-    internal void Consume_ExpiredRepositoryResult_PreservesRejectionAndServerTime()
+    [TestMethod]
+    public void Consume_ExpiredRepositoryResult_PreservesRejectionAndServerTime()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext
@@ -66,7 +71,8 @@ internal sealed class VerificationCodeServiceTests
             "Leading zeroes must survive verification.");
     }
 
-    internal void Protect_DifferentIdentity_BindsCodeToAccountAndPurpose()
+    [TestMethod]
+    public void Protect_DifferentIdentity_BindsCodeToAccountAndPurpose()
     {
         // Arrange
         VerificationCodeProtector protector = new VerificationCodeProtector(new byte[32]);

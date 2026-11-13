@@ -3,6 +3,7 @@ using System.IO;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Contracts;
 using ReversiGameSystem.Server.Contracts.Common;
 using ReversiGameSystem.Server.Contracts.Faults;
@@ -10,9 +11,11 @@ using ReversiGameSystem.Server.ServiceApi;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class ServiceErrorBehaviorTests
+[TestClass]
+public sealed class ServiceErrorBehaviorTests
 {
-    internal void UnexpectedFailure_ThroughWcf_ReturnsSanitizedFaultAndLogsOnce()
+    [TestMethod]
+    public void UnexpectedFailure_ThroughWcf_ReturnsSanitizedFaultAndLogsOnce()
     {
         RecordingErrorLogger logger = new RecordingErrorLogger();
 
@@ -32,7 +35,8 @@ internal sealed class ServiceErrorBehaviorTests
             "The remote fault must not expose the provider message.");
     }
 
-    internal void UnexpectedFailure_WithIncomingCorrelation_PreservesIdentifier()
+    [TestMethod]
+    public void UnexpectedFailure_WithIncomingCorrelation_PreservesIdentifier()
     {
         RecordingErrorLogger logger = new RecordingErrorLogger();
         string correlationId = Guid.NewGuid().ToString("D");
@@ -46,7 +50,8 @@ internal sealed class ServiceErrorBehaviorTests
             "The incoming correlation identifier must be preserved in diagnostics.");
     }
 
-    internal void UnexpectedFailure_AfterCorrelationWasCreated_ReusesIdentifier()
+    [TestMethod]
+    public void UnexpectedFailure_AfterCorrelationWasCreated_ReusesIdentifier()
     {
         RecordingErrorLogger logger = new RecordingErrorLogger();
         string correlationId = Guid.NewGuid().ToString("D");
@@ -61,7 +66,8 @@ internal sealed class ServiceErrorBehaviorTests
             "The previously created correlation identifier must be reused.");
     }
 
-    internal void UndeclaredFault_ThroughWcf_IsSanitizedAndLogged()
+    [TestMethod]
+    public void UndeclaredFault_ThroughWcf_IsSanitizedAndLogged()
     {
         RecordingErrorLogger logger = new RecordingErrorLogger();
 
@@ -75,7 +81,8 @@ internal sealed class ServiceErrorBehaviorTests
             "An undeclared fault must not bypass sanitization.");
     }
 
-    internal void LoggingFailure_ThroughWcf_StillReturnsSanitizedFault()
+    [TestMethod]
+    public void LoggingFailure_ThroughWcf_StillReturnsSanitizedFault()
     {
         RecordingErrorLogger logger = new RecordingErrorLogger
         {
@@ -100,7 +107,8 @@ internal sealed class ServiceErrorBehaviorTests
         }
     }
 
-    internal void BusinessFault_ThroughWcf_PreservesTypeWithoutTechnicalLog()
+    [TestMethod]
+    public void BusinessFault_ThroughWcf_PreservesTypeWithoutTechnicalLog()
     {
         RecordingErrorLogger logger = new RecordingErrorLogger();
 

@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Contracts.Matches;
 
 namespace ReversiGameSystem.Server.Tests;
@@ -7,12 +8,14 @@ namespace ReversiGameSystem.Server.Tests;
 /// <summary>
 /// Verifies match state and replay transport without duplicating server validation.
 /// </summary>
-internal sealed class MatchSerializationTests
+[TestClass]
+public sealed class MatchSerializationTests
 {
     private static readonly DateTime RecordedAtUtc =
         new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc);
 
-    internal void MatchStateSnapshot_ActiveTurn_PreservesBoardAndVersion()
+    [TestMethod]
+    public void MatchStateSnapshot_ActiveTurn_PreservesBoardAndVersion()
     {
         // Arrange
         MatchStateSnapshot state = CreateActiveState();
@@ -35,7 +38,8 @@ internal sealed class MatchSerializationTests
         TestAssert.AreEqual(3, result.WhitePieceCount);
     }
 
-    internal void MatchStateSnapshot_FinishedDraw_PreservesConclusionAndAbsentTurn()
+    [TestMethod]
+    public void MatchStateSnapshot_FinishedDraw_PreservesConclusionAndAbsentTurn()
     {
         // Arrange
         MatchStateSnapshot state = CreateActiveState();
@@ -64,7 +68,8 @@ internal sealed class MatchSerializationTests
         TestAssert.AreEqual(MoveOrigin.Timeout, TestAssert.IsNotNull(result.LastMove).Origin);
     }
 
-    internal void MatchInformation_ObserverAndGuest_PreservesOptionalIdentities()
+    [TestMethod]
+    public void MatchInformation_ObserverAndGuest_PreservesOptionalIdentities()
     {
         // Arrange
         MatchInformation information = new MatchInformation
@@ -89,7 +94,8 @@ internal sealed class MatchSerializationTests
         TestAssert.AreEqual("Guest-two", result.Participants[1].DisplayName);
     }
 
-    internal void MatchDetails_ReplayFrames_PreservesMoveAndFrameOrder()
+    [TestMethod]
+    public void MatchDetails_ReplayFrames_PreservesMoveAndFrameOrder()
     {
         // Arrange
         BoardCellState[] initialBoard = CreateBoard();
@@ -127,7 +133,8 @@ internal sealed class MatchSerializationTests
         TestAssert.AreEqual<MatchConclusion?>(null, result.Conclusion);
     }
 
-    internal void MatchSummary_ActiveAndFinishedHistory_PreservesOptionalConclusion()
+    [TestMethod]
+    public void MatchSummary_ActiveAndFinishedHistory_PreservesOptionalConclusion()
     {
         // Arrange
         MatchSummary[] history = new[]
@@ -149,7 +156,8 @@ internal sealed class MatchSerializationTests
         TestAssert.AreEqual(RecordedAtUtc, result[0].RecordedAtUtc);
     }
 
-    internal void MatchDetails_EmptyHistory_PreservesEmptyArrays()
+    [TestMethod]
+    public void MatchDetails_EmptyHistory_PreservesEmptyArrays()
     {
         // Arrange
         MatchDetails details = new MatchDetails

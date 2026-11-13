@@ -4,21 +4,25 @@ using System.IO;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Console;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Host;
 
 namespace ReversiGameSystem.Server.Tests;
 
 /// <summary>Verifies original exception delivery and private diagnostic rendering.</summary>
-internal static class DiagnosticFormatterTests
+[TestClass]
+public sealed class DiagnosticFormatterTests
 {
     internal static void Run()
     {
-        LogError_OriginalProviderFailure_RendersSafeDiagnostics();
-        LogInformation_StructuredScope_PreservesOperationalContext();
-        ConsoleProvider_OriginalFailure_WritesOnlySafeDiagnostics();
+        DiagnosticFormatterTests instance = new DiagnosticFormatterTests();
+        instance.LogError_OriginalProviderFailure_RendersSafeDiagnostics();
+        instance.LogInformation_StructuredScope_PreservesOperationalContext();
+        instance.ConsoleProvider_OriginalFailure_WritesOnlySafeDiagnostics();
     }
 
-    private static void LogError_OriginalProviderFailure_RendersSafeDiagnostics()
+    [TestMethod]
+    public void LogError_OriginalProviderFailure_RendersSafeDiagnostics()
     {
         // Arrange
         Exception failure = CaptureFailure();
@@ -47,7 +51,8 @@ internal static class DiagnosticFormatterTests
             "Provider messages and exception data must never reach console output.");
     }
 
-    private static void LogInformation_StructuredScope_PreservesOperationalContext()
+    [TestMethod]
+    public void LogInformation_StructuredScope_PreservesOperationalContext()
     {
         // Arrange
         FormatterLogger logger = new FormatterLogger();
@@ -84,7 +89,8 @@ internal static class DiagnosticFormatterTests
         }
     }
 
-    private static void ConsoleProvider_OriginalFailure_WritesOnlySafeDiagnostics()
+    [TestMethod]
+    public void ConsoleProvider_OriginalFailure_WritesOnlySafeDiagnostics()
     {
         // Arrange
         Exception failure = CaptureFailure();

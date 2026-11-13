@@ -1,13 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Leaderboards;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class LeaderboardApplicationServiceTests
+[TestClass]
+public sealed class LeaderboardApplicationServiceTests
 {
-    internal void Get_ValidRequest_RanksAndLimitsEntries()
+    [TestMethod]
+    public void Get_ValidRequest_RanksAndLimitsEntries()
     {
         // Arrange
         LeaderboardRepositoryStub repository = new LeaderboardRepositoryStub
@@ -38,7 +41,8 @@ internal sealed class LeaderboardApplicationServiceTests
         TestAssert.AreEqual(0.7d, result.Entries[2].WinRate);
     }
 
-    internal void Get_InvalidMaximum_RejectsBeforeRepositoryAccess()
+    [TestMethod]
+    public void Get_InvalidMaximum_RejectsBeforeRepositoryAccess()
     {
         // Arrange
         LeaderboardRepositoryStub repository = new LeaderboardRepositoryStub();
@@ -60,7 +64,8 @@ internal sealed class LeaderboardApplicationServiceTests
         TestAssert.AreEqual(false, repository.WasCalled);
     }
 
-    internal void Get_EmptyRepository_ReturnsSuccessfulEmptyList()
+    [TestMethod]
+    public void Get_EmptyRepository_ReturnsSuccessfulEmptyList()
     {
         // Arrange
         LeaderboardRepositoryStub repository = new LeaderboardRepositoryStub();
@@ -76,7 +81,8 @@ internal sealed class LeaderboardApplicationServiceTests
         TestAssert.AreEqual(true, repository.WasCalled);
     }
 
-    internal void Get_BoundaryMaximums_AcceptsOneAndOneHundred()
+    [TestMethod]
+    public void Get_BoundaryMaximums_AcceptsOneAndOneHundred()
     {
         // Arrange
         IReadOnlyList<LeaderboardPlayer> players = Enumerable.Range(1, 101)
@@ -111,7 +117,8 @@ internal sealed class LeaderboardApplicationServiceTests
         TestAssert.AreEqual(100, maximumResult.Entries.Count);
     }
 
-    internal void Get_RepositoryFailure_PropagatesException()
+    [TestMethod]
+    public void Get_RepositoryFailure_PropagatesException()
     {
         // Arrange
         LeaderboardApplicationService applicationService =

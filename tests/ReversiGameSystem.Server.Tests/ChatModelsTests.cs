@@ -1,11 +1,14 @@
 using System;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Chat;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class ChatModelsTests
+[TestClass]
+public sealed class ChatModelsTests
 {
-    internal void ChatChannelAccess_SuccessStatus_RejectsStatusConstructor()
+    [TestMethod]
+    public void ChatChannelAccess_SuccessStatus_RejectsStatusConstructor()
     {
         // Arrange
         ChatStatus status = ChatStatus.Success;
@@ -19,7 +22,8 @@ internal sealed class ChatModelsTests
         TestAssert.AreEqual(nameof(status), exception.ParamName);
     }
 
-    internal void ChatMessageSubmission_SuccessStatus_RejectsMissingMessage()
+    [TestMethod]
+    public void ChatMessageSubmission_SuccessStatus_RejectsMissingMessage()
     {
         // Arrange
         ChatStatus status = ChatStatus.Success;
@@ -33,7 +37,8 @@ internal sealed class ChatModelsTests
         TestAssert.AreEqual(nameof(status), exception.ParamName);
     }
 
-    internal void ChatMessageSubmission_PlayerMutedStatus_RejectsMissingMute()
+    [TestMethod]
+    public void ChatMessageSubmission_PlayerMutedStatus_RejectsMissingMute()
     {
         // Arrange
         ChatStatus status = ChatStatus.PlayerMuted;
@@ -47,7 +52,8 @@ internal sealed class ChatModelsTests
         TestAssert.AreEqual(nameof(status), exception.ParamName);
     }
 
-    internal void ChatHistory_SuccessStatus_RejectsMissingMessages()
+    [TestMethod]
+    public void ChatHistory_SuccessStatus_RejectsMissingMessages()
     {
         // Arrange
         ChatStatus status = ChatStatus.Success;

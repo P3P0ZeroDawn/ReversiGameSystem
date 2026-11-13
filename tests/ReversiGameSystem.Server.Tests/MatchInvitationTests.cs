@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MimeKit;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
@@ -16,7 +17,8 @@ namespace ReversiGameSystem.Server.Tests;
 /// <summary>
 /// Unit and integration test suite for private match invitations over WCF and application layers.
 /// </summary>
-internal sealed class MatchInvitationTests
+[TestClass]
+public sealed class MatchInvitationTests
 {
     private const string ExpectedMandatoryLegend = "«Puedes unirte con este código mientras el creador siga esperando»";
 
@@ -71,7 +73,8 @@ internal sealed class MatchInvitationTests
     /// Verifies that inviting a connected friend successfully prepares, delivers the email,
     /// and confirms the waiting lobby.
     /// </summary>
-    internal void Invite_ConnectedFriend_DeliversEmailAndReturnsWaitingSnapshot()
+    [TestMethod]
+    public void Invite_ConnectedFriend_DeliversEmailAndReturnsWaitingSnapshot()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -102,7 +105,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that inviting an offline (disconnected) friend succeeds if account and friendship are active.
     /// </summary>
-    internal void Invite_DisconnectedFriend_DeliversEmailAndReturnsWaitingSnapshot()
+    [TestMethod]
+    public void Invite_DisconnectedFriend_DeliversEmailAndReturnsWaitingSnapshot()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -129,7 +133,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that a guest session attempting to invite someone throws an Unauthorized rejection.
     /// </summary>
-    internal void Invite_GuestSession_ThrowsUnauthorizedRejection()
+    [TestMethod]
+    public void Invite_GuestSession_ThrowsUnauthorizedRejection()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -152,7 +157,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that inviting one's own account ID throws an Unauthorized rejection.
     /// </summary>
-    internal void Invite_SelfInvitation_ThrowsUnauthorizedRejection()
+    [TestMethod]
+    public void Invite_SelfInvitation_ThrowsUnauthorizedRejection()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -175,7 +181,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that specifying a friend account ID less than or equal to 0 throws an InvalidAccountId rejection.
     /// </summary>
-    internal void Invite_NegativeOrZeroFriendAccountId_ThrowsInvalidAccountIdRejection()
+    [TestMethod]
+    public void Invite_NegativeOrZeroFriendAccountId_ThrowsInvalidAccountIdRejection()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -196,7 +203,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that an inactive or nonexistent recipient account throws AccountUnavailable.
     /// </summary>
-    internal void Invite_AccountUnavailable_ThrowsAccountUnavailableRejection()
+    [TestMethod]
+    public void Invite_AccountUnavailable_ThrowsAccountUnavailableRejection()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -219,7 +227,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that inviting a user without an active, accepted friendship throws FriendshipNotFound.
     /// </summary>
-    internal void Invite_FriendshipNotFound_ThrowsFriendshipNotFoundRejection()
+    [TestMethod]
+    public void Invite_FriendshipNotFound_ThrowsFriendshipNotFoundRejection()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -243,7 +252,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that an inactive creator throws InactiveAccount rejection.
     /// </summary>
-    internal void Invite_InactiveCaller_ThrowsInactiveAccountRejection()
+    [TestMethod]
+    public void Invite_InactiveCaller_ThrowsInactiveAccountRejection()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -269,7 +279,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that specifying a turn duration outside 10..120 throws InvalidTurnDuration.
     /// </summary>
-    internal void Invite_InvalidTurnDuration_ThrowsInvalidTurnDurationRejection()
+    [TestMethod]
+    public void Invite_InvalidTurnDuration_ThrowsInvalidTurnDurationRejection()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -296,7 +307,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that setting OpponentKind != Human throws InvalidConfiguration.
     /// </summary>
-    internal void Invite_InvalidOpponentKind_ThrowsInvalidConfigurationRejection()
+    [TestMethod]
+    public void Invite_InvalidOpponentKind_ThrowsInvalidConfigurationRejection()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -318,7 +330,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that setting CountsTowardStatistics = true throws InvalidConfiguration.
     /// </summary>
-    internal void Invite_CountsTowardStatisticsTrue_ThrowsInvalidConfigurationRejection()
+    [TestMethod]
+    public void Invite_CountsTowardStatisticsTrue_ThrowsInvalidConfigurationRejection()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -340,7 +353,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that when the email delivery fails, the prepared match is cancelled and an exception thrown.
     /// </summary>
-    internal void Invite_DeliveryFailure_CancelsPreparedMatchAndThrowsException()
+    [TestMethod]
+    public void Invite_DeliveryFailure_CancelsPreparedMatchAndThrowsException()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -363,7 +377,8 @@ internal sealed class MatchInvitationTests
     /// Verifies that when both email delivery and cancellation compensation fail,
     /// the match remains unconfirmed, preventing any join.
     /// </summary>
-    internal void Invite_DeliveryFailureWhenCompensationFails_PreservesUnconfirmedMatch()
+    [TestMethod]
+    public void Invite_DeliveryFailureWhenCompensationFails_PreservesUnconfirmedMatch()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -387,7 +402,8 @@ internal sealed class MatchInvitationTests
     /// Verifies that if the creator leaves or cancels the session during email delivery,
     /// confirmation fails and MatchNotWaiting is thrown.
     /// </summary>
-    internal void Invite_CreatorLeavesBeforeConfirmation_CancelsMatchAndThrowsMatchNotWaiting()
+    [TestMethod]
+    public void Invite_CreatorLeavesBeforeConfirmation_CancelsMatchAndThrowsMatchNotWaiting()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -415,7 +431,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that GetAvailableMatches strictly excludes private matches.
     /// </summary>
-    internal void GetAvailableMatches_PrivateMatch_ExcludesPrivateMatchesFromLobby()
+    [TestMethod]
+    public void GetAvailableMatches_PrivateMatch_ExcludesPrivateMatchesFromLobby()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -451,7 +468,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that the invited account can join the private match with the match code.
     /// </summary>
-    internal void Join_PrivateMatchForInvitedAccount_SucceedsAndStartsMatch()
+    [TestMethod]
+    public void Join_PrivateMatchForInvitedAccount_SucceedsAndStartsMatch()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -480,7 +498,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that an uninvited account attempting to join a private match throws Unauthorized.
     /// </summary>
-    internal void Join_PrivateMatchForOtherAccount_ThrowsUnauthorizedRejection()
+    [TestMethod]
+    public void Join_PrivateMatchForOtherAccount_ThrowsUnauthorizedRejection()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -509,7 +528,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that a guest account attempting to join a private match returns Unauthorized status.
     /// </summary>
-    internal void Join_PrivateMatchForGuest_ThrowsUnauthorizedRejection()
+    [TestMethod]
+    public void Join_PrivateMatchForGuest_ThrowsUnauthorizedRejection()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -534,7 +554,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that joining an unconfirmed private match throws MatchCodeUnavailable.
     /// </summary>
-    internal void Join_UnconfirmedPrivateMatch_ThrowsMatchCodeUnavailableRejection()
+    [TestMethod]
+    public void Join_UnconfirmedPrivateMatch_ThrowsMatchCodeUnavailableRejection()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -560,7 +581,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that joining a cancelled private match throws MatchCodeUnavailable.
     /// </summary>
-    internal void Join_CancelledPrivateMatch_ThrowsMatchCodeUnavailableRejection()
+    [TestMethod]
+    public void Join_CancelledPrivateMatch_ThrowsMatchCodeUnavailableRejection()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -586,7 +608,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that concurrent joins by the invited account result in exactly one successful start.
     /// </summary>
-    internal void Join_ConcurrentSameInvitedAccount_RegistersOnlyOneSecondSeat()
+    [TestMethod]
+    public void Join_ConcurrentSameInvitedAccount_RegistersOnlyOneSecondSeat()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -620,7 +643,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that cancelling waiting for a private match cancels the match in storage and clears the lobby.
     /// </summary>
-    internal void CancelWaitingForSession_PrivateMatchWaiting_CancelsMatchAndRemovesLobby()
+    [TestMethod]
+    public void CancelWaitingForSession_PrivateMatchWaiting_CancelsMatchAndRemovesLobby()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -647,7 +671,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that a new session for the same account does not prolong or restore the previous waiting match.
     /// </summary>
-    internal void CancelWaitingForSession_DifferentSessionForSameAccount_DoesNotProlongPreviousWaitingMatch()
+    [TestMethod]
+    public void CancelWaitingForSession_DifferentSessionForSameAccount_DoesNotProlongPreviousWaitingMatch()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -676,7 +701,8 @@ internal sealed class MatchInvitationTests
     /// <summary>
     /// Verifies that MatchInvitationEmailSender formats the message containing the mandatory legend and code.
     /// </summary>
-    internal void EmailSender_CreateMessage_ContainsMandatoryLegendAndMatchCode()
+    [TestMethod]
+    public void EmailSender_CreateMessage_ContainsMandatoryLegendAndMatchCode()
     {
         // Arrange
         WithTestMailSettings(() =>

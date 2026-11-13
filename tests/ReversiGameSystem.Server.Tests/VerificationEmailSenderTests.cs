@@ -4,14 +4,17 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Verification;
 using ReversiGameSystem.Server.Persistence.Mail;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class VerificationEmailSenderTests
+[TestClass]
+public sealed class VerificationEmailSenderTests
 {
-    internal void Load_ProcessConfiguration_ValidatesPortAndRequiresEncryption()
+    [TestMethod]
+    public void Load_ProcessConfiguration_ValidatesPortAndRequiresEncryption()
     {
         // Arrange
         WithSettings(587, () =>
@@ -30,7 +33,8 @@ internal sealed class VerificationEmailSenderTests
         });
     }
 
-    internal void Send_LocalServerWithheldBanner_CancelsWithinDeliveryBudget()
+    [TestMethod]
+    public void Send_LocalServerWithheldBanner_CancelsWithinDeliveryBudget()
     {
         // Arrange
         TcpListener listener = new TcpListener(IPAddress.Loopback, 0);

@@ -1,14 +1,17 @@
 using System;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Verification;
 using ReversiGameSystem.Server.Persistence.Sessions;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class AccountAccessValidationTests
+[TestClass]
+public sealed class AccountAccessValidationTests
 {
-    internal void ValidateCredentials_ValidCredentials_NormalizesAndReturnsActiveAccount()
+    [TestMethod]
+    public void ValidateCredentials_ValidCredentials_NormalizesAndReturnsActiveAccount()
     {
         // Arrange
         AccountLoginRepositoryStub accountStore = new AccountLoginRepositoryStub
@@ -34,7 +37,8 @@ internal sealed class AccountAccessValidationTests
         TestAssert.AreEqual(SessionOperationStatus.Success, result.Status);
     }
 
-    internal void ValidateCredentials_MissingCredentials_RejectsBeforeLookup()
+    [TestMethod]
+    public void ValidateCredentials_MissingCredentials_RejectsBeforeLookup()
     {
         // Arrange
         AccountLoginRepositoryStub accountStore = new AccountLoginRepositoryStub();
@@ -50,7 +54,8 @@ internal sealed class AccountAccessValidationTests
         TestAssert.AreEqual<string?>(null, accountStore.Login);
     }
 
-    internal void ValidateCredentials_UnknownAccount_ReturnsInvalidCredentials()
+    [TestMethod]
+    public void ValidateCredentials_UnknownAccount_ReturnsInvalidCredentials()
     {
         // Arrange
         SessionApplicationService service = CreateApplicationService(
@@ -68,7 +73,8 @@ internal sealed class AccountAccessValidationTests
         TestAssert.AreEqual(SessionOperationStatus.InvalidCredentials, result.Status);
     }
 
-    internal void ValidateCredentials_WrongPassword_ReturnsInvalidCredentials()
+    [TestMethod]
+    public void ValidateCredentials_WrongPassword_ReturnsInvalidCredentials()
     {
         // Arrange
         LoginPasswordHasherStub passwordHasher = new LoginPasswordHasherStub
@@ -88,7 +94,8 @@ internal sealed class AccountAccessValidationTests
         TestAssert.AreEqual("WrongPassword1!", passwordHasher.Password);
     }
 
-    internal void ValidateCredentials_InactiveAccount_ReturnsInactiveAccount()
+    [TestMethod]
+    public void ValidateCredentials_InactiveAccount_ReturnsInactiveAccount()
     {
         // Arrange
         SessionApplicationService service = CreateApplicationService(
@@ -104,7 +111,8 @@ internal sealed class AccountAccessValidationTests
         TestAssert.AreEqual(SessionOperationStatus.InactiveAccount, result.Status);
     }
 
-    internal void ValidateCredentials_UnavailableStore_PropagatesTechnicalFailure()
+    [TestMethod]
+    public void ValidateCredentials_UnavailableStore_PropagatesTechnicalFailure()
     {
         // Arrange
         AccountLoginRepositoryStub accountStore = new AccountLoginRepositoryStub
@@ -123,7 +131,8 @@ internal sealed class AccountAccessValidationTests
         TestAssert.AreEqual("Account lookup is unavailable.", exception.Message);
     }
 
-    internal void SessionStore_CreateFindAndExpire_EnforcesLifetime()
+    [TestMethod]
+    public void SessionStore_CreateFindAndExpire_EnforcesLifetime()
     {
         // Arrange
         MutableUtcClock clock = new MutableUtcClock(

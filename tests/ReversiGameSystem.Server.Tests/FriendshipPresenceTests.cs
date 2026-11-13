@@ -3,6 +3,7 @@ using System.IO;
 using System.ServiceModel;
 using System.Threading;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Contracts.Common;
 using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.Contracts.Friendships;
@@ -10,9 +11,11 @@ using ReversiGameSystem.Server.ServiceApi;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class FriendshipPresenceTests
+[TestClass]
+public sealed class FriendshipPresenceTests
 {
-    internal void DuplexChannels_PublishPresenceAndOwnFriendSnapshot()
+    [TestMethod]
+    public void DuplexChannels_PublishPresenceAndOwnFriendSnapshot()
     {
         // Arrange
         using FriendshipPresenceTestContext context = new FriendshipPresenceTestContext();
@@ -33,7 +36,8 @@ internal sealed class FriendshipPresenceTests
         TestAssert.AreEqual(0, stranger.Count(2, FriendChange.Connected));
     }
 
-    internal void MultipleSessions_StayOnlineUntilLastRevocation()
+    [TestMethod]
+    public void MultipleSessions_StayOnlineUntilLastRevocation()
     {
         // Arrange
         using FriendshipPresenceTestContext context = new FriendshipPresenceTestContext();
@@ -60,7 +64,8 @@ internal sealed class FriendshipPresenceTests
         TestAssert.IsTrue(!observer.Channel.GetFriends("one")[0].IsOnline, "Last revocation must disconnect.");
     }
 
-    internal void ClosedAndReplacementChannels_PreservePresence()
+    [TestMethod]
+    public void ClosedAndReplacementChannels_PreservePresence()
     {
         // Arrange
         using FriendshipPresenceTestContext context = new FriendshipPresenceTestContext();
@@ -81,7 +86,8 @@ internal sealed class FriendshipPresenceTests
         Wait(() => observer.Count(2, FriendChange.Disconnected) == 1);
     }
 
-    internal void InvalidInactiveAndExpiredSessions_ReturnTypedFaults()
+    [TestMethod]
+    public void InvalidInactiveAndExpiredSessions_ReturnTypedFaults()
     {
         // Arrange
         using FriendshipPresenceTestContext context = new FriendshipPresenceTestContext();
@@ -108,7 +114,8 @@ internal sealed class FriendshipPresenceTests
         TestAssert.AreEqual(0, context.FriendshipReads);
     }
 
-    internal void UnsupportedOperations_ReturnDeclaredServiceFaultWithoutRepositoryAccess()
+    [TestMethod]
+    public void UnsupportedOperations_ReturnDeclaredServiceFaultWithoutRepositoryAccess()
     {
         // Arrange
         using FriendshipPresenceTestContext context = new FriendshipPresenceTestContext();
@@ -129,7 +136,8 @@ internal sealed class FriendshipPresenceTests
         TestAssert.IsTrue(!fault.ToString().Contains("Private provider diagnostic"), "Provider messages must stay private.");
     }
 
-    internal void ExpiredReceiver_ReceivesNoCallbacks()
+    [TestMethod]
+    public void ExpiredReceiver_ReceivesNoCallbacks()
     {
         // Arrange
         using FriendshipPresenceTestContext context = new FriendshipPresenceTestContext();
@@ -148,7 +156,8 @@ internal sealed class FriendshipPresenceTests
         TestAssert.AreEqual(0, revoked.Count(2, FriendChange.Connected));
     }
 
-    internal void ExpirySweep_PublishesDisconnection()
+    [TestMethod]
+    public void ExpirySweep_PublishesDisconnection()
     {
         // Arrange
         using FriendshipPresenceTestContext context = new FriendshipPresenceTestContext();
@@ -163,7 +172,8 @@ internal sealed class FriendshipPresenceTests
         Wait(() => observer.Count(2, FriendChange.Disconnected) == 1, 8000);
     }
 
-    internal void EndedFriendship_ReceivesNoPresenceCallbacks()
+    [TestMethod]
+    public void EndedFriendship_ReceivesNoPresenceCallbacks()
     {
         // Arrange
         using FriendshipPresenceTestContext context = new FriendshipPresenceTestContext();
@@ -180,7 +190,8 @@ internal sealed class FriendshipPresenceTests
         TestAssert.AreEqual(0, observer.Count(2, FriendChange.Connected));
     }
 
-    internal void RelationshipFailure_PreservesHealthyChannelAndAllowsPresenceRecovery()
+    [TestMethod]
+    public void RelationshipFailure_PreservesHealthyChannelAndAllowsPresenceRecovery()
     {
         // Arrange
         using FriendshipPresenceTestContext context = new FriendshipPresenceTestContext();
@@ -204,7 +215,8 @@ internal sealed class FriendshipPresenceTests
         Wait(() => observer.Count(2, FriendChange.Disconnected) == 1);
     }
 
-    internal void RepositoryFailure_LogsOriginalExceptionAndReturnsDeclaredFault()
+    [TestMethod]
+    public void RepositoryFailure_LogsOriginalExceptionAndReturnsDeclaredFault()
     {
         // Arrange
         FailureLogger logger = new FailureLogger();
@@ -214,13 +226,15 @@ internal sealed class FriendshipPresenceTests
 
         // Act
         TestAssert.Throws<FaultException<ServiceFault>>(() => client.Channel.GetFriends("one"));
+        Wait(() => logger.Failure != null);
 
         // Assert
         TestAssert.IsTrue(ReferenceEquals(context.RepositoryFailure, logger.Failure),
             "The logger must receive the original exception, including its diagnostic structure.");
     }
 
-    internal void LoggerFailure_ReportsBothFailuresWithoutExposingProviderMessages()
+    [TestMethod]
+    public void LoggerFailure_ReportsBothFailuresWithoutExposingProviderMessages()
     {
         // Arrange
         FailureLogger logger = new FailureLogger { ThrowOnLog = true };
@@ -235,6 +249,7 @@ internal sealed class FriendshipPresenceTests
         {
             Console.SetError(fallback);
             TestAssert.Throws<FaultException<ServiceFault>>(() => client.Channel.GetFriends("one"));
+            Wait(() => fallback.ToString().Contains("CorrelationId:"));
         }
         finally
         {

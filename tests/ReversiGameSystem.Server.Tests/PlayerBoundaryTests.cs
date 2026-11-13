@@ -1,6 +1,7 @@
 using System;
 using System.ServiceModel;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Leaderboards;
 using ReversiGameSystem.Server.Application.Players;
 using ReversiGameSystem.Server.Contracts.Accounts;
@@ -11,9 +12,11 @@ using ReversiGameSystem.Server.ServiceApi;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal static class PlayerBoundaryTests
+[TestClass]
+public sealed class PlayerBoundaryTests
 {
-    internal static void RegisterAccount_ThroughWcf_MapsCredentialsAndOutcome()
+    [TestMethod]
+    public void RegisterAccount_ThroughWcf_MapsCredentialsAndOutcome()
     {
         // Arrange
         RecordingRegistrationHandler handler = new RecordingRegistrationHandler();
@@ -42,7 +45,8 @@ internal static class PlayerBoundaryTests
         TestAssert.AreEqual(42L, TestAssert.IsNotNull(result.RegisteredAccount).AccountId);
     }
 
-    internal static void GetProfile_ThroughWcf_MapsIdentityAndStatistics()
+    [TestMethod]
+    public void GetProfile_ThroughWcf_MapsIdentityAndStatistics()
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         ReversiGameSystem.Server.Contracts.Players.PlayerProfile result =
@@ -55,7 +59,8 @@ internal static class PlayerBoundaryTests
         TestAssert.AreEqual(0.5d, result.Statistics.WinRate);
     }
 
-    internal static void GetProfile_MissingAndInvalidSessionThroughWcf_ReturnsTypedFaults()
+    [TestMethod]
+    public void GetProfile_MissingAndInvalidSessionThroughWcf_ReturnsTypedFaults()
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         AssertSessionFault(context, "", SessionFailure.MissingSessionToken);
@@ -63,7 +68,8 @@ internal static class PlayerBoundaryTests
         AssertSessionFault(context, "unknown", SessionFailure.InvalidSession);
     }
 
-    internal static void GetProfile_InactiveCallerRequestingAnotherAccount_RejectsThroughWcf()
+    [TestMethod]
+    public void GetProfile_InactiveCallerRequestingAnotherAccount_RejectsThroughWcf()
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         context.Profiles.Profiles.Clear();
@@ -75,7 +81,8 @@ internal static class PlayerBoundaryTests
         TestAssert.AreEqual(42L, context.Profiles.AccountIds[0]);
     }
 
-    internal static void GetProfile_InvalidTargetThroughWcf_ReturnsTypedFault()
+    [TestMethod]
+    public void GetProfile_InvalidTargetThroughWcf_ReturnsTypedFault()
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         FaultException<ProfileFault> fault = TestAssert.Throws<FaultException<ProfileFault>>(() =>
@@ -84,7 +91,8 @@ internal static class PlayerBoundaryTests
         TestAssert.AreEqual(ProfileFailure.InvalidAccountId, fault.Detail.Reason);
     }
 
-    internal static void GetProfile_MissingTargetThroughWcf_ReturnsTypedFault()
+    [TestMethod]
+    public void GetProfile_MissingTargetThroughWcf_ReturnsTypedFault()
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
 
@@ -95,7 +103,8 @@ internal static class PlayerBoundaryTests
         TestAssert.AreEqual(ProfileFailure.AccountNotFound, fault.Detail.Reason);
     }
 
-    internal static void GetProfile_RepositoryFailureThroughWcf_ReturnsServiceFault()
+    [TestMethod]
+    public void GetProfile_RepositoryFailureThroughWcf_ReturnsServiceFault()
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         context.Profiles.ThrowOnGet = true;
@@ -110,7 +119,8 @@ internal static class PlayerBoundaryTests
             "The profile fault must not expose the repository message.");
     }
 
-    internal static void GetImage_AbsentImageThroughWcf_ReturnsNull()
+    [TestMethod]
+    public void GetImage_AbsentImageThroughWcf_ReturnsNull()
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         ImageContent? result = Invoke<IPlayerProfileService, ImageContent?>(context.Service,
@@ -119,7 +129,8 @@ internal static class PlayerBoundaryTests
         TestAssert.AreEqual(false, context.Images.ReadCalled);
     }
 
-    internal static void GetImage_PresentImageThroughWcf_ReturnsContent()
+    [TestMethod]
+    public void GetImage_PresentImageThroughWcf_ReturnsContent()
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         context.Profiles.Profiles[42] = new PlayerProfile(
@@ -140,7 +151,8 @@ internal static class PlayerBoundaryTests
         TestAssert.AreEqual(true, context.Images.ReadCalled);
     }
 
-    internal static void GetImage_ReadFailureThroughWcf_ReturnsServiceFault()
+    [TestMethod]
+    public void GetImage_ReadFailureThroughWcf_ReturnsServiceFault()
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         context.Profiles.Profiles[42] = new PlayerProfile(
@@ -159,7 +171,8 @@ internal static class PlayerBoundaryTests
         TestAssert.AreEqual(false, fault.ToString().Contains("private-provider-message"));
     }
 
-    internal static void ChangeUsername_ThroughWcf_NormalizesAndUpdatesOnlyCaller()
+    [TestMethod]
+    public void ChangeUsername_ThroughWcf_NormalizesAndUpdatesOnlyCaller()
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         Invoke<IPlayerProfileService, bool>(context.Service, channel =>
@@ -171,7 +184,8 @@ internal static class PlayerBoundaryTests
         TestAssert.AreEqual("NewPlayer", context.Profiles.ChangedUsername);
     }
 
-    internal static void ChangeUsername_UnavailableThroughWcf_ReturnsTypedFault()
+    [TestMethod]
+    public void ChangeUsername_UnavailableThroughWcf_ReturnsTypedFault()
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         context.Profiles.ChangeUsernameStatus =
@@ -187,7 +201,8 @@ internal static class PlayerBoundaryTests
         TestAssert.AreEqual(ProfileFailure.UsernameUnavailable, fault.Detail.Reason);
     }
 
-    internal static void UpdateImage_InvalidThroughWcf_ReturnsTypedFault()
+    [TestMethod]
+    public void UpdateImage_InvalidThroughWcf_ReturnsTypedFault()
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         context.Images.RejectSave = true;
@@ -206,7 +221,8 @@ internal static class PlayerBoundaryTests
         TestAssert.AreEqual(ProfileFailure.InvalidImage, fault.Detail.Reason);
     }
 
-    internal static void UpdateImage_AssociationFailureThroughWcf_RemovesNewImage()
+    [TestMethod]
+    public void UpdateImage_AssociationFailureThroughWcf_RemovesNewImage()
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         context.Profiles.ThrowOnSetImage = true;
@@ -221,7 +237,8 @@ internal static class PlayerBoundaryTests
         TestAssert.AreEqual<long?>(42, context.Profiles.ImageAccountId);
     }
 
-    internal static void GetLeaderboard_ThroughWcf_MapsOrderedEntries()
+    [TestMethod]
+    public void GetLeaderboard_ThroughWcf_MapsOrderedEntries()
     {
         LeaderboardRepositoryStub repository = new LeaderboardRepositoryStub
         {
@@ -243,7 +260,8 @@ internal static class PlayerBoundaryTests
         TestAssert.AreEqual(true, repository.WasCalled);
     }
 
-    internal static void GetLeaderboard_InvalidLimitThroughWcf_ReturnsTypedFault()
+    [TestMethod]
+    public void GetLeaderboard_InvalidLimitThroughWcf_ReturnsTypedFault()
     {
         LeaderboardService service = new LeaderboardService(
             new LeaderboardApplicationService(new LeaderboardRepositoryStub()));
@@ -252,7 +270,8 @@ internal static class PlayerBoundaryTests
         TestAssert.AreEqual(LeaderboardFailure.InvalidMaximumEntries, fault.Detail.Reason);
     }
 
-    internal static void GetLeaderboard_UnavailableThroughWcf_ReturnsServiceFault()
+    [TestMethod]
+    public void GetLeaderboard_UnavailableThroughWcf_ReturnsServiceFault()
     {
         LeaderboardService service = new LeaderboardService(new LeaderboardApplicationService(
             new LeaderboardRepositoryStub { ThrowOnGet = true }));

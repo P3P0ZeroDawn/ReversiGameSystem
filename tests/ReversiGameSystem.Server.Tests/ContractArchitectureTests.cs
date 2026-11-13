@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.ServiceModel;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Contracts.Accounts;
 using ReversiGameSystem.Server.Contracts.Common;
 
@@ -12,13 +13,15 @@ namespace ReversiGameSystem.Server.Tests;
 /// <summary>
 /// Checks the WCF boundary against the approved catalog and migration exception.
 /// </summary>
-internal sealed class ContractArchitectureTests
+[TestClass]
+public sealed class ContractArchitectureTests
 {
     private const string ServicesNamespace = "urn:reversi:services:v1";
     private const string DataNamespace = "urn:reversi:contracts:v1";
     private const string DiagnosticsNamespace = "urn:reversi:diagnostics:v1";
 
-    internal void ServiceContracts_CatalogSignatures_PreserveWireBoundary()
+    [TestMethod]
+    public void ServiceContracts_CatalogSignatures_PreserveWireBoundary()
     {
         // Arrange
         Dictionary<string, string[]> expected = ContractCatalogExpectations.Operations;
@@ -39,7 +42,8 @@ internal sealed class ContractArchitectureTests
         }
     }
 
-    internal void DataContracts_CatalogMembers_PreserveRequiredShape()
+    [TestMethod]
+    public void DataContracts_CatalogMembers_PreserveRequiredShape()
     {
         // Arrange
         Dictionary<string, string[]> expected = ContractCatalogExpectations.Members;
@@ -55,7 +59,8 @@ internal sealed class ContractArchitectureTests
         }
     }
 
-    internal void Enums_CatalogValues_PreserveSerializedVocabulary()
+    [TestMethod]
+    public void Enums_CatalogValues_PreserveSerializedVocabulary()
     {
         // Arrange
         Dictionary<string, string[]> expected = ContractCatalogExpectations.EnumValues;
@@ -78,7 +83,8 @@ internal sealed class ContractArchitectureTests
         }
     }
 
-    internal void ServiceFault_RetainedRegistration_PreservesRequiredTransientMember()
+    [TestMethod]
+    public void ServiceFault_RetainedRegistration_PreservesRequiredTransientMember()
     {
         // Arrange
         Type type = typeof(ServiceFault);
@@ -95,7 +101,8 @@ internal sealed class ContractArchitectureTests
             GetAttribute<DataContractAttribute>(type).Namespace);
     }
 
-    internal void ContractAssembly_ReferencedAssemblies_ExcludePersistence()
+    [TestMethod]
+    public void ContractAssembly_ReferencedAssemblies_ExcludePersistence()
     {
         // Arrange
         AssemblyName[] references = typeof(AuthenticatedSession)

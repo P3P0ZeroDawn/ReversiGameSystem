@@ -3,6 +3,7 @@ using System.ServiceModel;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Verification;
 using ReversiGameSystem.Server.Contracts.Faults;
@@ -12,9 +13,11 @@ using ReversiGameSystem.Server.ServiceApi;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class SessionServiceTests
+[TestClass]
+public sealed class SessionServiceTests
 {
-    internal void RequestLoginCode_ThroughWcfChannel_ReturnsExpiryWithoutCreatingSession()
+    [TestMethod]
+    public void RequestLoginCode_ThroughWcfChannel_ReturnsExpiryWithoutCreatingSession()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -31,7 +34,8 @@ internal sealed class SessionServiceTests
         });
     }
 
-    internal void CompleteLogin_ThroughWcfChannel_CreatesMappedSessionAndRevokesIt()
+    [TestMethod]
+    public void CompleteLogin_ThroughWcfChannel_CreatesMappedSessionAndRevokesIt()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -53,7 +57,8 @@ internal sealed class SessionServiceTests
         });
     }
 
-    internal void RequestLoginCode_InvalidCredentialsThroughWcf_ReturnsTypedSessionFault()
+    [TestMethod]
+    public void RequestLoginCode_InvalidCredentialsThroughWcf_ReturnsTypedSessionFault()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -72,7 +77,8 @@ internal sealed class SessionServiceTests
         });
     }
 
-    internal void RequestLoginCode_DeliveryTimeoutThroughWcf_ReturnsSanitizedServiceFault()
+    [TestMethod]
+    public void RequestLoginCode_DeliveryTimeoutThroughWcf_ReturnsSanitizedServiceFault()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext { FailDelivery = true };
@@ -92,7 +98,8 @@ internal sealed class SessionServiceTests
         });
     }
 
-    internal void CompleteLogin_ExpiredCodeThroughWcf_ReturnsTypedExpiryFault()
+    [TestMethod]
+    public void CompleteLogin_ExpiredCodeThroughWcf_ReturnsTypedExpiryFault()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext
@@ -113,7 +120,8 @@ internal sealed class SessionServiceTests
         });
     }
 
-    internal void CompleteLogin_InactiveAccount_RejectsSessionCreation()
+    [TestMethod]
+    public void CompleteLogin_InactiveAccount_RejectsSessionCreation()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext { Inactive = true };
@@ -126,7 +134,8 @@ internal sealed class SessionServiceTests
         TestAssert.AreEqual(0, context.Sessions.CreatedCount);
     }
 
-    internal void CompleteLogin_RepositoryRejectsConsumedCode_DoesNotCreateSession()
+    [TestMethod]
+    public void CompleteLogin_RepositoryRejectsConsumedCode_DoesNotCreateSession()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext
@@ -142,7 +151,8 @@ internal sealed class SessionServiceTests
         TestAssert.AreEqual(0, context.Sessions.CreatedCount);
     }
 
-    internal void OpenGuestSession_ExpiredGuest_ReleasesReservedName()
+    [TestMethod]
+    public void OpenGuestSession_ExpiredGuest_ReleasesReservedName()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -168,7 +178,8 @@ internal sealed class SessionServiceTests
             "A new guest must receive a new token.");
     }
 
-    internal void OpenGuestSession_ThroughWcfChannel_ReservesAndReleasesName()
+    [TestMethod]
+    public void OpenGuestSession_ThroughWcfChannel_ReservesAndReleasesName()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -196,7 +207,8 @@ internal sealed class SessionServiceTests
         });
     }
 
-    internal void OpenGuestSession_ConcurrentSameName_CreatesOnlyOneGuest()
+    [TestMethod]
+    public void OpenGuestSession_ConcurrentSameName_CreatesOnlyOneGuest()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -224,7 +236,8 @@ internal sealed class SessionServiceTests
         TestAssert.AreEqual(15, rejected);
     }
 
-    internal void CloseSession_EmptyTokenThroughWcf_ReturnsTypedFault()
+    [TestMethod]
+    public void CloseSession_EmptyTokenThroughWcf_ReturnsTypedFault()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -242,7 +255,8 @@ internal sealed class SessionServiceTests
         });
     }
 
-    internal void CloseSession_FailingObserver_NotifiesRemainingObservers()
+    [TestMethod]
+    public void CloseSession_FailingObserver_NotifiesRemainingObservers()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();

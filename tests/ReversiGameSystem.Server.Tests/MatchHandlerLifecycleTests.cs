@@ -1,12 +1,15 @@
 using System;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class MatchApplicationServiceLifecycleTests
+[TestClass]
+public sealed class MatchApplicationServiceLifecycleTests
 {
-    internal void CancelExpiredWaitingSessions_ChannelCleanupFailure_RetriesWhileSessionIsValid()
+    [TestMethod]
+    public void CancelExpiredWaitingSessions_ChannelCleanupFailure_RetriesWhileSessionIsValid()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -27,7 +30,8 @@ internal sealed class MatchApplicationServiceLifecycleTests
         TestAssert.AreEqual(0, handler.CancelExpiredWaitingSessions().Length);
     }
 
-    internal void CancelWaitingForSession_TransientFailure_RetainsLobbyForRetry()
+    [TestMethod]
+    public void CancelWaitingForSession_TransientFailure_RetainsLobbyForRetry()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -48,7 +52,8 @@ internal sealed class MatchApplicationServiceLifecycleTests
         TestAssert.AreEqual(0, handler.CancelWaitingForSession(player.SessionToken).Length);
     }
 
-    internal void CancelWaitingForSession_JoinAlreadyStarted_PreservesStartedMatch()
+    [TestMethod]
+    public void CancelWaitingForSession_JoinAlreadyStarted_PreservesStartedMatch()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -66,7 +71,8 @@ internal sealed class MatchApplicationServiceLifecycleTests
         TestAssert.AreEqual(1, store.CancelAttempts);
     }
 
-    internal void Create_ExpiredSession_DoesNotCreateLobby()
+    [TestMethod]
+    public void Create_ExpiredSession_DoesNotCreateLobby()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -85,7 +91,8 @@ internal sealed class MatchApplicationServiceLifecycleTests
         TestAssert.AreEqual(MatchStatus.InvalidSession, result.Status);
     }
 
-    internal void Invite_DeliveryFailure_CancelsMatchAndThrowsServiceFault()
+    [TestMethod]
+    public void Invite_DeliveryFailure_CancelsMatchAndThrowsServiceFault()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
@@ -102,7 +109,8 @@ internal sealed class MatchApplicationServiceLifecycleTests
         TestAssert.AreEqual(1, store.CancelAttempts);
     }
 
-    internal void Invite_GuestSession_ThrowsUnauthorizedRejection()
+    [TestMethod]
+    public void Invite_GuestSession_ThrowsUnauthorizedRejection()
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
