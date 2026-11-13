@@ -8,28 +8,15 @@ namespace ReversiGameSystem.Server.Domain.Matches;
 /// </summary>
 public static class ReversiEngine
 {
-    /// <summary>Value representing an empty board cell.</summary>
     public const int Empty = 0;
-
-    /// <summary>Value representing a Black disc (Seat 1).</summary>
     public const int Black = 1;
-
-    /// <summary>Value representing a White disc (Seat 2).</summary>
     public const int White = 2;
-
-    /// <summary>Width and height of a standard Reversi board.</summary>
     public const int BoardSize = 8;
-
-    /// <summary>Total number of cells on a standard 8x8 Reversi board.</summary>
     public const int CellCount = 64;
 
     private static readonly int[] RowOffsets = new int[] { -1, -1, -1, 0, 0, 1, 1, 1 };
     private static readonly int[] ColumnOffsets = new int[] { -1, 0, 1, -1, 1, -1, 0, 1 };
 
-    /// <summary>
-    /// Creates a new 64-cell board array initialized with the standard 4 centered discs.
-    /// </summary>
-    /// <returns>A 64-element integer array in row-major order.</returns>
     public static int[] CreateInitialBoard()
     {
         int[] board = new int[CellCount];
@@ -41,18 +28,9 @@ public static class ReversiEngine
     }
 
     /// <summary>
-    /// Validates a move on the given board and, if legal, places the disc and flips all bracketed opponent discs in place.
+    /// Flips captured opponent discs on <paramref name="board"/> in place when the move is legal,
+    /// returning the flipped flat cell indices (0..63) or an empty array if invalid.
     /// </summary>
-    /// <param name="board">The 64-cell board state in row-major order.</param>
-    /// <param name="row">Target zero-based row index (0..7).</param>
-    /// <param name="column">Target zero-based column index (0..7).</param>
-    /// <param name="disc">The player's disc value (<see cref="Black"/> or <see cref="White"/>).</param>
-    /// <returns>
-    /// An array containing the flat cell indices (0..63) of all flipped opponent discs when the move is valid;
-    /// otherwise, an empty array when the move is out of bounds, targets an occupied cell, or captures no opponent discs.
-    /// </returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="board"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="board"/> does not contain 64 cells.</exception>
     public static int[] ApplyMove(int[] board, int row, int column, int disc)
     {
         ValidateBoard(board);
@@ -71,14 +49,6 @@ public static class ReversiEngine
         return capturedIndices.ToArray();
     }
 
-    /// <summary>
-    /// Determines whether the specified disc has at least one legal move on the given board.
-    /// </summary>
-    /// <param name="board">The 64-cell board state in row-major order.</param>
-    /// <param name="disc">The player's disc value (<see cref="Black"/> or <see cref="White"/>).</param>
-    /// <returns><see langword="true"/> if at least one legal placement exists; otherwise, <see langword="false"/>.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="board"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="board"/> does not contain 64 cells.</exception>
     public static bool HasValidMoves(int[] board, int disc)
     {
         ValidateBoard(board);
@@ -94,6 +64,12 @@ public static class ReversiEngine
         }
 
         return false;
+    }
+
+    public static bool IsLegalMove(int[] board, int row, int column, int disc)
+    {
+        ValidateBoard(board);
+        return FindCapturedIndices(board, row, column, disc).Count > 0;
     }
 
     private static void ValidateBoard(int[] board)

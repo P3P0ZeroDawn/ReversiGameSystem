@@ -8,7 +8,6 @@ namespace ReversiGameSystem.Server.Tests;
 /// </summary>
 internal sealed class ReversiDomainTests
 {
-    /// <summary>Verifies that the canonical initial board contains 2 black and 2 white discs centered.</summary>
     internal void CreateInitialBoard_StandardSetup_PlacesFourCenteredDiscs()
     {
         // Arrange & Act
@@ -22,7 +21,6 @@ internal sealed class ReversiDomainTests
         TestAssert.AreEqual(ReversiEngine.White, board[(4 * 8) + 4]);
     }
 
-    /// <summary>Verifies that malformed board arrays are rejected.</summary>
     internal void ApplyMove_InvalidBoardArray_ThrowsArgumentException()
     {
         // Arrange & Act & Assert
@@ -33,7 +31,6 @@ internal sealed class ReversiDomainTests
             });
     }
 
-    /// <summary>Verifies that out-of-bounds, occupied, or non-capturing moves leave the board untouched and return empty.</summary>
     internal void ApplyMove_IllegalPlacements_ReturnsEmptyAndLeavesBoardUnchanged()
     {
         // Arrange
@@ -54,7 +51,6 @@ internal sealed class ReversiDomainTests
         TestAssert.AreEqual(ReversiEngine.White, board[(3 * 8) + 3]);
     }
 
-    /// <summary>Verifies that a valid placement mutates the board in place and returns the flipped indices.</summary>
     internal void ApplyMove_ValidMove_PlacesDiscAndFlipsBracketedCells()
     {
         // Arrange
@@ -70,7 +66,6 @@ internal sealed class ReversiDomainTests
         TestAssert.AreEqual(ReversiEngine.Black, board[(3 * 8) + 3]);
     }
 
-    /// <summary>Verifies multi-directional flips in horizontal, vertical, and diagonal lines simultaneously.</summary>
     internal void ApplyMove_MultiDirectionalCaptures_FlipsAllLines()
     {
         // Arrange
@@ -93,7 +88,6 @@ internal sealed class ReversiDomainTests
         TestAssert.AreEqual(ReversiEngine.Black, board[(4 * 8) + 4]);
     }
 
-    /// <summary>Verifies legal move detection when moves exist and when no moves exist.</summary>
     internal void HasValidMoves_EvaluatesBoardAvailabilityAccurately()
     {
         // Arrange
@@ -110,5 +104,20 @@ internal sealed class ReversiDomainTests
         TestAssert.IsTrue(
             !ReversiEngine.HasValidMoves(emptyBoard, ReversiEngine.Black),
             "Expected no valid moves on an empty board.");
+    }
+
+    internal void IsLegalMove_BoardEvaluation_DetectsLegalityWithoutMutatingBoard()
+    {
+        // Arrange
+        int[] board = ReversiEngine.CreateInitialBoard();
+
+        // Act
+        bool legalOpening = ReversiEngine.IsLegalMove(board, 2, 3, ReversiEngine.Black);
+        bool illegalCorner = ReversiEngine.IsLegalMove(board, 0, 0, ReversiEngine.Black);
+
+        // Assert
+        TestAssert.IsTrue(legalOpening, "Expected (2, 3) to be a legal move for Black.");
+        TestAssert.IsTrue(!illegalCorner, "Expected (0, 0) to be illegal on initial board.");
+        TestAssert.AreEqual(ReversiEngine.Empty, board[(2 * 8) + 3]);
     }
 }

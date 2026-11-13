@@ -12,7 +12,15 @@ namespace ReversiGameSystem.Server.ServiceApi;
 /// <summary>Translates internal match domain representations into WCF contract snapshots.</summary>
 internal static class MatchContractMapper
 {
-    /// <summary>Maps internal participant domain entities into contract summaries.</summary>
+    private const string StateFinished = "Finished";
+    private const string StateCancelled = "Cancelled";
+    private const string StateInProgress = "InProgress";
+    private const string OriginTimeout = "Timeout";
+    private const string OriginSystem = "System";
+    private const string EndReasonInactivity = "INACTIVITY";
+    private const string EndReasonAbandonment = "ABANDONMENT";
+    private const int DefaultSeatNumber = 1;
+
     internal static MatchParticipantSummary[] Participants(Match match)
     {
         return match.Participants.Select(player => new MatchParticipantSummary
@@ -24,7 +32,6 @@ internal static class MatchContractMapper
         }).ToArray();
     }
 
-    /// <summary>Maps internal match state into a lobby snapshot.</summary>
     internal static LobbySnapshot Lobby(Match match)
     {
         return new LobbySnapshot
@@ -42,12 +49,10 @@ internal static class MatchContractMapper
         };
     }
 
-    /// <summary>Creates the dynamic state snapshot for an active or concluded match.</summary>
     internal static MatchStateSnapshot State(Match match)
     {
         MatchConclusion? conclusion = null;
-        if (string.Equals(match.State, "Finished", StringComparison.Ordinal)
-            || match.EndedAtUtc.HasValue)
+        if (IsConcluded(match))
         {
             conclusion = Conclusion(match);
         }
@@ -80,14 +85,12 @@ internal static class MatchContractMapper
         };
     }
 
-    /// <summary>Creates the initial snapshot for a started match.</summary>
     internal static MatchStateSnapshot InitialState(Match match)
     {
         RequireStarted(match);
         return State(match);
     }
 
-    /// <summary>Creates the confirmed match conclusion snapshot.</summary>
     internal static MatchConclusion Conclusion(Match match)
     {
         int[] board = match.Board ?? ReversiEngine.CreateInitialBoard();
@@ -104,15 +107,14 @@ internal static class MatchContractMapper
         };
     }
 
-    /// <summary>Translates an internal placement move into a contract move record.</summary>
     internal static MoveRecord Move(MatchMove move)
     {
         MoveOrigin origin = MoveOrigin.Manual;
-        if (string.Equals(move.Origin, "Timeout", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(move.Origin, OriginTimeout, StringComparison.OrdinalIgnoreCase))
         {
             origin = MoveOrigin.Timeout;
         }
-        else if (string.Equals(move.Origin, "System", StringComparison.OrdinalIgnoreCase))
+        else if (string.Equals(move.Origin, OriginSystem, StringComparison.OrdinalIgnoreCase))
         {
             origin = MoveOrigin.System;
         }
@@ -129,12 +131,10 @@ internal static class MatchContractMapper
         };
     }
 
-    /// <summary>Builds full match details including historical move records and board replay frames.</summary>
     internal static MatchDetails Details(Match match)
     {
         MatchConclusion? conclusion = null;
-        if (string.Equals(match.State, "Finished", StringComparison.Ordinal)
-            || match.EndedAtUtc.HasValue)
+        if (IsConcluded(match))
         {
             conclusion = Conclusion(match);
         }
@@ -156,16 +156,15 @@ internal static class MatchContractMapper
         };
     }
 
-    /// <summary>Builds a summary of a match from the perspective of an authorized participant account.</summary>
     internal static MatchSummary Summary(Match match, long accountId)
     {
-        MatchParticipant? participant = match.Participants.FirstOrDefault(p => p.AccountId == accountId);
-        int assignedSeat = participant != null ? participant.SeatNumber : 1;
+        MatchParticipant? participant = match.Participants
+            .FirstOrDefault(p => p.AccountId == accountId);
+        int assignedSeat = participant != null ? participant.SeatNumber : DefaultSeatNumber;
         int[] board = match.Board ?? ReversiEngine.CreateInitialBoard();
 
         MatchConclusion? conclusion = null;
-        if (string.Equals(match.State, "Finished", StringComparison.Ordinal)
-            || match.EndedAtUtc.HasValue)
+        if (IsConcluded(match))
         {
             conclusion = Conclusion(match);
         }
@@ -183,7 +182,6 @@ internal static class MatchContractMapper
         };
     }
 
-    /// <summary>Generates sequential board frames for replay beginning with the initial board.</summary>
     internal static BoardCellState[][] GenerateBoardFrames(MatchMove[] moves)
     {
         List<BoardCellState[]> frames = new List<BoardCellState[]>();
@@ -200,20 +198,19 @@ internal static class MatchContractMapper
         return frames.ToArray();
     }
 
-    /// <summary>Maps string match state representation to the contract enum.</summary>
     internal static MatchState MapMatchState(string? state)
     {
-        if (string.Equals(state, "Finished", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(state, StateFinished, StringComparison.OrdinalIgnoreCase))
         {
             return MatchState.Finished;
         }
 
-        if (string.Equals(state, "Cancelled", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(state, StateCancelled, StringComparison.OrdinalIgnoreCase))
         {
             return MatchState.Cancelled;
         }
 
-        if (string.Equals(state, "InProgress", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(state, StateInProgress, StringComparison.OrdinalIgnoreCase))
         {
             return MatchState.InProgress;
         }
@@ -221,15 +218,14 @@ internal static class MatchContractMapper
         return MatchState.Waiting;
     }
 
-    /// <summary>Maps string end reason representation to the contract enum.</summary>
     internal static MatchEndReason MapEndReason(string? endReason)
     {
-        if (string.Equals(endReason, "INACTIVITY", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(endReason, EndReasonInactivity, StringComparison.OrdinalIgnoreCase))
         {
             return MatchEndReason.Inactivity;
         }
 
-        if (string.Equals(endReason, "ABANDONMENT", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(endReason, EndReasonAbandonment, StringComparison.OrdinalIgnoreCase))
         {
             return MatchEndReason.Abandonment;
         }
@@ -240,7 +236,7 @@ internal static class MatchContractMapper
     /// <summary>Ensures that the match is in the active InProgress state.</summary>
     internal static void RequireStarted(Match match)
     {
-        if (string.Equals(match.State, "Cancelled", StringComparison.Ordinal))
+        if (string.Equals(match.State, StateCancelled, StringComparison.Ordinal))
         {
             throw new FaultException<MatchFault>(new MatchFault
             {
@@ -248,12 +244,18 @@ internal static class MatchContractMapper
             }, "The match request was rejected.");
         }
 
-        if (!string.Equals(match.State, "InProgress", StringComparison.Ordinal))
+        if (!string.Equals(match.State, StateInProgress, StringComparison.Ordinal))
         {
             throw new FaultException<MatchFault>(new MatchFault
             {
                 Reason = MatchFailure.MatchNotInProgress
             }, "The match request was rejected.");
         }
+    }
+
+    private static bool IsConcluded(Match match)
+    {
+        return string.Equals(match.State, StateFinished, StringComparison.Ordinal)
+            || match.EndedAtUtc.HasValue;
     }
 }

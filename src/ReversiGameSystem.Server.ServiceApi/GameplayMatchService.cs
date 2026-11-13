@@ -14,23 +14,32 @@ using ReversiGameSystem.Server.Contracts.Services;
 
 namespace ReversiGameSystem.Server.ServiceApi;
 
-/// <summary>Publishes authoritative active match gameplay and handles client placement requests.</summary>
+/// <summary>
+/// Publishes authoritative active match gameplay and handles client placement requests.
+/// </summary>
 [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single,
     ConcurrencyMode = ConcurrencyMode.Multiple, UseSynchronizationContext = false)]
 public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
 {
+    private const string InProgressMatchState = "InProgress";
     private static readonly TimeSpan TimeoutTickInterval = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan PersistenceTickInterval = TimeSpan.FromSeconds(1);
     private readonly GameplayMatchApplicationService _applicationService;
     private readonly ISessionRepository _sessions;
     private readonly ILogger<GameplayMatchService> _logger;
-    private readonly MatchCallbackSubscriptions<IGameplayMatchServiceCallback> _callbackSubscriptions;
+    private readonly MatchCallbackSubscriptions<IGameplayMatchServiceCallback>
+        _callbackSubscriptions;
     private readonly object _presenceSync = new object();
     private readonly Dictionary<long, Dictionary<int, HashSet<string>>> _participantPresence =
         new Dictionary<long, Dictionary<int, HashSet<string>>>();
     private readonly Timer _timeoutTimer;
+    private readonly Timer _persistenceTimer;
     private int _timeoutTickRunning;
+    private int _persistenceSyncRunning;
 
-    /// <summary>Initializes a new instance of the <see cref="GameplayMatchService"/> class.</summary>
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GameplayMatchService"/> class.
+    /// </summary>
     public GameplayMatchService(
         GameplayMatchApplicationService applicationService,
         ISessionRepository sessions,
@@ -46,6 +55,11 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             RemovePresence,
             _logger);
         _timeoutTimer = new Timer(OnTimeoutTick, null, TimeoutTickInterval, TimeoutTickInterval);
+        _persistenceTimer = new Timer(
+            OnPersistenceTick,
+            null,
+            PersistenceTickInterval,
+            PersistenceTickInterval);
     }
 
     /// <inheritdoc />
@@ -53,11 +67,12 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     {
         try
         {
-            MatchResult<Match> result = _applicationService.GetMatchInformation(sessionToken, matchId);
+            MatchResult<Match> result = _applicationService.GetMatchInformation(
+                sessionToken,
+                matchId);
             ThrowFailure(result.Status);
 
-            Match match = result.Value
-                ?? throw new InvalidOperationException("A successful match result must contain its value.");
+            Match match = RequireValue(result);
             MatchContractMapper.RequireStarted(match);
 
             AuthenticatedSession session = GetSession(sessionToken);
@@ -91,11 +106,12 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     {
         try
         {
-            MatchResult<Match> result = _applicationService.GetMatchInformation(sessionToken, matchId);
+            MatchResult<Match> result = _applicationService.GetMatchInformation(
+                sessionToken,
+                matchId);
             ThrowFailure(result.Status);
 
-            Match match = result.Value
-                ?? throw new InvalidOperationException("A successful match result must contain its value.");
+            Match match = RequireValue(result);
             AuthenticatedSession session = GetSession(sessionToken);
             MatchParticipant? participant = match.Participants.FirstOrDefault(
                 player => player.AccountId == session.AccountId);
@@ -131,8 +147,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             MatchResult<Match> result = _applicationService.GetMatchState(sessionToken, matchId);
             ThrowFailure(result.Status);
 
-            Match match = result.Value
-                ?? throw new InvalidOperationException("A successful match result must contain its value.");
+            Match match = RequireValue(result);
             return MatchContractMapper.State(match);
         }
         catch (FaultException)
@@ -157,11 +172,12 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
                 throw CreateMatchFault(MatchFailure.MissingPlacement);
             }
 
-            MatchResult<Match> result = _applicationService.PlacePiece(sessionToken, domainPlacement);
+            MatchResult<Match> result = _applicationService.PlacePiece(
+                sessionToken,
+                domainPlacement);
             ThrowFailure(result.Status);
 
-            Match match = result.Value
-                ?? throw new InvalidOperationException("A successful match result must contain its value.");
+            Match match = RequireValue(result);
             MatchStateSnapshot snapshot = MatchContractMapper.State(match);
             PublishMatchStateChanged(match.Id, snapshot);
             return snapshot;
@@ -185,8 +201,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             MatchResult<Match> result = _applicationService.ForfeitMatch(sessionToken, matchId);
             ThrowFailure(result.Status);
 
-            Match match = result.Value
-                ?? throw new InvalidOperationException("A successful match result must contain its value.");
+            Match match = RequireValue(result);
             MatchStateSnapshot snapshot = MatchContractMapper.State(match);
             PublishMatchStateChanged(match.Id, snapshot);
             return MatchContractMapper.Conclusion(match);
@@ -210,8 +225,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             MatchResult<Match> result = _applicationService.ObserveMatch(sessionToken, matchId);
             ThrowFailure(result.Status);
 
-            Match match = result.Value
-                ?? throw new InvalidOperationException("A successful match result must contain its value.");
+            Match match = RequireValue(result);
             _callbackSubscriptions.Register(sessionToken, matchId);
             return MatchContractMapper.State(match);
         }
@@ -235,9 +249,10 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             MatchResult<Match[]> result = _applicationService.GetMatchHistory(sessionToken);
             ThrowFailure(result.Status);
 
-            Match[] matches = result.Value
-                ?? throw new InvalidOperationException("A successful match result must contain its value.");
-            return matches.Select(match => MatchContractMapper.Summary(match, session.AccountId)).ToArray();
+            Match[] matches = RequireValue(result);
+            return matches
+                .Select(match => MatchContractMapper.Summary(match, session.AccountId))
+                .ToArray();
         }
         catch (FaultException)
         {
@@ -258,8 +273,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             MatchResult<Match> result = _applicationService.GetMatchDetails(sessionToken, matchId);
             ThrowFailure(result.Status);
 
-            Match match = result.Value
-                ?? throw new InvalidOperationException("A successful match result must contain its value.");
+            Match match = RequireValue(result);
             return MatchContractMapper.Details(match);
         }
         catch (FaultException)
@@ -278,11 +292,12 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     {
         try
         {
-            MatchResult<MatchMove[]> result = _applicationService.GetMoveHistory(sessionToken, matchId);
+            MatchResult<MatchMove[]> result = _applicationService.GetMoveHistory(
+                sessionToken,
+                matchId);
             ThrowFailure(result.Status);
 
-            MatchMove[] moves = result.Value
-                ?? throw new InvalidOperationException("A successful match result must contain its value.");
+            MatchMove[] moves = RequireValue(result);
             return moves.Select(MatchContractMapper.Move).ToArray();
         }
         catch (FaultException)
@@ -306,6 +321,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     public void Dispose()
     {
         _timeoutTimer.Dispose();
+        _persistenceTimer.Dispose();
         _callbackSubscriptions.Dispose();
     }
 
@@ -336,6 +352,29 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         }
     }
 
+    private void OnPersistenceTick(object? state)
+    {
+        if (Interlocked.Exchange(ref _persistenceSyncRunning, 1) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            _applicationService.SynchronizePendingMatches();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "An error occurred while synchronizing pending matches.");
+        }
+        finally
+        {
+            Volatile.Write(ref _persistenceSyncRunning, 0);
+        }
+    }
+
     private void PublishMatchStateChanged(long matchId, MatchStateSnapshot snapshot)
     {
         _callbackSubscriptions.Publish(matchId, (token, callback) =>
@@ -352,7 +391,18 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             return false;
         }
 
-        return string.Equals(result.Value.State, "InProgress", StringComparison.Ordinal);
+        return string.Equals(
+            result.Value.State,
+            InProgressMatchState,
+            StringComparison.Ordinal);
+    }
+
+    private static T RequireValue<T>(MatchResult<T> result)
+        where T : class
+    {
+        return result.Value
+            ?? throw new InvalidOperationException(
+                "A successful match result must contain its value.");
     }
 
     private AuthenticatedSession GetSession(string sessionToken)
@@ -377,6 +427,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         int seatNumber,
         MatchParticipant[] participants)
     {
+        KeyValuePair<int, bool>[]? snapshot = null;
         lock (_presenceSync)
         {
             if (!_participantPresence.TryGetValue(
@@ -390,16 +441,26 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
                         participants[index].SeatNumber,
                         new HashSet<string>(StringComparer.Ordinal));
                 }
+
                 _participantPresence.Add(matchId, matchPresence);
             }
 
-            matchPresence[seatNumber].Add(sessionToken);
-            PublishPresence(matchId, CreatePresenceSnapshot(matchPresence));
+            if (matchPresence.TryGetValue(seatNumber, out HashSet<string>? seatTokens))
+            {
+                seatTokens.Add(sessionToken);
+                snapshot = CreatePresenceSnapshot(matchPresence);
+            }
+        }
+
+        if (snapshot != null)
+        {
+            PublishPresence(matchId, snapshot);
         }
     }
 
     private void RemovePresence(string sessionToken, long matchId)
     {
+        KeyValuePair<int, bool>[]? snapshot = null;
         lock (_presenceSync)
         {
             if (_participantPresence.TryGetValue(
@@ -411,12 +472,17 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
                     tokens.Remove(sessionToken);
                 }
 
-                PublishPresence(matchId, CreatePresenceSnapshot(matchPresence));
+                snapshot = CreatePresenceSnapshot(matchPresence);
                 if (!matchPresence.Values.Any(tokens => tokens.Count > 0))
                 {
                     _participantPresence.Remove(matchId);
                 }
             }
+        }
+
+        if (snapshot != null)
+        {
+            PublishPresence(matchId, snapshot);
         }
     }
 
