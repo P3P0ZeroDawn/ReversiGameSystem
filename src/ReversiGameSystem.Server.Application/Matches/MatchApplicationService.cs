@@ -250,7 +250,7 @@ public sealed class MatchApplicationService
         AuthenticatedSession player = playerResult.Value
             ?? throw new InvalidOperationException(
                 "A successful match result must contain its value.");
-        return _matches.Get(player.AccountId, matchId);
+        return _matches.LoadParticipantMatch(player.AccountId, matchId);
     }
 
     /// <summary>Changes the turn duration of the caller's waiting match.</summary>

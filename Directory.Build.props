@@ -2,4 +2,7 @@
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' != 'ReversiGameSystem.Server.Contracts' And '$(MSBuildProjectName)' != 'ReversiGameSystem.Server.ServiceApi'">
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
 </Project>

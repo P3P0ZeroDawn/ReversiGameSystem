@@ -165,7 +165,7 @@ internal sealed class LobbyAuthorizationTests
             throw new NotSupportedException();
         }
 
-        public MatchResult<Match> Get(long accountId, long matchId)
+        public MatchResult<Match> LoadParticipantMatch(long accountId, long matchId)
         {
             throw new NotSupportedException();
         }

@@ -983,7 +983,7 @@ internal sealed class MatchInvitationTests
             }
         }
 
-        public MatchResult<Match> Get(long accountId, long matchId)
+        public MatchResult<Match> LoadParticipantMatch(long accountId, long matchId)
         {
             lock (_sync)
             {

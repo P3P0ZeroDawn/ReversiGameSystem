@@ -203,7 +203,7 @@ internal sealed class MatchBoundaryTests
         }
     }
 
-    private sealed class BoundaryStore : IMatchRepository
+    private sealed class BoundaryStore : IMatchRepository, IGameplayRepository
     {
         public MatchStatus EvaluateLobbyAccess(long accountId)
         {
@@ -231,7 +231,7 @@ internal sealed class MatchBoundaryTests
         {
             throw new NotSupportedException();
         }
-        public MatchResult<Match> Get(long accountId, long matchId)
+        public MatchResult<Match> LoadParticipantMatch(long accountId, long matchId)
         {
             if (FailStorage)
             {
@@ -371,12 +371,22 @@ internal sealed class MatchBoundaryTests
             throw new NotSupportedException();
         }
 
-        public MatchResult<Match[]> GetMatchHistory(long accountId)
+        public MatchResult<Match> LoadMatch(long matchId)
+        {
+            return LoadParticipantMatch(0, matchId);
+        }
+
+        public bool SynchronizeMatch(Match match)
+        {
+            return true;
+        }
+
+        public MatchResult<Match[]> LoadMatchHistory(long accountId)
         {
             throw new NotSupportedException();
         }
 
-        public MatchResult<Match> GetForObservation(long accountId, long matchId)
+        public MatchResult<Match> LoadMatchForObservation(long accountId, long matchId)
         {
             throw new NotSupportedException();
         }

@@ -1,21 +1,28 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Data.Entity;
+using System.Data.Entity.Core;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Security.Cryptography;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
+using ReversiGameSystem.Server.Domain.Matches;
 using ReversiGameSystem.Server.Persistence.Model;
+using ApplicationMatchParticipant = ReversiGameSystem.Server.Application.Matches.MatchParticipant;
 using PersistentMatchParticipant = ReversiGameSystem.Server.Persistence.Model.MatchParticipant;
 
 
 namespace ReversiGameSystem.Server.Persistence.Matches;
 
 /// <summary>Persists atomic human lobby transitions using transaction-owned database locks.</summary>
-public sealed class MatchRepository : IMatchRepository
+public sealed class MatchRepository : IMatchRepository, IGameplayRepository
 {
+    private const string FinishedMatchStatusCode = "FINISHED";
+    private const string InProgressMatchStatusCode = "IN_PROGRESS";
+
     /// <inheritdoc />
     public MatchStatus EvaluateLobbyAccess(long accountId)
     {
@@ -312,7 +319,17 @@ public sealed class MatchRepository : IMatchRepository
     }
 
     /// <summary>Loads confirmed match data for an authorized participant.</summary>
-    public MatchResult<Match> Get(long accountId, long matchId)
+    public MatchResult<Match> LoadParticipantMatch(long accountId, long matchId)
+    {
+        return LoadMatch(accountId, matchId);
+    }
+
+    public MatchResult<Match> LoadMatch(long matchId)
+    {
+        return LoadMatch(0, matchId);
+    }
+
+    private static MatchResult<Match> LoadMatch(long accountId, long matchId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         if (accountId > 0)
@@ -341,6 +358,209 @@ public sealed class MatchRepository : IMatchRepository
         }
 
         return new MatchResult<Match>(MatchDatabase.Map(match));
+    }
+
+    public bool SynchronizeMatch(Match match)
+    {
+        if (match == null)
+        {
+            throw new ArgumentNullException(nameof(match));
+        }
+
+        bool synchronized;
+        try
+        {
+            SynchronizeMatchState(match);
+            synchronized = true;
+        }
+        catch (DbException)
+        {
+            synchronized = false;
+        }
+        catch (EntityException)
+        {
+            synchronized = false;
+        }
+        catch (TimeoutException)
+        {
+            synchronized = false;
+        }
+
+        return synchronized;
+    }
+
+    private static void SynchronizeMatchState(Match match)
+    {
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
+        MatchDatabase.AcquireTransactionLock(context, MatchDatabase.MatchLockResource(match.Id));
+
+        GameMatch? persistentMatch = context.GameMatch
+            .Include(candidate => candidate.MatchParticipant1)
+            .Include(candidate => candidate.GameMove)
+            .SingleOrDefault(candidate => candidate.matchId == match.Id);
+        if (persistentMatch == null)
+        {
+            throw new InvalidOperationException("The active match does not exist in persistence.");
+        }
+
+        int persistentVersion = persistentMatch.GameMove.Count == 0
+            ? 0
+            : persistentMatch.GameMove.Max(move => move.moveNumber);
+        bool snapshotFinished = string.Equals(match.State, "Finished", StringComparison.Ordinal);
+        bool persistenceFinished = string.Equals(
+            persistentMatch.statusCode,
+            FinishedMatchStatusCode,
+            StringComparison.Ordinal);
+
+        if (match.MatchStateVersion < persistentVersion
+            || persistenceFinished && !snapshotFinished)
+        {
+            transaction.Commit();
+            return;
+        }
+
+        HashSet<int> persistentMoveNumbers = new HashSet<int>(
+            persistentMatch.GameMove.Select(move => move.moveNumber));
+        MatchMove[] missingMoves = match.Moves
+            .Where(move => !persistentMoveNumbers.Contains(move.MoveNumber))
+            .OrderBy(move => move.MoveNumber)
+            .ToArray();
+        for (int index = 0; index < missingMoves.Length; index++)
+        {
+            InsertMove(context, match.Id, missingMoves[index]);
+        }
+
+        if (snapshotFinished)
+        {
+            ApplyFinishedState(context, match);
+        }
+        else if (string.Equals(match.State, "InProgress", StringComparison.Ordinal))
+        {
+            ApplyActiveState(context, match);
+        }
+        else
+        {
+            throw new InvalidOperationException("Only active or finished matches can be synchronized.");
+        }
+
+        ApplyParticipantState(context, match);
+        transaction.Commit();
+    }
+
+    private static void ApplyActiveState(ReversiGameSystemEntities context, Match match)
+    {
+        context.Database.ExecuteSqlCommand(
+            "UPDATE dbo.GameMatch SET statusCode = @statusCode, "
+            + "currentTurnSeatNumber = @currentTurnSeatNumber, turnStartedAtUtc = @turnStartedAtUtc "
+            + "WHERE matchId = @matchId",
+            new SqlParameter("@statusCode", InProgressMatchStatusCode),
+            new SqlParameter("@currentTurnSeatNumber", SqlDbType.TinyInt)
+            {
+                Value = match.CurrentTurnSeatNumber.HasValue
+                    ? (object)(byte)match.CurrentTurnSeatNumber.Value
+                    : DBNull.Value
+            },
+            new SqlParameter("@turnStartedAtUtc", SqlDbType.DateTime2)
+            {
+                Value = match.TurnStartedAtUtc.HasValue
+                    ? (object)match.TurnStartedAtUtc.Value
+                    : DBNull.Value
+            },
+            new SqlParameter("@matchId", match.Id));
+    }
+
+    private static void ApplyFinishedState(ReversiGameSystemEntities context, Match match)
+    {
+        context.Database.ExecuteSqlCommand(
+            "UPDATE dbo.GameMatch SET statusCode = @statusCode, endReasonCode = @endReasonCode, "
+            + "endedAtUtc = @endedAtUtc, currentTurnSeatNumber = NULL, turnStartedAtUtc = NULL "
+            + "WHERE matchId = @matchId",
+            new SqlParameter("@statusCode", FinishedMatchStatusCode),
+            new SqlParameter("@endReasonCode", (object?)match.EndReason ?? DBNull.Value),
+            new SqlParameter("@endedAtUtc", SqlDbType.DateTime2)
+            {
+                Value = match.EndedAtUtc.HasValue
+                    ? (object)match.EndedAtUtc.Value
+                    : DBNull.Value
+            },
+            new SqlParameter("@matchId", match.Id));
+    }
+
+    private static void ApplyParticipantState(
+        ReversiGameSystemEntities context,
+        Match match)
+    {
+        int blackPieceCount = match.Board.Count(cell => cell == ReversiEngine.Black);
+        int whitePieceCount = match.Board.Count(cell => cell == ReversiEngine.White);
+
+        for (int index = 0; index < match.Participants.Length; index++)
+        {
+            ApplicationMatchParticipant participant = match.Participants[index];
+
+            if (string.Equals(match.State, "Finished", StringComparison.Ordinal))
+            {
+                int finalPieceCount = participant.SeatNumber == 1
+                    ? blackPieceCount
+                    : whitePieceCount;
+                string resultCode = DetermineParticipantResult(
+                    participant.SeatNumber,
+                    match.WinnerSeatNumber,
+                    match.AbandoningSeatNumber);
+                context.Database.ExecuteSqlCommand(
+                    "UPDATE dbo.MatchParticipant SET consecutiveTimeoutCount = @timeoutCount, "
+                    + "finalPieceCount = @finalPieceCount, resultCode = @resultCode "
+                    + "WHERE matchId = @matchId AND seatNumber = @seatNumber",
+                    CreateByteParameter("@timeoutCount", participant.ConsecutiveTimeoutCount),
+                    CreateByteParameter("@finalPieceCount", finalPieceCount),
+                    new SqlParameter("@resultCode", resultCode),
+                    new SqlParameter("@matchId", match.Id),
+                    CreateByteParameter("@seatNumber", participant.SeatNumber));
+            }
+            else
+            {
+                context.Database.ExecuteSqlCommand(
+                    "UPDATE dbo.MatchParticipant SET consecutiveTimeoutCount = @timeoutCount "
+                    + "WHERE matchId = @matchId AND seatNumber = @seatNumber",
+                    CreateByteParameter("@timeoutCount", participant.ConsecutiveTimeoutCount),
+                    new SqlParameter("@matchId", match.Id),
+                    CreateByteParameter("@seatNumber", participant.SeatNumber));
+            }
+        }
+    }
+
+    private static SqlParameter CreateByteParameter(string name, int value)
+    {
+        return new SqlParameter(name, SqlDbType.TinyInt)
+        {
+            Value = (byte)value
+        };
+    }
+
+    private static string DetermineParticipantResult(
+        int seatNumber,
+        int? winnerSeatNumber,
+        int? abandoningSeatNumber)
+    {
+        string resultCode;
+        if (abandoningSeatNumber == seatNumber)
+        {
+            resultCode = "ABANDONED";
+        }
+        else if (!winnerSeatNumber.HasValue)
+        {
+            resultCode = "DRAW";
+        }
+        else if (winnerSeatNumber == seatNumber)
+        {
+            resultCode = "WIN";
+        }
+        else
+        {
+            resultCode = "LOSS";
+        }
+
+        return resultCode;
     }
 
     /// <summary>Changes the duration only while the creator still owns a waiting lobby.</summary>
@@ -422,141 +642,6 @@ public sealed class MatchRepository : IMatchRepository
         return MatchStatus.Success;
     }
 
-    /// <inheritdoc />
-    public MatchStatus SaveMove(
-        long matchId,
-        MatchMove move,
-        int consecutiveTimeouts,
-        int nextTurnSeatNumber,
-        DateTime turnStartedAtUtc)
-    {
-        if (move == null)
-        {
-            throw new ArgumentNullException(nameof(move));
-        }
-
-        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
-        using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
-        MatchDatabase.AcquireTransactionLock(context, MatchDatabase.MatchLockResource(matchId));
-
-        GameMatch? match = context.GameMatch.SingleOrDefault(candidate => candidate.matchId == matchId);
-        if (match == null)
-        {
-            return MatchStatus.MatchNotFound;
-        }
-
-        if (match.statusCode != "IN_PROGRESS")
-        {
-            return MatchStatus.MatchNotInProgress;
-        }
-
-        InsertMove(context, matchId, move);
-        context.Database.ExecuteSqlCommand(
-            "UPDATE dbo.MatchParticipant SET consecutiveTimeoutCount = @consecutiveTimeouts "
-            + "WHERE matchId = @matchId AND seatNumber = @seatNumber",
-            new SqlParameter("@consecutiveTimeouts", SqlDbType.TinyInt)
-            {
-                Value = (byte)consecutiveTimeouts
-            },
-            new SqlParameter("@matchId", matchId),
-            new SqlParameter("@seatNumber", SqlDbType.TinyInt)
-            {
-                Value = (byte)move.SeatNumber
-            });
-        context.Database.ExecuteSqlCommand(
-            "UPDATE dbo.GameMatch SET currentTurnSeatNumber = @nextTurnSeatNumber, "
-            + "turnStartedAtUtc = @turnStartedAtUtc WHERE matchId = @matchId",
-            new SqlParameter("@nextTurnSeatNumber", SqlDbType.TinyInt)
-            {
-                Value = (byte)nextTurnSeatNumber
-            },
-            new SqlParameter("@turnStartedAtUtc", SqlDbType.DateTime2)
-            {
-                Value = turnStartedAtUtc
-            },
-            new SqlParameter("@matchId", matchId));
-        transaction.Commit();
-        return MatchStatus.Success;
-    }
-
-    /// <inheritdoc />
-    public MatchStatus SaveMoveAndConclude(
-        long matchId,
-        MatchMove move,
-        int consecutiveTimeouts,
-        string endReason,
-        int? winnerSeatNumber,
-        int blackPieceCount,
-        int whitePieceCount,
-        DateTime endedAtUtc)
-    {
-        if (move == null)
-        {
-            throw new ArgumentNullException(nameof(move));
-        }
-
-        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
-        using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
-        MatchDatabase.AcquireTransactionLock(context, MatchDatabase.MatchLockResource(matchId));
-
-        GameMatch? match = context.GameMatch.SingleOrDefault(candidate => candidate.matchId == matchId);
-        if (match == null)
-        {
-            return MatchStatus.MatchNotFound;
-        }
-
-        if (match.statusCode != "IN_PROGRESS")
-        {
-            return MatchStatus.MatchNotInProgress;
-        }
-
-        InsertMove(context, matchId, move);
-        context.Database.ExecuteSqlCommand(
-            "UPDATE dbo.MatchParticipant SET "
-            + "consecutiveTimeoutCount = CASE WHEN seatNumber = @actingSeatNumber "
-            + "THEN @consecutiveTimeouts ELSE consecutiveTimeoutCount END, "
-            + "finalPieceCount = CASE WHEN seatNumber = 1 THEN @blackPieceCount "
-            + "WHEN seatNumber = 2 THEN @whitePieceCount ELSE finalPieceCount END, "
-            + "resultCode = CASE WHEN @winnerSeatNumber IS NULL THEN 'DRAW' "
-            + "WHEN seatNumber = @winnerSeatNumber THEN 'WIN' ELSE 'LOSS' END "
-            + "WHERE matchId = @matchId",
-            new SqlParameter("@actingSeatNumber", SqlDbType.TinyInt)
-            {
-                Value = (byte)move.SeatNumber
-            },
-            new SqlParameter("@consecutiveTimeouts", SqlDbType.TinyInt)
-            {
-                Value = (byte)consecutiveTimeouts
-            },
-            new SqlParameter("@blackPieceCount", SqlDbType.TinyInt)
-            {
-                Value = (byte)blackPieceCount
-            },
-            new SqlParameter("@whitePieceCount", SqlDbType.TinyInt)
-            {
-                Value = (byte)whitePieceCount
-            },
-            new SqlParameter("@winnerSeatNumber", SqlDbType.TinyInt)
-            {
-                Value = winnerSeatNumber.HasValue
-                    ? (object)(byte)winnerSeatNumber.Value
-                    : DBNull.Value
-            },
-            new SqlParameter("@matchId", matchId));
-        context.Database.ExecuteSqlCommand(
-            "UPDATE dbo.GameMatch SET statusCode = 'FINISHED', endReasonCode = @endReason, "
-            + "endedAtUtc = @endedAtUtc, currentTurnSeatNumber = NULL, turnStartedAtUtc = NULL "
-            + "WHERE matchId = @matchId",
-            new SqlParameter("@endReason", endReason),
-            new SqlParameter("@endedAtUtc", SqlDbType.DateTime2)
-            {
-                Value = endedAtUtc
-            },
-            new SqlParameter("@matchId", matchId));
-        transaction.Commit();
-        return MatchStatus.Success;
-    }
-
     private static void InsertMove(
         ReversiGameSystemEntities context,
         long matchId,
@@ -589,78 +674,7 @@ public sealed class MatchRepository : IMatchRepository
     }
 
     /// <inheritdoc />
-    public MatchStatus ConcludeMatch(
-        long matchId,
-        string endReason,
-        int? winnerSeatNumber,
-        int? abandoningSeatNumber,
-        int blackPieceCount,
-        int whitePieceCount,
-        DateTime endedAtUtc)
-    {
-        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
-        using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
-        MatchDatabase.AcquireTransactionLock(context, MatchDatabase.MatchLockResource(matchId));
-
-        GameMatch? match = context.GameMatch.SingleOrDefault(candidate => candidate.matchId == matchId);
-        if (match == null)
-        {
-            return MatchStatus.MatchNotFound;
-        }
-
-        if (match.statusCode == "FINISHED")
-        {
-            return MatchStatus.Success;
-        }
-
-        if (match.statusCode != "IN_PROGRESS")
-        {
-            return MatchStatus.MatchNotInProgress;
-        }
-
-        match.statusCode = "FINISHED";
-        match.endReasonCode = endReason;
-        match.endedAtUtc = endedAtUtc;
-        match.currentTurnSeatNumber = null;
-        match.turnStartedAtUtc = null;
-        context.SaveChanges();
-
-        foreach (PersistentMatchParticipant current in match.MatchParticipant1)
-        {
-            if (current.seatNumber == 1)
-            {
-                current.finalPieceCount = (byte)blackPieceCount;
-            }
-            else if (current.seatNumber == 2)
-            {
-                current.finalPieceCount = (byte)whitePieceCount;
-            }
-
-            if (abandoningSeatNumber.HasValue && current.seatNumber == (byte)abandoningSeatNumber.Value)
-            {
-                current.resultCode = "ABANDONED";
-            }
-            else if (!winnerSeatNumber.HasValue)
-            {
-                current.resultCode = "DRAW";
-            }
-            else if (winnerSeatNumber.HasValue && current.seatNumber == (byte)winnerSeatNumber.Value)
-            {
-                current.resultCode = "WIN";
-            }
-            else
-            {
-                current.resultCode = "LOSS";
-            }
-        }
-
-        context.SaveChanges();
-        transaction.Commit();
-        return MatchStatus.Success;
-    }
-
-    /// <inheritdoc />
-    public MatchResult<Match[]> GetMatchHistory(long accountId)
+    public MatchResult<Match[]> LoadMatchHistory(long accountId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         if (!context.Account.Any(account => account.accountId == accountId && account.statusCode == "ACTIVE"))
@@ -687,7 +701,7 @@ public sealed class MatchRepository : IMatchRepository
     }
 
     /// <inheritdoc />
-    public MatchResult<Match> GetForObservation(long accountId, long matchId)
+    public MatchResult<Match> LoadMatchForObservation(long accountId, long matchId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         if (accountId > 0 && !context.Account.Any(account => account.accountId == accountId && account.statusCode == "ACTIVE"))

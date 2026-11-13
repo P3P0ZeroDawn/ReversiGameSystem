@@ -28,6 +28,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     private readonly Dictionary<long, Dictionary<int, HashSet<string>>> _participantPresence =
         new Dictionary<long, Dictionary<int, HashSet<string>>>();
     private readonly Timer _timeoutTimer;
+    private int _timeoutTickRunning;
 
     /// <summary>Initializes a new instance of the <see cref="GameplayMatchService"/> class.</summary>
     public GameplayMatchService(
@@ -310,6 +311,11 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
 
     private void OnTimeoutTick(object? state)
     {
+        if (Interlocked.Exchange(ref _timeoutTickRunning, 1) != 0)
+        {
+            return;
+        }
+
         try
         {
             Match[] transitionedMatches = _applicationService.ProcessTurnTimeouts();
@@ -323,6 +329,10 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         catch (Exception exception)
         {
             _logger.LogError(exception, "An error occurred while processing turn timeouts.");
+        }
+        finally
+        {
+            Volatile.Write(ref _timeoutTickRunning, 0);
         }
     }
 

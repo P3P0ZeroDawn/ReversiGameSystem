@@ -128,7 +128,7 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(MatchStatus.InvalidPosition, result.Status);
     }
 
-    internal void PlacePiece_ValidMove_FlipsPiecesAdvancesTurnAndSavesMove()
+    internal void PlacePiece_ValidMove_FlipsPiecesAdvancesTurnAndSynchronizesMatch()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -140,6 +140,7 @@ internal sealed class GameplayApplicationServiceTests
         MatchResult<Match> result = context.ApplicationService.PlacePiece(
             context.PlayerOne.SessionToken,
             placement);
+        _ = context.ApplicationService.ProcessTurnTimeouts();
 
         // Assert
         TestAssert.AreEqual(MatchStatus.Success, result.Status);
@@ -150,7 +151,34 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(ReversiEngine.Black, updated.Board[3 * 8 + 3]);
         TestAssert.AreEqual(1, updated.Moves.Count);
         TestAssert.AreEqual("Player", updated.LastMove?.Origin ?? string.Empty);
-        TestAssert.AreEqual(1, context.Repository.SaveMoveCalls);
+        TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
+    }
+
+    internal void PlacePiece_PersistenceUnavailable_PreservesAndRetriesConfirmedState()
+    {
+        GameplayTestContext context = new GameplayTestContext();
+        Match match = context.CreateMatch(40);
+        context.ApplicationService.TrackStartedMatch(match);
+        context.Repository.SynchronizationAvailable = false;
+
+        MatchResult<Match> result = context.ApplicationService.PlacePiece(
+            context.PlayerOne.SessionToken,
+            new MatchPlacement(match.Id, 0, 2, 3));
+
+        TestAssert.AreEqual(MatchStatus.Success, result.Status);
+        TestAssert.AreEqual(1L, match.MatchStateVersion);
+        TestAssert.AreEqual(0, context.Repository.SynchronizeCalls);
+
+        _ = context.ApplicationService.ProcessTurnTimeouts();
+        TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
+
+        context.Repository.SynchronizationAvailable = true;
+        context.Clock.Advance(TimeSpan.FromSeconds(5));
+        Match[] timeoutTransitions = context.ApplicationService.ProcessTurnTimeouts();
+
+        TestAssert.AreEqual(0, timeoutTransitions.Length);
+        TestAssert.AreEqual(2, context.Repository.SynchronizeCalls);
+        TestAssert.AreEqual(1L, context.Repository.LastSynchronizedVersion);
     }
 
     internal void PlacePiece_ResetsConsecutiveTimeoutCount()
@@ -199,6 +227,7 @@ internal sealed class GameplayApplicationServiceTests
         MatchResult<Match> result = context.ApplicationService.ForfeitMatch(
             context.PlayerOne.SessionToken,
             match.Id);
+        _ = context.ApplicationService.ProcessTurnTimeouts();
 
         // Assert
         TestAssert.AreEqual(MatchStatus.Success, result.Status);
@@ -208,7 +237,7 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual<int?>(1, concluded.AbandoningSeatNumber);
         TestAssert.AreEqual<int?>(2, concluded.WinnerSeatNumber);
         TestAssert.AreEqual<int?>(null, concluded.CurrentTurnSeatNumber);
-        TestAssert.AreEqual(1, context.Repository.ConcludeCalls);
+        TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
     }
 
     internal void ForfeitMatch_AlreadyFinished_IsIdempotent()
@@ -223,11 +252,12 @@ internal sealed class GameplayApplicationServiceTests
         MatchResult<Match> secondForfeit = context.ApplicationService.ForfeitMatch(
             context.PlayerOne.SessionToken,
             match.Id);
+        _ = context.ApplicationService.ProcessTurnTimeouts();
 
         // Assert
         TestAssert.AreEqual(MatchStatus.Success, secondForfeit.Status);
         TestAssert.AreEqual("Finished", secondForfeit.Value?.State);
-        TestAssert.AreEqual(1, context.Repository.ConcludeCalls);
+        TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
     }
 
     internal void ProcessTurnTimeouts_TurnNotExpired_DoesNothing()
@@ -256,6 +286,7 @@ internal sealed class GameplayApplicationServiceTests
 
         // Act
         Match[] updated = context.ApplicationService.ProcessTurnTimeouts();
+        _ = context.ApplicationService.ProcessTurnTimeouts();
 
         // Assert
         TestAssert.AreEqual(1, updated.Length);
@@ -263,7 +294,7 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(1L, match.MatchStateVersion);
         TestAssert.AreEqual<int?>(2, match.CurrentTurnSeatNumber);
         TestAssert.AreEqual("Timeout", match.LastMove?.Origin ?? string.Empty);
-        TestAssert.AreEqual(1, context.Repository.SaveMoveCalls);
+        TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
     }
 
     internal void ProcessTurnTimeouts_ThreeConsecutiveTimeouts_ConcludesMatchWithInactivity()
@@ -277,6 +308,7 @@ internal sealed class GameplayApplicationServiceTests
 
         // Act
         Match[] updated = context.ApplicationService.ProcessTurnTimeouts();
+        _ = context.ApplicationService.ProcessTurnTimeouts();
 
         // Assert
         TestAssert.AreEqual(1, updated.Length);
@@ -286,7 +318,7 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual<int?>(2, match.WinnerSeatNumber);
         TestAssert.AreEqual<int?>(1, match.AbandoningSeatNumber);
         TestAssert.AreEqual<int?>(null, match.CurrentTurnSeatNumber);
-        TestAssert.AreEqual(1, context.Repository.ConcludeCalls);
+        TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
     }
 
     internal void ObserveMatch_InProgress_ReturnsActiveMatch()
@@ -415,20 +447,20 @@ internal sealed class MutableTestClock : IUtcClock
     }
 }
 
-internal sealed class MockGameplayMatchRepository : IMatchRepository
+internal sealed class MockGameplayMatchRepository : IGameplayRepository
 {
     private readonly Dictionary<long, Match> _matches = new Dictionary<long, Match>();
 
-    internal int SaveMoveCalls { get; private set; }
-    internal int SaveMoveAndConcludeCalls { get; private set; }
-    internal int ConcludeCalls { get; private set; }
+    internal int SynchronizeCalls { get; private set; }
+    internal bool SynchronizationAvailable { get; set; } = true;
+    internal long LastSynchronizedVersion { get; private set; }
 
     internal void StoreMatch(Match match)
     {
         _matches[match.Id] = match;
     }
 
-    public MatchResult<Match> Get(long accountId, long matchId)
+    public MatchResult<Match> LoadMatch(long matchId)
     {
         if (_matches.TryGetValue(matchId, out Match? match))
         {
@@ -438,100 +470,20 @@ internal sealed class MockGameplayMatchRepository : IMatchRepository
         return new MatchResult<Match>(MatchStatus.MatchNotFound);
     }
 
-    public MatchStatus SaveMove(
-        long matchId,
-        MatchMove move,
-        int nextConsecutiveTimeouts,
-        int nextTurnSeatNumber,
-        DateTime turnStartedAtUtc)
+    public bool SynchronizeMatch(Match match)
     {
-        SaveMoveCalls++;
-        return MatchStatus.Success;
+        SynchronizeCalls++;
+        LastSynchronizedVersion = match.MatchStateVersion;
+        return SynchronizationAvailable;
     }
 
-    public MatchStatus SaveMoveAndConclude(
-        long matchId,
-        MatchMove move,
-        int nextConsecutiveTimeouts,
-        string endReason,
-        int? winnerSeatNumber,
-        int finalBlackCount,
-        int finalWhiteCount,
-        DateTime endedAtUtc)
-    {
-        SaveMoveAndConcludeCalls++;
-        return MatchStatus.Success;
-    }
-
-    public MatchStatus ConcludeMatch(
-        long matchId,
-        string endReason,
-        int? winnerSeatNumber,
-        int? forfeitingSeatNumber,
-        int finalBlackCount,
-        int finalWhiteCount,
-        DateTime endedAtUtc)
-    {
-        ConcludeCalls++;
-        return MatchStatus.Success;
-    }
-
-    public MatchResult<Match[]> GetMatchHistory(long accountId)
+    public MatchResult<Match[]> LoadMatchHistory(long accountId)
     {
         return new MatchResult<Match[]>(_matches.Values.ToArray());
     }
 
-    public MatchResult<Match> GetForObservation(long accountId, long matchId)
+    public MatchResult<Match> LoadMatchForObservation(long accountId, long matchId)
     {
-        return Get(accountId, matchId);
-    }
-
-    public MatchStatus ValidateGuestJoin(string code)
-    {
-        return MatchStatus.Success;
-    }
-
-    public MatchResult<Match> MarkInvitationDelivered(long accountId, long matchId, DateTime now)
-    {
-        return Get(accountId, matchId);
-    }
-
-    public MatchStatus EvaluateLobbyAccess(long accountId)
-    {
-        return MatchStatus.Success;
-    }
-
-    public MatchResult<Match> Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
-    {
-        throw new NotSupportedException();
-    }
-
-    public MatchResult<Match[]> Available(long accountId)
-    {
-        throw new NotSupportedException();
-    }
-
-    public MatchResult<Match> Join(AuthenticatedSession player, string code, DateTime now)
-    {
-        throw new NotSupportedException();
-    }
-
-    public MatchResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
-    {
-        throw new NotSupportedException();
-    }
-
-    public MatchStatus Cancel(long accountId, long matchId)
-    {
-        throw new NotSupportedException();
-    }
-
-    public MatchResult<MatchInvitationPreparation> PreparePrivateInvitation(
-        AuthenticatedSession creator,
-        long friendAccountId,
-        MatchSettings settings,
-        DateTime now)
-    {
-        throw new NotSupportedException();
+        return LoadMatch(matchId);
     }
 }

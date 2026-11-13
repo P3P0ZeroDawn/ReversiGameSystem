@@ -2576,47 +2576,41 @@ The documentation omits required tags and names a parameter that does not exist.
 
 ### 7.4 Public API Documentation
 
-Document all `public` production types and members with XML comments describing their contract (`<summary>`, `<param>`, `<returns>`, `<exception>`); concrete classes implementing an already documented interface may use `/// <inheritdoc />` when no implementation-specific contract details differ. Public MSTest classes and methods are exempt (Microsoft, 2025i, 2026k).
+XML documentation produces information for API consumers, and Microsoft recommends it for publicly visible APIs. For this project, detailed XML documentation is required only for types and members that form an externally consumed service or library boundary. Public implementation types used only between solution assemblies should remain undocumented when their identifiers and signatures already explain their behavior. Add documentation when a constraint, side effect, or failure cannot be understood from the declaration. Concrete boundary implementations may use `/// <inheritdoc />` when their documented interface already describes the complete contract. Public test types and methods are exempt (Microsoft, 2025i, 2026k).
 
 #### Correct
 
 ```csharp
-/// <summary>
-/// Manages the health points of an active combatant.
-/// </summary>
-public sealed class CombatantHealth
+public sealed class MatchApplicationService
 {
-    /// <summary>
-    /// Subtracts the specified damage from current health.
-    /// </summary>
-    /// <param name="damage">The non-negative damage amount.</param>
-    /// <exception cref="ArgumentOutOfRangeException">
-    /// Thrown when <paramref name="damage"/> is negative.
-    /// </exception>
-    public void ApplyDamage(int damage)
+    public MatchStatus PlacePiece(MatchPlacement placement)
     {
-        if (damage < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(damage));
-        }
+        return MatchStatus.Success;
     }
 }
 ```
 
-The public type and method document their behavior and possible exception.
+The internal application boundary remains readable without comments that repeat its identifiers.
 
 #### Incorrect
 
 ```csharp
-public sealed class CombatantHealth
+/// <summary>
+/// Provides match application services.
+/// </summary>
+public sealed class MatchApplicationService
 {
-    public void ApplyDamage(int damage)
+    /// <summary>
+    /// Places a piece.
+    /// </summary>
+    public MatchStatus PlacePiece(MatchPlacement placement)
     {
+        return MatchStatus.Success;
     }
 }
 ```
 
-The public API exposes no documentation for its caller.
+The comments repeat the type and method names without adding information for an external consumer.
 
 ### 7.5 `TODO` Comments
 

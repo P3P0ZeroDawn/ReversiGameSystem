@@ -11,11 +11,15 @@ namespace ReversiGameSystem.Server.Application.Matches;
 /// </summary>
 public sealed class GameplayMatchApplicationService
 {
+    private const int MaximumConsecutiveTimeouts = 3;
+    private static readonly TimeSpan PersistenceRetryInterval = TimeSpan.FromSeconds(5);
     private readonly ISessionRepository _sessions;
-    private readonly IMatchRepository _matches;
+    private readonly IGameplayRepository _matches;
     private readonly IUtcClock _clock;
     private readonly object _activeMatchesSync = new object();
     private readonly Dictionary<long, Match> _activeMatches = new Dictionary<long, Match>();
+    private readonly HashSet<long> _matchesPendingPersistence = new HashSet<long>();
+    private DateTime _nextPersistenceRetryUtc;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GameplayMatchApplicationService"/> class.
@@ -26,7 +30,7 @@ public sealed class GameplayMatchApplicationService
     /// <exception cref="ArgumentNullException">A required dependency is null.</exception>
     public GameplayMatchApplicationService(
         ISessionRepository sessions,
-        IMatchRepository matches,
+        IGameplayRepository matches,
         IUtcClock clock)
     {
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
@@ -93,14 +97,7 @@ public sealed class GameplayMatchApplicationService
         Match match = loadResult.Value
             ?? throw new InvalidOperationException("A loaded match result must contain its value.");
 
-        MatchMove committedMove;
-        int nextConsecutiveTimeouts;
-        int? nextTurnSeat;
         DateTime now = _clock.UtcNow;
-        bool isConcluded = false;
-        int finalBlackCount = 0;
-        int finalWhiteCount = 0;
-        int? winnerSeat = null;
 
         lock (match.SyncRoot)
         {
@@ -137,10 +134,9 @@ public sealed class GameplayMatchApplicationService
             }
 
             participant.ConsecutiveTimeoutCount = 0;
-            nextConsecutiveTimeouts = 0;
 
             match.MatchStateVersion++;
-            committedMove = new MatchMove
+            MatchMove committedMove = new MatchMove
             {
                 MoveNumber = (int)match.MatchStateVersion,
                 SeatNumber = participant.SeatNumber,
@@ -162,7 +158,6 @@ public sealed class GameplayMatchApplicationService
                 match.CurrentTurnSeatNumber = opponentSeat;
                 match.TurnStartedAtUtc = now;
                 match.SkippedSeatNumber = null;
-                nextTurnSeat = opponentSeat;
             }
             else
             {
@@ -172,49 +167,24 @@ public sealed class GameplayMatchApplicationService
                     match.CurrentTurnSeatNumber = participant.SeatNumber;
                     match.TurnStartedAtUtc = now;
                     match.SkippedSeatNumber = opponentSeat;
-                    nextTurnSeat = participant.SeatNumber;
                 }
                 else
                 {
-                    isConcluded = true;
                     match.State = "Finished";
                     match.EndReason = "NORMAL";
                     match.EndedAtUtc = now;
                     match.CurrentTurnSeatNumber = null;
                     match.TurnStartedAtUtc = null;
                     match.SkippedSeatNumber = null;
-                    nextTurnSeat = null;
 
-                    finalBlackCount = CountPieces(match.Board, ReversiEngine.Black);
-                    finalWhiteCount = CountPieces(match.Board, ReversiEngine.White);
-                    winnerSeat = DetermineWinner(finalBlackCount, finalWhiteCount);
-                    match.WinnerSeatNumber = winnerSeat;
+                    int blackPieceCount = CountPieces(match.Board, ReversiEngine.Black);
+                    int whitePieceCount = CountPieces(match.Board, ReversiEngine.White);
+                    match.WinnerSeatNumber = DetermineWinner(blackPieceCount, whitePieceCount);
                 }
             }
         }
 
-        if (isConcluded)
-        {
-            _matches.SaveMoveAndConclude(
-                match.Id,
-                committedMove,
-                nextConsecutiveTimeouts,
-                "NORMAL",
-                winnerSeat,
-                finalBlackCount,
-                finalWhiteCount,
-                now);
-        }
-        else if (nextTurnSeat.HasValue)
-        {
-            _matches.SaveMove(
-                match.Id,
-                committedMove,
-                nextConsecutiveTimeouts,
-                nextTurnSeat.Value,
-                now);
-        }
-
+        MarkPersistencePending(match.Id);
         return new MatchResult<Match>(match);
     }
 
@@ -225,6 +195,7 @@ public sealed class GameplayMatchApplicationService
     public Match[] ProcessTurnTimeouts()
     {
         DateTime now = _clock.UtcNow;
+        SynchronizePendingMatches(now);
         List<Match> expiredMatches = new List<Match>();
 
         lock (_activeMatchesSync)
@@ -287,8 +258,6 @@ public sealed class GameplayMatchApplicationService
         int? winnerSeat = null;
         int? forfeitingSeat = null;
         DateTime now = _clock.UtcNow;
-        int blackCount = 0;
-        int whiteCount = 0;
         bool newlyFinished = false;
 
         lock (match.SyncRoot)
@@ -311,8 +280,6 @@ public sealed class GameplayMatchApplicationService
 
             forfeitingSeat = participant.SeatNumber;
             winnerSeat = forfeitingSeat == 1 ? 2 : 1;
-            blackCount = CountPieces(match.Board, ReversiEngine.Black);
-            whiteCount = CountPieces(match.Board, ReversiEngine.White);
 
             match.State = "Finished";
             match.EndReason = "ABANDONMENT";
@@ -326,14 +293,7 @@ public sealed class GameplayMatchApplicationService
 
         if (newlyFinished)
         {
-            _matches.ConcludeMatch(
-                match.Id,
-                "ABANDONMENT",
-                winnerSeat,
-                forfeitingSeat,
-                blackCount,
-                whiteCount,
-                now);
+            MarkPersistencePending(match.Id);
         }
 
         return new MatchResult<Match>(match);
@@ -440,7 +400,7 @@ public sealed class GameplayMatchApplicationService
         AuthenticatedSession player = playerResult.Value
             ?? throw new InvalidOperationException("A successful player result must contain its value.");
 
-        return _matches.GetMatchHistory(player.AccountId);
+        return _matches.LoadMatchHistory(player.AccountId);
     }
 
     /// <summary>
@@ -519,19 +479,16 @@ public sealed class GameplayMatchApplicationService
 
     private bool ProcessSingleTimeout(Match match, DateTime now)
     {
-        MatchMove? timeoutMove = null;
-        int nextTimeouts = 0;
-        int? nextTurnSeat = null;
-        bool isConcluded = false;
-        string endReason = "INACTIVITY";
-        int? winnerSeat = null;
-        int blackCount = 0;
-        int whiteCount = 0;
-
         lock (match.SyncRoot)
         {
             if (!string.Equals(match.State, "InProgress", StringComparison.Ordinal)
                 || !match.CurrentTurnSeatNumber.HasValue)
+            {
+                return false;
+            }
+
+            DateTime turnStartedAtUtc = match.TurnStartedAtUtc ?? match.StartedAtUtc ?? now;
+            if (now < turnStartedAtUtc.AddSeconds(match.TurnDurationSeconds))
             {
                 return false;
             }
@@ -544,23 +501,11 @@ public sealed class GameplayMatchApplicationService
             }
 
             actingParticipant.ConsecutiveTimeoutCount++;
-            nextTimeouts = actingParticipant.ConsecutiveTimeoutCount;
 
-            if (nextTimeouts >= 3)
+            if (actingParticipant.ConsecutiveTimeoutCount >= MaximumConsecutiveTimeouts)
             {
-                isConcluded = true;
-                match.State = "Finished";
-                match.EndReason = endReason;
-                match.EndedAtUtc = now;
-                match.CurrentTurnSeatNumber = null;
-                match.TurnStartedAtUtc = null;
-                match.SkippedSeatNumber = null;
-
-                winnerSeat = currentSeat == 1 ? 2 : 1;
-                match.WinnerSeatNumber = winnerSeat;
-                match.AbandoningSeatNumber = currentSeat;
-                blackCount = CountPieces(match.Board, ReversiEngine.Black);
-                whiteCount = CountPieces(match.Board, ReversiEngine.White);
+                int winnerSeat = currentSeat == 1 ? 2 : 1;
+                ConcludeMatch(match, "INACTIVITY", now, winnerSeat, currentSeat);
             }
             else
             {
@@ -572,7 +517,7 @@ public sealed class GameplayMatchApplicationService
                     int[] flipped = ReversiEngine.ApplyMove(match.Board, row, col, currentSeat);
 
                     match.MatchStateVersion++;
-                    timeoutMove = new MatchMove
+                    MatchMove timeoutMove = new MatchMove
                     {
                         MoveNumber = (int)match.MatchStateVersion,
                         SeatNumber = currentSeat,
@@ -594,7 +539,6 @@ public sealed class GameplayMatchApplicationService
                         match.CurrentTurnSeatNumber = opponentSeat;
                         match.TurnStartedAtUtc = now;
                         match.SkippedSeatNumber = null;
-                        nextTurnSeat = opponentSeat;
                     }
                     else
                     {
@@ -604,82 +548,172 @@ public sealed class GameplayMatchApplicationService
                             match.CurrentTurnSeatNumber = currentSeat;
                             match.TurnStartedAtUtc = now;
                             match.SkippedSeatNumber = opponentSeat;
-                            nextTurnSeat = currentSeat;
                         }
                         else
                         {
-                            isConcluded = true;
-                            endReason = "NORMAL";
-                            match.State = "Finished";
-                            match.EndReason = endReason;
-                            match.EndedAtUtc = now;
-                            match.CurrentTurnSeatNumber = null;
-                            match.TurnStartedAtUtc = null;
-                            match.SkippedSeatNumber = null;
-
-                            blackCount = CountPieces(match.Board, ReversiEngine.Black);
-                            whiteCount = CountPieces(match.Board, ReversiEngine.White);
-                            winnerSeat = DetermineWinner(blackCount, whiteCount);
-                            match.WinnerSeatNumber = winnerSeat;
+                            int blackPieceCount = CountPieces(match.Board, ReversiEngine.Black);
+                            int whitePieceCount = CountPieces(match.Board, ReversiEngine.White);
+                            int? winnerSeat = DetermineWinner(blackPieceCount, whitePieceCount);
+                            ConcludeMatch(match, "NORMAL", now, winnerSeat, null);
                         }
                     }
                 }
                 else
                 {
-                    isConcluded = true;
-                    endReason = "NORMAL";
-                    match.State = "Finished";
-                    match.EndReason = endReason;
-                    match.EndedAtUtc = now;
-                    match.CurrentTurnSeatNumber = null;
-                    match.TurnStartedAtUtc = null;
-                    match.SkippedSeatNumber = null;
-
-                    blackCount = CountPieces(match.Board, ReversiEngine.Black);
-                    whiteCount = CountPieces(match.Board, ReversiEngine.White);
-                    winnerSeat = DetermineWinner(blackCount, whiteCount);
-                    match.WinnerSeatNumber = winnerSeat;
+                    int blackPieceCount = CountPieces(match.Board, ReversiEngine.Black);
+                    int whitePieceCount = CountPieces(match.Board, ReversiEngine.White);
+                    int? winnerSeat = DetermineWinner(blackPieceCount, whitePieceCount);
+                    ConcludeMatch(match, "NORMAL", now, winnerSeat, null);
                 }
             }
         }
 
-        if (isConcluded)
+        MarkPersistencePending(match.Id);
+        return true;
+    }
+
+    private void SynchronizePendingMatches(DateTime now)
+    {
+        long[] pendingMatchIds;
+        lock (_activeMatchesSync)
         {
-            if (timeoutMove != null)
+            if (now < _nextPersistenceRetryUtc)
             {
-                _matches.SaveMoveAndConclude(
-                    match.Id,
-                    timeoutMove,
-                    nextTimeouts,
-                    endReason,
-                    winnerSeat,
-                    blackCount,
-                    whiteCount,
-                    now);
+                return;
             }
-            else
+
+            pendingMatchIds = _matchesPendingPersistence.ToArray();
+            if (pendingMatchIds.Length == 0)
             {
-                _matches.ConcludeMatch(
-                    match.Id,
-                    endReason,
-                    winnerSeat,
-                    match.AbandoningSeatNumber,
-                    blackCount,
-                    whiteCount,
-                    now);
+                return;
             }
-        }
-        else if (timeoutMove != null && nextTurnSeat.HasValue)
-        {
-            _matches.SaveMove(
-                match.Id,
-                timeoutMove,
-                nextTimeouts,
-                nextTurnSeat.Value,
-                now);
+
+            _nextPersistenceRetryUtc = now.Add(PersistenceRetryInterval);
         }
 
-        return true;
+        for (int index = 0; index < pendingMatchIds.Length; index++)
+        {
+            Match? match;
+            lock (_activeMatchesSync)
+            {
+                _activeMatches.TryGetValue(pendingMatchIds[index], out match);
+            }
+
+            if (match != null)
+            {
+                Match snapshot;
+                lock (match.SyncRoot)
+                {
+                    snapshot = CopyMatch(match);
+                }
+                SynchronizeMatch(snapshot);
+            }
+        }
+    }
+
+    private void MarkPersistencePending(long matchId)
+    {
+        lock (_activeMatchesSync)
+        {
+            _matchesPendingPersistence.Add(matchId);
+        }
+    }
+
+    private void SynchronizeMatch(Match snapshot)
+    {
+        bool synchronized = _matches.SynchronizeMatch(snapshot);
+        lock (_activeMatchesSync)
+        {
+            if (!synchronized)
+            {
+                _matchesPendingPersistence.Add(snapshot.Id);
+                return;
+            }
+
+            if (_activeMatches.TryGetValue(snapshot.Id, out Match? currentMatch))
+            {
+                lock (currentMatch.SyncRoot)
+                {
+                    if (RepresentsSameState(currentMatch, snapshot))
+                    {
+                        _matchesPendingPersistence.Remove(snapshot.Id);
+                    }
+                }
+            }
+        }
+    }
+
+    private static bool RepresentsSameState(Match currentMatch, Match snapshot)
+    {
+        return currentMatch.MatchStateVersion == snapshot.MatchStateVersion
+            && string.Equals(currentMatch.State, snapshot.State, StringComparison.Ordinal)
+            && currentMatch.CurrentTurnSeatNumber == snapshot.CurrentTurnSeatNumber
+            && currentMatch.TurnStartedAtUtc == snapshot.TurnStartedAtUtc
+            && currentMatch.EndedAtUtc == snapshot.EndedAtUtc;
+    }
+
+    private static Match CopyMatch(Match source)
+    {
+        Match copy = new Match
+        {
+            Id = source.Id,
+            Code = source.Code,
+            State = source.State,
+            TurnDurationSeconds = source.TurnDurationSeconds,
+            CountsTowardStatistics = source.CountsTowardStatistics,
+            StartedAtUtc = source.StartedAtUtc,
+            Participants = source.Participants.Select(participant => new MatchParticipant
+            {
+                SeatNumber = participant.SeatNumber,
+                AccountId = participant.AccountId,
+                DisplayName = participant.DisplayName,
+                ConsecutiveTimeoutCount = participant.ConsecutiveTimeoutCount
+            }).ToArray(),
+            IsPrivate = source.IsPrivate,
+            Board = (int[])source.Board.Clone(),
+            MatchStateVersion = source.MatchStateVersion,
+            CurrentTurnSeatNumber = source.CurrentTurnSeatNumber,
+            TurnStartedAtUtc = source.TurnStartedAtUtc,
+            LastMove = source.LastMove == null ? null : CopyMove(source.LastMove),
+            SkippedSeatNumber = source.SkippedSeatNumber,
+            Moves = source.Moves.Select(CopyMove).ToList(),
+            EndReason = source.EndReason,
+            WinnerSeatNumber = source.WinnerSeatNumber,
+            AbandoningSeatNumber = source.AbandoningSeatNumber,
+            EndedAtUtc = source.EndedAtUtc
+        };
+        return copy;
+    }
+
+    private static MatchMove CopyMove(MatchMove source)
+    {
+        return new MatchMove
+        {
+            MoveNumber = source.MoveNumber,
+            SeatNumber = source.SeatNumber,
+            Row = source.Row,
+            Column = source.Column,
+            PlayedAtUtc = source.PlayedAtUtc,
+            FlippedPieceCount = source.FlippedPieceCount,
+            Origin = source.Origin
+        };
+    }
+
+    private static void ConcludeMatch(
+        Match match,
+        string endReason,
+        DateTime endedAtUtc,
+        int? winnerSeatNumber,
+        int? abandoningSeatNumber)
+    {
+        match.State = "Finished";
+        match.EndReason = endReason;
+        match.EndedAtUtc = endedAtUtc;
+        match.CurrentTurnSeatNumber = null;
+        match.TurnStartedAtUtc = null;
+        match.SkippedSeatNumber = null;
+        match.WinnerSeatNumber = winnerSeatNumber;
+        match.AbandoningSeatNumber = abandoningSeatNumber;
     }
 
     private MatchResult<Match> GetOrCreateActiveMatch(long matchId)
@@ -697,7 +731,7 @@ public sealed class GameplayMatchApplicationService
             }
         }
 
-        MatchResult<Match> loadResult = _matches.Get(0, matchId);
+        MatchResult<Match> loadResult = _matches.LoadMatch(matchId);
         if (loadResult.Status == MatchStatus.MatchNotFound)
         {
             return loadResult;

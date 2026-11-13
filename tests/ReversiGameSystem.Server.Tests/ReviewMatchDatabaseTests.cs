@@ -6,6 +6,7 @@ using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Chat;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Domain.Chat;
+using ReversiGameSystem.Server.Domain.Matches;
 using ReversiGameSystem.Server.Persistence.Accounts;
 using ReversiGameSystem.Server.Persistence.Chat;
 using ReversiGameSystem.Server.Persistence.Matches;
@@ -235,6 +236,9 @@ internal static class ReviewMatchDatabaseTests
         long accountId,
         long matchId)
     {
+        Match match = repository.LoadParticipantMatch(accountId, matchId).Value
+            ?? throw new InvalidOperationException("Match expected.");
+        int[] flippedPieces = ReversiEngine.ApplyMove(match.Board, 2, 3, ReversiEngine.Black);
         MatchMove move = new MatchMove
         {
             MoveNumber = 1,
@@ -242,11 +246,19 @@ internal static class ReviewMatchDatabaseTests
             Row = 2,
             Column = 3,
             PlayedAtUtc = DateTime.UtcNow,
+            FlippedPieceCount = flippedPieces.Length,
             Origin = "Player"
         };
-        MatchStatus moveStatus = repository.SaveMove(matchId, move, 0, 2, DateTime.UtcNow);
-        TestAssert.AreEqual(MatchStatus.Success, moveStatus);
+        match.MatchStateVersion = move.MoveNumber;
+        match.Moves.Add(move);
+        match.LastMove = move;
+        match.CurrentTurnSeatNumber = 2;
+        match.TurnStartedAtUtc = move.PlayedAtUtc;
+        TestAssert.IsTrue(
+            repository.SynchronizeMatch(match),
+            "Expected the manual move snapshot to be synchronized.");
 
+        flippedPieces = ReversiEngine.ApplyMove(match.Board, 2, 2, ReversiEngine.White);
         MatchMove timeoutMove = new MatchMove
         {
             MoveNumber = 2,
@@ -254,35 +266,42 @@ internal static class ReviewMatchDatabaseTests
             Row = 2,
             Column = 2,
             PlayedAtUtc = DateTime.UtcNow,
+            FlippedPieceCount = flippedPieces.Length,
             Origin = "Timeout"
         };
-        MatchStatus timeoutStatus = repository.SaveMove(
-            matchId,
-            timeoutMove,
-            1,
-            1,
-            DateTime.UtcNow);
-        TestAssert.AreEqual(MatchStatus.Success, timeoutStatus);
+        match.MatchStateVersion = timeoutMove.MoveNumber;
+        match.Moves.Add(timeoutMove);
+        match.LastMove = timeoutMove;
+        match.CurrentTurnSeatNumber = 1;
+        match.TurnStartedAtUtc = timeoutMove.PlayedAtUtc;
+        match.Participants.Single(participant => participant.SeatNumber == 2)
+            .ConsecutiveTimeoutCount = 1;
+        TestAssert.IsTrue(
+            repository.SynchronizeMatch(match),
+            "Expected the timeout move snapshot to be synchronized.");
 
-        Match loaded = repository.Get(accountId, matchId).Value
+        Match loaded = repository.LoadParticipantMatch(accountId, matchId).Value
             ?? throw new InvalidOperationException("Match expected.");
         TestAssert.AreEqual(2, loaded.Moves.Count);
         TestAssert.AreEqual(1, loaded.CurrentTurnSeatNumber);
         TestAssert.AreEqual(1, loaded.LastMove?.FlippedPieceCount);
         TestAssert.AreEqual("Timeout", loaded.LastMove?.Origin);
-        TestAssert.AreEqual(2, loaded.Board[(2 * 8) + 2]);
+        TestAssert.AreEqual(ReversiEngine.White, loaded.Board[(2 * ReversiEngine.BoardSize) + 2]);
 
-        MatchStatus concludeStatus = repository.ConcludeMatch(
-            matchId,
-            "NORMAL",
-            1,
-            null,
-            4,
-            1,
-            DateTime.UtcNow);
-        TestAssert.AreEqual(MatchStatus.Success, concludeStatus);
+        match.State = "Finished";
+        match.EndReason = "NORMAL";
+        match.WinnerSeatNumber = 1;
+        match.EndedAtUtc = DateTime.UtcNow;
+        match.CurrentTurnSeatNumber = null;
+        match.TurnStartedAtUtc = null;
+        TestAssert.IsTrue(
+            repository.SynchronizeMatch(match),
+            "Expected the finished match snapshot to be synchronized.");
+        TestAssert.IsTrue(
+            repository.SynchronizeMatch(match),
+            "Expected repeated synchronization to remain idempotent.");
 
-        MatchResult<Match[]> history = repository.GetMatchHistory(accountId);
+        MatchResult<Match[]> history = repository.LoadMatchHistory(accountId);
         TestAssert.AreEqual(MatchStatus.Success, history.Status);
         TestAssert.IsTrue(
             history.Value != null && history.Value.Any(m => m.Id == matchId && m.State == "Finished" && m.WinnerSeatNumber == 1),
