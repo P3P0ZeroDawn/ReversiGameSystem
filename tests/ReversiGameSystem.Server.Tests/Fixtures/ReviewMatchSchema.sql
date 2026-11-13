@@ -21,7 +21,7 @@ CREATE TABLE dbo.MatchParticipant (
  participantTypeCode varchar(20) NOT NULL,
  displayNameSnapshot nvarchar(50) NULL,
  pieceColorCode varchar(10) NOT NULL CHECK (pieceColorCode IN ('BLACK','WHITE')),
- resultCode varchar(10) NULL, finalPieceCount tinyint NULL,
+ resultCode varchar(10) NULL CHECK (resultCode IS NULL OR resultCode IN ('WIN','LOSS','DRAW')), finalPieceCount tinyint NULL,
  consecutiveTimeoutCount tinyint NOT NULL,
  joinedAtUtc datetime2(3) NOT NULL, isCreator bit NOT NULL,
  PRIMARY KEY(matchId,seatNumber));

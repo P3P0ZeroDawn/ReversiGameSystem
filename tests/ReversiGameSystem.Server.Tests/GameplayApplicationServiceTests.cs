@@ -253,6 +253,7 @@ public sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(MatchStatus.Success, result.Status);
         Match concluded = result.Value ?? throw new InvalidOperationException("Value expected.");
         TestAssert.AreEqual("Finished", concluded.State);
+        TestAssert.AreEqual(1L, concluded.MatchStateVersion);
         TestAssert.AreEqual("ABANDONMENT", concluded.EndReason);
         TestAssert.AreEqual<int?>(1, concluded.AbandoningSeatNumber);
         TestAssert.AreEqual<int?>(2, concluded.WinnerSeatNumber);

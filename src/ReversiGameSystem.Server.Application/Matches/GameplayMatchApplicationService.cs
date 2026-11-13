@@ -169,6 +169,7 @@ public sealed class GameplayMatchApplicationService
             }
 
             int winnerSeat = GetOpponentSeat(participant.SeatNumber);
+            match.MatchStateVersion++;
             ConcludeMatch(
                 match,
                 EndReasonAbandonment,

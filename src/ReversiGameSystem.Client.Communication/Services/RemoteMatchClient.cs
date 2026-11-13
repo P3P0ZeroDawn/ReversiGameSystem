@@ -336,6 +336,18 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
         return result;
     }
 
+    internal Task<MatchStatus> ForfeitMatch(long id)
+    {
+        return RequestStatus(async () =>
+        {
+            _ = await Execute(() => PrepareGameplay(), async () =>
+            {
+                await OpenGameplayChannel(id);
+                return await _gameplay.ForfeitMatchAsync(_token, id);
+            });
+        });
+    }
+
     internal Task<MatchStatus> OpenChatChannel(long id)
     {
         return RequestStatus(async () =>
@@ -510,9 +522,9 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
         StoreState(MapState(state));
     }
 
-    public void OnLobbyClosed(long id)
+    public void OnLobbyClosed(long matchId)
     {
-        LobbyClosed?.Invoke(id);
+        LobbyClosed?.Invoke(matchId);
     }
 
     public void OnMatchStateChanged(Proxy.MatchStateSnapshot state)
@@ -624,11 +636,10 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
 
     private static MatchStateSnapshot MapState(Proxy.MatchStateSnapshot state)
     {
-        ConfirmedBoardCell[] board = state.Board.Select(cell => cell == Proxy.BoardCellState.Black
-            ? ConfirmedBoardCell.Black
-            : cell == Proxy.BoardCellState.White
-                ? ConfirmedBoardCell.White
-                : ConfirmedBoardCell.Empty).ToArray();
+        ConfirmedBoardCell[] board = state.Board.Select(MapBoardCell).ToArray();
+        RemoteMatchConclusion? conclusion = state.Conclusion == null
+            ? null
+            : MapConclusion(state.Conclusion);
         return new MatchStateSnapshot(
             state.MatchId,
             state.MatchStateVersion,
@@ -636,7 +647,27 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
             board,
             state.BlackPieceCount,
             state.WhitePieceCount,
-            state.CurrentTurnSeatNumber);
+            state.CurrentTurnSeatNumber)
+        {
+            Conclusion = conclusion
+        };
+    }
+
+    private static ConfirmedBoardCell MapBoardCell(Proxy.BoardCellState cell)
+    {
+        return cell switch
+        {
+            Proxy.BoardCellState.Black => ConfirmedBoardCell.Black,
+            Proxy.BoardCellState.White => ConfirmedBoardCell.White,
+            _ => ConfirmedBoardCell.Empty
+        };
+    }
+
+    private static RemoteMatchConclusion MapConclusion(Proxy.MatchConclusion conclusion)
+    {
+        return new RemoteMatchConclusion(
+            (RemoteMatchEndReason)conclusion.Reason,
+            conclusion.WinnerSeatNumber);
     }
 
     private static MatchChatMessage MapMessage(Proxy.MatchChatEntry message)
@@ -661,15 +692,20 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
         }
         else if (exception is FaultException<Proxy.FriendshipFault> friendshipFault)
         {
-            status = friendshipFault.Detail.Reason == Proxy.FriendshipFailure.AccountUnavailable
-                ? MatchStatus.AccountUnavailable
-                : friendshipFault.Detail.Reason == Proxy.FriendshipFailure.FriendshipNotFound
-                    ? MatchStatus.FriendshipNotFound
-                    : friendshipFault.Detail.Reason == Proxy.FriendshipFailure.InvalidAccountId
-                        ? MatchStatus.InvalidAccountId
-                        : MatchStatus.InactiveAccount;
+            status = MapFriendshipFailure(friendshipFault.Detail.Reason);
         }
         return status;
+    }
+
+    private static MatchStatus MapFriendshipFailure(Proxy.FriendshipFailure reason)
+    {
+        return reason switch
+        {
+            Proxy.FriendshipFailure.AccountUnavailable => MatchStatus.AccountUnavailable,
+            Proxy.FriendshipFailure.FriendshipNotFound => MatchStatus.FriendshipNotFound,
+            Proxy.FriendshipFailure.InvalidAccountId => MatchStatus.InvalidAccountId,
+            _ => MatchStatus.InactiveAccount
+        };
     }
 
     private static MatchStatus MapMatchFailure(Proxy.MatchFailure failure)

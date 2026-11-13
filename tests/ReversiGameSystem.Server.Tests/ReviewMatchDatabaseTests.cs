@@ -289,8 +289,9 @@ internal static class ReviewMatchDatabaseTests
         TestAssert.AreEqual(ReversiEngine.White, loaded.Board[(2 * ReversiEngine.BoardSize) + 2]);
 
         match.State = "Finished";
-        match.EndReason = "NORMAL";
+        match.EndReason = "ABANDONMENT";
         match.WinnerSeatNumber = 1;
+        match.AbandoningSeatNumber = 2;
         match.EndedAtUtc = DateTime.UtcNow;
         match.CurrentTurnSeatNumber = null;
         match.TurnStartedAtUtc = null;
@@ -304,7 +305,12 @@ internal static class ReviewMatchDatabaseTests
         MatchResult<Match[]> history = repository.LoadMatchHistory(accountId);
         TestAssert.AreEqual(MatchStatus.Success, history.Status);
         TestAssert.IsTrue(
-            history.Value != null && history.Value.Any(m => m.Id == matchId && m.State == "Finished" && m.WinnerSeatNumber == 1),
-            "Expected historical match to reflect completed state and winner.");
+            history.Value != null && history.Value.Any(m =>
+                m.Id == matchId
+                && m.State == "Finished"
+                && m.EndReason == "ABANDONMENT"
+                && m.WinnerSeatNumber == 1
+                && m.AbandoningSeatNumber == 2),
+            "Expected historical match to reflect completed abandonment state, winner, and abandoner.");
     }
 }

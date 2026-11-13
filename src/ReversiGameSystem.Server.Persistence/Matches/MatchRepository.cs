@@ -545,7 +545,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         string resultCode;
         if (abandoningSeatNumber == seatNumber)
         {
-            resultCode = "ABANDONED";
+            resultCode = "LOSS";
         }
         else if (!winnerSeatNumber.HasValue)
         {

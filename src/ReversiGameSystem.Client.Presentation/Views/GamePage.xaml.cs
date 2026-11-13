@@ -111,8 +111,8 @@ public partial class GamePage : Page
         LanguageChangeService.ConfirmSelection((ComboBox)sender);
     }
 
-    private void OnLeaveMatchClick(object sender, RoutedEventArgs e)
+    private async void OnLeaveMatchClick(object sender, RoutedEventArgs e)
     {
-        CloseRemoteView();
+        await LeaveRemoteMatchAsync();
     }
 }

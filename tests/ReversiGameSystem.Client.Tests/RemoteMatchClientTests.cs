@@ -67,20 +67,79 @@ internal static class RemoteMatchClientTests
         ResourceManager resources = new("ReversiGameSystem.Properties.Resources", typeof(ReversiGameSystem.App).Assembly);
         foreach (string culture in new[] { "en-US", "es-MX" })
         {
-            foreach (string key in new[] { "RemoteMatch_MovesUnavailable", "RemoteMatch_StateFormat",
-                "RemoteMatch_CloseView", "RemoteMatch_SessionExpired", "RemoteMatch_GuestUnavailable",
-                "RemoteMatch_AccessRejected",
-                "RemoteMatch_ServerFailure", "RemoteMatch_ConnectionFailed", "RemoteMatch_NotAvailable",
-                "RemoteMatch_Send", "Game_PresenceUnknown", "Game_PresenceConnected",
-                "Game_PresenceDisconnected" })
+            foreach (string key in new[]
             {
-                TestAssert.AreEqual(false, string.IsNullOrWhiteSpace(resources.GetString(key, CultureInfo.GetCultureInfo(culture))));
+                "RemoteMatch_MovesUnavailable",
+                "RemoteMatch_StateFormat",
+                "RemoteMatch_CloseView",
+                "RemoteMatch_SessionExpired",
+                "RemoteMatch_GuestUnavailable",
+                "RemoteMatch_AccessRejected",
+                "RemoteMatch_ServerFailure",
+                "RemoteMatch_ConnectionFailed",
+                "RemoteMatch_NotAvailable",
+                "RemoteMatch_Send",
+                "Game_PresenceUnknown",
+                "Game_PresenceConnected",
+                "Game_PresenceDisconnected",
+                "Game_LeaveMatchButton",
+                "Game_LeaveConfirmationTitle",
+                "Game_LeaveConfirmationMessage",
+                "Game_ContinueMatchButton",
+                "AbandonMatch_ServerConnectionFailedTitle",
+                "AbandonMatch_ServerConnectionFailedMessage",
+                "MatchHistory_AbandonmentReason",
+                "MatchHistory_BackButton",
+                "Game_VictoryTitle",
+                "Game_VictoryMessage",
+                "Game_MatchResultTitle",
+                "Game_DrawResultMessage",
+                "Game_InactivityResultMessage"
+            })
+            {
+                string? localizedValue = resources.GetString(
+                    key,
+                    CultureInfo.GetCultureInfo(culture));
+                TestAssert.AreEqual(false, string.IsNullOrWhiteSpace(localizedValue));
             }
         }
         TestAssert.AreEqual("JoinMatch_MatchCodeNotAvailableMessage",
             RemoteMatchMessages.Key(MatchStatus.MatchCodeUnavailable));
         TestAssert.AreEqual("RemoteMatch_ConnectionFailed",
             RemoteMatchMessages.Key(MatchStatus.ServiceUnavailable));
+    }
+
+    internal static void Callbacks_ConclusionSnapshot_PreservesWinnerAndAbandonmentReason()
+    {
+        using RemoteMatchClient client = Create("unused");
+        client.OnMatchStateChanged(new Proxy.MatchStateSnapshot
+        {
+            MatchId = 15,
+            MatchStateVersion = 4,
+            State = Proxy.MatchState.Finished,
+            Board = Array.Empty<Proxy.BoardCellState>(),
+            BlackPieceCount = 12,
+            WhitePieceCount = 18,
+            CurrentTurnSeatNumber = null,
+            Conclusion = new Proxy.MatchConclusion
+            {
+                MatchId = 15,
+                MatchStateVersion = 4,
+                Reason = Proxy.MatchEndReason.Abandonment,
+                WinnerSeatNumber = 2,
+                AbandoningSeatNumber = 1,
+                BlackPieceCount = 12,
+                WhitePieceCount = 18,
+                EndedAtUtc = new DateTime(2026, 11, 13, 14, 30, 0, DateTimeKind.Utc)
+            }
+        });
+
+        MatchStateSnapshot snapshot = client.ReadMatchState(15);
+        TestAssert.AreEqual(ConfirmedMatchState.Finished, snapshot.State);
+        RemoteMatchConclusion conclusion = snapshot.Conclusion
+            ?? throw new InvalidOperationException("Expected confirmed match conclusion.");
+        TestAssert.AreEqual(RemoteMatchEndReason.Abandonment, conclusion.Reason);
+        TestAssert.AreEqual(2, conclusion.WinnerSeatNumber);
     }
 
     internal static RemoteMatchClient Create(string token) => new(token, new MatchEndpoints

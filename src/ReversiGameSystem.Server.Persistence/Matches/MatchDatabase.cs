@@ -20,7 +20,8 @@ internal static class MatchDatabase
     private const string InProgressStatusCode = "IN_PROGRESS";
     private const string CancelledStatusCode = "CANCELLED";
     private const string WinnerResultCode = "WIN";
-    private const string AbandonedResultCode = "ABANDONED";
+    private const string LossResultCode = "LOSS";
+    private const string AbandonmentEndReasonCode = "ABANDONMENT";
     private const string WaitingState = "Waiting";
     private const string InProgressState = "InProgress";
     private const string CancelledState = "Cancelled";
@@ -165,11 +166,14 @@ internal static class MatchDatabase
             mapped.WinnerSeatNumber = winner.seatNumber;
         }
 
-        PersistentMatchParticipant? abandoner = match.MatchParticipant1
-            .FirstOrDefault(player => player.resultCode == AbandonedResultCode);
-        if (abandoner != null)
+        if (string.Equals(match.endReasonCode, AbandonmentEndReasonCode, StringComparison.Ordinal))
         {
-            mapped.AbandoningSeatNumber = abandoner.seatNumber;
+            PersistentMatchParticipant? abandoner = match.MatchParticipant1
+                .FirstOrDefault(player => player.resultCode == LossResultCode);
+            if (abandoner != null)
+            {
+                mapped.AbandoningSeatNumber = abandoner.seatNumber;
+            }
         }
     }
 

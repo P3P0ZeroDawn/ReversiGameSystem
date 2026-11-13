@@ -50,6 +50,7 @@ internal static class Program
             accountCreationTests.CreateAccount_ValidInput_NormalizesAndCallsServer,
             accountCreationTests.CreateAccount_ConcurrentSubmission_ReturnsSubmissionInProgress,
             RemoteMatchClientTests.Callbacks_StaleVersionsAndDuplicateMessages_PreserveConfirmedState,
+            RemoteMatchClientTests.Callbacks_ConclusionSnapshot_PreservesWinnerAndAbandonmentReason,
             RemoteMatchClientTests.Faults_SupportedCultures_ResolveLocalizedRecoveryAndRejectionMessages,
             ClientArchitectureTests.Assemblies_RuntimeReferences_ExcludeServerAndPersistence,
             FailureDiagnosticsTests.ForLogging_ThrownFailure_PreservesOnlySafeDiagnostics,

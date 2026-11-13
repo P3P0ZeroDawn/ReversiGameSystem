@@ -155,6 +155,28 @@ internal sealed class MatchStateSnapshot
     internal int BlackPieceCount { get; }
     internal int WhitePieceCount { get; }
     internal int? CurrentTurnSeatNumber { get; }
+    internal RemoteMatchConclusion? Conclusion { get; set; }
+}
+
+internal enum RemoteMatchEndReason
+{
+    NoLegalMoves,
+    Inactivity,
+    Abandonment
+}
+
+internal sealed class RemoteMatchConclusion
+{
+    internal RemoteMatchConclusion(
+        RemoteMatchEndReason reason,
+        int? winnerSeatNumber)
+    {
+        Reason = reason;
+        WinnerSeatNumber = winnerSeatNumber;
+    }
+
+    internal RemoteMatchEndReason Reason { get; }
+    internal int? WinnerSeatNumber { get; }
 }
 
 internal sealed class MatchChatMessage

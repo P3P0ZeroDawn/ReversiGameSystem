@@ -21,6 +21,7 @@ namespace ReversiGameSystem.Server.ServiceApi;
 public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
 {
     private const string InProgressMatchState = "InProgress";
+    private const string FinishedMatchState = "Finished";
     private static readonly TimeSpan TimeoutTickInterval = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan PersistenceTickInterval = TimeSpan.FromSeconds(1);
     private readonly GameplayMatchApplicationService _applicationService;
@@ -283,9 +284,13 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         }
 
         return string.Equals(
-            result.Value.State,
-            InProgressMatchState,
-            StringComparison.Ordinal);
+                result.Value.State,
+                InProgressMatchState,
+                StringComparison.Ordinal)
+            || string.Equals(
+                result.Value.State,
+                FinishedMatchState,
+                StringComparison.Ordinal);
     }
 
     private static T RequireValue<T>(MatchResult<T> result)

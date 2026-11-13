@@ -16,6 +16,13 @@ namespace ReversiGameSystem.Views;
 
 public partial class GamePage
 {
+    private const string RemoteMatchCloseViewKey = "RemoteMatch_CloseView";
+    private const string GameLeaveConfirmationTitleKey = "Game_LeaveConfirmationTitle";
+    private const string GameLeaveMatchButtonKey = "Game_LeaveMatchButton";
+    private const string GameContinueMatchButtonKey = "Game_ContinueMatchButton";
+    private const string AbandonMatchFailedTitleKey = "AbandonMatch_ServerConnectionFailedTitle";
+    private const string GameMatchResultTitleKey = "Game_MatchResultTitle";
+
     private readonly RemoteMatchClient _remoteClient;
     private readonly long _remoteMatchId;
     private readonly string? _remoteGuestName;
@@ -27,9 +34,12 @@ public partial class GamePage
     private bool _remoteLoading;
     private bool _remotePlacing;
     private bool _remoteSending;
+    private bool _remoteLeaving;
     private bool _remoteChatReady;
+    private bool _remoteConclusionShown;
     private DateTime? _remoteMutedUntil;
     private string? _remoteStatusKey;
+    private string? _leaveButtonResourceKey;
 
     internal GamePage(RemoteMatchClient client, long matchId, string? guestName)
     {
@@ -42,8 +52,7 @@ public partial class GamePage
         refreshRemoteMatchButton.Visibility = Visibility.Visible;
         creatorConnectionTextBlock.Visibility = Visibility.Visible;
         opponentConnectionTextBlock.Visibility = Visibility.Visible;
-        leaveMatchButton.SetBinding(ContentControl.ContentProperty,
-            new Binding("[RemoteMatch_CloseView]") { Source = LocalizationManager.Instance });
+        UpdateLeaveButtonContent(null);
         turnTimeTextBlock.TextWrapping = TextWrapping.Wrap;
         if (guestName != null)
         {
@@ -117,59 +126,76 @@ public partial class GamePage
         {
             return;
         }
+
         _remoteLoading = true;
         refreshRemoteMatchButton.IsEnabled = false;
+        try
+        {
+            if (await LoadMatchSnapshotAsync() && IsLoaded)
+            {
+                await InitializeRemoteChatAsync();
+                if (_remoteGuestName != null || _remoteChatReady)
+                {
+                    _remoteStatusKey = null;
+                }
+            }
+        }
+        finally
+        {
+            _remoteLoading = false;
+            refreshRemoteMatchButton.IsEnabled = true;
+            sendMessageButton.IsEnabled = IsLoaded && _remoteChatReady && !_remoteSending;
+            UpdateRemoteStatus();
+        }
+    }
+
+    private async Task<bool> LoadMatchSnapshotAsync()
+    {
         MatchResult<RemoteMatchInformation> informationResult =
             await _remoteClient.LoadRemoteMatchInformation(_remoteMatchId);
         MatchResult<MatchStateSnapshot> stateResult =
             await _remoteClient.LoadMatchState(_remoteMatchId);
-        if (informationResult.Status == MatchStatus.Success
-            && stateResult.Status == MatchStatus.Success)
-        {
-            _remoteInformation = informationResult.Value
-                ?? throw new InvalidOperationException(
-                    "A successful match result must contain its value.");
-            if (!IsLoaded)
-            {
-                _remoteLoading = false;
-                refreshRemoteMatchButton.IsEnabled = true;
-                return;
-            }
-            RenderRemoteMatch();
-            if (_remoteGuestName == null)
-            {
-                MatchStatus openStatus = await _remoteClient.OpenChatChannel(_remoteMatchId);
-                MatchStatus refreshStatus = openStatus == MatchStatus.Success
-                    ? await _remoteClient.RefreshChat(_remoteMatchId)
-                    : openStatus;
-                _remoteChatReady = IsLoaded && refreshStatus == MatchStatus.Success;
-                if (_remoteChatReady)
-                {
-                    RenderRemoteMessages();
-                }
-                else
-                {
-                    _remoteStatusKey = RemoteMatchMessages.Key(
-                        refreshStatus, _remoteGuestName != null);
-                }
-            }
-            if (_remoteGuestName != null || _remoteChatReady)
-            {
-                _remoteStatusKey = null;
-            }
-        }
-        else
+        if (informationResult.Status != MatchStatus.Success
+            || stateResult.Status != MatchStatus.Success)
         {
             _remoteChatReady = false;
             MatchStatus failure = informationResult.Status != MatchStatus.Success
                 ? informationResult.Status
                 : stateResult.Status;
             _remoteStatusKey = RemoteMatchMessages.Key(failure, _remoteGuestName != null);
+            return false;
         }
-        _remoteLoading = false;
-        refreshRemoteMatchButton.IsEnabled = true;
-        sendMessageButton.IsEnabled = IsLoaded && _remoteChatReady && !_remoteSending;
-        UpdateRemoteStatus();
+
+        _remoteInformation = informationResult.Value
+            ?? throw new InvalidOperationException(
+                "A successful match result must contain its value.");
+        if (IsLoaded)
+        {
+            RenderRemoteMatch();
+        }
+
+        return true;
+    }
+
+    private async Task InitializeRemoteChatAsync()
+    {
+        if (_remoteGuestName != null)
+        {
+            return;
+        }
+
+        MatchStatus openStatus = await _remoteClient.OpenChatChannel(_remoteMatchId);
+        MatchStatus refreshStatus = openStatus == MatchStatus.Success
+            ? await _remoteClient.RefreshChat(_remoteMatchId)
+            : openStatus;
+        _remoteChatReady = IsLoaded && refreshStatus == MatchStatus.Success;
+        if (_remoteChatReady)
+        {
+            RenderRemoteMessages();
+            return;
+        }
+
+        _remoteStatusKey = RemoteMatchMessages.Key(refreshStatus, _remoteGuestName != null);
     }
 
     private void OnRemoteStateChanged(MatchStateSnapshot state)
@@ -231,6 +257,9 @@ public partial class GamePage
             localization["MatchInformation_TurnTimeFormat"],
             _remoteInformation.TurnDurationSeconds);
         RenderParticipantConnections();
+        UpdateLeaveButtonContent(state.State);
+        UpdateRemoteStatus();
+        NotifyConclusionIfFinished(state);
     }
 
     private async void OnRemoteSquareSelected(
@@ -380,35 +409,96 @@ public partial class GamePage
 
     private void UpdateRemoteStatus()
     {
-        turnStatusTextBlock.Text = _remoteMutedUntil > DateTime.UtcNow
-            ? string.Format(LocalizationManager.Instance["Chat_PlayerMutedMessage"],
-                _remoteMutedUntil.Value.ToLocalTime().ToString("g",
-                    CultureInfo.GetCultureInfo(LocalizationManager.Instance.CultureName)))
-            : _remoteStatusKey == null ? string.Empty : LocalizationManager.Instance[_remoteStatusKey];
+        if (_remoteMutedUntil > DateTime.UtcNow)
+        {
+            turnStatusTextBlock.Text = string.Format(
+                LocalizationManager.Instance["Chat_PlayerMutedMessage"],
+                _remoteMutedUntil.Value.ToLocalTime().ToString(
+                    "g",
+                    CultureInfo.GetCultureInfo(LocalizationManager.Instance.CultureName)));
+            return;
+        }
+
+        string? statusKey = ResolveRemoteStatusKey();
+        turnStatusTextBlock.Text = statusKey == null
+            ? string.Empty
+            : LocalizationManager.Instance[statusKey];
+    }
+
+    private string? ResolveRemoteStatusKey()
+    {
+        if (_remoteStatusKey != null)
+        {
+            return _remoteStatusKey;
+        }
+        if (!_remoteClient.HasMatchState(_remoteMatchId))
+        {
+            return null;
+        }
+
+        MatchStateSnapshot state = _remoteClient.ReadMatchState(_remoteMatchId);
+        if (state.State == ConfirmedMatchState.Finished
+            && state.Conclusion?.Reason == RemoteMatchEndReason.Abandonment)
+        {
+            return "MatchHistory_AbandonmentReason";
+        }
+
+        return null;
     }
 
     private async Task SendRemoteChatMessage()
     {
-        if (_remoteSending || !_remoteChatReady || _remoteGuestName != null)
+        string? content = ValidateRemoteChatInput();
+        if (content == null)
         {
             return;
         }
+
+        _remoteSending = true;
+        sendMessageButton.IsEnabled = false;
+        chatMessageTextBox.IsEnabled = false;
+        try
+        {
+            ChatSubmission submission =
+                await _remoteClient.SendChatMessage(_remoteMatchId, content);
+            ApplyChatSubmissionResult(submission);
+        }
+        finally
+        {
+            _remoteSending = false;
+            chatMessageTextBox.IsEnabled = true;
+            sendMessageButton.IsEnabled = IsLoaded && _remoteChatReady;
+            UpdateRemoteStatus();
+        }
+    }
+
+    private string? ValidateRemoteChatInput()
+    {
+        if (_remoteSending || !_remoteChatReady || _remoteGuestName != null)
+        {
+            return null;
+        }
+
         string content = chatMessageTextBox.Text.Trim();
         if (content.Length == 0 || content.Length > ChatStore.MaximumMessageLength)
         {
-            HandleChatSendFailure(content.Length == 0 ? ChatSendResult.EmptyMessage : ChatSendResult.MessageTooLong, null);
-            return;
+            ChatSendResult lengthFailure = content.Length == 0
+                ? ChatSendResult.EmptyMessage
+                : ChatSendResult.MessageTooLong;
+            HandleChatSendFailure(lengthFailure, null);
+            return null;
         }
         if (_remoteMutedUntil > DateTime.UtcNow)
         {
             HandleChatSendFailure(ChatSendResult.PlayerMuted, _remoteMutedUntil);
-            return;
+            return null;
         }
-        _remoteSending = true;
-        sendMessageButton.IsEnabled = false;
-        chatMessageTextBox.IsEnabled = false;
-        ChatSubmission submission =
-            await _remoteClient.SendChatMessage(_remoteMatchId, content);
+
+        return content;
+    }
+
+    private void ApplyChatSubmissionResult(ChatSubmission submission)
+    {
         if (submission.Status == MatchStatus.Success)
         {
             if (IsLoaded)
@@ -417,28 +507,25 @@ public partial class GamePage
                 _remoteStatusKey = null;
                 RenderRemoteMessages();
             }
+            return;
         }
-        else if (submission.Status == MatchStatus.PlayerMuted)
+
+        if (submission.Status == MatchStatus.PlayerMuted)
         {
             _remoteMutedUntil = submission.MuteEndsAtUtc;
             if (IsLoaded)
             {
                 HandleChatSendFailure(ChatSendResult.PlayerMuted, _remoteMutedUntil);
             }
+            return;
         }
-        else
+
+        _remoteStatusKey = RemoteMatchMessages.Key(
+            submission.Status, _remoteGuestName != null);
+        if (IsLoaded)
         {
-            _remoteStatusKey = RemoteMatchMessages.Key(
-                submission.Status, _remoteGuestName != null);
-            if (IsLoaded)
-            {
-                _dialogService.ShowError(this, "Game_ChatTitle", _remoteStatusKey);
-            }
+            _dialogService.ShowError(this, "Game_ChatTitle", _remoteStatusKey);
         }
-        _remoteSending = false;
-        chatMessageTextBox.IsEnabled = true;
-        sendMessageButton.IsEnabled = IsLoaded && _remoteChatReady;
-        UpdateRemoteStatus();
     }
 
     private void ShowRemoteInstructions()
@@ -462,15 +549,216 @@ public partial class GamePage
         }
     }
 
+    private void UpdateLeaveButtonContent(ConfirmedMatchState? matchState)
+    {
+        string resourceKey = ResolveLeaveButtonResourceKey(matchState);
+        if (string.Equals(_leaveButtonResourceKey, resourceKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _leaveButtonResourceKey = resourceKey;
+        leaveMatchButton.SetBinding(
+            ContentControl.ContentProperty,
+            new Binding("[" + resourceKey + "]") { Source = LocalizationManager.Instance });
+    }
+
+    private string ResolveLeaveButtonResourceKey(ConfirmedMatchState? matchState)
+    {
+        if (matchState == ConfirmedMatchState.Finished)
+        {
+            return "MatchHistory_BackButton";
+        }
+        if (IsActiveRemoteParticipant())
+        {
+            return GameLeaveMatchButtonKey;
+        }
+
+        return RemoteMatchCloseViewKey;
+    }
+
+    private bool IsActiveRemoteParticipant()
+    {
+        return _remoteGuestName == null
+            && _remoteInformation?.AssignedSeatNumber != null;
+    }
+
+    private void NotifyConclusionIfFinished(MatchStateSnapshot state)
+    {
+        if (state.State != ConfirmedMatchState.Finished
+            || _remoteConclusionShown
+            || _remoteLeaving
+            || !IsLoaded)
+        {
+            return;
+        }
+
+        _remoteConclusionShown = true;
+        _remoteRefreshTimer.Stop();
+        if (state.Conclusion == null)
+        {
+            return;
+        }
+
+        ShowRemoteConclusion(state.Conclusion);
+        if (IsLoaded)
+        {
+            NavigateToMainMenu();
+        }
+    }
+
+    private void ShowRemoteConclusion(RemoteMatchConclusion conclusion)
+    {
+        if (conclusion.WinnerSeatNumber == null)
+        {
+            _dialogService.ShowInformation(
+                this,
+                GameMatchResultTitleKey,
+                "Game_DrawResultMessage");
+            return;
+        }
+
+        string winnerName = RemotePlayerName(conclusion.WinnerSeatNumber.Value);
+        if (conclusion.Reason == RemoteMatchEndReason.Inactivity)
+        {
+            _dialogService.ShowInformation(
+                this,
+                GameMatchResultTitleKey,
+                "Game_InactivityResultMessage",
+                winnerName);
+            return;
+        }
+
+        _dialogService.ShowInformation(
+            this,
+            "Game_VictoryTitle",
+            "Game_VictoryMessage",
+            winnerName);
+    }
+
+    private async Task LeaveRemoteMatchAsync()
+    {
+        if (_remoteLeaving)
+        {
+            return;
+        }
+        if (IsRemoteMatchFinished())
+        {
+            NavigateToMainMenu();
+            return;
+        }
+        if (!CanForfeitRemoteMatch())
+        {
+            CloseRemoteView();
+            return;
+        }
+        if (!ConfirmRemoteAbandonment())
+        {
+            return;
+        }
+
+        await ExecuteRemoteForfeitAsync();
+    }
+
+    private bool IsRemoteMatchFinished()
+    {
+        return _remoteClient.HasMatchState(_remoteMatchId)
+            && _remoteClient.ReadMatchState(_remoteMatchId).State == ConfirmedMatchState.Finished;
+    }
+
+    private bool CanForfeitRemoteMatch()
+    {
+        return IsActiveRemoteParticipant()
+            && _remoteClient.HasMatchState(_remoteMatchId)
+            && _remoteClient.ReadMatchState(_remoteMatchId).State
+                == ConfirmedMatchState.InProgress;
+    }
+
+    private bool ConfirmRemoteAbandonment()
+    {
+        int opponentSeat = _remoteInformation?.AssignedSeatNumber == 1 ? 2 : 1;
+        string opponentName = RemotePlayerName(opponentSeat);
+        ConfirmationDialogOptions options = new ConfirmationDialogOptions(
+            GameLeaveConfirmationTitleKey,
+            "Game_LeaveConfirmationMessage",
+            GameLeaveMatchButtonKey,
+            GameContinueMatchButtonKey)
+        {
+            MessageArguments = new object[] { opponentName }
+        };
+        return _dialogService.Confirm(this, options);
+    }
+
+    private async Task ExecuteRemoteForfeitAsync()
+    {
+        _remoteLeaving = true;
+        leaveMatchButton.IsEnabled = false;
+        try
+        {
+            MatchStatus status = await _remoteClient.ForfeitMatch(_remoteMatchId);
+            if (!IsLoaded)
+            {
+                return;
+            }
+
+            await HandleForfeitResultAsync(status);
+        }
+        finally
+        {
+            _remoteLeaving = false;
+            leaveMatchButton.IsEnabled = IsLoaded;
+        }
+    }
+
+    private async Task HandleForfeitResultAsync(MatchStatus status)
+    {
+        if (status == MatchStatus.Success)
+        {
+            _remoteConclusionShown = true;
+            _remoteRefreshTimer.Stop();
+            NavigateToMainMenu();
+            return;
+        }
+        if (status == MatchStatus.ServiceUnavailable)
+        {
+            _dialogService.ShowError(
+                this,
+                AbandonMatchFailedTitleKey,
+                "AbandonMatch_ServerConnectionFailedMessage");
+            return;
+        }
+        if (status == MatchStatus.MatchNotInProgress)
+        {
+            await LoadRemoteMatch();
+            return;
+        }
+
+        string messageKey = RemoteMatchMessages.Key(status, _remoteGuestName != null);
+        _remoteStatusKey = messageKey;
+        UpdateRemoteStatus();
+        _dialogService.ShowError(
+            this,
+            AbandonMatchFailedTitleKey,
+            messageKey);
+    }
+
     private void CloseRemoteView()
     {
         ConfirmationDialogOptions options = new ConfirmationDialogOptions(
-            "Game_LeaveConfirmationTitle", "RemoteMatch_CloseView",
-            "RemoteMatch_CloseView", "Game_ContinueMatchButton");
+            GameLeaveConfirmationTitleKey,
+            RemoteMatchCloseViewKey,
+            RemoteMatchCloseViewKey,
+            GameContinueMatchButtonKey);
         if (_dialogService.Confirm(this, options))
         {
-            NavigationService?.Navigate(_remoteGuestName == null
-                ? new MainMenuPage() : new MainMenuPage(_remoteGuestName));
+            NavigateToMainMenu();
         }
+    }
+
+    private void NavigateToMainMenu()
+    {
+        NavigationService?.Navigate(_remoteGuestName == null
+            ? new MainMenuPage()
+            : new MainMenuPage(_remoteGuestName));
     }
 }

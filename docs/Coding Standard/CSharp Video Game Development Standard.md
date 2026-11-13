@@ -62,6 +62,7 @@
   - [[#5.21 Asynchronous Mutual Exclusion|5.21 Asynchronous Mutual Exclusion]]
   - [[#5.22 Atomic Operations|5.22 Atomic Operations]]
   - [[#5.23 Concurrent Collections|5.23 Concurrent Collections]]
+  - [[#5.24 You Aren't Gonna Need It (YAGNI)|5.24 You Aren't Gonna Need It (YAGNI)]]
 - [[#6. Error Handling, Logging, and Diagnostics|6. Error Handling, Logging, and Diagnostics]]
   - [[#6.1 Exception Handling|6.1 Exception Handling]]
   - [[#6.2 Custom Exceptions|6.2 Custom Exceptions]]
@@ -2152,6 +2153,78 @@ public sealed class SessionRegistry
 ```
 
 The dictionary can be modified simultaneously because the method has no synchronization.
+
+### 5.24 You Aren't Gonna Need It (YAGNI)
+
+Apply the **You Aren't Gonna Need It (YAGNI)** principle by implementing only the types,
+operations, abstractions, and extension points required by the current task (Microsoft, 2023c).
+Do not add speculative interfaces, configuration flags, or unused branches for hypothetical
+future requirements; introduce abstractions only when an actual requirement or second concrete
+implementation justifies them.
+
+#### Correct
+
+```csharp
+internal sealed class MatchTimeoutMonitor
+{
+    private readonly int _turnDurationSeconds;
+
+    internal MatchTimeoutMonitor(int turnDurationSeconds)
+    {
+        _turnDurationSeconds = turnDurationSeconds;
+    }
+
+    internal bool IsExpired(DateTime turnStartedAtUtc, DateTime utcNow)
+    {
+        return (utcNow - turnStartedAtUtc).TotalSeconds >= _turnDurationSeconds;
+    }
+}
+```
+
+The class models only the timeout behavior required now without speculative extension points.
+
+#### Incorrect
+
+```csharp
+internal interface ITurnRuleStrategy
+{
+    bool Evaluate(DateTime turnStartedAtUtc, DateTime utcNow);
+}
+
+internal sealed class ConfigurableTimeoutMonitor
+{
+    private readonly ITurnRuleStrategy? _customStrategy;
+    private readonly bool _enableGracePeriod;
+    private readonly int _turnDurationSeconds;
+
+    internal ConfigurableTimeoutMonitor(
+        int turnDurationSeconds,
+        bool enableGracePeriod = false,
+        ITurnRuleStrategy? customStrategy = null)
+    {
+        _turnDurationSeconds = turnDurationSeconds;
+        _enableGracePeriod = enableGracePeriod;
+        _customStrategy = customStrategy;
+    }
+
+    internal bool IsExpired(DateTime turnStartedAtUtc, DateTime utcNow)
+    {
+        if (_customStrategy != null)
+        {
+            return _customStrategy.Evaluate(turnStartedAtUtc, utcNow);
+        }
+        if (_enableGracePeriod)
+        {
+            return (utcNow - turnStartedAtUtc).TotalSeconds >= _turnDurationSeconds + 5;
+        }
+
+        return (utcNow - turnStartedAtUtc).TotalSeconds >= _turnDurationSeconds;
+    }
+}
+```
+
+The code adds an unrequested strategy interface, unused configuration flag, and dead branch for
+hypothetical future rules.
 
 ---
 
