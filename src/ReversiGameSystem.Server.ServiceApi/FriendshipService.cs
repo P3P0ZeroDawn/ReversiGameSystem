@@ -61,61 +61,55 @@ public sealed class FriendshipService : IFriendshipService, IDisposable
     /// <inheritdoc />
     public void OpenFriendshipChannel(string sessionToken)
     {
-        Execute(nameof(OpenFriendshipChannel), () =>
-        {
-            FriendshipResult<AuthenticatedSession> accessResult =
-                _applicationService.EvaluateChannelAccess(sessionToken);
-            ThrowFailure(accessResult.Status);
+        FriendshipResult<AuthenticatedSession> accessResult =
+            _applicationService.EvaluateChannelAccess(sessionToken);
+        ThrowFailure(accessResult.Status);
 
-            AuthenticatedSession session = accessResult.Value
-                ?? throw new InvalidOperationException(
-                    "A successful access evaluation must contain its session.");
+        AuthenticatedSession session = accessResult.Value
+            ?? throw new InvalidOperationException(
+                "A successful access evaluation must contain its session.");
 
-            IFriendshipServiceCallback callback = OperationContext.Current
-                .GetCallbackChannel<IFriendshipServiceCallback>();
+        IFriendshipServiceCallback callback = OperationContext.Current
+            .GetCallbackChannel<IFriendshipServiceCallback>();
 
-            IDisposable presenceRegistration =
-                _presenceRegistry.Register(sessionToken, session.AccountId);
+        IDisposable presenceRegistration =
+            _presenceRegistry.Register(sessionToken, session.AccountId);
 
-            _subscriptions.Register(
-                sessionToken,
-                session.AccountId,
-                callback,
-                presenceRegistration);
-        });
+        _subscriptions.Register(
+            sessionToken,
+            session.AccountId,
+            callback,
+            presenceRegistration);
     }
 
     /// <inheritdoc />
     public FriendSummary[] GetFriends(string sessionToken)
     {
-        return Execute(nameof(GetFriends), () =>
+        FriendshipResult<FriendAccount[]> result =
+            _applicationService.ReadConfirmedFriends(sessionToken);
+        ThrowFailure(result.Status);
+
+        FriendAccount[] friends = result.Value
+            ?? throw new InvalidOperationException(
+                "A successful friends result must contain its value.");
+
+        FriendSummary[] summaries = new FriendSummary[friends.Length];
+        for (int index = 0; index < friends.Length; index++)
         {
-            FriendshipResult<FriendAccount[]> result =
-                _applicationService.ReadConfirmedFriends(sessionToken);
-            ThrowFailure(result.Status);
-
-            FriendAccount[] friends = result.Value
-                ?? throw new InvalidOperationException(
-                    "A successful friends result must contain its value.");
-
-            FriendSummary[] summaries = new FriendSummary[friends.Length];
-            for (int index = 0; index < friends.Length; index++)
+            FriendAccount friend = friends[index];
+            summaries[index] = new FriendSummary
             {
-                FriendAccount friend = friends[index];
-                summaries[index] = new FriendSummary
+                Account = new AccountReference
                 {
-                    Account = new AccountReference
-                    {
-                        AccountId = friend.AccountId,
-                        Username = friend.Username
-                    },
-                    HasProfileImage = friend.HasProfileImage,
-                    IsOnline = _presenceRegistry.IsOnline(friend.AccountId)
-                };
-            }
+                    AccountId = friend.AccountId,
+                    Username = friend.Username
+                },
+                HasProfileImage = friend.HasProfileImage,
+                IsOnline = _presenceRegistry.IsOnline(friend.AccountId)
+            };
+        }
 
-            return summaries;
-        });
+        return summaries;
     }
 
     /// <summary>
@@ -256,36 +250,6 @@ public sealed class FriendshipService : IFriendshipService, IDisposable
     {
         return channel.Communication.State == CommunicationState.Opened
             && _applicationService.EvaluateChannelAccess(channel.Token).Status == FriendshipStatus.Success;
-    }
-
-    private void Execute(string operation, Action action)
-    {
-        Execute(operation, () =>
-        {
-            action();
-            return true;
-        });
-    }
-
-    private TResult Execute<TResult>(string operation, Func<TResult> action)
-    {
-        try
-        {
-            return action();
-        }
-        catch (FaultException<SessionFault>)
-        {
-            throw;
-        }
-        catch (FaultException<FriendshipFault>)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            LogFailure(operation, exception);
-            throw CreateServiceFault(operation);
-        }
     }
 
     private static void ThrowFailure(FriendshipStatus status)

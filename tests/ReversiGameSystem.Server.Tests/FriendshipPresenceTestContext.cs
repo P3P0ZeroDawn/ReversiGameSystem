@@ -43,13 +43,17 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, ISessionRepos
     {
     }
 
-    internal FriendshipPresenceTestContext(ILogger<FriendshipService> logger)
+    internal FriendshipPresenceTestContext(
+        ILogger<FriendshipService> logger,
+        ILogger<ServiceErrorBehavior>? behaviorLogger = null)
     {
         PresenceRegistry = new AccountPresenceRegistry();
         Subscriptions = new FriendshipSubscriptions();
         ApplicationService = new FriendshipApplicationService(this, this);
         Service = new FriendshipService(ApplicationService, PresenceRegistry, Subscriptions, logger);
         _host = new ServiceHost(Service, _address);
+        _host.Description.Behaviors.Add(new ServiceErrorBehavior(
+            behaviorLogger ?? NullLogger<ServiceErrorBehavior>.Instance));
         _host.AddServiceEndpoint(typeof(IFriendshipService), Binding(), string.Empty);
         _host.Open();
         AddSession("one", 1);

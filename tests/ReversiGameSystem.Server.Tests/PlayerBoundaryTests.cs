@@ -17,8 +17,7 @@ internal static class PlayerBoundaryTests
     {
         // Arrange
         RecordingRegistrationHandler handler = new RecordingRegistrationHandler();
-        AccountAccessService service = new AccountAccessService(handler,
-            NullLogger<AccountAccessService>.Instance);
+        AccountAccessService service = new AccountAccessService(handler);
         // Act
         AccountRegistrationOutcome result = Invoke<IAccountAccessService, AccountRegistrationOutcome>(
             service, channel => channel.RegisterAccountAsync(new AccountRegistrationCredentials

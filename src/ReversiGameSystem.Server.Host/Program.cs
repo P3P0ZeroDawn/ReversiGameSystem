@@ -56,8 +56,6 @@ internal static class Program
                 .AddConsoleFormatter<SafeConsoleFormatter, ConsoleFormatterOptions>()
                 .AddSerilog(fileLogger, dispose: false)))
         {
-            ILogger<AccountAccessService> serviceLogger =
-                loggerFactory.CreateLogger<AccountAccessService>();
             ILogger<ServerHostLogCategory> hostLogger =
                 loggerFactory.CreateLogger<ServerHostLogCategory>();
             using (ProcessErrorHooks processErrorHooks = new ProcessErrorHooks(
@@ -121,7 +119,7 @@ internal static class Program
                         ServiceHost[] hosts =
                         {
                             CreateServiceHost(
-                                CreateAccountAccessService(serviceLogger),
+                                CreateAccountAccessService(),
                                 loggerFactory),
                             CreateServiceHost(sessionService, loggerFactory),
                             CreateServiceHost(
@@ -147,8 +145,7 @@ internal static class Program
         }
     }
 
-    private static AccountAccessService CreateAccountAccessService(
-        ILogger<AccountAccessService> logger)
+    private static AccountAccessService CreateAccountAccessService()
     {
         SystemUtcClock clock = new SystemUtcClock();
         Pbkdf2PasswordHasher passwordHasher = new Pbkdf2PasswordHasher();
@@ -159,7 +156,7 @@ internal static class Program
             passwordHasher,
             new FileSystemProfileImageStore(imageDirectory),
             clock);
-        return new AccountAccessService(createAccountHandler, logger);
+        return new AccountAccessService(createAccountHandler);
     }
 
     private static SessionService CreateSessionService(ILogger<SessionService> logger,

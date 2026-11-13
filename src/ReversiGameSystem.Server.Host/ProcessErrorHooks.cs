@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using ReversiGameSystem.Server.ServiceApi;
 
 namespace ReversiGameSystem.Server.Host;
 
@@ -26,13 +27,20 @@ internal sealed class ProcessErrorHooks : IDisposable
         UnhandledExceptionEventArgs eventArguments)
     {
         Exception? exception = eventArguments.ExceptionObject as Exception;
-        if (exception != null)
+        try
         {
-            _logger.LogCritical(exception, "The server process failed unexpectedly.");
+            if (exception != null)
+            {
+                _logger.LogCritical(exception, "The server process failed unexpectedly.");
+            }
+            else
+            {
+                _logger.LogCritical("The server process failed with an unknown error.");
+            }
         }
-        else
+        catch (Exception loggingFailure)
         {
-            _logger.LogCritical("The server process failed with an unknown error.");
+            WriteFallback(exception, loggingFailure);
         }
     }
 
@@ -40,9 +48,31 @@ internal sealed class ProcessErrorHooks : IDisposable
         object? sender,
         UnobservedTaskExceptionEventArgs eventArguments)
     {
-        _logger.LogError(
-            eventArguments.Exception,
-            "An unobserved background task failed.");
-        eventArguments.SetObserved();
+        try
+        {
+            _logger.LogError(
+                eventArguments.Exception,
+                "An unobserved background task failed.");
+        }
+        catch (Exception loggingFailure)
+        {
+            WriteFallback(eventArguments.Exception, loggingFailure);
+        }
+        finally
+        {
+            eventArguments.SetObserved();
+        }
+    }
+
+    private static void WriteFallback(Exception? failure, Exception loggingFailure)
+    {
+        string failureDescription = failure == null
+            ? "Unknown error."
+            : FailureDiagnostics.Describe(failure);
+        Console.Error.WriteLine(
+            "The process diagnostic logger failed.{0}{1}{0}{2}",
+            Environment.NewLine,
+            failureDescription,
+            FailureDiagnostics.Describe(loggingFailure));
     }
 }

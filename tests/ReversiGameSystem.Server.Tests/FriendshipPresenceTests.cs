@@ -208,11 +208,12 @@ internal sealed class FriendshipPresenceTests
     {
         // Arrange
         FailureLogger logger = new FailureLogger();
-        using FriendshipPresenceTestContext context = new FriendshipPresenceTestContext(logger);
+        using FriendshipPresenceTestContext context = new FriendshipPresenceTestContext(logger, logger);
+        using FriendshipPresenceTestClient client = context.CreateClient();
         context.FailRepository = true;
 
         // Act
-        TestAssert.Throws<FaultException<ServiceFault>>(() => context.Service.GetFriends("one"));
+        TestAssert.Throws<FaultException<ServiceFault>>(() => client.Channel.GetFriends("one"));
 
         // Assert
         TestAssert.IsTrue(ReferenceEquals(context.RepositoryFailure, logger.Failure),
@@ -223,7 +224,8 @@ internal sealed class FriendshipPresenceTests
     {
         // Arrange
         FailureLogger logger = new FailureLogger { ThrowOnLog = true };
-        using FriendshipPresenceTestContext context = new FriendshipPresenceTestContext(logger);
+        using FriendshipPresenceTestContext context = new FriendshipPresenceTestContext(logger, logger);
+        using FriendshipPresenceTestClient client = context.CreateClient();
         context.FailRepository = true;
         TextWriter previousError = Console.Error;
         using StringWriter fallback = new StringWriter();
@@ -232,7 +234,7 @@ internal sealed class FriendshipPresenceTests
         try
         {
             Console.SetError(fallback);
-            TestAssert.Throws<FaultException<ServiceFault>>(() => context.Service.GetFriends("one"));
+            TestAssert.Throws<FaultException<ServiceFault>>(() => client.Channel.GetFriends("one"));
         }
         finally
         {
@@ -251,7 +253,7 @@ internal sealed class FriendshipPresenceTests
             "The independent diagnostic sink must exclude both provider messages.");
     }
 
-    private sealed class FailureLogger : ILogger<FriendshipService>
+    private sealed class FailureLogger : ILogger<FriendshipService>, ILogger<ServiceErrorBehavior>
     {
         internal bool ThrowOnLog { get; set; }
         internal Exception? Failure { get; private set; }
