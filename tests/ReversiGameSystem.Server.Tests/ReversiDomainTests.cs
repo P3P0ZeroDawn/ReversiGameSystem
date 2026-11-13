@@ -1,4 +1,5 @@
 using System;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Domain.Matches;
 
 namespace ReversiGameSystem.Server.Tests;
@@ -6,9 +7,11 @@ namespace ReversiGameSystem.Server.Tests;
 /// <summary>
 /// Verifies the stateless Reversi rules engine in <see cref="ReversiEngine"/>.
 /// </summary>
-internal sealed class ReversiDomainTests
+[TestClass]
+public sealed class ReversiDomainTests
 {
-    internal void CreateInitialBoard_StandardSetup_PlacesFourCenteredDiscs()
+    [TestMethod]
+    public void CreateInitialBoard_StandardSetup_PlacesFourCenteredDiscs()
     {
         // Arrange & Act
         int[] board = ReversiEngine.CreateInitialBoard();
@@ -21,7 +24,8 @@ internal sealed class ReversiDomainTests
         TestAssert.AreEqual(ReversiEngine.White, board[(4 * 8) + 4]);
     }
 
-    internal void ApplyMove_InvalidBoardArray_ThrowsArgumentException()
+    [TestMethod]
+    public void ApplyMove_InvalidBoardArray_ThrowsArgumentException()
     {
         // Arrange & Act & Assert
         TestAssert.Throws<ArgumentException>(
@@ -31,7 +35,8 @@ internal sealed class ReversiDomainTests
             });
     }
 
-    internal void ApplyMove_IllegalPlacements_ReturnsEmptyAndLeavesBoardUnchanged()
+    [TestMethod]
+    public void ApplyMove_IllegalPlacements_ReturnsEmptyAndLeavesBoardUnchanged()
     {
         // Arrange
         int[] board = ReversiEngine.CreateInitialBoard();
@@ -51,7 +56,8 @@ internal sealed class ReversiDomainTests
         TestAssert.AreEqual(ReversiEngine.White, board[(3 * 8) + 3]);
     }
 
-    internal void ApplyMove_ValidMove_PlacesDiscAndFlipsBracketedCells()
+    [TestMethod]
+    public void ApplyMove_ValidMove_PlacesDiscAndFlipsBracketedCells()
     {
         // Arrange
         int[] board = ReversiEngine.CreateInitialBoard();
@@ -66,7 +72,8 @@ internal sealed class ReversiDomainTests
         TestAssert.AreEqual(ReversiEngine.Black, board[(3 * 8) + 3]);
     }
 
-    internal void ApplyMove_MultiDirectionalCaptures_FlipsAllLines()
+    [TestMethod]
+    public void ApplyMove_MultiDirectionalCaptures_FlipsAllLines()
     {
         // Arrange
         int[] board = new int[ReversiEngine.CellCount];
@@ -88,7 +95,8 @@ internal sealed class ReversiDomainTests
         TestAssert.AreEqual(ReversiEngine.Black, board[(4 * 8) + 4]);
     }
 
-    internal void HasValidMoves_EvaluatesBoardAvailabilityAccurately()
+    [TestMethod]
+    public void HasValidMoves_EvaluatesBoardAvailabilityAccurately()
     {
         // Arrange
         int[] initialBoard = ReversiEngine.CreateInitialBoard();
@@ -106,7 +114,8 @@ internal sealed class ReversiDomainTests
             "Expected no valid moves on an empty board.");
     }
 
-    internal void IsLegalMove_BoardEvaluation_DetectsLegalityWithoutMutatingBoard()
+    [TestMethod]
+    public void IsLegalMove_BoardEvaluation_DetectsLegalityWithoutMutatingBoard()
     {
         // Arrange
         int[] board = ReversiEngine.CreateInitialBoard();

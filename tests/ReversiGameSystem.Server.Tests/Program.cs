@@ -116,7 +116,7 @@ internal static class Program
                 .CanReceiveMuteNotification_SameAccountSession_AuthorizesRecipient,
             matchBoundaryTests.Gameplay_UnauthorizedParticipant_PreservesDeclaredRejection,
             matchBoundaryTests.Gameplay_InitialState_UsesApplicationSnapshot,
-            matchBoundaryTests.Gameplay_UnsupportedWrite_ReturnsDeclaredServiceFault,
+            matchBoundaryTests.Gameplay_StoreFailure_PropagatesToGlobalHandler,
             matchBoundaryTests.Lobby_StoreFailure_PropagatesToGlobalHandler,
             matchBoundaryTests.Lobby_InviteToMatch_GuestSession_ReturnsMatchFaultUnauthorized,
             matchBoundaryTests.Lobby_InviteToMatch_SelfInvitation_ReturnsMatchFaultUnauthorized,

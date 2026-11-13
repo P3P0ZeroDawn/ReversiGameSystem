@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Domain.Matches;
@@ -11,9 +12,11 @@ namespace ReversiGameSystem.Server.Tests;
 /// <summary>
 /// Verifies authoritative in-memory match management, placement rules, timeout limits and replay data.
 /// </summary>
-internal sealed class GameplayApplicationServiceTests
+[TestClass]
+public sealed class GameplayApplicationServiceTests
 {
-    internal void TrackStartedMatch_InitializesBoardAndTurnCorrectly()
+    [TestMethod]
+    public void TrackStartedMatch_InitializesBoardAndTurnCorrectly()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -33,7 +36,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(context.Clock.UtcNow, match.TurnStartedAtUtc);
     }
 
-    internal void PlacePiece_MissingPlacement_ReturnsMissingPlacement()
+    [TestMethod]
+    public void PlacePiece_MissingPlacement_ReturnsMissingPlacement()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -47,7 +51,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(MatchStatus.MissingPlacement, result.Status);
     }
 
-    internal void PlacePiece_NegativeVersion_ReturnsInvalidMatchStateVersion()
+    [TestMethod]
+    public void PlacePiece_NegativeVersion_ReturnsInvalidMatchStateVersion()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -62,7 +67,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(MatchStatus.InvalidMatchStateVersion, result.Status);
     }
 
-    internal void PlacePiece_InvalidSession_ReturnsInvalidSession()
+    [TestMethod]
+    public void PlacePiece_InvalidSession_ReturnsInvalidSession()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -77,7 +83,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(MatchStatus.InvalidSession, result.Status);
     }
 
-    internal void PlacePiece_NotPlayersTurn_ReturnsNotPlayersTurn()
+    [TestMethod]
+    public void PlacePiece_NotPlayersTurn_ReturnsNotPlayersTurn()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -94,7 +101,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(MatchStatus.NotPlayersTurn, result.Status);
     }
 
-    internal void PlacePiece_StaleVersion_ReturnsStaleMatchStateVersion()
+    [TestMethod]
+    public void PlacePiece_StaleVersion_ReturnsStaleMatchStateVersion()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -111,7 +119,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(MatchStatus.StaleMatchStateVersion, result.Status);
     }
 
-    internal void PlacePiece_InvalidPosition_ReturnsInvalidPosition()
+    [TestMethod]
+    public void PlacePiece_InvalidPosition_ReturnsInvalidPosition()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -128,7 +137,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(MatchStatus.InvalidPosition, result.Status);
     }
 
-    internal void PlacePiece_ValidMove_FlipsPiecesAdvancesTurnAndSynchronizesMatch()
+    [TestMethod]
+    public void PlacePiece_ValidMove_FlipsPiecesAdvancesTurnAndSynchronizesMatch()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -155,7 +165,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
     }
 
-    internal void PlacePiece_PersistenceUnavailable_PreservesAndRetriesConfirmedState()
+    [TestMethod]
+    public void PlacePiece_PersistenceUnavailable_PreservesAndRetriesConfirmedState()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -187,7 +198,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(1L, context.Repository.LastSynchronizedVersion);
     }
 
-    internal void PlacePiece_ResetsConsecutiveTimeoutCount()
+    [TestMethod]
+    public void PlacePiece_ResetsConsecutiveTimeoutCount()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -206,7 +218,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(0, match.Participants[0].ConsecutiveTimeoutCount);
     }
 
-    internal void ForfeitMatch_NonParticipant_ReturnsUnauthorized()
+    [TestMethod]
+    public void ForfeitMatch_NonParticipant_ReturnsUnauthorized()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -222,7 +235,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(MatchStatus.Unauthorized, result.Status);
     }
 
-    internal void ForfeitMatch_Participant_ConcludesMatchWithAbandonment()
+    [TestMethod]
+    public void ForfeitMatch_Participant_ConcludesMatchWithAbandonment()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -246,7 +260,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
     }
 
-    internal void ForfeitMatch_AlreadyFinished_IsIdempotent()
+    [TestMethod]
+    public void ForfeitMatch_AlreadyFinished_IsIdempotent()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -267,7 +282,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
     }
 
-    internal void ProcessTurnTimeouts_TurnNotExpired_DoesNothing()
+    [TestMethod]
+    public void ProcessTurnTimeouts_TurnNotExpired_DoesNothing()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -283,7 +299,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(0, match.Participants[0].ConsecutiveTimeoutCount);
     }
 
-    internal void ProcessTurnTimeouts_SingleTimeout_PlaysAutomaticMoveAndIncrementsTimeout()
+    [TestMethod]
+    public void ProcessTurnTimeouts_SingleTimeout_PlaysAutomaticMoveAndIncrementsTimeout()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -304,7 +321,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
     }
 
-    internal void ProcessTurnTimeouts_ThreeConsecutiveTimeouts_ConcludesMatchWithInactivity()
+    [TestMethod]
+    public void ProcessTurnTimeouts_ThreeConsecutiveTimeouts_ConcludesMatchWithInactivity()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -328,7 +346,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
     }
 
-    internal void ObserveMatch_InProgress_ReturnsActiveMatch()
+    [TestMethod]
+    public void ObserveMatch_InProgress_ReturnsActiveMatch()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -345,7 +364,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(match.Id, result.Value?.Id);
     }
 
-    internal void ObserveMatch_FinishedMatch_ReturnsSpectatingUnavailable()
+    [TestMethod]
+    public void ObserveMatch_FinishedMatch_ReturnsSpectatingUnavailable()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -362,7 +382,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(MatchStatus.SpectatingUnavailable, result.Status);
     }
 
-    internal void GetMoveHistory_ReturnsOrderedMoves()
+    [TestMethod]
+    public void GetMoveHistory_ReturnsOrderedMoves()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -386,7 +407,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(3, moves[0].Column);
     }
 
-    internal void PlacePiece_OpponentHasNoLegalMoves_SkipsOpponentTurn()
+    [TestMethod]
+    public void PlacePiece_OpponentHasNoLegalMoves_SkipsOpponentTurn()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -412,7 +434,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual<int?>(2, updated.SkippedSeatNumber);
     }
 
-    internal void PlacePiece_NoPlayerHasLegalMoves_ConcludesMatchNormally()
+    [TestMethod]
+    public void PlacePiece_NoPlayerHasLegalMoves_ConcludesMatchNormally()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -437,7 +460,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual<int?>(null, concluded.CurrentTurnSeatNumber);
     }
 
-    internal void ProcessTurnTimeouts_DatabaseUnavailable_StillTransitionsExpiredTurns()
+    [TestMethod]
+    public void ProcessTurnTimeouts_DatabaseUnavailable_StillTransitionsExpiredTurns()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
@@ -460,7 +484,8 @@ internal sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
     }
 
-    internal void SynchronizePendingMatches_FinishedMatchPersisted_EvictsFromActiveMatches()
+    [TestMethod]
+    public void SynchronizePendingMatches_FinishedMatchPersisted_EvictsFromActiveMatches()
     {
         // Arrange
         GameplayTestContext context = new GameplayTestContext();

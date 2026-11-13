@@ -21,91 +21,128 @@ using ReversiGameSystem.Server.Persistence.Players;
 using ReversiGameSystem.Server.Persistence.Sessions;
 using ReversiGameSystem.Server.Persistence.Verification;
 using ReversiGameSystem.Server.ServiceApi;
+using Serilog;
 
 namespace ReversiGameSystem.Server.Host;
 
 internal static class Program
 {
+    private const long MaximumLogFileSizeBytes = 10_485_760;
+    private const int RetainedLogFileCount = 7;
+    private const string PersistentLogOutputTemplate =
+        "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] "
+        + "{SourceContext} {Message:lj}{NewLine}";
+
     private static int Main()
     {
+        string logDirectory = GetLogDirectory();
+        Directory.CreateDirectory(logDirectory);
+        Serilog.Core.Logger fileLogger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .WriteTo.File(
+                Path.Combine(logDirectory, "server-.log"),
+                rollingInterval: RollingInterval.Day,
+                fileSizeLimitBytes: MaximumLogFileSizeBytes,
+                rollOnFileSizeLimit: true,
+                retainedFileCountLimit: RetainedLogFileCount,
+                outputTemplate: PersistentLogOutputTemplate)
+            .CreateLogger();
+
+        using (fileLogger)
         using (ILoggerFactory loggerFactory = LoggerFactory.Create(
             builder => builder
                 .SetMinimumLevel(LogLevel.Information)
                 .AddConsole(options => options.FormatterName = SafeConsoleFormatter.FormatterName)
-                .AddConsoleFormatter<SafeConsoleFormatter, ConsoleFormatterOptions>()))
+                .AddConsoleFormatter<SafeConsoleFormatter, ConsoleFormatterOptions>()
+                .AddSerilog(fileLogger, dispose: false)))
         {
             ILogger<AccountAccessService> serviceLogger =
                 loggerFactory.CreateLogger<AccountAccessService>();
             ILogger<ServerHostLogCategory> hostLogger =
                 loggerFactory.CreateLogger<ServerHostLogCategory>();
-            try
+            using (ProcessErrorHooks processErrorHooks = new ProcessErrorHooks(
+                loggerFactory.CreateLogger<ProcessErrorHooks>()))
             {
-                SystemUtcClock clock = new SystemUtcClock();
-                SessionRepository sessions = new SessionRepository(clock);
-                AccountPresenceRegistry presenceRegistry = new AccountPresenceRegistry();
-                FriendshipSubscriptions friendshipSubscriptions = new FriendshipSubscriptions();
-                FriendshipApplicationService friendshipApplicationService =
-                    new FriendshipApplicationService(sessions, new FriendRepository());
-                using (FriendshipService friendship = new FriendshipService(
-                    friendshipApplicationService,
-                    presenceRegistry,
-                    friendshipSubscriptions,
-                    loggerFactory.CreateLogger<FriendshipService>()))
+                hostLogger.LogInformation(
+                    "Persistent server logs are written to {LogDirectory}.",
+                    logDirectory);
+                try
                 {
-                    MatchInvitationEmailSender matchInvitationEmailSender =
-                        new MatchInvitationEmailSender(MailSettings.Load());
-                    MatchRepository matchRepository = new MatchRepository();
-                    matchRepository.CancelAbandonedWaitingMatches();
-                    MatchApplicationService matchApplicationService =
-                        new MatchApplicationService(
-                        sessions,
-                        matchRepository,
-                        clock,
-                        matchInvitationEmailSender);
-                    GameplayMatchApplicationService gameplayMatchApplicationService =
-                        new GameplayMatchApplicationService(sessions, matchRepository, clock);
-                    matchApplicationService.MatchStarted += gameplayMatchApplicationService.TrackStartedMatch;
-                    using MatchLobbyService matchLobbyService = new MatchLobbyService(
-                        matchApplicationService,
-                        loggerFactory.CreateLogger<MatchLobbyService>());
-                    using GameplayMatchService gameplayMatchService = new GameplayMatchService(
-                        gameplayMatchApplicationService,
-                        sessions,
-                        loggerFactory.CreateLogger<GameplayMatchService>());
-                    ChatRepository chatRepository = new ChatRepository();
-                    ChatApplicationService chatApplicationService =
-                        new ChatApplicationService(sessions, chatRepository, clock);
-                    using MatchChatService matchChatService = new MatchChatService(
-                        chatApplicationService,
-                        loggerFactory.CreateLogger<MatchChatService>());
-                    SessionService sessionService = CreateSessionService(
-                        loggerFactory.CreateLogger<SessionService>(), sessions, clock);
-                    sessionService.SessionClosed += friendship.RemoveSession;
-                    sessionService.SessionClosed += matchLobbyService.RemoveSession;
-                    sessionService.SessionClosed += gameplayMatchService.RemoveSession;
-                    sessionService.SessionClosed += matchChatService.RemoveSession;
-                    ServiceHost[] hosts =
+                    SystemUtcClock clock = new SystemUtcClock();
+                    SessionRepository sessions = new SessionRepository(clock);
+                    AccountPresenceRegistry presenceRegistry = new AccountPresenceRegistry();
+                    FriendshipSubscriptions friendshipSubscriptions =
+                        new FriendshipSubscriptions();
+                    FriendshipApplicationService friendshipApplicationService =
+                        new FriendshipApplicationService(sessions, new FriendRepository());
+                    using (FriendshipService friendship = new FriendshipService(
+                        friendshipApplicationService,
+                        presenceRegistry,
+                        friendshipSubscriptions,
+                        loggerFactory.CreateLogger<FriendshipService>()))
                     {
-                        CreateServiceHost(CreateAccountAccessService(serviceLogger), loggerFactory),
-                        CreateServiceHost(sessionService, loggerFactory),
-                        CreateServiceHost(
-                            CreatePlayerProfileService(sessions),
-                            loggerFactory),
-                        CreateServiceHost(
-                            CreateLeaderboardService(),
-                            loggerFactory),
-                        CreateServiceHost(friendship, loggerFactory),
-                        CreateServiceHost(matchLobbyService, loggerFactory),
-                        CreateServiceHost(gameplayMatchService, loggerFactory),
-                        CreateServiceHost(matchChatService, loggerFactory)
-                    };
-                    return Run(hosts, hostLogger);
+                        MatchInvitationEmailSender matchInvitationEmailSender =
+                            new MatchInvitationEmailSender(MailSettings.Load());
+                        MatchRepository matchRepository = new MatchRepository();
+                        matchRepository.CancelAbandonedWaitingMatches();
+                        MatchApplicationService matchApplicationService =
+                            new MatchApplicationService(
+                                sessions,
+                                matchRepository,
+                                clock,
+                                matchInvitationEmailSender);
+                        GameplayMatchApplicationService gameplayMatchApplicationService =
+                            new GameplayMatchApplicationService(
+                                sessions,
+                                matchRepository,
+                                clock);
+                        matchApplicationService.MatchStarted +=
+                            gameplayMatchApplicationService.TrackStartedMatch;
+                        using MatchLobbyService matchLobbyService = new MatchLobbyService(
+                            matchApplicationService,
+                            loggerFactory.CreateLogger<MatchLobbyService>());
+                        using GameplayMatchService gameplayMatchService =
+                            new GameplayMatchService(
+                                gameplayMatchApplicationService,
+                                sessions,
+                                loggerFactory.CreateLogger<GameplayMatchService>());
+                        ChatRepository chatRepository = new ChatRepository();
+                        ChatApplicationService chatApplicationService =
+                            new ChatApplicationService(sessions, chatRepository, clock);
+                        using MatchChatService matchChatService = new MatchChatService(
+                            chatApplicationService,
+                            loggerFactory.CreateLogger<MatchChatService>());
+                        SessionService sessionService = CreateSessionService(
+                            loggerFactory.CreateLogger<SessionService>(), sessions, clock);
+                        sessionService.SessionClosed += friendship.RemoveSession;
+                        sessionService.SessionClosed += matchLobbyService.RemoveSession;
+                        sessionService.SessionClosed += gameplayMatchService.RemoveSession;
+                        sessionService.SessionClosed += matchChatService.RemoveSession;
+                        ServiceHost[] hosts =
+                        {
+                            CreateServiceHost(
+                                CreateAccountAccessService(serviceLogger),
+                                loggerFactory),
+                            CreateServiceHost(sessionService, loggerFactory),
+                            CreateServiceHost(
+                                CreatePlayerProfileService(sessions),
+                                loggerFactory),
+                            CreateServiceHost(
+                                CreateLeaderboardService(),
+                                loggerFactory),
+                            CreateServiceHost(friendship, loggerFactory),
+                            CreateServiceHost(matchLobbyService, loggerFactory),
+                            CreateServiceHost(gameplayMatchService, loggerFactory),
+                            CreateServiceHost(matchChatService, loggerFactory)
+                        };
+                        return Run(hosts, hostLogger);
+                    }
                 }
-            }
-            catch (Exception exception)
-            {
-                hostLogger.LogCritical(exception, "The server could not start.");
-                return 1;
+                catch (Exception exception)
+                {
+                    hostLogger.LogCritical(exception, "The server could not start.");
+                    return 1;
+                }
             }
         }
     }
@@ -180,6 +217,14 @@ internal static class Program
             "ReversiGameSystem.Server", "profile-images");
     }
 
+    private static string GetLogDirectory()
+    {
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "ReversiGameSystem.Server",
+            "logs");
+    }
+
     private static ServiceHost CreateServiceHost(
         object service,
         ILoggerFactory loggerFactory)
@@ -190,7 +235,9 @@ internal static class Program
         return host;
     }
 
-    private static int Run(ServiceHost[] hosts, ILogger logger)
+    private static int Run(
+        ServiceHost[] hosts,
+        Microsoft.Extensions.Logging.ILogger logger)
     {
         try
         {

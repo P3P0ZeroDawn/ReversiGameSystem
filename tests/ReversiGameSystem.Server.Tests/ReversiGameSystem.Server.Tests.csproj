@@ -8,6 +8,7 @@
     <AssemblyName>ReversiGameSystem.Server.Tests</AssemblyName>
     <ProjectGuid>{A1E6F4CC-0DF2-4A8F-93C8-13777F8AA3E2}</ProjectGuid>
     <SonarQubeTestProject>true</SonarQubeTestProject>
+    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Data" />
@@ -18,6 +19,12 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"
                       Version="10.0.13" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk"
+                      Version="18.12.0" />
+    <PackageReference Include="MSTest.TestAdapter"
+                      Version="4.5.3" />
+    <PackageReference Include="MSTest.TestFramework"
+                      Version="4.5.3" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\ReversiGameSystem.Server.Host\ReversiGameSystem.Server.Host.csproj" />

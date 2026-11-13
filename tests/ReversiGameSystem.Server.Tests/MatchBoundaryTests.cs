@@ -3,7 +3,6 @@ using System.ServiceModel;
 using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
-using ReversiGameSystem.Server.Contracts.Common;
 using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.Contracts.Matches;
 using ReversiGameSystem.Server.ServiceApi;
@@ -38,13 +37,15 @@ internal sealed class MatchBoundaryTests
         TestAssert.AreEqual(2, state.WhitePieceCount);
     }
 
-    internal void Gameplay_UnsupportedWrite_ReturnsDeclaredServiceFault()
+    internal void Gameplay_StoreFailure_PropagatesToGlobalHandler()
     {
-        using GameplayMatchService service = CreateGameplay(new BoundaryStore { FailStorage = true });
-        FaultException<ServiceFault> failure = TestAssert.Throws<FaultException<ServiceFault>>(
+        BoundaryStore store = new BoundaryStore { FailStorage = true };
+        using GameplayMatchService service = CreateGameplay(store);
+        InvalidOperationException failure = TestAssert.Throws<InvalidOperationException>(
             () => service.PlacePiece("valid", new PiecePlacement { MatchId = 7 }));
-        TestAssert.AreEqual("GAMEPLAY_OPERATION_FAILURE", failure.Detail.FailureCode);
-        TestAssert.IsTrue(!string.IsNullOrWhiteSpace(failure.Detail.CorrelationId), "Missing correlation.");
+        TestAssert.IsTrue(
+            failure.Message.Contains("private storage failure"),
+            "The service must preserve the technical failure for ServiceErrorBehavior.");
     }
 
     internal void Lobby_StoreFailure_PropagatesToGlobalHandler()

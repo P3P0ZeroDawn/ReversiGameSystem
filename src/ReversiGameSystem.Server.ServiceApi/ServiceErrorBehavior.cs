@@ -16,6 +16,9 @@ namespace ReversiGameSystem.Server.ServiceApi;
 public sealed class ServiceErrorBehavior : IServiceBehavior, IErrorHandler
 {
     private const string UnknownOperation = "UnknownOperation";
+    private const string OperationDataKey = "ReversiGameSystem.Operation";
+    private const string CorrelationDataKey = "ReversiGameSystem.CorrelationId";
+    private const string LoggedDataKey = "ReversiGameSystem.ErrorLogged";
     private readonly ILogger<ServiceErrorBehavior> _logger;
 
     /// <summary>Initializes the centralized WCF error behavior.</summary>
@@ -60,7 +63,25 @@ public sealed class ServiceErrorBehavior : IServiceBehavior, IErrorHandler
     /// <inheritdoc />
     public bool HandleError(Exception error)
     {
-        return IsDeclaredFault(error);
+        if (IsDeclaredFault(error))
+        {
+            return true;
+        }
+        if (error.Data[LoggedDataKey] is bool alreadyLogged && alreadyLogged)
+        {
+            return true;
+        }
+
+        string? operation = ReadDiagnosticValue(error, OperationDataKey);
+        string? correlationId = ReadDiagnosticValue(error, CorrelationDataKey);
+        if (operation == null || correlationId == null)
+        {
+            return true;
+        }
+
+        error.Data[LoggedDataKey] = true;
+        LogUnexpectedFailure(error, operation, correlationId);
+        return true;
     }
 
     /// <inheritdoc />
@@ -76,8 +97,8 @@ public sealed class ServiceErrorBehavior : IServiceBehavior, IErrorHandler
 
         string operation = GetOperationName();
         string correlationId = CorrelationContext.GetOrCreate();
-        LogUnexpectedFailure(error, operation, correlationId);
-
+        error.Data[OperationDataKey] = operation;
+        error.Data[CorrelationDataKey] = correlationId;
         FaultException<ServiceFault> serviceFault =
             ServiceFaultFactory.Create(operation, correlationId);
         MessageFault messageFault = serviceFault.CreateMessageFault();
@@ -147,5 +168,10 @@ public sealed class ServiceErrorBehavior : IServiceBehavior, IErrorHandler
         }
 
         return action.Substring(separatorIndex + 1);
+    }
+
+    private static string? ReadDiagnosticValue(Exception error, string key)
+    {
+        return error.Data[key] as string;
     }
 }

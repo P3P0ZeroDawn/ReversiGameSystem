@@ -2882,7 +2882,7 @@ The manual check is not deterministic or self-verifying.
 
 ### 9.2 Unit Testing
 
-Each MSTest unit test (`[TestClass]`, `[TestMethod]`) must be fast, deterministic, self-checking via `Assert`, and isolated from file systems, databases, and networks by substituting controlled `Stub` or `Fake` doubles for external dependencies (Microsoft, 2026m; Reese, 2025).
+For this project, unit test projects must reference `Microsoft.NET.Test.Sdk`, `MSTest.TestAdapter`, and `MSTest.TestFramework`. Test classes must use `[TestClass]`, and test methods must use `[TestMethod]`, so Visual Studio Test Explorer and `dotnet test` can discover and run an individual test. Each unit test must be fast, deterministic, self-checking via `Assert`, and isolated from file systems, databases, and networks by substituting controlled `Stub` or `Fake` doubles for external dependencies (Microsoft, 2026m, 2026o, 2026r; Reese, 2025).
 
 #### Correct
 
@@ -2908,30 +2908,30 @@ public sealed class DamageCalculatorTests
 }
 ```
 
-The unit test performs one action and verifies its result without external infrastructure.
+The MSTest attributes make the isolated test discoverable and independently executable.
 
 #### Incorrect
 
 ```csharp
-[TestClass]
-public sealed class DamageCalculatorTests
+public static class DamageCalculatorChecks
 {
-    [TestMethod]
-    public void CalculateDamage_TestEverything()
+    public static void RunDamageCheck()
     {
-        const string DamageText = "20";
+        const int BaseDamage = 20;
         const int DamageMultiplier = 2;
-
-        File.WriteAllText("damage.txt", DamageText);
+        const int ExpectedDamage = 40;
         DamageCalculator calculator = new DamageCalculator();
-        Console.WriteLine(calculator.CalculateDamage(
-            int.Parse(File.ReadAllText("damage.txt")),
-            DamageMultiplier));
+
+        int actualDamage = calculator.CalculateDamage(
+            BaseDamage,
+            DamageMultiplier);
+
+        Assert.AreEqual(ExpectedDamage, actualDamage);
     }
 }
 ```
 
-The test depends on a file and prints output without asserting the behavior.
+The custom static runner cannot be discovered or executed individually by MSTest.
 
 ### 9.3 Integration Testing
 
@@ -3237,6 +3237,8 @@ Microsoft. (2026o, June 24). *Write tests with MSTest*. Microsoft Learn. [https:
 Microsoft. (2026p, March 23). *Handle and raise events*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/standard/events/](https://learn.microsoft.com/en-us/dotnet/standard/events/)
 
 Microsoft. (2026q, January 20). *using statement - ensure the correct use of disposable objects*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/using](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/using)
+
+Microsoft. (2026r, March 9). *Unit test basics with Test Explorer*. Microsoft Learn. [https://learn.microsoft.com/en-us/visualstudio/test/unit-test-basics](https://learn.microsoft.com/en-us/visualstudio/test/unit-test-basics)
 
 Microsoft. (n.d.-b). *The lock statement: ensure exclusive access to a shared resource*. Microsoft Learn. Retrieved November 7, 2026, from [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/lock](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/lock)
 
