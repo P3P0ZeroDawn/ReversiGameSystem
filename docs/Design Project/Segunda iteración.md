@@ -54,8 +54,8 @@ Paso 6: Bocetar vistas y registrar decisiones de diseño
 ![Objetos de dominio.png](Segunda%20iteraci%C3%B3n/Objetos_de_dominio.png)
 
 
+![Reversi Módulos](Segunda%20iteración/Reversi%20Módulos.png)
 
-![](../../Reversi%20Módulos%20CORRECCION%201.png)
 
 
 | Elemento                     | Nodo     | Que hace                                                                                           | Que no hace                                                                       | De quien depende                                                                                            |

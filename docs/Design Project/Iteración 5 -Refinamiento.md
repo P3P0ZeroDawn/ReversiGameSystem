@@ -54,11 +54,11 @@ Paso 6: Bocetar vistas y registrar decisiones de diseño
 
 - Despliegue
 
-![](../../Reversi%20despliegue.png)
+![](Iteración%205%20-Refinamiento/Reversi%20despliegue.png)
 
 - Módulos
 
-![](../../Reversi%20Módulos.png)
+![](Iteración%205%20-Refinamiento/Reversi%20Módulos.png)
 
 | **Elemento** | Nodo | **Qué hace** | **Qué no hace** | **De quién depende** |
 | --- | --- | --- | --- | --- |
