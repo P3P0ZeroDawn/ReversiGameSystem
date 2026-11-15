@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ReversiGameSystem.Server.Domain.Matches;
 
 namespace ReversiGameSystem.Server.Application.Matches;
@@ -31,6 +32,20 @@ public sealed class MatchParticipant
 
     /// <summary>Gets or sets the number of consecutive timeouts accumulated by this participant.</summary>
     public int ConsecutiveTimeoutCount { get; set; }
+
+    /// <summary>Creates an isolated copy of this participant.</summary>
+    public MatchParticipant CreateSnapshot()
+    {
+        MatchParticipant snapshot = new MatchParticipant
+        {
+            SeatNumber = SeatNumber,
+            AccountId = AccountId,
+            DisplayName = DisplayName,
+            ConsecutiveTimeoutCount = ConsecutiveTimeoutCount
+        };
+
+        return snapshot;
+    }
 }
 
 /// <summary>Records an in-memory piece placement performed during active gameplay.</summary>
@@ -56,6 +71,23 @@ public sealed class MatchMove
 
     /// <summary>Gets or sets whether the placement originated from a player, a timeout or the system.</summary>
     public string Origin { get; set; } = "Player";
+
+    /// <summary>Creates an isolated copy of this move.</summary>
+    public MatchMove CreateSnapshot()
+    {
+        MatchMove snapshot = new MatchMove
+        {
+            MoveNumber = MoveNumber,
+            SeatNumber = SeatNumber,
+            Row = Row,
+            Column = Column,
+            PlayedAtUtc = PlayedAtUtc,
+            FlippedPieceCount = FlippedPieceCount,
+            Origin = Origin
+        };
+
+        return snapshot;
+    }
 }
 
 /// <summary>Encapsulates the parameters required to execute a piece placement attempt.</summary>
@@ -191,6 +223,43 @@ public sealed class Match
 
     /// <summary>Gets the synchronization root used to serialize concurrent state mutations on this match.</summary>
     public object SyncRoot { get; } = new object();
+
+    /// <summary>Creates an isolated deep copy of this match for reads outside locks.</summary>
+    public Match CreateSnapshot()
+    {
+        MatchParticipant[] participants = Participants
+            .Select(participant => participant.CreateSnapshot())
+            .ToArray();
+        List<MatchMove> moves = Moves
+            .Select(move => move.CreateSnapshot())
+            .ToList();
+        MatchMove? lastMove = LastMove == null ? null : LastMove.CreateSnapshot();
+
+        Match snapshot = new Match
+        {
+            Id = Id,
+            Code = Code,
+            State = State,
+            TurnDurationSeconds = TurnDurationSeconds,
+            CountsTowardStatistics = CountsTowardStatistics,
+            StartedAtUtc = StartedAtUtc,
+            Participants = participants,
+            IsPrivate = IsPrivate,
+            Board = (int[])Board.Clone(),
+            MatchStateVersion = MatchStateVersion,
+            CurrentTurnSeatNumber = CurrentTurnSeatNumber,
+            TurnStartedAtUtc = TurnStartedAtUtc,
+            LastMove = lastMove,
+            SkippedSeatNumber = SkippedSeatNumber,
+            Moves = moves,
+            EndReason = EndReason,
+            WinnerSeatNumber = WinnerSeatNumber,
+            AbandoningSeatNumber = AbandoningSeatNumber,
+            EndedAtUtc = EndedAtUtc
+        };
+
+        return snapshot;
+    }
 }
 
 /// <summary>Contains one prepared private match and its server-resolved destination.</summary>

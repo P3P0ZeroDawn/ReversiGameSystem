@@ -57,6 +57,7 @@ internal static class Program
         LobbyAuthorizationTests lobbyAuthorizationTests = new LobbyAuthorizationTests();
         ServiceErrorBehaviorTests errorBehaviorTests = new ServiceErrorBehaviorTests();
         ReversiDomainTests reversiTests = new ReversiDomainTests();
+        GameplayMatchRulesTests gameplayRulesTests = new GameplayMatchRulesTests();
         GameplayApplicationServiceTests gameplayTests = new GameplayApplicationServiceTests();
         PlayerBoundaryTests playerBoundaryTests = new PlayerBoundaryTests();
         System.Collections.Generic.List<Action> tests =
@@ -92,6 +93,15 @@ internal static class Program
             gameplayTests.PlacePiece_NoPlayerHasLegalMoves_ConcludesMatchNormally,
             gameplayTests.ProcessTurnTimeouts_DatabaseUnavailable_StillTransitionsExpiredTurns,
             gameplayTests.SynchronizePendingMatches_FinishedMatchPersisted_EvictsFromActiveMatches,
+            gameplayTests.GetAuthorizedMatchSnapshot_ParticipantAndNonParticipant_EnforcesAuthorization,
+            gameplayTests.SynchronizePendingMatches_PersistenceFailureOnFirstMatch_StopsTickForBackoff,
+            gameplayRulesTests.InitializeStartedMatch_ActiveMatch_SetsOpeningBoardAndBlackTurn,
+            gameplayRulesTests.ValidatePlacement_NotInProgress_ReturnsMatchNotInProgress,
+            gameplayRulesTests.ValidatePlacement_ValidTurnAndVersion_ReturnsAuthorizedParticipant,
+            gameplayRulesTests.ApplyPlayerMove_ValidMove_UpdatesStateWithoutMutatingSnapshot,
+            gameplayRulesTests.ApplyTimeoutIfExpired_ThirdTimeout_ConcludesInactivityAndAdvancesVersion,
+            gameplayRulesTests.ForfeitByParticipant_SecondCall_ReturnsMatchFinishedWithoutMutatingVersion,
+            gameplayRulesTests.CreateSnapshot_MutatingOriginalMatch_DoesNotAffectSnapshot,
             lobbyAuthorizationTests.Authorize_LiveSession_ChecksAccountWithoutListingMatches,
             lobbyAuthorizationTests.Authorize_ExpiredSession_RejectsBeforeAccountQuery,
             lobbyAuthorizationTests.Authorize_RevokedSession_RejectsBeforeAccountQuery,

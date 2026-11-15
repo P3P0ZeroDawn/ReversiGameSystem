@@ -65,7 +65,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     /// <inheritdoc />
     public void OpenMatchChannel(string sessionToken, long matchId)
     {
-        MatchResult<Match> result = _applicationService.GetMatchInformation(
+        MatchResult<Match> result = _applicationService.GetAuthorizedMatchSnapshot(
             sessionToken,
             matchId);
         ThrowFailure(result.Status);
@@ -92,7 +92,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     /// <inheritdoc />
     public MatchInformation GetMatchInformation(string sessionToken, long matchId)
     {
-        MatchResult<Match> result = _applicationService.GetMatchInformation(
+        MatchResult<Match> result = _applicationService.GetAuthorizedMatchSnapshot(
             sessionToken,
             matchId);
         ThrowFailure(result.Status);
@@ -184,7 +184,9 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     /// <inheritdoc />
     public MatchDetails GetMatchDetails(string sessionToken, long matchId)
     {
-        MatchResult<Match> result = _applicationService.GetMatchDetails(sessionToken, matchId);
+        MatchResult<Match> result = _applicationService.GetAuthorizedMatchSnapshot(
+            sessionToken,
+            matchId);
         ThrowFailure(result.Status);
 
         Match match = RequireValue(result);

@@ -505,6 +505,50 @@ public sealed class GameplayApplicationServiceTests
         TestAssert.AreEqual("Finished", reloadResult.Value?.State);
         TestAssert.AreEqual(1, context.Repository.LoadMatchCalls);
     }
+
+    [TestMethod]
+    public void GetAuthorizedMatchSnapshot_ParticipantAndNonParticipant_EnforcesAuthorization()
+    {
+        GameplayTestContext context = new GameplayTestContext();
+        Match match = context.CreateMatch(40);
+        context.ApplicationService.TrackStartedMatch(match);
+
+        MatchResult<Match> participantResult =
+            context.ApplicationService.GetAuthorizedMatchSnapshot(
+                context.PlayerOne.SessionToken,
+                match.Id);
+        MatchResult<Match> spectatorResult =
+            context.ApplicationService.GetAuthorizedMatchSnapshot(
+                context.Spectator.SessionToken,
+                match.Id);
+
+        TestAssert.AreEqual(MatchStatus.Success, participantResult.Status);
+        TestAssert.AreEqual(match.Id, participantResult.Value?.Id);
+        TestAssert.AreEqual(MatchStatus.Unauthorized, spectatorResult.Status);
+    }
+
+    [TestMethod]
+    public void SynchronizePendingMatches_PersistenceFailureOnFirstMatch_StopsTickForBackoff()
+    {
+        GameplayTestContext context = new GameplayTestContext();
+        Match firstMatch = context.CreateMatch(40);
+        Match secondMatch = context.CreateMatch(40);
+        secondMatch.Id = 56L;
+        context.Repository.StoreMatch(secondMatch);
+        context.ApplicationService.TrackStartedMatch(firstMatch);
+        context.ApplicationService.TrackStartedMatch(secondMatch);
+        context.Repository.SynchronizationAvailable = false;
+
+        _ = context.ApplicationService.PlacePiece(
+            context.PlayerOne.SessionToken,
+            new MatchPlacement(firstMatch.Id, 0, 2, 3));
+        _ = context.ApplicationService.PlacePiece(
+            context.PlayerOne.SessionToken,
+            new MatchPlacement(secondMatch.Id, 0, 2, 3));
+        context.ApplicationService.SynchronizePendingMatches();
+
+        TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
+    }
 }
 
 internal sealed class GameplayTestContext

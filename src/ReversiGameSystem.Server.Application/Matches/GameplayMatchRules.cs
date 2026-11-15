@@ -1,0 +1,364 @@
+using System;
+using System.Linq;
+using ReversiGameSystem.Server.Domain.Matches;
+
+namespace ReversiGameSystem.Server.Application.Matches;
+
+public static class GameplayMatchRules
+{
+    private const int MaximumConsecutiveTimeouts = 3;
+    private const int BlackSeatNumber = ReversiEngine.Black;
+    private const int WhiteSeatNumber = ReversiEngine.White;
+    private const string StateInProgress = "InProgress";
+    private const string StateFinished = "Finished";
+    private const string MoveOriginPlayer = "Player";
+    private const string MoveOriginTimeout = "Timeout";
+    private const string EndReasonNormal = "NORMAL";
+    private const string EndReasonInactivity = "INACTIVITY";
+    private const string EndReasonAbandonment = "ABANDONMENT";
+
+    public static void InitializeStartedMatch(Match match, DateTime startedAtUtc)
+    {
+        if (match == null)
+        {
+            throw new ArgumentNullException(nameof(match));
+        }
+
+        match.Board = ReversiEngine.CreateInitialBoard();
+        match.MatchStateVersion = 0;
+        match.CurrentTurnSeatNumber = BlackSeatNumber;
+        match.TurnStartedAtUtc = match.StartedAtUtc ?? startedAtUtc;
+    }
+
+    public static MatchResult<MatchParticipant> ValidatePlacement(
+        Match match,
+        long accountId,
+        MatchPlacement placement)
+    {
+        if (match == null)
+        {
+            throw new ArgumentNullException(nameof(match));
+        }
+
+        if (placement == null)
+        {
+            throw new ArgumentNullException(nameof(placement));
+        }
+
+        if (!string.Equals(match.State, StateInProgress, StringComparison.Ordinal))
+        {
+            return new MatchResult<MatchParticipant>(MatchStatus.MatchNotInProgress);
+        }
+
+        MatchParticipant? participant = FindParticipant(match, accountId);
+        if (participant == null)
+        {
+            return new MatchResult<MatchParticipant>(MatchStatus.Unauthorized);
+        }
+
+        if (match.CurrentTurnSeatNumber != participant.SeatNumber)
+        {
+            return new MatchResult<MatchParticipant>(MatchStatus.NotPlayersTurn);
+        }
+
+        if (match.MatchStateVersion != placement.ExpectedVersion)
+        {
+            return new MatchResult<MatchParticipant>(MatchStatus.StaleMatchStateVersion);
+        }
+
+        return new MatchResult<MatchParticipant>(participant);
+    }
+
+    public static MatchStatus ApplyPlayerMove(
+        Match match,
+        MatchPlacement placement,
+        DateTime playedAtUtc)
+    {
+        if (match == null)
+        {
+            throw new ArgumentNullException(nameof(match));
+        }
+
+        if (placement == null)
+        {
+            throw new ArgumentNullException(nameof(placement));
+        }
+
+        MatchParticipant? participant = FindParticipantBySeat(match, match.CurrentTurnSeatNumber);
+        if (participant == null)
+        {
+            return MatchStatus.NotPlayersTurn;
+        }
+
+        int[] flipped = ReversiEngine.ApplyMove(
+            match.Board,
+            placement.Row,
+            placement.Column,
+            participant.SeatNumber);
+        if (flipped.Length == 0)
+        {
+            return MatchStatus.InvalidPosition;
+        }
+
+        participant.ConsecutiveTimeoutCount = 0;
+        MatchMove committedMove = new MatchMove
+        {
+            SeatNumber = participant.SeatNumber,
+            Row = placement.Row,
+            Column = placement.Column,
+            PlayedAtUtc = playedAtUtc,
+            FlippedPieceCount = flipped.Length,
+            Origin = MoveOriginPlayer
+        };
+
+        RecordCommittedMove(match, committedMove);
+        AdvanceTurnOrConclude(match, participant.SeatNumber, playedAtUtc);
+
+        return MatchStatus.Success;
+    }
+
+    public static bool ApplyTimeoutIfExpired(Match match, DateTime now)
+    {
+        if (match == null)
+        {
+            throw new ArgumentNullException(nameof(match));
+        }
+
+        MatchParticipant? actingParticipant = FindExpiredTurnParticipant(match, now);
+        if (actingParticipant == null)
+        {
+            return false;
+        }
+
+        actingParticipant.ConsecutiveTimeoutCount++;
+        if (actingParticipant.ConsecutiveTimeoutCount >= MaximumConsecutiveTimeouts)
+        {
+            match.MatchStateVersion++;
+            match.WinnerSeatNumber = GetOpponentSeat(actingParticipant.SeatNumber);
+            match.AbandoningSeatNumber = actingParticipant.SeatNumber;
+            ConcludeMatch(match, EndReasonInactivity, now);
+            return true;
+        }
+
+        ApplyTimeoutAutoMove(match, actingParticipant.SeatNumber, now);
+        return true;
+    }
+
+    public static MatchStatus ForfeitByParticipant(
+        Match match,
+        long accountId,
+        DateTime endedAtUtc)
+    {
+        if (match == null)
+        {
+            throw new ArgumentNullException(nameof(match));
+        }
+
+        MatchParticipant? participant = FindParticipant(match, accountId);
+        if (participant == null)
+        {
+            return MatchStatus.Unauthorized;
+        }
+
+        if (string.Equals(match.State, StateFinished, StringComparison.Ordinal))
+        {
+            return MatchStatus.MatchFinished;
+        }
+
+        if (!string.Equals(match.State, StateInProgress, StringComparison.Ordinal))
+        {
+            return MatchStatus.MatchNotInProgress;
+        }
+
+        match.MatchStateVersion++;
+        match.WinnerSeatNumber = GetOpponentSeat(participant.SeatNumber);
+        match.AbandoningSeatNumber = participant.SeatNumber;
+        ConcludeMatch(match, EndReasonAbandonment, endedAtUtc);
+
+        return MatchStatus.Success;
+    }
+
+    public static bool IsParticipant(Match match, long accountId)
+    {
+        if (match == null)
+        {
+            throw new ArgumentNullException(nameof(match));
+        }
+
+        return FindParticipant(match, accountId) != null;
+    }
+
+    private static MatchParticipant? FindExpiredTurnParticipant(Match match, DateTime now)
+    {
+        if (!string.Equals(match.State, StateInProgress, StringComparison.Ordinal)
+            || !match.CurrentTurnSeatNumber.HasValue)
+        {
+            return null;
+        }
+
+        DateTime turnStartedAtUtc = match.TurnStartedAtUtc ?? now;
+        if (now < turnStartedAtUtc.AddSeconds(match.TurnDurationSeconds))
+        {
+            return null;
+        }
+
+        return FindParticipantBySeat(match, match.CurrentTurnSeatNumber);
+    }
+
+    private static void ApplyTimeoutAutoMove(Match match, int currentSeat, DateTime now)
+    {
+        BoardCoordinate? legalCell = FindLegalPlacement(match.Board, currentSeat);
+        if (!legalCell.HasValue)
+        {
+            match.MatchStateVersion++;
+            ConcludeByBoardScore(match, now);
+            return;
+        }
+
+        int row = legalCell.Value.Row;
+        int col = legalCell.Value.Column;
+        int[] flipped = ReversiEngine.ApplyMove(match.Board, row, col, currentSeat);
+        MatchMove committedMove = new MatchMove
+        {
+            SeatNumber = currentSeat,
+            Row = row,
+            Column = col,
+            PlayedAtUtc = now,
+            FlippedPieceCount = flipped.Length,
+            Origin = MoveOriginTimeout
+        };
+
+        RecordCommittedMove(match, committedMove);
+        AdvanceTurnOrConclude(match, currentSeat, now);
+    }
+
+    private static void RecordCommittedMove(Match match, MatchMove committedMove)
+    {
+        match.MatchStateVersion++;
+        committedMove.MoveNumber = (int)match.MatchStateVersion;
+        match.Moves.Add(committedMove);
+        match.LastMove = committedMove;
+    }
+
+    private static void AdvanceTurnOrConclude(Match match, int actingSeat, DateTime now)
+    {
+        int opponentSeat = GetOpponentSeat(actingSeat);
+        if (ReversiEngine.HasValidMoves(match.Board, opponentSeat))
+        {
+            match.CurrentTurnSeatNumber = opponentSeat;
+            match.TurnStartedAtUtc = now;
+            match.SkippedSeatNumber = null;
+            return;
+        }
+
+        if (ReversiEngine.HasValidMoves(match.Board, actingSeat))
+        {
+            match.CurrentTurnSeatNumber = actingSeat;
+            match.TurnStartedAtUtc = now;
+            match.SkippedSeatNumber = opponentSeat;
+            return;
+        }
+
+        ConcludeByBoardScore(match, now);
+    }
+
+    private static void ConcludeByBoardScore(Match match, DateTime now)
+    {
+        int blackPieceCount = CountPieces(match.Board, ReversiEngine.Black);
+        int whitePieceCount = CountPieces(match.Board, ReversiEngine.White);
+        match.WinnerSeatNumber = DetermineWinner(blackPieceCount, whitePieceCount);
+        match.AbandoningSeatNumber = null;
+        ConcludeMatch(match, EndReasonNormal, now);
+    }
+
+    private static void ConcludeMatch(Match match, string endReason, DateTime endedAtUtc)
+    {
+        match.State = StateFinished;
+        match.EndReason = endReason;
+        match.EndedAtUtc = endedAtUtc;
+        match.CurrentTurnSeatNumber = null;
+        match.TurnStartedAtUtc = null;
+        match.SkippedSeatNumber = null;
+    }
+
+    private static MatchParticipant? FindParticipant(Match match, long accountId)
+    {
+        return match.Participants.FirstOrDefault(
+            current => current.AccountId == accountId);
+    }
+
+    private static MatchParticipant? FindParticipantBySeat(Match match, int? seatNumber)
+    {
+        if (!seatNumber.HasValue)
+        {
+            return null;
+        }
+
+        int targetSeat = seatNumber.Value;
+        return match.Participants.FirstOrDefault(
+            current => current.SeatNumber == targetSeat);
+    }
+
+    private static int GetOpponentSeat(int seatNumber)
+    {
+        return seatNumber == BlackSeatNumber ? WhiteSeatNumber : BlackSeatNumber;
+    }
+
+    private static BoardCoordinate? FindLegalPlacement(int[] board, int disc)
+    {
+        for (int row = 0; row < ReversiEngine.BoardSize; row++)
+        {
+            for (int col = 0; col < ReversiEngine.BoardSize; col++)
+            {
+                if (ReversiEngine.IsLegalMove(board, row, col, disc))
+                {
+                    return new BoardCoordinate(row, col);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static int? DetermineWinner(int blackCount, int whiteCount)
+    {
+        if (blackCount > whiteCount)
+        {
+            return BlackSeatNumber;
+        }
+
+        if (whiteCount > blackCount)
+        {
+            return WhiteSeatNumber;
+        }
+
+        return null;
+    }
+
+    private static int CountPieces(int[] board, int disc)
+    {
+        int count = 0;
+        for (int i = 0; i < board.Length; i++)
+        {
+            if (board[i] == disc)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private readonly struct BoardCoordinate
+    {
+        internal BoardCoordinate(int row, int column)
+        {
+            Row = row;
+            Column = column;
+        }
+
+        internal int Row { get; }
+
+        internal int Column { get; }
+    }
+}
