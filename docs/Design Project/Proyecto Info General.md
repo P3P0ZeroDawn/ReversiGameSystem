@@ -747,15 +747,18 @@ El Módulo de juego proviene de las iteraciones anteriores y se refina en la ter
 
 El Módulo de persistencia conserva las responsabilidades de almacenamiento. El Módulo despachador de correo permanece separado de persistencia y limita a 5 segundos la comunicación con el proveedor externo.
 
-#### Evolución estructural de las primeras iteraciones
+#### Evolución estructural de las iteraciones
 
 - La primera iteración define las capas de presentación, negocio, datos y servicios. Todavía no descompone esas capas en módulos.
 - La segunda iteración incorpora los módulos de presentación, comunicación, servicios, juego, motor de juego, jugadores, amistades, chat, despacho de correo y persistencia.
-- La tercera iteración refina el Módulo de juego e incorpora el nuevo Módulo de estado de juego.
-- La quinta iteración conserva tres niveles lógicos: cliente, aplicación y datos. En la vista física existen dos dispositivos; la aplicación de servicio y la base de datos se ejecutan como procesos independientes dentro del mismo dispositivo del servidor.
-- En la quinta iteración, los módulos de datos dependen de la base de datos relacional. El Módulo de servicios utiliza el Módulo de registro de eventos para registrar los eventos del servidor.
-
+- La tercera iteración refina el Módulo de juego e incorpora el Módulo de estado de juego para conservar el estado activo de las partidas en memoria. También delimita el despacho de correo como una responsabilidad separada de la persistencia.
+- La cuarta iteración deja planeada la generación, con un solo comando, de instaladores separados para el cliente y el servidor.
+- La quinta iteración distingue los tres niveles lógicos de los dos dispositivos de la vista física. La aplicación de servicio y la base de datos se ejecutan como procesos independientes en el mismo dispositivo servidor. El servidor conserva la autoridad sobre las reglas y el cliente usa un validador de interfaz. Los módulos de datos dependen de la base de datos relacional y el Módulo de servicios utiliza el Módulo de registro de eventos.
+- La sexta iteración refina la estructura del servidor para facilitar las pruebas. La raíz de composición ensambla los módulos desde la capa de arranque. Los contratos de salida definidos en negocio separan la persistencia y el correo de quienes los consumen. La frontera de servicios se subdivide por área funcional y los modelos se traducen en las fronteras.
+- La séptima iteración define MVVM para la presentación del cliente. Presentación se subdivide por flujo de usuario y comunicación por cliente remoto. Los ViewModels usan la validación local y el Módulo de comunicación encapsula el acceso remoto mediante Proxy. Sala, partida en curso y chat comparten el Cliente de partidas.
+- La octava iteración refina el Módulo de juego para comprobar la versión esperada y aplicar la jugada bajo el mismo acceso exclusivo por partida. Una solicitud desactualizada se rechaza antes de modificar el tablero.
 - La novena iteración refina la usabilidad del cliente. El tablero indica las posiciones válidas a partir del estado confirmado y bloquea las identificadas como inválidas. La sala ofrece jugar contra el sistema desde su primera presentación.
+- La décima iteración conserva el envío del estado completo por respuesta y notificación. Compara su costo con el envío de cambios para 8 jugadores en 4 partidas y proyecta una carga de 32 jugadores en 16 partidas con un enlace de mayor capacidad. También registra la resolución de los vencimientos de turno en el servidor.
 
 ### Árbol de utilidad
 

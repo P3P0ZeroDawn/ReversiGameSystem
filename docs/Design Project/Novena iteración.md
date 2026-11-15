@@ -32,6 +32,8 @@ El ViewModel de Sala de partida presenta habilitada la opción de jugar contra e
 
 ![Iniciar una partida contra el sistema](Novena%20iteración/Iniciar%20una%20partida%20contra%20el%20sistema.png)
 
+
+
 | Elemento | Capa | Responsabilidad en esta iteración | Dependencias |
 | --- | --- | --- | --- |
 | Partida en curso | Presentación | Actualiza el tablero y las posiciones habilitadas a partir del estado confirmado. | Módulo validador de interfaz y Cliente de partidas. |
