@@ -754,6 +754,10 @@ El Módulo de persistencia conserva las responsabilidades de almacenamiento. El 
 - La tercera iteración refina el Módulo de juego e incorpora el nuevo Módulo de estado de juego.
 - La quinta iteración conserva tres niveles lógicos: cliente, aplicación y datos. En la vista física existen dos dispositivos; la aplicación de servicio y la base de datos se ejecutan como procesos independientes dentro del mismo dispositivo del servidor.
 - En la quinta iteración, los módulos de datos dependen de la base de datos relacional. El Módulo de servicios utiliza el Módulo de registro de eventos para registrar los eventos del servidor.
+- La sexta iteración explicita la división del cliente en las capas de presentación, negocio y datos, y la división del servidor en las capas de arranque, servicios, negocio, persistencia y transversal. También refina la estructura interna del servidor para priorizar la facilidad de prueba: incorpora la Raíz de composición del servidor, invierte las dependencias hacia la capa de persistencia y el Módulo despachador de correo mediante contratos definidos en la capa de negocio, separa los modelos de dominio en las fronteras y subdivide el Módulo de servicios por área funcional.
+
+- La séptima iteración define MVVM para la capa de presentación del cliente. Conserva la capa de negocio del cliente en el proyecto de validación y la capa de datos en el proyecto de comunicación. Los ViewModels coordinan la interacción con ambas capas y el Módulo de comunicación encapsula el acceso remoto mediante Proxy.
+- En la séptima iteración, presentación se subdivide por flujo de usuario y comunicación por cliente remoto. Sala, partida en curso y chat comparten el cliente de partidas.
 
 ### Árbol de utilidad
 
