@@ -110,6 +110,8 @@ Tier cliente para la ejecución de la Rich Client Application
 
 Tier servidor para la ejecución de la Service Application y el servidor de base de datos
 
+Esta iteración define la organización inicial mediante capas. La descomposición de esas capas en módulos estructurales se realiza a partir de la segunda iteración.
+
 Paso 6: Bocetar vistas y registrar decisiones de diseño
 
 ![Reversi Módulos.png](Primera%20iteraci%C3%B3n/Reversi_Mdulos.png)

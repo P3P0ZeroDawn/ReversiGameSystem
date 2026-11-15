@@ -36,7 +36,7 @@ STK-__  _______ tiene relación con el sistema porque ______________
 Le importa _____________ y eso podría hacernos razonar sobre ____________
 
 - **STK-01 Jugador** tiene relación con el sistema porque es su usuario principal y utiliza sus servicios de partida, comunicación y consulta de información. Su información, partidas y progreso serán administrados por el sistema. Le importa poder jugar de manera sencilla, justa y confiable, que su progreso se conserve correctamente, que las partidas respondan con rapidez y que una interrupción temporal no provoque innecesariamente la pérdida de una partida. Esto podría hacernos razonar sobre **usability, performance, availability, security, integridad y persistencia de información**.
-- **STK-02 Equipo de desarrollo** tiene relación con el sistema porque será responsable de diseñarlo, implementarlo, probarlo, desplegarlo y mantenerlo. Le importa que los cambios puedan localizarse, que los componentes puedan probarse de manera independiente y que nuevas funcionalidades puedan incorporarse sin provocar modificaciones innecesarias en otras partes del sistema. Esto podría hacernos razonar sobre **modifiability, testability, deployability y control de dependencias**.
+- **STK-02 Equipo de desarrollo** tiene relación con el sistema porque será responsable de diseñarlo, implementarlo, probarlo, desplegarlo y mantenerlo. Le importa que los cambios puedan localizarse, que los módulos puedan probarse de manera independiente y que nuevas funcionalidades puedan incorporarse sin provocar modificaciones innecesarias en otras partes del sistema. Esto podría hacernos razonar sobre **modifiability, testability, deployability y control de dependencias**.
 - **STK-03 Administrador del sistema** tiene relación con el sistema porque será responsable de atender incidencias operativas y dar soporte a los jugadores. Le importa poder identificar problemas, consultar información relevante de cuentas y partidas y realizar las acciones administrativas permitidas sin comprometer la integridad de la información. Esto podría hacernos razonar sobre **observability, auditability, security, availability y herramientas administrativas**.
 - **STK-04 Auditor** tiene relación con el sistema porque debe revisar posteriormente las acciones realizadas sobre información relevante del sistema y verificar la trazabilidad de los eventos registrados. Le importa poder determinar quién realizó una acción, qué acción realizó, cuándo ocurrió, sobre qué recurso se realizó y cuál fue su resultado. Esto podría hacernos razonar sobre **auditabilidad, trazabilidad, integridad de los registros, seguridad y costo de almacenamiento y procesamiento de la auditoría**.
 - STK-05 **Adversario** tiene relación con el sistema porque puede intentar manipular el cliente, enviar jugadas ilegales, alterar mensajes, acceder a recursos sin autorización o modificar información de manera indebida. Esto podría hacernos razonar sobre **security**.
@@ -152,7 +152,7 @@ HIS → Historial
 - TEN-04 — Modifiability/Testability vs. simplicidad: Separar responsabilidades y dependencias mejora la capacidad de cambio y prueba, pero aumenta el número de abstracciones que un equipo de dos desarrolladores debe implementar y comprender.
 - TEN-05 — Seguridad vs. latencia: Validar cada movimiento en el servidor mejora la integridad de las partidas online, pero introduce comunicación de red antes de confirmar una jugada.
 - TEN-06 — Persistencia de chat vs. almacenamiento/privacidad: Conservar más historial facilita moderación y auditoría, pero incrementa la cantidad de información almacenada y su periodo de exposición.
-- TEN-07 — Desacoplamiento de binarios y rendimiento de red vs. localidad de cambio (Duplicación): Implementar un validador ligero desacopla el ciclo de vida del cliente respecto al servidor y evita el envío de jugadas ilegales por la red, pero sacrifica la localidad de cambio al obligar a actualizar la lógica de validación básica en dos componentes independientes si las reglas cambian.
+- TEN-07 — Desacoplamiento de binarios y rendimiento de red vs. localidad de cambio (Duplicación): Implementar un validador ligero desacopla el ciclo de vida del cliente respecto al servidor y evita el envío de jugadas ilegales por la red, pero sacrifica la localidad de cambio al obligar a actualizar la lógica de validación básica en dos módulos independientes si las reglas cambian.
 
 ### Escenarios
 
@@ -166,7 +166,7 @@ Durante la operación normal del sistema, un auditor solicita revisar las accion
 
 Fuente del estímulo:
 
-El auditor.
+STK-04 Auditor.
 
 Estímulo:
 
@@ -196,37 +196,37 @@ Para el 100 % de las acciones clasificadas como auditables y registradas durante
 
 Además, los datos registrados no presentan contradicciones con la información persistida de las partidas que pueda ser utilizada para verificar dichas acciones.
 
-**ESC-02: Ausencia de contrincante**
+**ESC-02: Disponibilidad de la partida contra el sistema**
 
 **Narrativa**
 
-Durante la operación normal del sistema, un jugador solicita iniciar una partida en línea contra otro jugador. Si tras cinco minutos de búsqueda no se encuentra un contrincante humano disponible, el sistema finaliza la búsqueda y le ofrece la opción de iniciar una partida contra un oponente controlado por el sistema, garantizando la continuidad de la experiencia de juego
+Durante la operación normal del sistema, un jugador crea una partida y entra a la pantalla de espera. Desde que se muestra esta pantalla, el sistema presenta la opción para iniciar una partida contra un oponente controlado por el sistema.
 
 **Escenario**
 
 Fuente del estímulo:
 
-El jugador
+STK-01 Jugador.
 
 Estímulo:
 
-Solicita una partida contra otro jugador y transcurren 5 minutos sin encontrar un contrincante humano disponible.
+Entra a la pantalla de espera después de crear una partida.
 
 Ambiente:
 
-El sistema se encuentra en operación normal, los servicios necesarios para jugar están disponibles y no existe un contrincante disponible durante el periodo de búsqueda.
+El sistema se encuentra en operación normal y los servicios necesarios para jugar están disponibles.
 
 Artefacto:
 
-Las capacidades de emparejamiento y creación de partidas.
+El flujo de creación y espera de la partida.
 
 Respuesta:
 
-El sistema finaliza la búsqueda de contrincante, informa al jugador que no se encontró un oponente humano y le ofrece iniciar una partida contra un oponente controlado por el sistema.
+El sistema muestra la opción para iniciar una partida contra un oponente controlado por el sistema desde el inicio de la espera.
 
 Medida de la respuesta:
 
-Al cumplirse los 5 minutos de búsqueda sin encontrar contrincante, el jugador dispone de una opción para iniciar una partida contra la computadora sin requerir la conexión de otro jugador.
+La opción está disponible desde la primera presentación de la pantalla de espera, con 0 segundos de espera obligatoria.
 
 **ESC-03: Intento de realizar una jugada inválida**
 
@@ -276,7 +276,7 @@ Durante una partida en línea activa, el jugador pierde la conexión de red de m
 
 **Fuente del estímulo:**
 
-La conexión de red del jugador.
+STK-01 Jugador que participa en una partida en línea.
 
 **Estímulo:**
 
@@ -314,7 +314,7 @@ Escenario
 
 **Fuente del estímulo:**
 
-Un jugador en una partida en línea.
+STK-01 Jugador en turno en una partida en línea.
 
 **Estímulo:**
 
@@ -346,7 +346,7 @@ Escenario
 
 **Fuente del estímulo:**
 
-El transcurso del tiempo asociado al turno del jugador.
+STK-01 Jugador cuyo turno se encuentra activo.
 
 **Estímulo:**
 
@@ -382,7 +382,7 @@ Escenario
 
 **Fuente del estímulo:**
 
-El jugador.
+STK-01 Jugador durante su turno.
 
 **Estímulo:**
 
@@ -402,8 +402,8 @@ La interfaz distingue visualmente las posiciones válidas al posicionar el curso
 
 **Medida de la respuesta:**
 
-- Todas las posiciones identificadas como válidas presentan el indicador visual definido al colocar el cursor sobre ellas.
-- Una posición inválida no permite ejecutar una jugada desde la interfaz normal.
+- El indicador de posiciones válidas aparece en un máximo de 1 segundo.
+- El 100 % de las posiciones inválidas identificadas por la interfaz quedan bloqueadas.
 - Intentar seleccionar una posición inválida no modifica el tablero ni provoca un cambio de turno.
 
 **ESC-08 — Consulta de instrucciones durante una partida**
@@ -416,7 +416,7 @@ Escenario
 
 **Fuente del estímulo:**
 
-El jugador.
+STK-01 Jugador.
 
 **Estímulo:**
 
@@ -440,7 +440,9 @@ El sistema presenta las instrucciones del juego y permite al jugador regresar po
 - Consultar las instrucciones no modifica el tablero, el jugador en turno, el resultado ni la configuración de la partida.
 - Al cerrar las instrucciones, el jugador regresa a la misma partida.
 
-**ESC-09 — Protección de operaciones administrativas**
+**~~ESC-09~~ — Protección de operaciones administrativas [Descartado]**
+
+- **DESCARTADO:** no existe un caso de uso administrativo dentro del alcance acordado.
 
 Narrativa
 
@@ -448,7 +450,7 @@ Durante la operación normal del sistema, un jugador autenticado sin privilegios
 
 **Fuente del estímulo:**
 
-Un jugador autenticado sin privilegios administrativos.
+STK-01 Jugador autenticado sin privilegios administrativos.
 
 **Estímulo:**
 
@@ -500,14 +502,16 @@ Las pruebas pueden establecer estados concretos del tablero, ejecutar movimiento
 
 **Medida de la respuesta:**
 
-Las reglas pueden probarse sin iniciar:
+El 100 % de la suite de reglas se ejecuta en menos de 5 segundos.
+
+La suite se ejecuta sin iniciar:
 
 - interfaz WPF;
 - comunicación WCF;
 - SQL Server;
 - Entity Framework;
 - servicio externo de correo.
-- Las pruebas permiten verificar de manera aislada al menos:
+Las pruebas permiten verificar de manera aislada al menos:
 
 | Caso | Resultado observable |
 | --- | --- |
@@ -566,7 +570,7 @@ Durante una partida en curso, un jugador decide personalizar su experiencia visu
 
 **Fuente del estímulo:**
 
-El jugador.
+STK-01 Jugador.
 
 **Estímulo:**
 
@@ -600,7 +604,7 @@ Al finalizar una versión del videojuego, el equipo de desarrollo decide generar
 
 **Fuente del estímulo:**
 
-El equipo de desarrollo.
+STK-02 Equipo de desarrollo.
 
 **Estímulo:**
 
@@ -630,7 +634,7 @@ Durante la fase de mantenimiento, el equipo de desarrollo decide incorporar un n
 
 **Fuente del estímulo:**
 
-El equipo de desarrollo.
+STK-02 Equipo de desarrollo.
 
 **Estímulo:**
 
@@ -662,7 +666,7 @@ Se agregan los nuevos recursos textuales y visuales sin necesidad de modificar e
     
     **Fuente del estímulo:**
     
-    El equipo de desarrollo.
+    STK-07 Responsable del producto.
     
     **Estímulo:**
     
@@ -683,6 +687,36 @@ Se agregan los nuevos recursos textuales y visuales sin necesidad de modificar e
     **Medida de la respuesta:**
     
     El cambio se aplica en un único punto de la solución, sin necesidad de reescribir la lógica ni modificar la interfaz de usuario
+
+**ESC-16 — Tolerancia a indisponibilidad de correo**
+
+Narrativa
+
+Durante una función que requiere enviar un correo, el proveedor externo no responde dentro del tiempo permitido. El sistema termina el intento, informa el fallo al jugador y permite que las operaciones no relacionadas con el correo continúen.
+
+**Fuente del estímulo:**
+
+STK-01 Jugador que solicita una función que requiere el envío de correo.
+
+**Estímulo:**
+
+El proveedor externo de correo no responde o supera el tiempo permitido para completar el envío.
+
+**Ambiente:**
+
+Operación normal durante una función que requiere enviar un correo.
+
+**Artefacto:**
+
+La comunicación con el proveedor externo de correo.
+
+**Respuesta:**
+
+El sistema termina la operación de envío, informa el fallo al jugador y permite que las operaciones no relacionadas con el correo continúen.
+
+**Medida de la respuesta:**
+
+La operación de envío termina en un máximo de 5 segundos. Ninguna partida activa se cancela, se pausa o modifica su estado como consecuencia del fallo del proveedor.
     
 
 ### **Decisiones arquitectónicas candidatas**
@@ -701,6 +735,26 @@ Se agregan los nuevos recursos textuales y visuales sin necesidad de modificar e
 
 ¿Arquitectura modular concreta?
 
+#### Convención de nomenclatura arquitectónica
+
+- Un **módulo** representa una unidad estructural del código y sus responsabilidades.
+- Un **componente** representa una unidad que existe durante la ejecución.
+- Las tablas estructurales de las iteraciones usarán la denominación de módulo. Los diagramas de ejecución podrán usar componentes cuando representen instancias o unidades desplegadas en funcionamiento.
+
+#### Decisión incorporada en la tercera iteración
+
+El Módulo de juego proviene de las iteraciones anteriores y se refina en la tercera iteración. Como resultado se incorpora el nuevo Módulo de estado de juego, responsable de mantener en memoria el estado activo y la asociación temporal necesaria para la reconexión durante 30 segundos.
+
+El Módulo de persistencia conserva las responsabilidades de almacenamiento. El Módulo despachador de correo permanece separado de persistencia y limita a 5 segundos la comunicación con el proveedor externo.
+
+#### Evolución estructural de las primeras iteraciones
+
+- La primera iteración define las capas de presentación, negocio, datos y servicios. Todavía no descompone esas capas en módulos.
+- La segunda iteración incorpora los módulos de presentación, comunicación, servicios, juego, motor de juego, jugadores, amistades, chat, despacho de correo y persistencia.
+- La tercera iteración refina el Módulo de juego e incorpora el nuevo Módulo de estado de juego.
+- La quinta iteración conserva tres niveles lógicos: cliente, aplicación y datos. En la vista física existen dos dispositivos; la aplicación de servicio y la base de datos se ejecutan como procesos independientes dentro del mismo dispositivo del servidor.
+- En la quinta iteración, los módulos de datos dependen de la base de datos relacional. El Módulo de servicios utiliza el Módulo de registro de eventos para registrar los eventos del servidor.
+
 ### Árbol de utilidad
 
 Utilidad
@@ -710,12 +764,12 @@ Utilidad
 | Availability | Recoverability | ESC-04 Recuperación ante desconexión temporal | (A, A) |
 | Security | Auditability | ESC-01 Reconstrucción de acciones sobre partidas | (M, M) |
 | Security | Integrity | ESC-03 Intento de realizar una jugada inválida | (A, M) |
-| Security | Authorization | ESC-09 Protección de operaciones administrativas | (A, M) |
+| Availability | Fault Tolerance | ESC-16 Tolerancia a indisponibilidad de correo | (A, M) |
 | Performance | Latency / Response Time | ESC-05 Procesamiento y propagación de una jugada | (A, M) |
 | Performance | Deadline Compliance / Temporal Behavior | ESC-06 Gestión de inactividad durante un turno | (M, M) |
 | Usability | User Error Prevention | ESC-07 Identificación y prevención de jugadas inválidas | (M, B) |
 | Usability | Learnability | ESC-08 Consulta de instrucciones durante la partida | (M, B) |
-| Usability | Operational Efficiency | ESC-02 Ausencia de contrincante | (M, B) |
+| Usability | Operational Efficiency | ESC-02 Disponibilidad de la partida contra el sistema | (M, B) |
 | Testability | Controllability / Test Isolation | ESC-10 Prueba aislada y controlable de las reglas | (A, M) |
 | Modifiability | Change Locality | ESC-11 Modificación de una política de inactividad | (M, B) |
 | Deployability | Automation | ESC-13 Empaquetado de nueva versión | (M,M) |
@@ -742,7 +796,7 @@ Conversación y Notas de Alcance
 Dependencias y reglas:
 
 - La partida se inicializa con el tiempo de turno predeterminado del sistema.
-- La búsqueda de contrincante humano tiene un límite temporal máximo de 5 minutos, según lo definido en el escenario arquitectónico ESC-02 (CON-07).
+- La opción para iniciar una partida contra el sistema está disponible desde que se muestra la pantalla de espera, según lo definido en ESC-02.
 - Si la partida deriva en un juego contra el bot, se considera una partida de práctica local y no alterará las estadísticas competitivas del jugador.
 
 Criterios de aceptación
@@ -763,22 +817,15 @@ Y el tablero presenta el estado de inicio,
 Y se indica en la interfaz a qué jugador corresponde el primer turno,
 Y se inicia la cuenta regresiva del tiempo asignado para dicho turno
 
-Escenario 3: Tiempo límite de espera agotado sin contrincante (Camino alterno)
+Escenario 3: Inicio de partida contra el sistema (Camino alterno)
 
 Dado que el jugador anfitrión se encuentra en la pantalla de espera,
-Cuando transcurren 5 minutos continuos sin que se una ningún contrincante humano,
-Entonces el sistema finaliza la búsqueda de contrincantes,
-Y muestra un mensaje notificando la ausencia de rivales,
-Y presenta la opción de iniciar una partida contra la computadora
-
-Escenario 4: Aceptación de partida contra la computadora (Resolución de camino alterno)
-
-Dado que el sistema muestra la opción de jugar contra la computadora tras agotarse el tiempo de espera,
-Cuando el jugador anfitrión confirma la opción de jugar contra la computadora,
+Cuando selecciona la opción para jugar contra el sistema,
 Entonces el sistema muestra la pantalla de juego del tablero,
 Y el tablero presenta el estado de inicio,
 Y se indica el jugador que tiene el turno inicial,
-Y comienza la cuenta regresiva del tiempo del turno.
+Y comienza la cuenta regresiva del tiempo del turno,
+Y la sala deja de aceptar conexiones de otros jugadores.
 
 HU-02
 
@@ -1006,6 +1053,35 @@ Y determina si el otro jugador puede continuar jugando.
 
 ### Revisar entradas
 
+#### Catálogo de QAS aprobados
+
+| QAS | Escenario | Fuente | Medida principal |
+| --- | --- | --- | --- |
+| **QAS-Seguridad-1** | Intento de realizar una jugada inválida | STK-05 Adversario mediante un cliente modificado | El 100 % de las solicitudes identificadas como inválidas se rechazan sin colocar fichas, cambiar el turno, modificar el conteo ni persistir un movimiento. |
+| **QAS-Disponibilidad-1** | Recuperación ante desconexión temporal | STK-01 Jugador que participa en una partida en línea | Si la conexión se recupera en un máximo de 30 segundos, el jugador vuelve a la misma partida y obtiene el último estado válido sin perder ni duplicar movimientos confirmados. |
+| **QAS-Disponibilidad-2** | Tolerancia a indisponibilidad de correo | STK-01 Jugador que solicita una función que requiere correo | El envío termina en un máximo de 5 segundos y el fallo no cancela, pausa ni modifica partidas activas. |
+| **QAS-Rendimiento-1** | Procesamiento y propagación de una jugada | STK-01 Jugador en turno | El estado actualizado queda disponible para ambos jugadores en menos de 1 segundo en el 95 % de las jugadas, con hasta 8 jugadores en 4 partidas. |
+| **QAS-Rendimiento-2** | Gestión de inactividad durante un turno | STK-01 Jugador cuyo turno está activo | Se realiza exactamente 1 jugada automática válida y, al tercer turno consecutivo agotado, la partida termina con derrota del jugador inactivo. |
+| **QAS-Usabilidad-1** | Identificación y prevención de jugadas inválidas | STK-01 Jugador durante su turno | Las posiciones válidas se indican en un máximo de 1 segundo y el 100 % de las posiciones identificadas como inválidas quedan bloqueadas. |
+| **QAS-Usabilidad-2** | Disponibilidad de la partida contra el sistema | STK-01 Jugador que crea una partida | La opción está disponible desde la primera presentación de la pantalla de espera, con 0 segundos de espera obligatoria. |
+| **QAS-FacilidadPrueba-1** | Prueba aislada y determinista de las reglas | STK-02 Equipo de desarrollo | El 100 % de la suite de reglas se ejecuta en menos de 5 segundos sin iniciar WPF, WCF, SQL Server, Entity Framework ni el proveedor de correo. |
+| **QAS-Modificabilidad-1** | Incorporación de un nuevo idioma | STK-02 Equipo de desarrollo | Los cambios se concentran en recursos, requieren 0 cambios en reglas o contratos remotos y se completan en menos de 4 horas. |
+| **QAS-Desplegabilidad-1** | Empaquetado de una nueva versión | STK-02 Equipo de desarrollo | La generación se inicia con 1 comando y requiere 0 pasos manuales adicionales durante la compilación y el empaquetado. |
+
+#### Catálogo de ASR prioritarios
+
+| ASR | Qué debe cumplir la arquitectura | Viene de |
+| --- | --- | --- |
+| **ASR-01** | Mantener en el servidor la autoridad sobre las reglas, el turno y el estado vigente. Las solicitudes inválidas deben rechazarse sin alterar ni persistir un movimiento. | CU-16 / HU-02 y QAS-Seguridad-1 |
+| **ASR-02** | Conservar durante 30 segundos la sesión y el estado necesarios para reincorporar al jugador a la misma partida sin perder ni duplicar movimientos confirmados. | QAS-Disponibilidad-1 |
+| **ASR-03** | Procesar una jugada válida y poner el estado actualizado a disposición de ambos jugadores en menos de 1 segundo en el 95 % de los casos, con hasta 8 jugadores en 4 partidas. | QAS-Rendimiento-1 y ASM-02 |
+| **ASR-04** | Aislar al proveedor externo de correo y terminar la operación en un máximo de 5 segundos sin afectar partidas activas. | QAS-Disponibilidad-2 |
+| **ASR-05** | Mantener la aplicación distribuida entre un cliente WPF y un servidor WCF mediante contratos remotos, sin acceso directo del cliente a la lógica o persistencia del servidor. | RES-TEC-02 y RES-TEC-03 |
+| **ASR-06** | Permitir que el cliente indique posiciones válidas en un máximo de 1 segundo y bloquee las posiciones que reconoce como inválidas antes de enviar una solicitud. | CU-16 / HU-02 y QAS-Usabilidad-1 |
+| **ASR-07** | Ejecutar toda la suite de reglas en menos de 5 segundos con estados controlados y sin iniciar WPF, WCF, SQL Server, Entity Framework ni el proveedor de correo. | STK-02 y QAS-FacilidadPrueba-1 |
+
+QAS-Desplegabilidad-1 se conserva como escenario planeado para la cuarta iteración y no forma parte de los ASR prioritarios.
+
 Drivers con mayor peso arquitectónico y que encapsulan la funcionalidad primaria
 
 - CU-01 Crear cuenta
@@ -1020,13 +1096,15 @@ Drivers con mayor peso arquitectónico y que encapsulan la funcionalidad primari
 
 ---
 
-- ESC-04 Recuperación ante desconexión temporal
-- ESC-09 Protección de operaciones administrativas
-- ESC-05 Procesamiento y propagación de una jugada
 - ESC-03 Intento de realizar una jugada inválida
-- ESC-14 Añadiendo nuevo soporte de idioma
-- ~~ESC-15~~ Modificación de reglas de Reversi
+- ESC-04 Recuperación ante desconexión temporal
+- ESC-16 Tolerancia a indisponibilidad de correo
+- ESC-05 Procesamiento y propagación de una jugada
+- ESC-06 Gestión de inactividad durante un turno
+- ESC-07 Identificación y prevención de jugadas inválidas
+- ESC-02 Disponibilidad de la partida contra el sistema
 - ESC-10 Prueba aislada y controlable de las reglas
+- ESC-14 Añadiendo nuevo soporte de idioma
 - ESC-13 Empaquetado de nueva versión
 
 ---
@@ -1046,8 +1124,8 @@ Drivers con mayor peso arquitectónico y que encapsulan la funcionalidad primari
 
 ---
 
-- ASM-01 — Se asume que el sistema deberá permitir partidas en modo offline/local.
-- ASM-02 — Se asume un alcance operativo de 20 jugadores activos concurrentes
+- El modo offline o local queda fuera del entregable principal para priorizar las partidas en línea.
+- ASM-02 — Se asume una carga base de 8 jugadores activos concurrentes, distribuidos en 4 partidas simultáneas de 2 jugadores.
 
 ---
 

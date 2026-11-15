@@ -1,123 +1,117 @@
 # Tercera iteración
 
-Objetivo: 
+Objetivo:
 
-Diseñar **las tácticas** de disponibilidad y tolerancia a fallos para mitigar el riesgo de indisponibilidad de la base de datos **y del servicio de correo electrónico**.
+Diseñar el manejo de desconexiones temporales y de fallos del servicio de correo para que una partida activa conserve su estado válido y no sea afectada por la indisponibilidad de una dependencia externa.
 
 Paso 2: Drivers para establecer el objetivo de la iteración
 
-- **CON-02** — Asegurar la persistencia íntegra e inmutable del progreso de los jugadores y de los registros de auditoría ante fallos operativos. → Reliability / Auditability
-- **CON-04 —** Una falla o indisponibilidad del servicio externo de correo no deberá degradar ni interrumpir el flujo principal de las partidas en línea → (Availability / Fault Tolerance)
-- **ASM-02 —** Se asume un alcance operativo de 20 jugadores activos concurrentes.
+- **ASR-02 / QAS-Disponibilidad-1:** El servidor debe conservar durante 30 segundos la sesión y el estado necesarios para reincorporar a un jugador desconectado sin perder ni duplicar movimientos confirmados.
+- **ASR-04 / QAS-Disponibilidad-2:** La comunicación con el proveedor de correo debe estar aislada. Si el proveedor no responde, la operación debe terminar en un máximo de 5 segundos sin cancelar, pausar ni modificar partidas activas.
+- **STK-01:** El jugador requiere recuperar una partida interrumpida temporalmente y recibir una respuesta controlada cuando una función de correo no puede completarse.
+- **RES-TEC-01 / RES-TEC-04:** La persistencia utiliza Entity Framework y Microsoft SQL Server, pero el estado vigente de una partida activa no debe depender de una consulta a la base de datos para cada operación.
 
-Casos de uso afectados:
+Escenarios afectados:
 
-- **CU-16 —** Realizar movimiento
-- **CU-01 —** Crear cuenta
+- **ESC-04:** Recuperación ante desconexión temporal.
+- **ESC-16:** Tolerancia a indisponibilidad de correo.
+- **CU-01:** Crear cuenta, cuando se requiere enviar un código por correo.
 
 Paso 3: Seleccionar uno o más elementos del sistema a refinar
 
-- La capa de lógica de negocio del Servidor: Específicamente la descomposición de la gestión de partidas para desacoplar el estado activo de la persistencia.
-- La Capa de Datos del Servidor: Refinamiento del componente de persistencia.
+- El Módulo de juego, que coordina las partidas activas.
+- El Módulo de persistencia, que concentra las responsabilidades de almacenamiento.
+- El Módulo de jugadores, que coordina las funciones de cuenta.
+- El Módulo despachador de correo y su relación con el proveedor externo de correo.
 
 Paso 4: Conceptos de diseño que satisfacen los drivers
 
-- Degradación Elegante (*Graceful Degradation*) y Aislamiento de Fallas:
-    - Se prioriza la continuidad del juego activo en memoria RAM sobre la persistencia inmediata en disco. Si la base de datos se vuelve inaccesible o responde con lentitud, las partidas activas no se cancelan ni se congelan; el fallo de persistencia se aísla y se reporta en segundo plano.
-        - Costo aceptado: Si el servidor experimenta un apagado abrupto o pérdida de energía antes de persistir, los movimientos de las partidas en curso que permanecían únicamente en memoria no podrán recuperarse en el historial final.
-    - Alternativas consideradas y descartadas:
-        - Colas de mensajería persistente distribuida (ej. RabbitMQ / Kafka): Descartada por sobreingeniería, complejidad operativa y consumo innecesario de recursos para la escala de 20 jugadores concurrentes (ASM-02).
-        - Bloqueo síncrono transaccional en cada movimiento: Descartada porque cualquier lentitud o desconexión de SQL Server congelaría la interfaz de los jugadores, violando la disponibilidad requerida.
-- Separación de Responsabilidades y Motor Sin Estado:
-    - El cálculo y validación de reglas de Reversi se mantiene puro en el Motor de juego, mientras que el Módulo de estado de juego retiene en memoria la verdad absoluta de la partida activa.
-    - **Costo aceptado:** El componente orquestador debe consultar explícitamente el estado en memoria antes de invocar las reglas.
-    - Alternativas consideradas y descartadas:
-        - Motor acoplado a persistencia: Descartada porque dificultaba las pruebas unitarias y creaba dependencias cíclicas con el acceso a datos.
-- Servicios de persistencia especializados y aislados (Bulkhead y fire-and-forget):
-    - Aplica el principio de mamparas (*Bulkhead*) para aislar los accesos por área funcional, además de añadir invocación asíncrona en operaciones que no requieren una retroalimentación. Esto evita que la carga pesada o la lentitud en áreas no críticas (chat, amistades) sature el *pool* de conexiones de Entity Framework o acapare hilos de ejecución, protegiendo el flujo de las partidas (CON-02).
-        - Costo aceptado**:** Si el proceso del servidor se interrumpe de forma abrupta antes de vaciar las escrituras a disco, los movimientos que residían solo en la memoria RAM no se consolidarán en la base de datos.
-    - Alternativas consideradas y descartadas:
-        - Componente monolítico único:  Descartado por centralizar todas las entidades en una sola clase, facilitando que se compartan contextos de larga duración o se mezclen bloqueos, generando un punto único de falla para el servidor.
-        - Patrón Repositorio Genérico abstracto: Descartada por añadir capas de abstracción e interfaces innecesarias para un equipo y proyecto pequeño.
-- Fallo Rápido (*Fail-Fast*) para Servicios Externos de Autenticación (CON-04):
-    - El módulo Despachador correo ejecuta el envío de códigos de forma síncrona pero acotada por un tiempo límite estricto (*timeout*). Si el proveedor no responde, la petición se cancela de inmediato y se notifica al usuario.
-        - Costo aceptado: El usuario debe solicitar manualmente el reenvío del correo si el servicio externo falla temporalmente.
-    - Alternativas consideradas y descartadas:
-        - Reintentos en segundo plano: Descartada porque retendría hilos en el servidor innecesariamente ante caídas prolongadas del proveedor de correo.
+### Conservación temporal de la sesión y del estado activo
+
+Como concepto candidato se considera conservar temporalmente en el servidor la información necesaria para recuperar una interacción interrumpida. Este concepto permite establecer un periodo de 30 segundos en el que la sesión y la asociación con la partida continúan disponibles.
+
+Alternativas consideradas:
+
+- **Retirar al jugador inmediatamente:** Se descarta porque una interrupción breve terminaría la asociación con la partida e impediría cumplir la recuperación dentro de 30 segundos.
+- **Conservar la sesión y la asociación sin límite:** Se descarta porque mantendría información de sesiones y partidas abandonadas sin un criterio para liberar los recursos ocupados.
+- **Reconstruir la partida únicamente desde persistencia:** Se descarta porque la recuperación dependería de que todo el estado activo ya se encontrara almacenado. También incorporaría acceso a datos al flujo inmediato de reconexión.
+
+Costo del concepto: El servidor deberá controlar el periodo de conservación y liberar la información temporal cuando expire.
+
+### Estado activo separado de la representación persistente
+
+Como concepto candidato se considera separar el estado activo de una partida de la información que debe conservarse de forma persistente. El estado activo puede mantenerse en memoria para atender el flujo de juego y la recuperación temporal, mientras la persistencia mantiene los datos que deben sobrevivir al proceso.
+
+Alternativas consideradas:
+
+- **Consultar y actualizar la base de datos en cada operación:** Se descarta porque la continuidad de la partida y la reconexión temporal quedarían condicionadas por la disponibilidad y el tiempo de respuesta de SQL Server.
+- **Mantener toda la información únicamente en memoria:** Se descarta porque las cuentas, resultados y demás datos que deben sobrevivir al proceso no quedarían almacenados.
+- **Introducir una base de datos en memoria adicional:** Se descarta porque agregaría otra tecnología y responsabilidades operativas que no se justifican para la carga base de 8 jugadores concurrentes.
+
+Costo del concepto: Una interrupción completa del proceso del servidor puede provocar la pérdida de cambios que todavía no se hayan persistido. Este concepto no resuelve la recuperación ante una caída total del servidor.
+
+### Tiempo límite para el proveedor de correo
+
+Como concepto candidato se considera limitar temporalmente la interacción con una dependencia externa y convertir su fallo en una respuesta controlada. El límite debe permitir que la operación termine en un máximo de 5 segundos y que las partidas activas continúen sin cambios.
+
+Alternativas consideradas:
+
+- **Esperar sin un límite definido:** Se descarta porque puede mantener bloqueada la operación y no cumple el máximo de 5 segundos.
+- **Realizar varios reintentos dentro de la misma solicitud:** Se descarta porque reduce el tiempo disponible para cada intento y puede superar el límite establecido antes de entregar una respuesta.
+- **Usar una cola persistente de correos:** Se descarta porque requiere administrar mensajes pendientes, reintentos y estados de entrega que no forman parte del alcance actual.
+- **Ignorar el fallo del proveedor:** Se descarta porque el usuario no recibiría una respuesta que indique que la operación requerida no pudo completarse.
+
+Costo del concepto: El usuario deberá solicitar nuevamente la operación cuando el proveedor se recupere.
 
 Paso 5: Instanciar elementos arquitectónicos
 
-- **Módulo estado de juego:** Mantendrá en memoria RAM la información de los tableros y turnos de las partidas activas, siendo consultado y actualizado directamente por el Componente de juego.
-- **PartidasDatos:** Submódulo del Componente de persistencia de uso exclusivo del Componente de juego para almacenar movimientos y resultados finales de partidas.
-- **ChatDatos:** Submódulo del Componente de persistencia de uso exclusivo del Módulo de chat para registrar los mensajes enviados.
-- **AmistadesDatos:** Submódulo del Componente de persistencia de uso exclusivo del Módulo de amistades para gestionar el estado de las relaciones.
-- **JugadoresDatos:** Submódulo del Componente de persistencia utilizado por el Módulo de jugadores para el registro y autenticación.
-- **Módulo registro de eventos:** Servicio transversal utilizado por los distintos componentes para registrar incidencias y errores en disco local (como fallos o tiempos de espera al interactuar con la base de datos).
+Se decide refinar el Módulo de juego mediante la creación de un Módulo de estado de juego. El nuevo módulo mantendrá en memoria el estado activo y la asociación temporal de los jugadores. La persistencia conservará una responsabilidad separada y la comunicación con el proveedor de correo quedará aislada mediante un límite de 5 segundos.
+
+- **Módulo de juego, refinado:** Conserva la coordinación de las partidas activas. Solicita el estado vigente, valida la continuidad de la sesión y coordina la reincorporación del jugador.
+- **Módulo de estado de juego, nuevo:** Mantiene en memoria el tablero, el turno, los participantes y la asociación temporal necesaria para recuperar una partida durante 30 segundos.
+- **Módulo de persistencia, refinado:** Almacena cuentas, resultados y demás información persistente. No decide qué estado debe recuperar un jugador durante una desconexión temporal.
+- **Módulo de jugadores, refinado:** Coordina las funciones de cuenta que requieren correo y recibe el resultado controlado del despacho.
+- **Módulo despachador de correo, refinado:** Ejecuta la comunicación con un límite de 5 segundos y devuelve éxito o fallo al módulo solicitante.
+- **Servicio de correo electrónico:** Sistema externo que puede no responder y no forma parte del Módulo de persistencia.
 
 Paso 6: Bocetar vistas y registrar decisiones de diseño
 
-![Reversi MódulosI3.png](Tercera%20iteraci%C3%B3n/Reversi_MdulosI3.png)
-
-| Elemento | Nodo | Que hace | Que no hace | De quien depende |
+| Elemento | Nodo | Qué hace | Qué no hace | De quién depende |
 | --- | --- | --- | --- | --- |
-| API de servicio | Servidor | Recibe solicitudes remotas de los clientes y las delega al modulo correspondiente. | No valida reglas del juego ni interactúa directo con la base de datos. | Módulos de la capa de negocio |
-| Componente de juego | Servidor | Coordina las partidas activas, los turnos de los jugadores. | No define si una jugada es válida, ni ejecuta consultas a la base de datos. | Motor de juego, Módulo de estado de juego, PartidaDatos |
-| Motor de juego | Servidor | Conoce las reglas del juego y decide si una jugada es válida. | No sabe de red, ni jugadores. | - |
-| Módulo estado de juego | Servidor | Conoce el estado e información de las partidas activas. | No sabe de validaciones de jugadas. |  |
-| Módulo de chat | Servidor | Se encarga de validar que el mensaje no incumpla las normas de conducta, y lo redirige al remitente. | No almacena los mensajes directamente en la base de datos, ni gestiona la partida | Componente de juego, ChatDatos |
-| Módulo de jugadores | Servidor | Conoce los jugadores, realiza autenticación, diferencia entre jugador con cuenta e invitado | No gestiona la partida de los jugadores | Despachador correo, JugadoresDatos |
-| Módulo de amistades | Servidor | Gestiona las amistades activas, las solicitudes de amistad | No valida credenciales de los jugadores, ni los mensajes de las partidas | Módulo de jugadores, AmistadesDatos |
-| Despachador correo | Servidor | Despacha los mensajes hacia el servidor de correo electrónico | No decide las reglas de negocio de los mensajes enviados | Servicio de correo electrónico |
-| Componente de persistencia | Servidor | Agrupa lógicamente el acceso a la base de datos a través de sus submódulos especializados | No realiza validaciones de las partidas. No registra las fallas directamente en los archivos | Submódulos especializados. |
-| PartidaDatos | Servidor | Se encarga de las operaciones de persistencia de una partida. | No gestiona operaciones persistentes de otras áreas. | Base de datos, Módulo registro de eventos |
-| ChatDatos | Servidor | Se encarga de las operaciones de persistencia del chat. | No gestiona operaciones persistentes de otras áreas. | Base de datos, Módulo registro de eventos |
-| AmistadesDatos | Servidor | Se encarga de las operaciones de persistencia de las amistades. | No gestiona operaciones persistentes de otras áreas. | Base de datos, Módulo registro de eventos |
-| JugadoresDatos | Servidor | Se encarga de las operaciones de persistencia de los jugadores. | No gestiona operaciones persistentes de otras áreas. | Base de datos, Módulo registro de eventos |
-| Módulo registro de eventos | Servidor | Se encarga del registro de eventos del servidor en el disco local. | No intercepta excepciones automáticamente, no contiene lógica de negocio. | Almacenamiento local del servidor. |
-| Componente de comunicación | Cliente | Se comunica con el servidor. | No se comunica con la persistencia. | Servidor |
-| Componente de UI | Cliente | Implementa la interfaz del cliente | No se comunica directamente con el servidor | Componente de comunicación. (Operación normal)
-Componente de juego y Motor de juego locales (Modo offline) |
-| Componente de juego | Cliente | Coordina las partidas activas, los turnos de los jugadores para partidas offline. | No define si una jugada es válida. | Motor de juego (Cliente) |
-| Motor de juego | Cliente | Conoce las reglas del juego y decide si una jugada es válida para partidas offline. | No sabe de red, ni jugadores. | - |
+| Módulo de servicios | Servidor | Recibe las solicitudes remotas y las delega al módulo correspondiente. | No conserva el estado de las partidas ni accede directamente a la base de datos o al proveedor de correo. | Módulo de juego, Módulo de jugadores |
+| Módulo de juego | Servidor | Coordina las partidas activas y reincorpora al jugador cuando su sesión continúa vigente. | No obtiene del cliente el estado oficial ni envía correos. | Módulo de estado de juego |
+| Módulo de estado de juego | Servidor | Conserva el estado vigente y la asociación temporal de los participantes durante el periodo definido. | No aplica reglas, no envía correos y no ejecuta operaciones de persistencia. | Ninguno |
+| Módulo de jugadores | Servidor | Coordina las funciones de cuenta y solicita los correos requeridos. | No se comunica directamente con el proveedor externo. | Módulo de persistencia, Módulo despachador de correo |
+| Módulo despachador de correo | Servidor | Limita a 5 segundos la comunicación con el proveedor y devuelve un resultado controlado. | No forma parte de la persistencia ni modifica partidas activas. | Servicio de correo electrónico |
+| Módulo de persistencia | Servidor | Agrupa el acceso a los datos que deben almacenarse. | No determina el estado vigente de una partida ni administra el tiempo de reconexión. | Base de datos |
+| Módulo de comunicación | Cliente | Restablece la comunicación y solicita recuperar la sesión del jugador. | No reconstruye ni decide el estado oficial de la partida. | Módulo de servicios |
 
-CU-16 Realizar movimiento
+Flujo de reconexión temporal:
 
-![CU-16 Realizar movimientoI3.png](Tercera%20iteraci%C3%B3n/CU-16_Realizar_movimientoI3.png)
+1. Se interrumpe la comunicación del jugador durante una partida activa.
+2. El servidor conserva durante 30 segundos la sesión, la asociación con la partida y el último estado válido.
+3. El cliente restablece la comunicación y solicita recuperar su sesión.
+4. El servidor valida que la sesión continúa dentro del periodo permitido.
+5. El Módulo de juego reincorpora al jugador y entrega el estado vigente sin volver a aplicar movimientos confirmados.
 
-CU-01 Crear cuenta-ErrorEmail
+Flujo de error del servicio de correo:
 
 ![CU-01 Crear cuenta-ErrorEmail.png](Tercera%20iteraci%C3%B3n/CU-01_Crear_cuenta-ErrorEmail.png)
 
+La ruta de excepción o timeout mostrada en la vista debe terminar en un máximo de 5 segundos. El Módulo despachador de correo se mantiene separado del Módulo de persistencia.
+
 Paso 7: Análisis del diseño actual
 
-| Driver | No abordado | Parcialmente Abordado | Completamente abordado | Decisiones de diseño tomadas y justificación |
+| Driver | No abordado | Parcialmente abordado | Completamente abordado | Decisiones de diseño tomadas y justificación |
 | --- | --- | --- | --- | --- |
-| CNR-ARQ-01 — Estructura global |  |  | X | Se definió la estructura global del sistema usando el estilo arquitectónico cliente - servidor y el patrón de despliegue Two Tier. |
-| RES-TEC-02 — Necesidad de comunicación remota |  |  | X | Se definió WCF como mecanismo de comunicación remota |
-| RES-TEC-04 — La persistencia relacional del sistema deberá utilizar Microsoft SQL Server. |  |  | X | Se asignó la base de datos con SQL Server al nodo del servidor. |
-| ESC-05 Procesamiento y propagación de una jugada |  |  | X | Se definió el componente de juego, encargado de la gestión de las partidas, y la propagación de las jugadas |
-| RES-TEC-03 — El cliente de escritorio deberá implementarse utilizando Windows Presentation Foundation (WPF). |  |  | X | Se definió el uso de una Rich Client  Application usando la tecnología de WPF. |
-| ASM-01 — Se asume que el sistema deberá permitir partidas en modo offline/local. |  |  | X | Se incluyó un componente de juego y un motor de juego en el cliente para permitir el juego offline. |
-| **CON-01** — Garantizar la integridad y consistencia del estado de las partidas en línea, evitando que un cliente pueda modificar unilateralmente el estado válido del juego. → Security / Integrity |  |  | X | Se aisló el motor de juego dentro de la capa de negocio del servidor, asegurando que la validación de movimientos y el cálculo del nuevo tablero se realicen exclusivamente del lado del servidor antes de actualizar la persistencia y notificar a los clientes. |
-| CU-01 Crear cuenta |  |  | X | Se definió el componente de jugadores, encargado de la gestión de jugadores y del registro. |
-| CU-11 Crear partida |  |  | X | Se definió el componente de juego, encargado de la gestión de la partida |
-| CU-09 Modificar idioma de interfaz | X |  |  | - |
-| CU-15 Unirse a partida |  |  | X | Se definió el componente de juego, encargado de la gestión de la partida |
-| CU-16 Realizar movimiento |  |  | X | Se definió el componente de juego, encargado de la gestión de la partida, y el motor de juego encargado de validar movimientos. |
-| CU-21 Enviar solicitud de amistad |  |  | X | Se definió el modulo de amistades, encargado de la gestión de amistades entre jugadores |
-| CU-23 Responder solicitud de amistad |  |  | X | Se definió el modulo de amistades, encargado de la gestión de amistades entre jugadores |
-| CU-26 Enviar mensaje |  |  | X | Se definió el modulo de chat, encargado de la gestión de los mensajes. |
-| CU-28 Entrar como invitado |  |  | X | Se definió el modulo de jugadores, encargado de diferencia jugadores con cuenta e invitados. |
-| ESC-04 Recuperación ante desconexión temporal | X |  |  | - |
-| ESC-09 Protección de operaciones administrativas | X |  |  | - |
-| ESC-03 Intento de realizar una jugada inválida |  | X |  | El motor de juego se convirtió en el mecanismo para validar jugadas, evitando jugadas inválidas. |
-| ESC-14 Añadiendo nuevo soporte de idioma | X |  |  | - |
-| ESC-15 Modificación de reglas de Reversi |  | X |  | Se definió el motor de juego encargado de contener las reglas de Reversi. |
-| ESC-10 Prueba aislada y controlable de las reglas | X |  |  | - |
-| ESC-13 Empaquetado de nueva versión | X |  |  | - |
-| RES-TEC-01 — La persistencia deberá implementarse utilizando Entity Framework. |  |  | X | Se encapsuló el acceso a datos en el Componente de persistencia, donde Entity Framework gestionará el mapeo y almacenamiento de las entidades derivadas del modelo de dominio. |
-| • **CON-02** — Asegurar la persistencia íntegra e inmutable del progreso de los jugadores y de los registros de auditoría ante fallos operativos. → Reliability / Auditability |  | X |  | Debido a que, ante una interrupción súbita o caída del proceso del servidor, los movimientos no registrados a la BD se pierden, priorizando la disponibilidad del juego en memoria sobre la consistencia. |
-| **CON-03** — Facilitar la adaptación a nuevos idiomas y perfiles de accesibilidad con un impacto mínimo en la arquitectura y esfuerzo de desarrollo. → Modifiability / Usability | X |  |  | - |
-| **CON-04** — Una falla o indisponibilidad del servicio externo de correo no deberá degradar ni interrumpir el flujo principal de las partidas en línea. → Availability / Fault Tolerance |  |  | X | Se formalizo el flujo de respuesta del Despachador de correo ante una indisponibilidad del servicio de correo. |
-| **CON-05** — Facilitar la distribución de actualizaciones con mínima intervención manual. → Deployability/Maintainability | X |  |  | - |
-| ASM-02 — Se asume un alcance operativo de 20 jugadores activos concurrentes | X |  |  | - |
+| **ASR-01:** Autoridad del servidor sobre el estado legal de la partida |  |  | X | El estado vigente se conserva en el servidor y no se reconstruye a partir del estado enviado por el cliente. La validación completa de movimientos corresponde a las decisiones de las iteraciones anteriores. |
+| **ASR-02:** Recuperación durante 30 segundos |  |  | X | El servidor conserva temporalmente la sesión, la asociación con la partida y el último estado válido para reincorporar al jugador sin duplicar movimientos. |
+| **ASR-03:** Procesamiento y propagación en menos de 1 segundo |  | X |  | Mantener el estado activo en memoria evita una lectura obligatoria de la base de datos, pero esta iteración no analiza la latencia ni la carga de 8 jugadores. |
+| **ASR-04:** Aislamiento del correo y timeout de 5 segundos |  |  | X | El Módulo despachador de correo aísla al proveedor externo, limita la operación a 5 segundos y devuelve un fallo controlado sin afectar partidas activas. |
+| **ASR-05:** Cliente WPF y servidor WCF separados |  |  | X | El cliente accede mediante la frontera remota y no consulta directamente el estado ni la persistencia del servidor. |
+| **ASR-06:** Prevención de jugadas inválidas en el cliente | X |  |  | Esta iteración no diseña la validación ligera ni la retroalimentación del cliente. |
+| **ASR-07:** Suite aislada de reglas en menos de 5 segundos |  | X |  | El estado y la persistencia permanecen separados del Módulo motor de juego, pero todavía no se define la estructura completa de pruebas ni se comprueba el tiempo de la suite. |
+| **QAS-Rendimiento-2:** Gestión de inactividad durante un turno | X |  |  | La automatización por inactividad se abordará en una iteración posterior. |
+| **QAS-Usabilidad-2:** Partida contra el sistema disponible desde el inicio | X |  |  | El acceso a la partida contra el sistema no forma parte de esta iteración. |
+| **QAS-Modificabilidad-1:** Incorporación de un nuevo idioma | X |  |  | La localización del cliente no forma parte de esta iteración. |
+| **QAS-Desplegabilidad-1:** Empaquetado con un comando | X |  |  | Se conserva como escenario planeado para la cuarta iteración y no forma parte de los ASR prioritarios. |
