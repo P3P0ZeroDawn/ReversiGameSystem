@@ -755,6 +755,8 @@ El Módulo de persistencia conserva las responsabilidades de almacenamiento. El 
 - La quinta iteración conserva tres niveles lógicos: cliente, aplicación y datos. En la vista física existen dos dispositivos; la aplicación de servicio y la base de datos se ejecutan como procesos independientes dentro del mismo dispositivo del servidor.
 - En la quinta iteración, los módulos de datos dependen de la base de datos relacional. El Módulo de servicios utiliza el Módulo de registro de eventos para registrar los eventos del servidor.
 
+- La novena iteración refina la usabilidad del cliente. El tablero indica las posiciones válidas a partir del estado confirmado y bloquea las identificadas como inválidas. La sala ofrece jugar contra el sistema desde su primera presentación.
+
 ### Árbol de utilidad
 
 Utilidad
