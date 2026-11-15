@@ -159,3 +159,40 @@ Definir:
 - Como se estructurara Models y si se separara o no
 - Las excepciones personalizadas, decidir si se van
 - Que patrón estamos ocupando en WPF (MVC, MVVM)
+
+# Revisión del proyecto 6
+
+- Revisar el nombre de los métodos (aun no son descriptivos)
+- En MatchStateSnapchot:
+	- Revisar bien porque existe y porque existe asi
+	- Considerar el ancho de banda que se esta consumiendo
+	- Revisar las estadisticas del envio, para revisar si es la opción adecuada ante performance o gran cantidad de mensajes (sobrecarga)
+- En GameplayMatchApplicationService:
+	- El método PlacePiece tiene 2 responsabilidades
+		- Verifica si es valido
+		- Lo pone
+		- *Buscar refactorización y división*
+		- *Revisar el resto de métodos, que antes igual están realizando validaciones*
+- Todo lo que se hace debe tener facilidad de prueba
+- Pruebas:
+	- Deben ser atomicas
+	- Deben tener elementos verificables concretos que muestren que la prueba es exitosa
+	- Las pruebas tienen varios Assert 
+	- Las pruebas deben tener:
+		- Resultado esperado
+		- Resultado obtenido
+	- Nombrado:
+		- `Test_FuncionalidadProbando_FlujoProbando_SiEsExitoso` (**Sugerencia**)
+		- Se puede pensar si omitir el Test, si ya esta en un proyecto de prueba
+	- Deben seguir el principio de responsabilidad unica
+	- Los comentarios de Arrange... esta de más
+- Logs
+	- Si no se logra acceder al archivo, mandarlo al visor de evento del Sistema operativo
+- Bug en el cliente
+	- El cliente deja de ver el resto de jugadores activos
+	- Bug donde no logra realizar una operación con el server
+	- Bug donde pierde la conexión pero continua o nose q
+- Formato de los correos
+	- Mejora (decisión propia)
+
+- Revisar **Rendimiento**, **Facilidad de prueba** y **Facilidad de modificación** del proyecto
