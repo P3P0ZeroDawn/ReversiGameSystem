@@ -1,5 +1,3 @@
-# Documento-Entrega
-
 UNIVERSIDAD VERACRUZANA
 
 FACULTAD DE ESTADÍSTICA E INFORMÁTICA
@@ -534,12 +532,16 @@ Cada preocupación tiene una decisión, o un «no aplica» con su razón. No es 
 
 ### 6.1 Tipos de vista que usaremos
 
-| Tipo de vista | Qué preocupaciones atiende                                                                                                                                                           | Representaciones útiles                                                                   |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| Contexto      | Delimita el sistema, los actores y el proveedor externo de correo. Complementa el modelo 4+1.                                                                                        | C4 nivel 1 (V-01).                                                                        |
-| Estructura    | La vista lógica explica las responsabilidades y la autoridad sobre el estado de juego. La vista de desarrollo organiza los módulos, contratos y dependencias.                        | UML de clases o de paquetes, según el propósito. V-02 muestra la organización de módulos. |
-| Ejecución     | La vista de procesos permite seguir las solicitudes, la comprobación de versión y la propagación del estado. Los escenarios de jugada, tablero y sala enlazan las vistas como el +1. | UML de secuencia para los recorridos de IT8 a IT10.                                       |
-| Despliegue    | La vista física ubica el cliente, la aplicación de servicio y el motor relacional en sus dispositivos y distingue los procesos que comparten el servidor.                            | UML de despliegue (V-03).                                                                 |
+Para documentar la arquitectura de Reversi usaremos las vistas lógica, de desarrollo, de procesos y física del modelo 4+1. Los escenarios «Realizar una jugada en línea» y «Reincorporarse tras una desconexión» relacionan las cuatro vistas. El contexto C4 (V-01) complementa el modelo al mostrar la frontera del sistema, sus actores y el proveedor externo de correo.
+
+| Tipo de vista | Qué preocupaciones atiende | Representaciones útiles |
+| --- | --- | --- |
+| **Vista lógica** (Estructura) | Explica las responsabilidades del cliente y del servidor y quién tiene autoridad sobre las reglas y el estado de juego. | UML de clases para las responsabilidades y relaciones del dominio. |
+| **Vista de desarrollo** (Estructura) | Muestra cómo se organizan los módulos, sus contratos y sus dependencias. | UML de paquetes (V-02) y catálogo de 4.1. |
+| **Vista de procesos** (Ejecución) | Muestra cómo se comprueba la versión de una jugada, cómo se propaga el estado confirmado y cómo se recupera el estado vigente tras una desconexión. | Secuencias de IT8 e IT10 para la jugada y recorrido de IT3 para la reincorporación. |
+| **Vista física** (Despliegue) | Ubica el cliente, el servicio y el motor relacional en sus dispositivos y distingue los procesos que comparten el servidor. | UML de despliegue (V-03). |
+| **Escenarios (+1)** | La jugada en línea conecta las vistas desde la solicitud hasta que ambos jugadores disponen del estado confirmado. La reincorporación explica cómo el jugador recupera la misma partida y el último estado válido cuando la conexión se restablece en un máximo de 30 segundos. | Descripciones textuales de «Realizar una jugada en línea» (CU-16 / HU-02) y «Reincorporarse tras una desconexión» (IT3 / ASR-02). |
+| Contexto | Identifica la frontera del sistema, sus actores y el proveedor externo de correo. Complementa las vistas 4+1. | C4 nivel 1 (V-01). |
 
 ### 6.2 Vistas
 
