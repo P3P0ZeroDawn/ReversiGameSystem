@@ -11,9 +11,9 @@ Diseño de Software
 | Proyecto             | Reversi                         |
 | -------------------- | ------------------------------- |
 | Equipo e integrantes | César Daniel Ortega Castillejos<br>Pedro Enrique Sánchez Rodríguez |
-| Versión del documento | v0.1 |
-| Entrega | Primera entrega |
-| Fecha | 12/10/2026 |
+| Versión del documento | v0.2 |
+| Entrega | Segundo avance |
+| Fecha | 15/11/2026 |
 
 # Documento de Arquitectura de Software (SAD)
 
@@ -32,18 +32,19 @@ Diseño de Software
 | **Versión** | **Fecha** | **Cambios principales** |
 | --- | --- | --- |
 | v0.1 | 10/10/2026 | Primera entrega parcial: definición de frontera, interesados, drivers de calidad, árbol de utilidad, ASR prioritarios, decisiones ADR (001 a 006), catálogo de módulos C-01 a C-14, vistas V-01/V-02 y riesgos iniciales. |
+| v0.2 | 15/11/2026 | Segundo avance. Se conciliaron los escenarios de calidad y los ASR. Se actualizaron los ADR y el catálogo de elementos a partir de las iteraciones ADD. Se documentaron las reglas de dependencia y se justificó la selección de vistas 4+1. |
 
 ### 1.2 Resumen de la arquitectura
 
 El sistema Reversi es un juego distribuido por turnos para escritorio enfocado en garantizar la integridad absoluta de las partidas y una experiencia de usuario fluida con baja latencia.
 
-Los principales drivers que gobiernan su estructura son la integridad del estado del juego (CON-01), la disponibilidad y tolerancia a fallos del servicio (CON-02, CON-04), y la usabilidad mediante retroalimentación inmediata sin saturar la red (ESC-05, ESC-07).
+La estructura responde a la integridad del juego (ASR-01), la recuperación ante desconexiones (ASR-02), la propagación de jugadas (ASR-03) y la retroalimentación en el tablero (ASR-06).
 
-La solución adopta un estilo arquitectónico Cliente-Servidor autoritativo estructurado bajo un patrón de despliegue Three-Tier.
+La solución usa un servidor autoritativo y separa los niveles lógicos de cliente, aplicación y datos.
 
 - El cliente de escritorio (WPF) implementa un validador ligero de movimientos para guiar visualmente la interacción del usuario sin esperar viajes de red.
-- El servidor de aplicaciones (WCF) retiene la autoridad legal completa del reglamento a través de un motor de juego puro y sin estado, manteniendo las partidas activas en memoria RAM para asegurar respuestas sub-segundo y desacoplando la persistencia en disco de fallos transitorios mediante tácticas de degradación elegante y aislamiento (Bulkhead).
-- La persistencia relacional reside en Microsoft SQL Server operando en un nivel de datos aislado. Los riesgos principales involucran la comprobación empírica de saturación bajo concurrencia y la prevención de discrepancias entre las reglas de la interfaz y las del servidor.
+- El servidor WCF valida las jugadas y mantiene en memoria el estado de las partidas activas.
+- La aplicación de servicio y el motor relacional se ejecutan como procesos independientes en el mismo dispositivo servidor.
 
 ### 1.3 Glosario
 
@@ -57,12 +58,13 @@ La solución adopta un estilo arquitectónico Cliente-Servidor autoritativo estr
 
 ### 1.4 Uso de IA generativa
 
-| Qué pidieron | Qué aceptaron y qué rechazaron | Cómo lo verificaron |
-| --- | --- | --- |
-| **Mejora de redacción apegada al dominio:** Redacción y pulido técnico de descripciones arquitectónicas, fichas de decisión (ADR), justificaciones de ASR y escenarios de calidad con terminología formal del dominio de Reversi y tácticas del SEI. | **Aceptado:** La terminología formal, la redacción neutral de caja negra en las respuestas de escenarios (eliminando fugas prematuras de solución) y los trade-offs de diseño.<br><br>**Rechazado:** Propuestas que sugerían tecnologías o mecanismos fuera del alcance y stack estipulado (tales como colas RabbitMQ o persistencia síncrona en cada turno). | Cotejo manual contra el glosario del proyecto (1.3), las restricciones técnicas formales (RES-TEC) y los términos de calidad del SEI / ISO 25010. |
-| **Verificación de llenado correcto según reglas de la plantilla:** Auditoría de la estructura de las secciones de la primera entrega frente a las instrucciones de la plantilla SAD v5.0 y la lista de comprobación proporcionada. | **Aceptado:** El ajuste en la cantidad de elementos (10 escenarios, 6 ASR, 6 ADR), la inclusión de las filas obligatorias de seguridad (activo, actor, límite) y el formato tabular estricto de las fichas.<br><br>**Rechazado:** Formatos de redacción libre o listas desestructuradas que no respetaban las tablas canónicas de la plantilla. | Comparación punto por punto contra la lista de comprobación proporcionada de la plantilla y la rúbrica de evaluación docente. |
-| **Verificación de identificadores permitidos en el documento:** Validación estricta del cumplimiento de la regla de los siete identificadores canónicos y trazabilidad entre secciones. | **Aceptado:** La corrección y eliminación de sub-abreviaciones inventadas (reemplazando `QAS-SEG` por la nomenclatura canónica `QAS-Seguridad`), y la unificación de los catálogos de componentes (`C-01` a `C-14`) y riesgos (`R-01` a `R-03`).<br><br>**Rechazado:** Cualquier prefijo intermedio que violara la regla de identificadores de la plantilla. | Rastreo y búsqueda en el texto para comprobar que solo existan los prefijos permitidos (QAS, ASR, ADR, C, V, EV, R) y que las referencias cruzadas entre secciones coincidan. |
-| **Análisis y síntesis de avances de iteraciones:** Extracción y discriminación de la información técnica generada en las notas de las Iteraciones 1 a 5 de ADD para trasladar las decisiones esenciales a la entrega formal. | **Aceptado:** Sugerencias para la selección de decisiones arquitectónicas estructurales y la representación de la evolución histórica (marcando ADR-001 y ADR-002 como sustituidos por ADR-004 y ADR-005 tras la Iteración 5).<br><br>**Rechazado:** Trasladar decisiones de nivel de código, dependencias de bajo nivel o características descartadas (como el modo de juego fuera de línea). | Contraste contra las bitácoras de diseño de las Iteraciones 1 a 5 y los acuerdos de alcance establecidos con la autoridad organizacional. |
+| Qué pidieron                                                                                                                                                                                                                                         | Qué aceptaron y qué rechazaron                                                                                                                                                                                                                                                                                                                                                                 | Cómo lo verificaron                                                                                                                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Mejora de redacción apegada al dominio:** Redacción y pulido técnico de descripciones arquitectónicas, fichas de decisión (ADR), justificaciones de ASR y escenarios de calidad con terminología formal del dominio de Reversi y tácticas del SEI. | **Aceptado:** La terminología formal, la redacción neutral de caja negra en las respuestas de escenarios (eliminando fugas prematuras de solución) y los trade-offs de diseño.<br><br>**Rechazado:** Propuestas que sugerían tecnologías o mecanismos fuera del alcance y stack estipulado (tales como colas RabbitMQ o persistencia síncrona en cada turno).                                  | Cotejo manual contra el glosario del proyecto (1.3), las restricciones técnicas formales (RES-TEC) y los términos de calidad del SEI / ISO 25010.                             |
+| **Verificación de llenado correcto según reglas de la plantilla:** Auditoría de la estructura de las secciones de la primera entrega frente a las instrucciones de la plantilla SAD v5.0 y la lista de comprobación proporcionada.                   | **Aceptado:** El ajuste en la cantidad de elementos (10 escenarios y 7 ASR), la inclusión de las filas obligatorias de seguridad (activo, actor, límite) y el formato tabular de las fichas.<br><br>**Rechazado:** Formatos de redacción libre o listas desestructuradas que no respetaban las tablas canónicas de la plantilla.                                               | Comparación punto por punto contra la lista de comprobación proporcionada de la plantilla y la rúbrica de evaluación docente.                                                 |
+| **Verificación de identificadores permitidos en el documento:** Validación estricta del cumplimiento de la regla de los siete identificadores canónicos y trazabilidad entre secciones.                                                              | **Aceptado:** La corrección y eliminación de sub-abreviaciones inventadas (reemplazando `QAS-SEG` por la nomenclatura canónica `QAS-Seguridad`), y la unificación de los catálogos de componentes (`C-01` a `C-14`) y riesgos (`R-01` a `R-03`).<br><br>**Rechazado:** Cualquier prefijo intermedio que violara la regla de identificadores de la plantilla.                                   | Rastreo y búsqueda en el texto para comprobar que solo existan los prefijos permitidos (QAS, ASR, ADR, C, V, EV, R) y que las referencias cruzadas entre secciones coincidan. |
+| **Análisis y síntesis de avances de iteraciones:** Extracción y discriminación de la información técnica generada en las notas de las Iteraciones 1 a 5 de ADD para trasladar las decisiones esenciales a la entrega formal.                         | **Aceptado:** Sugerencias para la selección de decisiones arquitectónicas estructurales y la representación de la evolución histórica (marcando ADR-001 y ADR-002 como sustituidos por ADR-004 y ADR-005 tras la Iteración 5).<br><br>**Rechazado:** Trasladar decisiones de nivel de código, dependencias de bajo nivel o características descartadas (como el modo de juego fuera de línea). | Contraste contra las bitácoras de diseño de las Iteraciones 1 a 5 y los acuerdos de alcance establecidos con la autoridad organizacional.                                     |
+| Consolidación del segundo avance con las iteraciones ADD y revisión contra el Word original. | Se conservaron las decisiones de diseño sustentadas por las iteraciones, el catálogo de módulos y las reglas de dependencia. Las estimaciones de red se registraron como análisis. | Se contrastaron las secciones y las tablas con la plantilla. Se cotejaron los ADR, los elementos y las vistas con los documentos de diseño. |
 
 ---
 
@@ -70,21 +72,17 @@ La solución adopta un estilo arquitectónico Cliente-Servidor autoritativo estr
 
 ### 2.1 Contexto y frontera
 
-El sistema Reversi incluye el cliente de escritorio, los servicios remotos, la lógica de cuentas y partidas, el estado de las partidas activas y la persistencia relacional. El sistema permite gestionar jugadores, amistades, partidas, chat, estadísticas e historial. Los clientes se comunican con el servidor mediante contratos remotos, pero no tienen autoridad para modificar directamente el estado válido de las partidas.
-
-Fuera de la frontera queda el proveedor externo de correo electrónico (DEP-01), que recibe solicitudes de envío generadas por el sistema.
-
-La delimitación estructural y los actores externos se ilustran en la vista V-01.
+Reversi incluye el cliente de escritorio, los servicios remotos, la lógica de cuentas y partidas, el estado de las partidas activas y la persistencia relacional. El sistema gestiona jugadores, amistades, partidas, chat, estadísticas e historial. Los clientes se comunican con el servidor mediante contratos remotos y el servidor conserva la autoridad sobre el estado de las partidas. Fuera de la frontera queda el proveedor de correo, al que el sistema solicita los envíos. La vista V-01 muestra esta frontera y sus actores externos.
 
 ### 2.2 Interesados y preocupaciones
 
-| Interesado | Qué le preocupa |
-| --- | --- |
-| STK-01 Jugador | Disponer de partidas justas y confiables, recibir respuesta adecuada durante el juego, conservar su progreso y recuperarse de desconexiones breves. |
-| STK-02 Equipo de desarrollo | Probar las reglas de forma aislada, localizar los cambios, controlar las dependencias y generar versiones distribuibles. |
-| STK-05 Adversario | Manipular el cliente, enviar jugadas ilegales o intentar modificar información sin autorización. |
-| STK-06 Autoridad organizacional | Cumplir el alcance, las tecnologías obligatorias, el calendario y la documentación de las decisiones arquitectónicas. |
-| STK-07 Responsable del producto | Mantener las funciones prioritarias y una experiencia de juego adecuada dentro del tiempo disponible. |
+| Interesado                      | Qué le preocupa                                                                                                                                     |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| STK-01 Jugador                  | Disponer de partidas justas y confiables, recibir respuesta adecuada durante el juego, conservar su progreso y recuperarse de desconexiones breves. |
+| STK-02 Equipo de desarrollo     | Probar las reglas de forma aislada, localizar los cambios, controlar las dependencias y generar versiones distribuibles.                            |
+| STK-05 Adversario               | Manipular el cliente, enviar jugadas ilegales o intentar modificar información sin autorización.                                                    |
+| STK-06 Autoridad organizacional | Cumplir el alcance, las tecnologías obligatorias, el calendario y la documentación de las decisiones arquitectónicas.                               |
+| STK-07 Responsable del producto | Mantener las funciones prioritarias y una experiencia de juego adecuada dentro del tiempo disponible.                                               |
 
 ### 2.3 Funciones clave
 
@@ -160,7 +158,7 @@ La delimitación estructural y los actores externos se ilustran en la vista V-01
 | Entorno | Operación normal con hasta 8 jugadores activos concurrentes, distribuidos en 4 partidas simultáneas. |
 | Artefacto | Procesamiento de jugadas y sincronización del estado de la partida. |
 | Respuesta | El sistema valida la jugada, actualiza el estado y comunica el resultado a los dos participantes. |
-| Medida | El tiempo desde la recepción de la solicitud hasta que el estado actualizado queda disponible para ambos jugadores es menor a 1 segundo en el 95 % de las jugadas. |
+| Medida | El tiempo desde el envío de la solicitud hasta que el estado actualizado queda disponible para ambos jugadores es menor a 1 segundo en el 95 % de las jugadas. |
 | Prioridad | (A, M) |
 
 | QAS-Rendimiento-2 | Gestión de inactividad durante un turno |
@@ -244,7 +242,7 @@ La delimitación estructural y los actores externos se ilustran en la vista V-01
 
 | ASR        | Qué debe cumplir la arquitectura                                                                                                                                                                                                                                                                                               | Procedencia                       | Viene de                         |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------- | -------------------------------- |
-| **ASR-01** | La arquitectura debe mantener en el servidor la autoridad sobre el estado legal de cada partida. El servidor debe validar la regla, el turno y el estado vigente de cada movimiento. El 100 % de las solicitudes identificadas como inválidas debe rechazarse sin colocar fichas, cambiar el turno ni persistir un movimiento. | Función y escenario de calidad    | CU-16 / HU-02 y QAS-Seguridad-1  |
+| **ASR-01** | La arquitectura debe mantener en el servidor la autoridad sobre el estado legal de cada partida. El servidor debe validar la regla, el turno y el estado vigente de cada movimiento. El 100 % de las solicitudes identificadas como inválidas debe rechazarse sin colocar fichas, cambiar el turno, modificar el conteo ni persistir un movimiento. | Función y escenario de calidad    | CU-16 / HU-02 y QAS-Seguridad-1  |
 | **ASR-02** | La arquitectura debe conservar durante 30 segundos la sesión y el estado necesarios para reincorporar a un jugador desconectado. Si el jugador regresa dentro de ese periodo, debe recuperar la misma partida y el último estado válido sin pérdida ni duplicación de movimientos confirmados.                                 | Escenario de calidad              | QAS-Disponibilidad-1             |
 | **ASR-03** | La arquitectura debe procesar una jugada válida y poner el estado actualizado a disposición de ambos participantes en menos de 1 segundo en el 95 % de los casos. Esta medida aplica con hasta 8 jugadores concurrentes distribuidos en 4 partidas simultáneas.                                                                | Escenario de calidad y supuesto   | QAS-Rendimiento-1 y ASM-02       |
 | **ASR-04** | La arquitectura debe aislar la comunicación con el proveedor externo de correo. Cuando el proveedor no responda, la operación debe terminar en un máximo de 5 segundos e informar el fallo sin cancelar, pausar ni modificar partidas activas.                                                                                 | Escenario de calidad              | QAS-Disponibilidad-2             |
@@ -265,9 +263,17 @@ QAS-Desplegabilidad-1 se conserva como escenario planeado para la Iteración 4. 
 | **ADR-001** | Adopción de patrón de despliegue Two-Tier para cliente y servidor | Sustituido por ADR-004 | ASR-05 |
 | **ADR-002** | Distribución de reglas mediante biblioteca compartida entre cliente y servidor | Sustituido por ADR-005 | ASR-01, ASR-06 |
 | **ADR-003** | Selección de Windows Communication Foundation (WCF) como tecnología de comunicación remota | Aceptado | ASR-05 |
-| **ADR-004** | Adopción de patrón de despliegue Three-Tier con nivel de base de datos aislado | Aceptado | ASR-05 |
+| **ADR-004** | Organización Three-Tier con dos dispositivos físicos | Aceptado | ASR-05 |
 | **ADR-005** | Desacoplamiento de reglas mediante Servidor Autoritativo y Validador Ligero en Cliente | Aceptado | ASR-01, ASR-06 |
-| **ADR-006** | Gestión de estado de partidas activas en memoria RAM con aislamiento de persistencia (Bulkhead) | Aceptado | ASR-02, ASR-03 |
+| **ADR-006** | Estado activo en memoria separado de la persistencia | Aceptado | ASR-02, ASR-03 |
+| **ADR-007** | Contratos de salida y composición del servidor | Aceptado | ASR-07, ASR-04 |
+| **ADR-008** | Organización funcional de la frontera de servicios | Aceptado | ASR-05, ASR-07 |
+| **ADR-009** | Presentación del cliente con MVVM | Aceptado | ASR-06 |
+| **ADR-010** | Proxy remoto en el Módulo de comunicación | Aceptado | ASR-05 |
+| **ADR-011** | Control de versión al aplicar jugadas | Aceptado | ASR-01 |
+| **ADR-012** | Opción de jugar contra el sistema desde la sala de espera | Aceptado | Sin ASR prioritario. Atiende QAS-Usabilidad-2. |
+| **ADR-013** | Propagación del estado completo de la partida | Aceptado | ASR-03 |
+| **ADR-014** | Tiempo límite para el proveedor de correo | Aceptado | ASR-04 |
 
 ### 3.2 Fichas de decisión
 
@@ -304,73 +310,178 @@ QAS-Desplegabilidad-1 se conserva como escenario planeado para la Iteración 4. 
 | **Riesgos** | R-03 |
 | **Elementos afectados** | C-03, C-04 |
 
-| ADR-004 | Adopción de patrón de despliegue Three-Tier con nivel de base de datos aislado |
+| ADR-004 | Organización Three-Tier con dos dispositivos físicos |
 | --- | --- |
 | **Estado** | Aceptado (Sustituye a ADR-001) |
-| **Contexto** | Se requiere estructurar la arquitectura en tres niveles formales para aislar el cómputo de partidas respecto a la persistencia y preparar el sistema para pruebas de concurrencia independientes (ASR-05). |
-| **Alternativas** | **A (Three-Tier con motor relacional aislado):** El cliente WPF opera en el dispositivo del usuario, el servidor WCF procesa partidas en un nodo de aplicación, y Microsoft SQL Server opera en un nivel de datos aislado (contenedorizado). *A favor:* Aislamiento de consumo de CPU/RAM entre base de datos y servidor de juego; modularidad física para reproducir entornos de prueba limpios. *En contra:* Requiere configurar y mantener la conexión de red y credenciales entre el contenedor y el host de servicios.<br><br>**B (Two-Tier mantenido):** Continuar con SQL Server instalado de forma compartida en el mismo host que WCF. *A favor:* Evita administrar contenedores o enlaces de red adicionales. *En contra:* No cumple con la separación de niveles evaluable ni protege al servidor WCF de saturación por bloqueos en el motor relacional. |
-| **Criterios** | Aislamiento de fallos, desacoplamiento físico de persistencia y directrices de evaluación del sistema. |
-| **Decisión** | Se elige la Alternativa A (Three-Tier), aislando la base de datos relacional en su propio contenedor. |
-| **Consecuencias** | Se independiza la infraestructura de datos y se elimina la contención de recursos en el servidor de juego. Se asume la administración del contenedor y su red interna. |
+| **Contexto** | Tras la revisión de alcance con la autoridad organizacional (IT5), se requería delimitar los niveles lógicos de cliente, aplicación y datos (`ASR-05`) manteniendo un despliegue operativo realista y manejable para un equipo de dos personas sin áreas externas de infraestructura (`ORG-01`, `ORG-03`). |
+| **Alternativas** | **A (Tres niveles lógicos en dos dispositivos físicos):** El cliente WPF se ejecuta en el dispositivo del jugador, mientras que la aplicación de servicio WCF y la base de datos SQL Server se ejecutan como procesos independientes dentro del mismo dispositivo servidor. *A favor:* Conserva la separación lógica y de ciclos de ejecución entre aplicación y datos, sin añadir administración de red ni hardware adicional. *En contra:* Ambos procesos del servidor comparten recursos y dominio físico de fallos.<br><br>**B (Two-Tier monolítico en un proceso):** Mantener la aplicación y la persistencia dentro del mismo proceso. *A favor:* Menor esfuerzo de despliegue inicial. *En contra:* Mezcla responsabilidades y ciclos de ejecución.<br><br>**C (Tres dispositivos físicos independientes):** Alojar la base de datos en un tercer dispositivo separado. *A favor:* Aislamiento físico de recursos y fallos. *En contra:* Mayor sobrecarga operativa y no corresponde al despliegue real del proyecto. |
+| **Criterios** | Separación de responsabilidades lógicas, fidelidad al despliegue real y costo de operación para el equipo. |
+| **Decisión** | Se elige la Alternativa A: se mantienen los tres niveles lógicos (cliente, aplicación y datos) ejecutando la aplicación de servicio y la base de datos como procesos independientes en el mismo dispositivo servidor. |
+| **Consecuencias** | Se preserva la modularidad lógica de los tres niveles con operación simple. Se acepta que una falla o saturación física del equipo servidor afecta a ambos procesos y limita el escalado físico independiente de los datos. |
 | **Riesgos** | R-03 |
-| **Elementos afectados** | C-04, C-08, C-09 |
+| **Elementos afectados** | C-03, C-04, C-12, C-14 |
 
 | ADR-005 | Desacoplamiento de reglas mediante Servidor Autoritativo y Validador Ligero en Cliente |
 | --- | --- |
 | **Estado** | Aceptado (Sustituye a ADR-002) |
 | **Contexto** | Es obligatorio proteger el juego contra clientes adulterados (ASR-01) y proveer retroalimentación visual inmediata al usuario sin enviar jugadas inválidas por la red (ASR-06), eliminando el acoplamiento binario de dependencias compartidas. |
-| **Alternativas** | **A (Servidor Autoritativo con Validador Ligero en Cliente y duplicación deliberada):** El servidor concentra el Motor de Juego autoritativo completo (validación, flanqueo, turnos y fin de juego). El cliente integra un Validador Ligero independiente que solo evalúa casillas admisibles a partir de su tablero local para responder al cursor del usuario y filtrar selecciones ilegales antes de transmitirlas. *A favor:* Elimina el acoplamiento binario entre cliente y servidor; provee respuesta visual en menos de 50 ms (ASR-06); reduce el tráfico de red al descartar clics erróneos en el cliente; el servidor retiene la autoridad legal absoluta ante cualquier modificación no autorizada (ASR-01). *En contra:* Duplicación deliberada de la lógica básica de comprobación de casillas; requiere sincronización manual en ambos módulos si las reglas cambian.<br><br>**B (Mantener biblioteca binaria compartida DLL):** Distribuir la misma DLL compilada a ambos proyectos. *A favor:* Evita duplicación de código. *En contra:* Provoca acoplamiento de compilación y empaquetado; expone la lógica interna completa del servidor en el binario del cliente. |
+| **Alternativas** | **A (Servidor Autoritativo con Validador Ligero en Cliente y duplicación deliberada):** El servidor concentra el Motor de Juego autoritativo completo (validación, flanqueo, turnos y fin de juego). El cliente integra un Validador Ligero independiente que solo evalúa casillas admisibles a partir de su tablero local para responder al cursor del usuario y filtrar selecciones ilegales antes de transmitirlas. *A favor:* Elimina el acoplamiento binario entre cliente y servidor; permite indicar las posiciones válidas con un objetivo de máximo 1 segundo (ASR-06); reduce el tráfico de red al descartar clics erróneos en el cliente; el servidor retiene la autoridad legal absoluta ante cualquier modificación no autorizada (ASR-01). *En contra:* Duplicación deliberada de la lógica básica de comprobación de casillas; requiere sincronización manual en ambos módulos si las reglas cambian.<br><br>**B (Mantener biblioteca binaria compartida DLL):** Distribuir la misma DLL compilada a ambos proyectos. *A favor:* Evita duplicación de código. *En contra:* Provoca acoplamiento de compilación y empaquetado; expone la lógica interna completa del servidor en el binario del cliente. |
 | **Criterios** | Seguridad e integridad del juego (ASR-01), usabilidad y rendimiento de red (ASR-06) e independencia de artefactos. |
 | **Decisión** | Se elige la Alternativa A, aceptando conscientemente la duplicación deliberada de la validación básica en pro del desacoplamiento y el rendimiento de red. |
 | **Consecuencias** | Interfaz rápida sin latencia de red para el jugador y validación segura en el servidor. Se asume el compromiso de mantener alineadas ambas implementaciones ante evoluciones del reglamento. |
 | **Riesgos** | R-02 |
 | **Elementos afectados** | C-01, C-02, C-05, C-06 |
 
-| ADR-006 | Gestión de estado de partidas activas en memoria RAM con aislamiento de persistencia (Bulkhead) |
+| ADR-006 | Estado activo en memoria separado de la persistencia |
 | --- | --- |
 | **Estado** | Aceptado |
-| **Contexto** | Se debe garantizar la propagación de movimientos en menos de 1 segundo bajo concurrencia (ASR-03) y preservar partidas ante caídas temporales de red (ASR-02), sin que contingencias en el acceso a datos interrumpan las partidas. |
-| **Alternativas** | **A (Estado en memoria RAM con persistencia asíncrona y mamparas Bulkhead):** Las partidas activas se mantienen y operan en la memoria RAM del servidor. La persistencia hacia SQL Server se ejecuta de forma asíncrona mediante submódulos aislados por área funcional (PartidaDatos, ChatDatos, JugadoresDatos). *A favor:* Permite latencia sub-segundo en partidas activas; si la base de datos presenta lentitud temporal, las partidas activas no se congelan (Degradación Elegante); las operaciones de chat o auditoría no saturan las conexiones de las partidas. *En contra:* Una interrupción abrupta de energía en el proceso de servidor provocaría la pérdida de jugadas que no alcanzaron a volcarse a disco.<br><br>**B (Persistencia síncrona transaccional en cada jugada):** Cada movimiento abre y bloquea una transacción directa en SQL Server antes de notificar el nuevo estado a los jugadores. *A favor:* Consistencia inmediata e inmutable en disco ante cualquier apagón. *En contra:* Cualquier bloqueo, contención o latencia en el motor relacional congela la partida, violando el tiempo de respuesta requerido. |
-| **Criterios** | Latencia de propagación (ASR-03), resiliencia de juego (ASR-02) y aislamiento de fallos. |
-| **Decisión** | Se elige la Alternativa A, aplicando las tácticas de *Degradación Elegante* y *Mamparas (Bulkhead)* mediante el Módulo de Estado de Juego en memoria y persistencia especializada. |
-| **Consecuencias** | Se maximiza la disponibilidad y fluidez de las partidas en tiempo real. Se acepta el riesgo residual de pérdida de estado volátil ante caídas repentinas del proceso del servidor. |
+| **Contexto** | Para cumplir la recuperación ante desconexiones breves durante 30 segundos (`ASR-02`) y responder jugadas en menos de 1 segundo bajo concurrencia (`ASR-03`), el flujo activo de una partida y su reconexión temporal no deben quedar bloqueados por la latencia o indisponibilidad momentánea de la base de datos (IT3). |
+| **Alternativas** | **A (Estado activo en memoria separado de la representación persistente):** El estado vigente de las partidas y la asociación temporal de 30 segundos se mantienen en memoria, mientras el almacenamiento relacional conserva cuentas, historial y datos durables de forma separada. *A favor:* Permite respuestas rápidas en el flujo de juego y reconexión sin depender de consultas a disco; aísla fallos transitorios de SQL Server frente a partidas activas. *En contra:* Exige controlar el periodo de conservación temporal y aceptar pérdida de estado volátil si cae el proceso del servidor.<br><br>**B (Usar la base de datos relacional como estado de trabajo por jugada):** Consultar y actualizar SQL Server de forma síncrona en cada operación y reconexión. *A favor:* Durabilidad inmediata en disco ante caídas del proceso. *En contra:* Condiciona la continuidad y tiempos de respuesta de la partida a la latencia y disponibilidad de SQL Server.<br><br>**C (Introducir una base de datos en memoria externa):** Incorporar un motor de caché distribuida adicional. *A favor:* Persistencia temporal desacoplada del proceso de aplicación. *En contra:* Agrega otra tecnología y carga operativa injustificada para 8 jugadores concurrentes (`ASM-02`). |
+| **Criterios** | Recuperación dentro de 30 segundos (`ASR-02`), latencia de jugada (`ASR-03`) y simplicidad operativa. |
+| **Decisión** | Se elige la Alternativa A: el Módulo de estado de juego (`C-07`) mantiene en memoria el estado activo de la partida y la ventana de 30 segundos para reconexión, separado del Módulo de persistencia (`C-12`). |
+| **Consecuencias** | La partida continúa y se recupera con rapidez mientras el proceso del servidor permanezca en ejecución. Se asume la pérdida del estado volátil no persistido ante una caída abrupta del proceso y la responsabilidad de liberar sesiones expiradas tras 30 segundos. |
 | **Riesgos** | R-01 |
 | **Elementos afectados** | C-05, C-07, C-12 |
 
+| ADR-007 | Contratos de salida y composición del servidor |
+| --- | --- |
+| **Estado** | Aceptado |
+| **Contexto** | El equipo requiere ejecutar el 100 % de la suite automatizada de reglas en menos de 5 segundos sin levantar WPF, WCF, SQL Server, Entity Framework ni el proveedor externo de correo (`ASR-07`), aislando además fallos de correo (`ASR-04`) y permitiendo trabajo paralelo entre capas (`STK-02`, `ORG-01`, `TEN-04`) en IT6. |
+| **Alternativas** | **A (Inversión de dependencias selectiva en salidas, raíz de composición y separación de modelos en fronteras):** La capa de negocio opera con modelos propios y define contratos abstractos de salida para persistencia y correo; la raíz de composición ensambla e inyecta las implementaciones concretas en el arranque. *A favor:* Permite sustituir persistencia y correo por dobles de prueba en memoria en menos de 5 segundos; protege el dominio frente a restricciones del ORM o WCF; evita ceremonias excesivas para dos desarrolladores. *En contra:* La capa de servicio depende de la firma de los módulos de negocio y requiere mantener modelos separados y traducciones explícitas en los bordes.<br><br>**B (Arquitectura Hexagonal completa con puertos simétricos en todas las fronteras):** Desacoplar entradas y salidas mediante puertos y adaptadores independientes por cada caso de uso. *A favor:* Aislamiento máximo y simétrico en todas las fronteras. *En contra:* Multiplica interfaces, objetos intermedios y esfuerzo de mantenimiento para un equipo de dos personas (`TEN-04`, `ORG-01`).<br><br>**C (Capas tradicionales con dependencia directa hacia persistencia y correo):** Permitir que negocio invoque directamente implementaciones de datos y correo e instancie dependencias internamente. *A favor:* Menor número de contratos iniciales. *En contra:* Obliga a cargar ORM, SQL Server y correo para probar la lógica de negocio, incumpliendo `ASR-07`. |
+| **Criterios** | Facilidad de prueba aislada (`ASR-07`), trabajo paralelo (`STK-02`) y simplicidad estructural (`TEN-04`). |
+| **Decisión** | Se elige la Alternativa A: negocio define los contratos de salida por área funcional, persistencia (`C-12`) y el despachador de correo (`C-11`) los implementan, las traducciones de modelos ocurren en las fronteras y la raíz de composición (`C-15`) conecta todo en el arranque. |
+| **Consecuencias** | Las pruebas unitarias reemplazan dependencias externas con facilidad sin contaminar el dominio. El equipo asume el mantenimiento de los contratos de salida, la traducción de modelos en fronteras y el ensamblado centralizado en `C-15`. |
+| **Riesgos** | Ninguno identificado |
+| **Elementos afectados** | C-04, C-05, C-08, C-09, C-10, C-11, C-12, C-15 |
+
+| ADR-008 | Organización funcional de la frontera de servicios |
+| --- | --- |
+| **Estado** | Aceptado |
+| **Contexto** | Un único punto de entrada monolítico para todas las operaciones remotas del servidor (`C-04`) acumularía dependencias hacia todo el negocio, mezclaría canales simples con canales de tiempo real y provocaría colisiones al trabajar en paralelo (`STK-02`, `ORG-01`), dificultando pruebas focalizadas (`ASR-07`) y cambios localizados (`ASR-05`) en IT6. |
+| **Alternativas** | **A (Descomposición por cohesión funcional en submódulos de servicio):** Dividir el Módulo de servicios en ocho submódulos especializados por área (cuentas, sesiones, perfil, clasificación, amistades, sala de espera, partida en curso y chat). *A favor:* Reduce el acoplamiento de cada servicio a su área de negocio, facilita cambios localizados en paralelo y permite probar cada frontera sin inicializar las demás. *En contra:* Incrementa la cantidad de puntos de entrada remotos que deben configurarse y coordinarse.<br><br>**B (Fachada única monolítica de servicios):** Exponer todas las operaciones del sistema en un único módulo de servicio. *A favor:* Un solo punto de acceso para configurar. *En contra:* Concentra dependencias hacia todos los módulos de negocio, genera conflictos de edición paralela y obliga a inicializar todo el servidor para probar una operación. |
+| **Criterios** | Cohesión funcional, disminución de acoplamiento, trabajo paralelo (`ORG-01`) y facilidad de prueba (`ASR-07`). |
+| **Decisión** | Se elige la Alternativa A: subdividir `C-04` en los submódulos funcionales `C-30` a `C-37`, donde cada uno delega únicamente al módulo de negocio de su área y utiliza `C-13` para el registro de eventos. |
+| **Consecuencias** | Los cambios y pruebas quedan acotados por área funcional y se evitan colisiones entre desarrolladores. Se acepta gestionar y configurar ocho contratos de servicio en el arranque y en el cliente. |
+| **Riesgos** | Ninguno identificado |
+| **Elementos afectados** | C-04, C-13, C-15, C-30 a C-37 |
+
+| ADR-009 | Presentación del cliente con MVVM |
+| --- | --- |
+| **Estado** | Aceptado |
+| **Contexto** | El cliente de escritorio en WPF (`RES-TEC-03`) necesita separar el comportamiento e interacción de los controles visuales para facilitar modificaciones y probar la lógica de presentación sin levantar ventanas gráficas (`STK-02`, `TEN-04`), manteniendo la ruta de prevalidación local del tablero (`ASR-06`) en IT7 e IT9. |
+| **Alternativas** | **A (Patrón MVVM con enlaces de datos):** Las vistas WPF muestran el estado expuesto por su ViewModel y le entregan las acciones del usuario; el ViewModel coordina validaciones locales y llamadas remotas. *A favor:* Aprovecha el enlace de datos nativo de WPF y permite probar la lógica de presentación sin instanciar controles visuales. *En contra:* Exige mantener enlaces en XAML y sincronizar el estado observable.<br><br>**B (Lógica de interacción en el código detrás de cada vista):** Manejar eventos, llamadas remotas y reglas locales directamente en la vista. *A favor:* Sencillo para pantallas pequeñas sin estado complejo. *En contra:* Mezcla la coordinación operativa con eventos de controles gráficos, impidiendo probarla sin cargar WPF.<br><br>**C (Patrón MVP con interfaces de vista):** Coordinar la pantalla mediante presentadores que actualizan la vista a través de interfaces explícitas. *A favor:* Desacopla la vista del presentador. *En contra:* Obliga a definir y mantener interfaces de vista adicionales cuando WPF ya resuelve la sincronización mediante enlaces de datos. |
+| **Criterios** | Facilidad de prueba de presentación (`STK-02`), aprovechamiento de WPF y simplicidad estructural (`TEN-04`). |
+| **Decisión** | Se elige la Alternativa A (MVVM): `C-01` se organiza por flujo de usuario (`C-16` a `C-23`), donde cada vista se enlaza a su ViewModel y este consume la validación local (`C-02`) y los clientes remotos (`C-03`). |
+| **Consecuencias** | Se prueba el comportamiento de interacción sin depender del entorno gráfico de WPF y se mantiene limpia la separación entre controles y estado. Requiere disciplina para mantener la sincronización y enlaces de presentación. |
+| **Riesgos** | R-02 |
+| **Elementos afectados** | C-01, C-02, C-03, C-16 a C-23 |
+
+| ADR-010 | Proxy remoto en el Módulo de comunicación |
+| --- | --- |
+| **Estado** | Aceptado |
+| **Contexto** | La capa de presentación del cliente (`C-01`) debe comunicarse con los ocho servicios remotos del servidor (`ASR-05`) sin quedar expuesta a los tipos de red, canales dúplex ni errores de transporte de WCF, conservando la sustituibilidad para pruebas (`STK-02`, `TEN-04`) en IT7. |
+| **Alternativas** | **A (Proxy remoto por área en el Módulo de comunicación, agrupando partidas):** Encapsular el acceso a los servicios en clientes remotos (`C-24` a `C-29`), reuniendo en `Cliente de partidas` (`C-29`) los contratos de sala, partida en curso y chat por compartir el mismo flujo y ciclo de vida de juego. *A favor:* Aísla a presentación del ciclo de vida de canales WCF, centraliza la gestión de errores de red y permite sustituir clientes en pruebas. *En contra:* `Cliente de partidas` acumula operaciones y dependencias de tres contratos remotos.<br><br>**B (Gestionar comunicación directamente desde cada ViewModel):** Cada ViewModel abre conexiones, maneja callbacks y captura fallos de red. *A favor:* Evita clientes intermedios por servicio. *En contra:* Dispersa la gestión de canales y errores entre pantallas y dificulta sustituir la red en pruebas.<br><br>**C (Consumir directamente proxies WCF generados desde presentación):** Usar los clientes autogenerados de WCF en los ViewModels. *A favor:* Reutiliza clases generadas sin envoltura adicional. *En contra:* Expone a presentación a tipos y ciclo de vida propios de WCF. |
+| **Criterios** | Aislamiento del transporte remoto (`ASR-05`), sustituibilidad en pruebas (`STK-02`) y simplicidad de coordinación (`TEN-04`). |
+| **Decisión** | Se elige la Alternativa A: el Módulo de comunicación (`C-03`) implementa Proxy remoto mediante `C-24` a `C-29`, traduciendo respuestas y fallos hacia presentación y agrupando sala, partida en curso y chat en `C-29`. |
+| **Consecuencias** | Presentación queda desacoplada de WCF y de sus cargas útiles. Se acepta que `C-29` concentre dependencias de tres contratos; si esas áreas comienzan a cambiar de forma independiente, `C-29` podrá dividirse en tres clientes dentro de `C-03`. |
+| **Riesgos** | Ninguno identificado |
+| **Elementos afectados** | C-01, C-03, C-04, C-24 a C-29 |
+
+| ADR-011 | Control de versión al aplicar jugadas |
+| --- | --- |
+| **Estado** | Aceptado |
+| **Contexto** | Un cliente modificado (`STK-05`) o con estado atrasado puede enviar una jugada preparada sobre un tablero anterior que siga pareciendo legal en el tablero vigente (`QAS-Seguridad-1`, `ASR-01`), generando cambios no deseados si el estado cambia entre la comprobación y la aplicación (IT8). |
+| **Alternativas** | **A (Exigir versión esperada y compararla bajo acceso exclusivo por partida):** La solicitud incluye la versión del tablero sobre la cual se eligió la jugada; `C-05` compara esa versión contra la vigente y, solo si coincide, delega al motor (`C-06`) y avanza la versión dentro del mismo acceso exclusivo de esa partida. *A favor:* Rechaza el 100 % de solicitudes obsoletas antes de invocar al motor y elimina condiciones de carrera al validar y aplicar el movimiento. *En contra:* Exige que el cliente conserve y envíe la versión, y serializa las escrituras sobre una misma partida.<br><br>**B (Validar únicamente la posición contra el estado vigente):** Verificar solo si la casilla es legal en el tablero actual sin comprobar versión previa. *A favor:* Mensajes más simples sin control de versión en el cliente. *En contra:* Permite aplicar una jugada calculada sobre un estado anterior si la casilla sigue siendo válida en el nuevo tablero. |
+| **Criterios** | Integridad absoluta del estado legal (`ASR-01`) y prevención de condiciones de carrera por partida. |
+| **Decisión** | Se elige la Alternativa A: `C-05` exige la versión esperada en cada solicitud de jugada, la compara con la versión vigente en `C-07` bajo acceso exclusivo por partida y rechaza solicitudes desactualizadas antes de modificar tablero, turno o persistencia. |
+| **Consecuencias** | Garantiza coherencia entre lo que vio el jugador y el estado que autoriza el servidor. El cliente debe consultar nuevamente el estado vigente tras un rechazo por versión anterior, y las operaciones sobre una misma partida esperan brevemente mientras se resuelve la jugada en curso. |
+| **Riesgos** | Ninguno identificado |
+| **Elementos afectados** | C-03, C-04, C-05, C-06, C-07 |
+
+| ADR-012 | Opción de jugar contra el sistema desde la sala de espera |
+| --- | --- |
+| **Estado** | Aceptado |
+| **Contexto** | Un jugador que crea una sala debe poder optar por jugar contra un oponente automatizado del sistema sin demoras obligatorias (`QAS-Usabilidad-2`, `OBJ-01`), evitando abandono cuando no desea esperar otro jugador humano (IT9). |
+| **Alternativas** | **A (Habilitar la opción desde la primera presentación de la sala con 0 segundos de espera):** `Sala de partida` (`C-20`) muestra habilitada la opción desde que aparece al anfitrión, distinguiéndola de la espera de otro jugador y abriendo la partida en curso al recibir confirmación del servidor. *A favor:* Cumple con los 0 segundos de espera obligatoria y reduce la fricción de entrada. *En contra:* Exige coordinar en sala la transición inmediata entre espera humana y partida contra el sistema.<br><br>**B (Habilitar la opción tras agotar un tiempo de espera):** Mostrar la alternativa solo después de transcurrir varios minutos sin encontrar rival humano. *A favor:* Prioriza el emparejamiento entre jugadores humanos. *En contra:* Introduce una espera obligatoria que incumple directamente `QAS-Usabilidad-2`. |
+| **Criterios** | Disponibilidad inmediata en la primera presentación de la sala (`QAS-Usabilidad-2`) y claridad de flujo para el anfitrión. |
+| **Decisión** | Se elige la Alternativa A: el ViewModel de `C-20` habilita jugar contra el sistema desde la primera vista de la sala de espera (0 segundos de espera obligatoria) y solicita el inicio mediante `C-29` hacia `C-05`. |
+| **Consecuencias** | Elimina tiempos muertos forzados para quien prefiere jugar de inmediato contra el sistema. La sala debe distinguir claramente el estado de espera humana frente a la confirmación de partida contra el sistema y reflejar posibles errores de inicio. |
+| **Riesgos** | Ninguno identificado |
+| **Elementos afectados** | C-01, C-03, C-04, C-05, C-20, C-29 |
+
+| ADR-013 | Propagación del estado completo de la partida |
+| --- | --- |
+| **Estado** | Aceptado |
+| **Contexto** | Cada jugada válida o vencimiento de turno debe quedar disponible para ambos jugadores en menos de 1 segundo en el 95 % de los casos con hasta 8 jugadores en 4 partidas (`ASR-03`, `QAS-Rendimiento-2`), definiendo el formato de mensajes entre `C-36` y `C-29` en IT10. |
+| **Alternativas** | **A (Enviar el estado completo de 64 celdas por respuesta y notificación dúplex):** El servidor devuelve al solicitante y notifica a los suscriptores la instantánea completa con su versión; el cliente descarta copias repetidas u obsoletas por versión. *A favor:* Permite al cliente actualizar y recuperarse en un solo mensaje incluso si perdió estados previos; en el análisis de carga (49,2 ms favorable y 393,2 ms extremo en 4 partidas a 1 Mbit/s) mantiene margen dentro de 1 segundo. *En contra:* Retransmite las 64 celdas en cada jugada y el solicitante puede recibir duplicado por respuesta y notificación.<br><br>**B (Enviar solo cambios por jugada con versión base):** Transmitir la casilla colocada, fichas volteadas y versión base. *A favor:* Ahorra cerca de 4,4 ms por ráfaga en el caso favorable y reduce bytes cuando hay pocos volteos. *En contra:* En el peor caso ocupa lo mismo que el estado completo y exige una consulta adicional de estado completo si al cliente le falta la versión base. |
+| **Criterios** | Cumplimiento de latencia (`ASR-03`), tolerancia ante pérdida o desorden de estados y simplicidad en el cliente. |
+| **Decisión** | Se elige la Alternativa A: `C-36` propaga el estado completo en la respuesta y notificaciones dúplex tras cada jugada o vencimiento de turno, y `C-29` filtra copias repetidas mediante la versión de `ADR-011`. |
+| **Consecuencias** | Simplifica la sincronización y recuperación del cliente ante mensajes perdidos. Se acepta el costo de retransmitir el tablero completo y de descartar copias repetidas en el cliente; la meta del percentil 95 queda sujeta a verificación empírica bajo carga (`R-03`). |
+| **Riesgos** | R-03 |
+| **Elementos afectados** | C-01, C-03, C-04, C-05, C-07, C-29, C-36 |
+
+| ADR-014 | Tiempo límite para el proveedor de correo |
+| --- | --- |
+| **Estado** | Aceptado |
+| **Contexto** | El registro y otras funciones de cuenta dependen de un proveedor externo de correo electrónico (`DEP-01`); su lentitud o caída no debe retener hilos ni degradar las partidas en curso, debiendo concluir en un máximo de 5 segundos (`QAS-Disponibilidad-2`, `ASR-04`) según IT3. |
+| **Alternativas** | **A (Fallo rápido con tiempo límite acotado de 5 segundos):** El `Módulo despachador de correo` (`C-11`) ejecuta el despacho con un límite estricto de 5 segundos; si el proveedor no responde, cancela la espera e informa el fallo al solicitante. *A favor:* Protege los hilos del servidor y garantiza respuesta acotada sin infraestructura adicional. *En contra:* Si el proveedor externo falla temporalmente, el usuario debe reintentar manualmente su solicitud.<br><br>**B (Esperar sin límite o reintentar en la misma solicitud):** Mantener la petición abierta o reintentar internamente ante fallos del proveedor. *A favor:* Podría absorber microcortes sin intervención del usuario. *En contra:* Retiene hilos del servidor durante caídas prolongadas e incumple el máximo de 5 segundos (`ASR-04`).<br><br>**C (Cola persistente asíncrona de reintentos):** Encolar mensajes en segundo plano y reintentarlos periódicamente. *A favor:* Eventual entrega sin repetir la solicitud. *En contra:* Introduce infraestructura de colas y gestión de reintentos innecesaria para códigos temporales de verificación. |
+| **Criterios** | Cumplimiento del límite máximo de 5 segundos (`ASR-04`), aislamiento de fallos (`QAS-Disponibilidad-2`) y simplicidad operativa (`ORG-01`). |
+| **Decisión** | Se elige la Alternativa A: `C-11` aplica fallo rápido (*Fail-Fast*) con tiempo límite estricto de 5 segundos al comunicarse con `DEP-01` e informa el error de vuelta al solicitante sin afectar partidas activas. |
+| **Consecuencias** | Las caídas o latencias del proveedor externo quedan aisladas a la operación solicitada y no bloquean hilos de juego. El usuario debe solicitar un nuevo envío cuando el proveedor se restablezca. |
+| **Riesgos** | Ninguno residual registrado (dependencia externa acotada a 5 s) |
+| **Elementos afectados** | C-08, C-11, DEP-01 |
+
 ---
 
-## 4. Estructura y componentes
+## 4. Estructura
 
-### 4.1 Catálogo de elementos
+### 4.1 Módulos y componentes
 
-#### Reglas generales de dependencia permitidas:
-
-1. **Aislamiento de niveles:** El Tier Cliente sólo interactúa con el Tier Servidor a través del canal de red entre `C-03` y `C-04`. Ningún elemento del cliente puede referenciar componentes internos de negocio o persistencia del servidor.
-2. **Flujo unidireccional en servidor:** La fachada de entrada (`C-04`) invoca los módulos de lógica de negocio (`C-05`, `C-08`, `C-09`, `C-10`). La lógica de negocio consume la persistencia (`C-12`) y el soporte (`C-11`, `C-13`).
-3. **Pureza de las reglas y estado:** El motor de juego (`C-06`) y el estado en memoria (`C-07`) son componentes puros sin dependencias hacia persistencia, servicios de red ni interfaces de usuario.
-4. **Acceso exclusivo a datos:** El servidor de base de datos (`C-14`) sólo puede ser accedido por el componente de persistencia (`C-12`).
-
----
-
-| Elemento | Qué hace | Qué no hace | De quién depende |
+| ID | Nombre y tipo | Responsabilidad | Provee / requiere |
 | --- | --- | --- | --- |
-| **Tier Cliente (Escritorio WPF)** |  |  |  |
-| **C-01 Componente de UI** | Renderiza tableros, menús interactivos, animaciones y ventanas de chat; captura eventos de usuario y muestra casillas sugeridas. | No calcula el nuevo estado legal definitivo del tablero ni ejecuta consultas a bases de datos. | C-02, C-03 |
-| **C-02 Validador de interfaz** | Analiza la matriz del tablero local para pre-validar movimientos válidos en tiempo real (\le 50 ms) y bloquear clics erróneos en la interfaz. | No aplica el volteo final de fichas, no cambia turnos ni emite veredictos de victoria/derrota. | Ninguno (Lógica de presentación pura) |
-| **C-03 Componente de comunicación** | Gestiona la conexión de red como cliente WCF; serializa solicitudes, invoca operaciones remotas y escucha callbacks del servidor. | No implementa lógica de interfaz de usuario ni procesa reglas de juego. | C-04 (Vía canal de red WCF) |
-| **Tier Servidor (Servicios y Negocio WCF)** |  |  |  |
-| **C-04 API de servicio** | Expone los contratos de servicio WCF (ServiceContracts), autentica peticiones remotas y despacha las invocaciones a la lógica correspondiente. | No contiene lógica de reglas de Reversi ni interactúa directamente con el motor de base de datos. | C-05, C-08, C-09, C-10, C-13 |
-| **C-05 Componente de juego** | Orquesta el ciclo de vida de salas, sincroniza turnos entre jugadores, controla los temporizadores de inactividad (40 s) y ejecuta el oponente automatizado (bot). | No dictamina si una jugada cumple el reglamento de flanqueo ni realiza consultas SQL directas. | C-06, C-07, C-12, C-13 |
-| **C-06 Motor de juego** | Entidad autoritativa que valida legalidad de movimientos, calcula el flanqueo y volteo de piezas, y dictamina fin de partida o empate según el reglamento de Reversi. | No mantiene conexiones de red, no gestiona sesiones ni accede a la base de datos o sistema de archivos. | Ninguno (Lógica pura independiente) |
-| **C-07 Módulo de estado de juego** | Mantiene en memoria RAM las estructuras del tablero, participantes y reloj de las partidas activas (hasta 4 concurrentes) para respuestas sub-segundo. | No persiste información en disco ni valida la legalidad de las jugadas. | Ninguno |
-| **C-08 Módulo de jugadores** | Gestiona la autenticación, altas de cuentas, sesiones activas, perfiles de usuario y cómputo de estadísticas de juego. | No administra las salas de juego activas ni envía mensajes de correo directamente. | C-11, C-12, C-13 |
-| **C-09 Módulo de amistades** | Administra la lista de contactos, solicitudes de amistad entrantes/salientes y estado de conexión social de los jugadores. | No interviene en el flujo de partidas activas ni en el chat de juego. | C-12, C-13 |
-| **C-10 Módulo de chat** | Recibe, valida formato y distribuye mensajes de texto entre los participantes de una sala de partida en curso. | No almacena estado en memoria permanente ni gestiona turnos de juego. | C-12, C-13 |
-| **C-11 Despachador correo** | Coordina el envío de códigos de verificación temporal aplicando Fail-Fast con límite estricto de 5 s ante fallos del proveedor SMTP externo. | No almacena credenciales de usuario ni bloquea las partidas activas si el proveedor externo falla. | C-13 (Consume proveedor SMTP externo DEP-01) |
-| **C-12 Componente de persistencia** | Encapsula el acceso a datos mediante Entity Framework aplicando aislamiento de mamparas (Bulkhead: PartidaDatos, JugadoresDatos, etc.). | No contiene reglas del juego ni procesa validaciones de interfaz de usuario. | C-14, C-13 |
-| **C-13 Módulo registro de eventos** | Registra de forma transversal errores del sistema, advertencias, caídas transitorias y auditoría de seguridad en archivos de registro locales. | No procesa peticiones de usuarios ni gestiona estados de negocio. | Ninguno (Escribe directamente en el sistema de archivos local) |
-| **Tier de Datos (Persistencia Relacional)** |  |  |  |
-| **C-14 Servidor de base de datos** | Instancia de Microsoft SQL Server que asegura la consistencia, integridad referencial y almacenamiento persistente del esquema relacional. | No ejecuta lógica de aplicación ni contiene reglas de negocio de Reversi. | Ninguno |
+| C-01 | Módulo de presentación (Cliente · Presentación) | Presenta la interfaz y organiza vistas y ViewModels por flujo. | C-02 y C-03 según el flujo. |
+| C-02 | Módulo validador de interfaz (Cliente · Negocio) | Evalúa posiciones válidas y políticas de entrada locales. | Provee comprobaciones locales a C-01. |
+| C-03 | Módulo de comunicación (Cliente · Datos) | Encapsula las llamadas remotas, las notificaciones y la traducción de datos. | Contratos remotos provistos por C-04. |
+| C-04 | Módulo de servicios (Servidor · Servicios) | Expone los contratos remotos y delega al área de negocio correspondiente. | Módulos de negocio y C-13. |
+| C-05 | Módulo de juego (Servidor · Negocio) | Coordina salas, partidas, turnos y movimientos. Comprueba la versión esperada. | C-06, C-07 y contratos de persistencia de partidas y envío de correo. |
+| C-06 | Módulo motor de juego (Servidor · Negocio) | Valida jugadas, resuelve el flanqueo y evalúa las condiciones de victoria. | Provee reglas autoritativas a C-05. |
+| C-07 | Módulo de estado de juego (Servidor · Negocio) | Conserva el tablero, el turno, la versión y los participantes de las partidas activas. | Provee el estado activo a C-05. |
+| C-08 | Módulo de jugadores (Servidor · Negocio) | Gestiona cuentas, autenticación, perfiles y sesiones. | Contratos de persistencia de jugadores y envío de correo. |
+| C-09 | Módulo de amistades (Servidor · Negocio) | Gestiona contactos y solicitudes de amistad. | C-08 y contrato de persistencia de amistades. |
+| C-10 | Módulo de chat (Servidor · Negocio) | Gestiona mensajes entre participantes de la partida. | C-05 y contrato de persistencia de chat. |
+| C-11 | Módulo despachador de correo (Servidor · Servicios) | Despacha correo con un máximo de 5 segundos. | Provee el contrato de envío de correo. Requiere DEP-01. |
+| C-12 | Módulo de persistencia (Servidor · Persistencia) | Agrupa los módulos que guardan y consultan datos por área. | Provee los contratos de persistencia. Requiere C-14. |
+| C-13 | Módulo de registro de eventos (Servidor · Transversal) | Registra eventos y fallos del servidor. | Provee registro a C-04. Requiere almacenamiento local. |
+| C-14 | Base de datos relacional (Servidor · Almacén en ejecución) | Almacena los datos relacionales en un proceso independiente del servicio. | Provee almacenamiento a C-12. |
+| C-15 | Raíz de composición del servidor (Servidor · Arranque) | Ensambla el servidor y conecta contratos con implementaciones. | C-04, módulos de negocio y C-11 a C-13. |
+| C-16 | Acceso y registro (submódulo de C-01) | Presenta el inicio de sesión, el acceso como invitado y la creación de cuentas. | Cliente de sesiones, Cliente de cuentas, políticas de entrada y apoyo de presentación. |
+| C-17 | Menú principal (submódulo de C-01) | Muestra la clasificación y la lista de amigos. Permite acceder a partidas y cerrar sesión. | Cliente de clasificación, Cliente de amistades, Cliente de sesiones y apoyo de presentación. |
+| C-18 | Perfil y configuración (submódulo de C-01) | Presenta el perfil y las opciones de interfaz. Desde el perfil también se pueden enviar solicitudes de amistad. | Cliente de perfil, Cliente de cuentas y apoyo de presentación. |
+| C-19 | Amistades (submódulo de C-01) | Presenta la búsqueda de jugadores y las solicitudes de amistad. | Cliente de amistades y apoyo de presentación. |
+| C-20 | Sala de partida (submódulo de C-01) | Presenta la creación, la búsqueda y la espera de partidas. | Cliente de partidas, comprobaciones de juego y apoyo de presentación. |
+| C-21 | Partida en curso (submódulo de C-01) | Muestra el tablero, recibe las acciones de juego y presenta el chat de la partida. | Cliente de partidas, comprobaciones de juego y apoyo de presentación. |
+| C-22 | Historial de partidas (submódulo de C-01) | Presenta el historial y permite abrir la información de una partida. | Cliente de partidas |
+| C-23 | Apoyo de presentación (submódulo de C-01) | Proporciona diálogos, localización, estado local de sesión y acceso a los clientes remotos compartidos. | Cliente de sesiones, Cliente de cuentas, Cliente de perfil, Cliente de clasificación, Cliente de amistades y Cliente de partidas. |
+| C-24 | Cliente de sesiones (submódulo de C-03) | Solicita el inicio y cierre de sesión y el acceso como invitado. | Contrato remoto de sesiones. |
+| C-25 | Cliente de cuentas (submódulo de C-03) | Envía operaciones de registro y administración de la cuenta. | Contrato remoto de cuentas. |
+| C-26 | Cliente de perfil (submódulo de C-03) | Consulta y actualiza el perfil y su imagen. | Contrato remoto de perfil. |
+| C-27 | Cliente de clasificación (submódulo de C-03) | Consulta la clasificación de jugadores. | Contrato remoto de clasificación. |
+| C-28 | Cliente de amistades (submódulo de C-03) | Envía operaciones de amistad y recibe sus notificaciones. | Contrato remoto de amistades. |
+| C-29 | Cliente de partidas (submódulo de C-03) | Agrupa las llamadas remotas de sala, partida en curso y chat. | Contrato remoto de sala de partida, Contrato remoto de partida en curso y Contrato remoto de chat de partida. |
+| C-30 | Servicio de registro de cuentas (submódulo de C-04) | Expone el registro de cuentas y traduce datos hacia el negocio. | Módulo de jugadores, Módulo de registro de eventos |
+| C-31 | Servicio de sesiones (submódulo de C-04) | Expone autenticación, sesiones de invitado y cierre de sesión. | Módulo de jugadores, Módulo de registro de eventos |
+| C-32 | Servicio de perfil de jugador (submódulo de C-04) | Expone consulta y actualización de perfil e imagen. | Módulo de jugadores, Módulo de registro de eventos |
+| C-33 | Servicio de clasificación (submódulo de C-04) | Expone la consulta de la tabla global de posiciones. | Módulo de jugadores, Módulo de registro de eventos |
+| C-34 | Servicio de amistades (submódulo de C-04) | Expone la gestión de amistades y notificaciones de presencia en línea. | Módulo de amistades, Módulo de registro de eventos |
+| C-35 | Servicio de sala de partida (submódulo de C-04) | Expone creación, listado, invitación, unión y configuración previa de salas. | Módulo de juego, Módulo de registro de eventos |
+| C-36 | Servicio de partida en curso (submódulo de C-04) | Expone jugadas, estado en curso, observación, abandono e historial de partidas. | Módulo de juego, Módulo de registro de eventos |
+| C-37 | Servicio de chat de partida (submódulo de C-04) | Expone mensajería en tiempo real e historial de chat de partida. | Módulo de chat, Módulo de registro de eventos |
+| C-38 | Módulo de datos de partidas (submódulo de C-12) | Implementa el contrato de persistencia de partidas y traduce hacia la base de datos relacional. | Contrato de persistencia de partidas (implementa), Base de datos relacional |
+| C-39 | Módulo de datos de chat (submódulo de C-12) | Implementa el contrato de persistencia de chat y traduce hacia la base de datos relacional. | Contrato de persistencia de chat (implementa), Base de datos relacional |
+| C-40 | Módulo de datos de amistades (submódulo de C-12) | Implementa el contrato de persistencia de amistades y traduce hacia la base de datos relacional. | Contrato de persistencia de amistades (implementa), Base de datos relacional |
+| C-41 | Módulo de datos de jugadores (submódulo de C-12) | Implementa el contrato de persistencia de jugadores y traduce hacia la base de datos relacional. | Contrato de persistencia de jugadores (implementa), Base de datos relacional |
+
+Los submódulos heredan la capa del módulo que los agrupa. Los contratos de salida se definen en negocio y los contratos remotos se exponen en servicios. La ficha V-02 indica cómo leer los nombres de la figura junto con los identificadores del catálogo.
 
 ### 4.2 Interfaces críticas
 
@@ -384,11 +495,19 @@ Sólo las interfaces cuyo incumplimiento produce un riesgo real: dinero, estado 
 
 ### 4.3 Reglas de dependencia
 
-*Entrega final*
-
 | Regla | Permitida o prohibida | Por qué (ADR) |
 | --- | --- | --- |
-| […] | […] | [ADR-_] |
+| Las vistas consumen su ViewModel. El ViewModel usa la validación local y los clientes remotos que exige su flujo. | Permitida | ADR-009, ADR-010 |
+| Presentación abre canales WCF directamente o accede a módulos internos del servidor. | Prohibida | ADR-003, ADR-010 |
+| El Módulo de comunicación consume los contratos remotos provistos por el Módulo de servicios. | Permitida | ADR-003, ADR-010 |
+| Los submódulos de servicio delegan al negocio de su área y usan el Módulo de registro de eventos. | Permitida | ADR-008 |
+| Los submódulos de servicio acceden directamente a la base de datos. | Prohibida | ADR-004, ADR-007 |
+| Negocio consume sus contratos de salida. Persistencia y el despachador de correo implementan los contratos que les corresponden. | Permitida | ADR-007 |
+| Negocio referencia implementaciones de persistencia, correo o transporte remoto. | Prohibida | ADR-007 |
+| Los módulos de datos acceden a la base relacional. El despachador de correo accede al proveedor externo. | Permitida | ADR-004, ADR-007 |
+| Los módulos de datos dependen del Módulo de registro de eventos. | Prohibida | ADR-007, ADR-008 |
+| La raíz de composición referencia los módulos concretos necesarios para el ensamblado. | Permitida | ADR-007 |
+| El Motor de juego y el Módulo de estado de juego dependen de presentación, transporte remoto o persistencia. | Prohibida | ADR-005, ADR-006, ADR-011 |
 
 ---
 
@@ -415,12 +534,12 @@ Cada preocupación tiene una decisión, o un «no aplica» con su razón. No es 
 
 ### 6.1 Tipos de vista que usaremos
 
-| Tipo de vista | Qué preocupaciones atiende |
-| --- | --- |
-| Contexto | Frontera del sistema, usuarios y sistemas externos |
-| Estructura | Módulos, componentes, interfaces y dependencias |
-| Ejecución | Interacciones, estado compartido, concurrencia y fallas |
-| Despliegue | Nodos, comunicación, límites de confianza y redundancia |
+| Tipo de vista | Qué preocupaciones atiende                                                                                                                                                           | Representaciones útiles                                                                   |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| Contexto      | Delimita el sistema, los actores y el proveedor externo de correo. Complementa el modelo 4+1.                                                                                        | C4 nivel 1 (V-01).                                                                        |
+| Estructura    | La vista lógica explica las responsabilidades y la autoridad sobre el estado de juego. La vista de desarrollo organiza los módulos, contratos y dependencias.                        | UML de clases o de paquetes, según el propósito. V-02 muestra la organización de módulos. |
+| Ejecución     | La vista de procesos permite seguir las solicitudes, la comprobación de versión y la propagación del estado. Los escenarios de jugada, tablero y sala enlazan las vistas como el +1. | UML de secuencia para los recorridos de IT8 a IT10.                                       |
+| Despliegue    | La vista física ubica el cliente, la aplicación de servicio y el motor relacional en sus dispositivos y distingue los procesos que comparten el servidor.                            | UML de despliegue (V-03).                                                                 |
 
 ### 6.2 Vistas
 
@@ -429,31 +548,46 @@ Cada preocupación tiene una decisión, o un «no aplica» con su razón. No es 
 | Vista | Nombre | Tipo de vista | Qué muestra | Decisión que refleja |
 | --- | --- | --- | --- | --- |
 | **V-01** | Vista de contexto del sistema | Contexto | Delimitación de la frontera del sistema Reversi, actores humanos y servicios externos con los que interactúa. | ADR-003, ADR-006 |
-| **V-02** | Vista de estructura de módulos | Módulos / Estructura | Descomposición del sistema en componentes a través de los tres tiers, límites de responsabilidad y dependencias permitidas. | ADR-004, ADR-005, ADR-006 |
+| **V-02** | Vista de estructura de módulos | Estructura | Organización de los módulos del cliente y del servidor y sus contratos. | ADR-004, ADR-007, ADR-008, ADR-009, ADR-010 |
+| **V-03** | Vista de despliegue | Despliegue | Ubicación de la aplicación cliente, el servidor Reversi y el motor de base de datos en dos dispositivos. | ADR-004 |
 
 ---
 
-| V-01 Vista de contexto del sistema |  |
-| --- | --- |
-| **Tipo de vista** | Contexto |
-| **Para quién y para qué** | **Evaluadores y docente:** Para verificar los límites operacionales del sistema Reversi y distinguir qué elementos quedan bajo el control de la aplicación frente a entidades externas.<br><br>**Equipo de desarrollo:** Para identificar los canales de entrada/salida y las interfaces con actores humanos y dependencias externas. |
-| **Preocupaciones que atiende** | Delimitación clara de la frontera del sistema, identificación de los actores externos (jugador/rival) y desacoplamiento de servicios externos no confiables (servidor SMTP). |
-| **Notación y leyenda** | Diagrama de contexto tipo C4 (Nivel 1). Bloque central delimitando la frontera del Sistema Reversi; cajas externas para actores humanos y servicios externos (DEP-01); flechas dirigidas rotuladas indicando el sentido de los mensajes. |
-| **Se corresponde con** | V:01 Sistema de Juego de Reversi es todo V-02. |
+| V-01 Vista de contexto del sistema |                                                                                                                                                                                                                                                                                                                                       |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Tipo de vista**                  | Contexto                                                                                                                                                                                                                                                                                                                              |
+| **Para quién y para qué**          | **Evaluadores y docente:** Para verificar los límites operacionales del sistema Reversi y distinguir qué elementos quedan bajo el control de la aplicación frente a entidades externas.<br><br>**Equipo de desarrollo:** Para identificar los canales de entrada/salida y las interfaces con actores humanos y dependencias externas. |
+| **Preocupaciones que atiende**     | Delimitación clara de la frontera del sistema, identificación de los actores externos (jugador/rival) y desacoplamiento de servicios externos no confiables (servidor SMTP).                                                                                                                                                          |
+| **Notación y leyenda**             | Diagrama de contexto tipo C4 (Nivel 1). Bloque central delimitando la frontera del Sistema Reversi; cajas externas para actores humanos y servicios externos (DEP-01); flechas dirigidas rotuladas indicando el sentido de los mensajes.                                                                                              |
+| **Se corresponde con** | Los módulos de V-02 pertenecen al sistema delimitado en V-01. |
 
-![Diagrama de contexto.png](Documento-Entrega/Diagrama_de_contexto.png)
+![[Context-dark.png]]
 
 ---
 
 | V-02 Vista de estructura de módulos |  |
 | --- | --- |
 | **Tipo de vista** | Estructura |
-| **Para quién y para qué** | **Equipo de desarrollo:** Para conocer la descomposición del software en componentes (C-01 a C-14), los límites de cada tier y las reglas de dependencia permitidas al implementar y estructurar el código.<br><br>**Evaluadores y QA:** Para verificar la separación de responsabilidades, la autoría única de las reglas de juego y el desacoplamiento físico de la persistencia. |
-| **Preocupaciones que atiende** | Modularidad, autoridad del motor de juego frente a trampas (ASR-01), respuestas visuales sin latencia de red (ASR-06), aislamiento de fallos en persistencia (Mamparas / Bulkhead en C-12) y arquitectura de despliegue Three-Tier (ADR-004). |
-| **Notación y leyenda** | Diagrama de módulos y paquetes UML. Cajas agrupadas por niveles (Tier Cliente, Tier Servidor de Aplicaciones y Tier de Datos); flechas dirigidas continuas (`-->`) que representan dependencias de uso/invocación permitidas. |
-| **Se corresponde con** | V-02 completo es V-01: Sistema de Juego de Reversi. |
+| **Para quién y para qué** | Equipo de desarrollo y evaluadores. Permite localizar los módulos del cliente y del servidor y seguir los contratos que conectan sus capas. |
+| **Preocupaciones que atiende** | Modularidad, autoridad del motor de juego (ASR-01), validación local (ASR-06) y separación lógica de los niveles (ADR-004). |
+| **Notación y leyenda** | Diagrama UML de paquetes. Las cajas agrupan módulos por capa. Las flechas discontinuas indican dependencias y los triángulos huecos señalan la realización de contratos. La base de datos se distingue como proceso de datos. ADR-004 define su ubicación física. |
+| **Se corresponde con** | Cliente, servidor y base de datos corresponden al interior del sistema delimitado en V-01. Los módulos y contratos se identifican mediante el catálogo C de 4.1. |
 
-![Reversi Módulos.png](Documento-Entrega/Reversi_Mdulos.png)
+![Reversi Módulos](Documento-Entrega/Reversi%20Módulos.png)
+
+Correspondencia de V-02 con 4.1. Los flujos de presentación de la figura son C-16 a C-23, los clientes remotos son C-24 a C-29 y los servicios son C-30 a C-37. «Módulo de juego» en la capa de negocio del cliente corresponde a C-02, Módulo validador de interfaz. En el servidor, «Módulo de juego» corresponde a C-05. Los módulos de datos por área corresponden a C-38 a C-41.
+
+---
+
+| V-03 Vista de despliegue | |
+| --- | --- |
+| **Tipo de vista** | Despliegue |
+| **Para quién y para qué** | Equipo de desarrollo y evaluadores. Permite ubicar dónde se ejecutan la aplicación cliente, el servicio y el motor relacional. |
+| **Preocupaciones que atiende** | Distribución física y comunicación entre unidades de ejecución. La aplicación cliente se ejecuta en el dispositivo del jugador. El servidor Reversi y el motor de base de datos se ejecutan como procesos independientes en el mismo dispositivo servidor, según ADR-004. |
+| **Notación y leyenda** | UML de despliegue. Los nodos representan dispositivos. Los elementos contenidos representan el software desplegado y las líneas muestran sus conexiones. |
+| **Se corresponde con** | En V-02, C-01 a C-03 se ejecutan en la aplicación cliente. Los módulos del servidor se ejecutan en la aplicación de servicio, incluido C-12. La base relacional C-14 se aloja en el motor de base de datos del mismo dispositivo servidor. |
+
+![[docs/Design Project/Documento-Entrega/Reversi despliegue.png]]
 
 ---
 
@@ -500,11 +634,11 @@ Registren aquí cada EV que citen. Una evidencia puede ser una revisión por esc
 
 ### 7.3 Riesgos y pendientes
 
-| R | Tipo | Descripción | Qué se hará |
-| --- | --- | --- | --- |
-| **R-01** | Riesgo | Mantener el estado activo de las partidas en la memoria RAM del servidor sin persistencia transaccional síncrona en disco (ADR-006). Ante una caída inesperada del proceso del host o fallo de energía, se pierde el progreso de las partidas en curso no concluidas. | Registrar eventos clave en el log de auditoría local (C-13) y ejecutar pruebas de corte forzado de proceso durante la fase de integración para validar el comportamiento residual. |
-| **R-02** | Deuda | Duplicación deliberada de la comprobación básica de casillas entre el cliente WPF y el servidor WCF (ADR-005). Existe riesgo de divergencia (rule drift): la interfaz podría habilitar casillas que el servidor luego rechace si no se mantienen sincronizados ambos módulos ante futuras modificaciones. | Definir una batería idéntica de pruebas unitarias automatizadas (QAS-Verificabilidad) para validar la misma matriz de jugadas sobre el validador del cliente y el motor del servidor antes del cierre de versión. |
-| **R-03** | Pendiente | Comunicación remota por TCP entre el servidor WCF y el contenedor de Microsoft SQL Server (ADR-004) bajo la concurrencia operativa de 8 jugadores (ASM-02). Existe riesgo de latencia acumulada o agotamiento del pool de conexiones durante picos simultáneos de chat y perfiles. | Aplicar aislamiento mediante DbContexts independientes por área funcional (Bulkhead en C-12) y verificar tiempos de respuesta con pruebas de carga de 8 jugadores concurrentes en la segunda entrega. |
+| R        | Tipo      | Descripción                                                                                                                                                                                                                                                                                               | Qué se hará                                                                                                                                                                                                               |
+| -------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **R-01** | Riesgo    | Mantener el estado activo de las partidas en la memoria RAM del servidor sin persistencia transaccional síncrona en disco (ADR-006). Ante una caída inesperada del proceso del host o fallo de energía, se pierde el progreso de las partidas en curso no concluidas.                                     | Registrar eventos clave en el log de auditoría local (C-13) y ejecutar pruebas de corte forzado de proceso durante la fase de integración para validar el comportamiento residual.                                        |
+| **R-02** | Deuda     | Duplicación deliberada de la comprobación básica de casillas entre el cliente WPF y el servidor WCF (ADR-005). Existe riesgo de divergencia (rule drift): la interfaz podría habilitar casillas que el servidor luego rechace si no se mantienen sincronizados ambos módulos ante futuras modificaciones. | Definir una batería idéntica de pruebas unitarias automatizadas (**`QAS-FacilidadPrueba-1`**) para validar la misma matriz de jugadas sobre el validador del cliente y el motor del servidor antes del cierre de versión. |
+| **R-03** | Pendiente | El servicio y el motor relacional comparten recursos del dispositivo servidor (ADR-004). La carga simultánea puede afectar el tiempo de propagación (ADR-013).                                                                                                                                            | Medir el recorrido de extremo a extremo con 8 jugadores en 4 partidas y registrar el percentil 95 conforme a ASR-03.                                                                                                      |
 
 ### 7.4 Transición a Construcción
 
