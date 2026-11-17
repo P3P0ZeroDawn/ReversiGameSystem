@@ -131,23 +131,25 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
 
     private static MatchSettings MapSettings(MatchConfiguration configuration)
     {
-        return new MatchSettings
+        MatchSettings settings = new MatchSettings
         {
             TurnDurationSeconds = configuration.TurnDurationSeconds,
             CountsTowardStatistics = configuration.CountsTowardStatistics,
             OpponentKind = configuration.OpponentKind.ToString()
         };
+        return settings;
     }
 
     private static AvailableMatch MapAvailableMatch(Match match)
     {
-        return new AvailableMatch
+        AvailableMatch available = new AvailableMatch
         {
             MatchCode = match.Code
                 ?? throw new InvalidOperationException("An available match must have a join code."),
             CreatorDisplayName = match.Participants[0].DisplayName,
             TurnDurationSeconds = match.TurnDurationSeconds
         };
+        return available;
     }
 
     /// <summary>Removes a revoked session and cancels its waiting lobbies.</summary>
@@ -253,66 +255,53 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
             throw CreateFriendshipFault(FriendshipFailure.FriendshipNotFound);
         }
 
-        MatchFailure failure = GetMatchFailure(status);
-        throw new FaultException<MatchFault>(new MatchFault
+        MatchFailure failure = MapMatchFailure(status);
+        MatchFault detail = new MatchFault
         {
             Reason = failure
-        }, "The match request was rejected.");
+        };
+        throw new FaultException<MatchFault>(detail, "The match request was rejected.");
     }
 
     private static FaultException<FriendshipFault> CreateFriendshipFault(
         FriendshipFailure failure)
     {
-        return new FaultException<FriendshipFault>(new FriendshipFault
+        FriendshipFault detail = new FriendshipFault
         {
             Reason = failure
-        }, "The friendship request was rejected.");
+        };
+        FaultException<FriendshipFault> fault = new FaultException<FriendshipFault>(
+            detail,
+            "The friendship request was rejected.");
+        return fault;
     }
 
-    private static MatchFailure GetMatchFailure(MatchStatus status)
+    private static MatchFailure MapMatchFailure(MatchStatus status)
     {
-        MatchFailure failure = MatchFailure.Unauthorized;
-        if (status == MatchStatus.InactiveAccount)
+        switch (status)
         {
-            failure = MatchFailure.InactiveAccount;
+            case MatchStatus.InactiveAccount:
+                return MatchFailure.InactiveAccount;
+            case MatchStatus.InvalidMatchId:
+                return MatchFailure.InvalidMatchId;
+            case MatchStatus.InvalidConfiguration:
+                return MatchFailure.InvalidConfiguration;
+            case MatchStatus.InvalidTurnDuration:
+                return MatchFailure.InvalidTurnDuration;
+            case MatchStatus.MatchNotFound:
+                return MatchFailure.MatchNotFound;
+            case MatchStatus.CannotJoinOwnMatch:
+                return MatchFailure.CannotJoinOwnMatch;
+            case MatchStatus.InvalidMatchCode:
+                return MatchFailure.InvalidMatchCode;
+            case MatchStatus.MatchCodeUnavailable:
+                return MatchFailure.MatchCodeUnavailable;
+            case MatchStatus.MatchNotWaiting:
+                return MatchFailure.MatchNotWaiting;
+            case MatchStatus.MatchNotInProgress:
+                return MatchFailure.MatchNotInProgress;
+            default:
+                return MatchFailure.Unauthorized;
         }
-        else if (status == MatchStatus.InvalidMatchId)
-        {
-            failure = MatchFailure.InvalidMatchId;
-        }
-        else if (status == MatchStatus.InvalidConfiguration)
-        {
-            failure = MatchFailure.InvalidConfiguration;
-        }
-        else if (status == MatchStatus.InvalidTurnDuration)
-        {
-            failure = MatchFailure.InvalidTurnDuration;
-        }
-        else if (status == MatchStatus.MatchNotFound)
-        {
-            failure = MatchFailure.MatchNotFound;
-        }
-        else if (status == MatchStatus.CannotJoinOwnMatch)
-        {
-            failure = MatchFailure.CannotJoinOwnMatch;
-        }
-        else if (status == MatchStatus.InvalidMatchCode)
-        {
-            failure = MatchFailure.InvalidMatchCode;
-        }
-        else if (status == MatchStatus.MatchCodeUnavailable)
-        {
-            failure = MatchFailure.MatchCodeUnavailable;
-        }
-        else if (status == MatchStatus.MatchNotWaiting)
-        {
-            failure = MatchFailure.MatchNotWaiting;
-        }
-        else if (status == MatchStatus.MatchNotInProgress)
-        {
-            failure = MatchFailure.MatchNotInProgress;
-        }
-
-        return failure;
     }
 }

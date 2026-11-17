@@ -22,6 +22,11 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
 {
     private const string InProgressMatchState = "InProgress";
     private const string FinishedMatchState = "Finished";
+    private const string MissingResultValueMessage =
+        "A successful match result must contain its value.";
+    private const string RejectedMatchRequestReason = "The match request was rejected.";
+    private const int TickIdle = 0;
+    private const int TickRunning = 1;
     private static readonly TimeSpan TimeoutTickInterval = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan PersistenceTickInterval = TimeSpan.FromSeconds(1);
     private readonly GameplayMatchApplicationService _applicationService;
@@ -83,13 +88,14 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         Match match = RequireAuthorizedMatch(sessionToken, matchId);
         MatchParticipant participant = RequireParticipant(match, sessionToken);
 
-        return new MatchInformation
+        MatchInformation information = new MatchInformation
         {
             MatchId = match.Id,
             Participants = MatchContractMapper.Participants(match),
             TurnDurationSeconds = match.TurnDurationSeconds,
             AssignedSeatNumber = participant.SeatNumber
         };
+        return information;
     }
 
     /// <inheritdoc />
@@ -153,9 +159,10 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         ThrowFaultIfFailed(result.Status);
 
         Match[] matches = RequireValue(result);
-        return matches
+        MatchSummary[] summaries = matches
             .Select(match => MatchContractMapper.Summary(match, session.AccountId))
             .ToArray();
+        return summaries;
     }
 
     /// <inheritdoc />
@@ -198,7 +205,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
 
     private void OnTimeoutTick(object? state)
     {
-        if (Interlocked.Exchange(ref _timeoutTickRunning, 1) != 0)
+        if (Interlocked.Exchange(ref _timeoutTickRunning, TickRunning) != TickIdle)
         {
             return;
         }
@@ -219,13 +226,13 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         }
         finally
         {
-            Volatile.Write(ref _timeoutTickRunning, 0);
+            Volatile.Write(ref _timeoutTickRunning, TickIdle);
         }
     }
 
     private void OnPersistenceTick(object? state)
     {
-        if (Interlocked.Exchange(ref _persistenceSyncRunning, 1) != 0)
+        if (Interlocked.Exchange(ref _persistenceSyncRunning, TickRunning) != TickIdle)
         {
             return;
         }
@@ -242,7 +249,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         }
         finally
         {
-            Volatile.Write(ref _persistenceSyncRunning, 0);
+            Volatile.Write(ref _persistenceSyncRunning, TickIdle);
         }
     }
 
@@ -262,22 +269,26 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             return false;
         }
 
-        return string.Equals(
-                result.Value.State,
-                InProgressMatchState,
-                StringComparison.Ordinal)
-            || string.Equals(
-                result.Value.State,
-                FinishedMatchState,
-                StringComparison.Ordinal);
+        bool isInProgress = string.Equals(
+            result.Value.State,
+            InProgressMatchState,
+            StringComparison.Ordinal);
+        bool isFinished = string.Equals(
+            result.Value.State,
+            FinishedMatchState,
+            StringComparison.Ordinal);
+        return isInProgress || isFinished;
     }
 
     private static T RequireValue<T>(MatchResult<T> result)
         where T : class
     {
-        return result.Value
-            ?? throw new InvalidOperationException(
-                "A successful match result must contain its value.");
+        if (result.Value == null)
+        {
+            throw new InvalidOperationException(MissingResultValueMessage);
+        }
+
+        return result.Value;
     }
 
     private AuthenticatedSession RequireActiveSession(string sessionToken)
@@ -378,10 +389,11 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     private static KeyValuePair<int, bool>[] CreatePresenceSnapshot(
         Dictionary<int, HashSet<string>> matchPresence)
     {
-        return matchPresence
+        KeyValuePair<int, bool>[] snapshot = matchPresence
             .OrderBy(entry => entry.Key)
             .Select(entry => new KeyValuePair<int, bool>(entry.Key, entry.Value.Count > 0))
             .ToArray();
+        return snapshot;
     }
 
     private static MatchPlacement? MapPlacement(PiecePlacement? placement)
@@ -391,11 +403,12 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             return null;
         }
 
-        return new MatchPlacement(
+        MatchPlacement domainPlacement = new MatchPlacement(
             placement.MatchId,
             placement.ExpectedMatchStateVersion,
             placement.Row,
             placement.Column);
+        return domainPlacement;
     }
 
     private static void ThrowFaultIfFailed(MatchStatus status)
@@ -450,10 +463,14 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
 
     private static FaultException<MatchFault> CreateMatchFault(MatchFailure failure)
     {
-        return new FaultException<MatchFault>(new MatchFault
+        MatchFault detail = new MatchFault
         {
             Reason = failure
-        }, "The match request was rejected.");
+        };
+        FaultException<MatchFault> fault = new FaultException<MatchFault>(
+            detail,
+            RejectedMatchRequestReason);
+        return fault;
     }
 
     private Match RequireAuthorizedMatch(string sessionToken, long matchId)
