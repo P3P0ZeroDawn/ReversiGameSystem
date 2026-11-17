@@ -42,7 +42,7 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
         string mediaType = string.Equals(Path.GetExtension(path), ".png",
             StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
         ProfileImageData data = new ProfileImageData(content, mediaType);
-        if (!IsValidProfileImage(data))
+        if (!ProfileImagePolicy.IsSupported(data.Content, data.MediaType))
         {
             throw new IOException("The stored profile image content is invalid.");
         }
@@ -51,12 +51,12 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
     }
 
     /// <inheritdoc />
-    public ProfileImageSaveResult SaveImage(ProfileImageData image)
+    public ProfileResult<string> SaveImage(ProfileImageData image)
     {
         byte[]? recoded = RecodeImage(image);
         if (recoded == null)
         {
-            return ProfileImageSaveResult.CreateRejected();
+            return new ProfileResult<string>(ProfileOperationStatus.InvalidImage);
         }
 
         string reference = ReferencePrefix + Guid.NewGuid().ToString("N")
@@ -78,7 +78,7 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
             }
         }
 
-        return ProfileImageSaveResult.CreateSaved(reference);
+        return new ProfileResult<string>(reference);
     }
 
     /// <inheritdoc />

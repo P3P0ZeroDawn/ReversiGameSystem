@@ -4,18 +4,12 @@ using ReversiGameSystem.Server.Domain.Accounts;
 
 namespace ReversiGameSystem.Server.Application.Players;
 
-/// <summary>Coordinates the application operations for player profiles.</summary>
 public sealed class PlayerProfileApplicationService
 {
     private readonly ISessionRepository _sessions;
     private readonly IPlayerProfileRepository _profiles;
     private readonly IPlayerImageRepository _images;
 
-    /// <summary>Initializes the player profile application service.</summary>
-    /// <param name="sessions">The authenticated session store.</param>
-    /// <param name="profiles">The player profile repository.</param>
-    /// <param name="images">The server-owned image repository.</param>
-    /// <exception cref="ArgumentNullException">A dependency is absent.</exception>
     public PlayerProfileApplicationService(
         ISessionRepository sessions,
         IPlayerProfileRepository profiles,
@@ -26,131 +20,93 @@ public sealed class PlayerProfileApplicationService
         _images = images ?? throw new ArgumentNullException(nameof(images));
     }
 
-    /// <summary>Gets the caller's profile or another active public profile.</summary>
-    /// <param name="sessionToken">The caller's authenticated session token.</param>
-    /// <param name="targetAccountId">The target account, or null for the caller.</param>
-    /// <returns>The expected profile result.</returns>
-    public GetPlayerProfileResult GetProfile(
+    public ProfileResult<PlayerProfile> GetProfile(
         string sessionToken,
         long? targetAccountId)
     {
-        if (string.IsNullOrWhiteSpace(sessionToken))
+        SessionOperationResult<AuthenticatedSession> sessionResult =
+            ResolveAuthenticatedSession(sessionToken);
+        if (sessionResult.Status != SessionOperationStatus.Success)
         {
-            return new GetPlayerProfileResult(ProfileOperationStatus.MissingSessionToken);
-        }
-        if (!_sessions.TryGet(sessionToken, out AuthenticatedSession? session)
-            || session == null)
-        {
-            return new GetPlayerProfileResult(ProfileOperationStatus.InvalidSession);
+            return new ProfileResult<PlayerProfile>(MapSessionStatus(sessionResult.Status));
         }
         if (targetAccountId.HasValue && targetAccountId.Value <= 0)
         {
-            return new GetPlayerProfileResult(ProfileOperationStatus.InvalidAccountId);
+            return new ProfileResult<PlayerProfile>(ProfileOperationStatus.InvalidAccountId);
         }
 
-        long callerAccountId = session.AccountId;
-        PlayerProfileLookupResult callerLookup = _profiles.GetProfile(callerAccountId);
-        if (!callerLookup.IsFound)
-        {
-            return new GetPlayerProfileResult(ProfileOperationStatus.InactiveAccount);
-        }
-        PlayerProfile callerProfile = callerLookup.GetFoundProfile();
-        GetPlayerProfileResult result;
+        long callerAccountId = sessionResult.GetValue().AccountId;
         if (!targetAccountId.HasValue || targetAccountId.Value == callerAccountId)
         {
-            result = new GetPlayerProfileResult(
-                ProfileOperationStatus.Success,
-                callerProfile);
-        }
-        else
-        {
-            PlayerProfileLookupResult targetLookup = _profiles.GetProfile(
-                targetAccountId.Value);
-            if (!targetLookup.IsFound)
+            ProfileResult<PlayerProfile> callerLookup = _profiles.GetProfile(callerAccountId);
+            if (callerLookup.Value == null)
             {
-                result = new GetPlayerProfileResult(
-                    ProfileOperationStatus.AccountNotFound);
+                return new ProfileResult<PlayerProfile>(ProfileOperationStatus.InactiveAccount);
             }
-            else
-            {
-                result = new GetPlayerProfileResult(
-                    ProfileOperationStatus.Success,
-                    targetLookup.GetFoundProfile());
-            }
+
+            return callerLookup;
         }
 
-        return result;
+        if (!_profiles.IsActive(callerAccountId))
+        {
+            return new ProfileResult<PlayerProfile>(ProfileOperationStatus.InactiveAccount);
+        }
+
+        return _profiles.GetProfile(targetAccountId.Value);
     }
 
-    /// <summary>Gets the custom image associated with an accessible public profile.</summary>
-    /// <param name="sessionToken">The caller's authenticated session token.</param>
-    /// <param name="targetAccountId">The target account, or null for the caller.</param>
-    /// <returns>The expected image result; an absent image is successful.</returns>
     public GetProfileImageResult GetImage(
         string sessionToken,
         long? targetAccountId)
     {
-        GetPlayerProfileResult profileResult = GetProfile(
-            sessionToken,
+        SessionOperationResult<AuthenticatedSession> sessionResult =
+            ResolveAuthenticatedSession(sessionToken);
+        if (sessionResult.Status != SessionOperationStatus.Success)
+        {
+            return new GetProfileImageResult(MapSessionStatus(sessionResult.Status));
+        }
+        if (targetAccountId.HasValue && targetAccountId.Value <= 0)
+        {
+            return new GetProfileImageResult(ProfileOperationStatus.InvalidAccountId);
+        }
+
+        long callerAccountId = sessionResult.GetValue().AccountId;
+        ProfileResult<string> referenceResult = ResolveProfileImageReference(
+            callerAccountId,
             targetAccountId);
-        if (profileResult.Status != ProfileOperationStatus.Success)
+        if (referenceResult.Value == null)
         {
-            return new GetProfileImageResult(profileResult.Status);
-        }
-        if (profileResult.Profile == null)
-        {
-            throw new InvalidOperationException(
-                "A successful profile result must contain a profile.");
+            return new GetProfileImageResult(referenceResult.Status);
         }
 
-        string? imageReference = profileResult.Profile.ProfileImageUri;
-        GetProfileImageResult result;
-        if (imageReference == null || string.IsNullOrWhiteSpace(imageReference))
+        if (string.IsNullOrWhiteSpace(referenceResult.Value))
         {
-            result = new GetProfileImageResult(ProfileOperationStatus.Success);
-        }
-        else
-        {
-            ProfileImageData image = _images.ReadImage(imageReference);
-            result = new GetProfileImageResult(ProfileOperationStatus.Success, image);
+            return new GetProfileImageResult((ProfileImageData?)null);
         }
 
-        return result;
+        ProfileImageData image = _images.ReadImage(referenceResult.Value);
+        return new GetProfileImageResult(image);
     }
 
-    /// <summary>Normalizes and saves an available username for the caller.</summary>
-    /// <param name="sessionToken">The caller's authenticated session token.</param>
-    /// <param name="username">The proposed public username.</param>
-    /// <returns>The expected modification status.</returns>
     public ProfileOperationStatus ChangeUsername(
         string sessionToken,
         string username)
     {
-        if (string.IsNullOrWhiteSpace(sessionToken))
+        SessionOperationResult<AuthenticatedSession> sessionResult =
+            ResolveAuthenticatedSession(sessionToken);
+        if (sessionResult.Status != SessionOperationStatus.Success)
         {
-            return ProfileOperationStatus.MissingSessionToken;
-        }
-        if (!_sessions.TryGet(sessionToken, out AuthenticatedSession? session)
-            || session == null)
-        {
-            return ProfileOperationStatus.InvalidSession;
-        }
-        long accountId = session.AccountId;
-        if (!_profiles.IsActive(accountId))
-        {
-            return ProfileOperationStatus.InactiveAccount;
+            return MapSessionStatus(sessionResult.Status);
         }
 
+        long accountId = sessionResult.GetValue().AccountId;
         string normalized = username == null ? string.Empty : username.Trim();
         if (UsernamePolicy.Validate(normalized) != UsernameValidationError.None)
         {
             return ProfileOperationStatus.InvalidUsername;
         }
 
-        ProfileRepositoryUpdateStatus updateStatus = _profiles.ChangeUsername(
-            accountId,
-            normalized);
-        return MapUpdateStatus(updateStatus);
+        return _profiles.ChangeUsername(accountId, normalized);
     }
 
     /// <summary>Stores and associates a validated image with the caller's profile.</summary>
@@ -162,84 +118,109 @@ public sealed class PlayerProfileApplicationService
         string sessionToken,
         ProfileImageData? image)
     {
-        if (string.IsNullOrWhiteSpace(sessionToken))
+        SessionOperationResult<AuthenticatedSession> sessionResult =
+            ResolveAuthenticatedSession(sessionToken);
+        if (sessionResult.Status != SessionOperationStatus.Success)
         {
-            return ProfileOperationStatus.MissingSessionToken;
+            return MapSessionStatus(sessionResult.Status);
         }
-        if (!_sessions.TryGet(sessionToken, out AuthenticatedSession? session)
-            || session == null)
-        {
-            return ProfileOperationStatus.InvalidSession;
-        }
-        long accountId = session.AccountId;
-        if (!_profiles.IsActive(accountId))
-        {
-            return ProfileOperationStatus.InactiveAccount;
-        }
+
+        long accountId = sessionResult.GetValue().AccountId;
         if (image == null)
         {
             return ProfileOperationStatus.InvalidImage;
         }
 
-        ProfileImageSaveResult saveResult = _images.SaveImage(image);
-        if (!saveResult.IsSaved)
+        ProfileResult<string> saveResult = _images.SaveImage(image);
+        if (saveResult.Value == null)
         {
-            return ProfileOperationStatus.InvalidImage;
+            return saveResult.Status;
         }
 
-        string imageReference = saveResult.ImageReference;
+        return AssociateProfileImage(accountId, saveResult.Value);
+    }
 
-        ProfileRepositoryUpdateStatus updateStatus;
+    private ProfileOperationStatus AssociateProfileImage(
+        long accountId,
+        string imageReference)
+    {
+        ProfileOperationStatus updateStatus;
         try
         {
             updateStatus = _profiles.SetProfileImage(accountId, imageReference);
         }
         catch (Exception failure)
         {
-            try
-            {
-                _images.DeleteImage(imageReference);
-            }
-            catch (Exception cleanupFailure)
-            {
-                throw new AggregateException(
-                    "The image association and cleanup failed.",
-                    failure,
-                    cleanupFailure);
-            }
-
+            DeleteImageOnFailure(imageReference, failure);
             throw;
         }
 
-        if (updateStatus != ProfileRepositoryUpdateStatus.Success)
+        if (updateStatus != ProfileOperationStatus.Success)
         {
             _images.DeleteImage(imageReference);
         }
 
-        return MapUpdateStatus(updateStatus);
+        return updateStatus;
     }
 
-    private static ProfileOperationStatus MapUpdateStatus(
-        ProfileRepositoryUpdateStatus status)
+    private void DeleteImageOnFailure(string imageReference, Exception originalFailure)
     {
-        ProfileOperationStatus operationStatus;
-        if (status == ProfileRepositoryUpdateStatus.Success)
+        try
         {
-            operationStatus = ProfileOperationStatus.Success;
+            _images.DeleteImage(imageReference);
         }
-        else if (status == ProfileRepositoryUpdateStatus.InactiveAccount)
+        catch (Exception cleanupFailure)
         {
-            operationStatus = ProfileOperationStatus.InactiveAccount;
+            throw new AggregateException(
+                "The profile image cleanup failed after an operation failure.",
+                originalFailure,
+                cleanupFailure);
         }
-        else if (status == ProfileRepositoryUpdateStatus.UsernameUnavailable)
+    }
+
+    private ProfileResult<string> ResolveProfileImageReference(
+        long callerAccountId,
+        long? targetAccountId)
+    {
+        if (!targetAccountId.HasValue || targetAccountId.Value == callerAccountId)
         {
-            operationStatus = ProfileOperationStatus.UsernameUnavailable;
-        }
-        else
-        {
-            throw new ArgumentOutOfRangeException(nameof(status));
+            ProfileResult<string> callerReference =
+                _profiles.GetProfileImageReference(callerAccountId);
+            if (callerReference.Value == null)
+            {
+                return new ProfileResult<string>(ProfileOperationStatus.InactiveAccount);
+            }
+
+            return callerReference;
         }
 
-        return operationStatus;
+        if (!_profiles.IsActive(callerAccountId))
+        {
+            return new ProfileResult<string>(ProfileOperationStatus.InactiveAccount);
+        }
+
+        return _profiles.GetProfileImageReference(targetAccountId.Value);
+    }
+
+    private SessionOperationResult<AuthenticatedSession> ResolveAuthenticatedSession(
+        string sessionToken)
+    {
+        if (string.IsNullOrWhiteSpace(sessionToken))
+        {
+            return SessionOperationResult<AuthenticatedSession>.CreateFailure(
+                SessionOperationStatus.MissingSessionToken);
+        }
+
+        return _sessions.FindAuthenticated(sessionToken);
+    }
+
+    private static ProfileOperationStatus MapSessionStatus(SessionOperationStatus status)
+    {
+        if (status == SessionOperationStatus.MissingSessionToken)
+        {
+            return ProfileOperationStatus.MissingSessionToken;
+        }
+
+        return ProfileOperationStatus.InvalidSession;
     }
 }

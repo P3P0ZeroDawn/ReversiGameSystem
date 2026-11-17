@@ -48,6 +48,7 @@ internal sealed class ProfileImageStoreIntegrationTests
 
     internal void SaveImage_ValidAndInvalidImages_ReturnsExpectedOutcome()
     {
+        // Arrange
         string root = Path.Combine(
             Path.GetTempPath(),
             "ReversiGameSystem.Tests",
@@ -60,18 +61,21 @@ internal sealed class ProfileImageStoreIntegrationTests
                 "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwC"
                 + "AAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
 
-            ProfileImageSaveResult saved = repository.SaveImage(
+            // Act
+            ProfileResult<string> saved = repository.SaveImage(
                 new ProfileImageData(imageContent, "image/png"));
-            ProfileImageSaveResult rejected = repository.SaveImage(
+            ProfileResult<string> rejected = repository.SaveImage(
                 new ProfileImageData(new byte[] { 1, 2 }, "image/png"));
 
-            TestAssert.AreEqual(true, saved.IsSaved);
-            TestAssert.AreEqual(true, saved.ImageReference.StartsWith("profile-images/"));
-            TestAssert.AreEqual(false, rejected.IsSaved);
-            TestAssert.AreEqual(string.Empty, rejected.ImageReference);
+            // Assert
+            TestAssert.AreEqual(ProfileOperationStatus.Success, saved.Status);
+            string savedReference = TestAssert.IsNotNull(saved.Value);
+            TestAssert.AreEqual(true, savedReference.StartsWith("profile-images/"));
+            TestAssert.AreEqual(ProfileOperationStatus.InvalidImage, rejected.Status);
+            TestAssert.AreEqual<string?>(null, rejected.Value);
             TestAssert.AreEqual(1, Directory.GetFiles(root).Length);
 
-            repository.DeleteImage(saved.ImageReference);
+            repository.DeleteImage(savedReference);
             TestAssert.AreEqual(0, Directory.GetFiles(root).Length);
         }
         finally

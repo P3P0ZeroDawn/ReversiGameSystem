@@ -83,38 +83,70 @@ public enum ProfileOperationStatus
     InvalidImage
 }
 
-/// <summary>Contains the expected result of a public profile query.</summary>
-public sealed class GetPlayerProfileResult
+/// <summary>
+/// Encapsulates the expected status and optional payload of a profile operation.
+/// </summary>
+/// <typeparam name="T">The type of the profile payload.</typeparam>
+public sealed class ProfileResult<T>
 {
-    /// <summary>Initializes a public profile result.</summary>
-    /// <param name="status">The expected read status.</param>
-    /// <param name="profile">The profile when the operation succeeds.</param>
-    public GetPlayerProfileResult(
-        ProfileOperationStatus status,
-        PlayerProfile? profile = null)
+    /// <summary>Initializes a successful profile result containing its required payload.</summary>
+    /// <param name="value">The confirmed profile payload.</param>
+    /// <exception cref="ArgumentNullException">The supplied value is null.</exception>
+    public ProfileResult(T value)
     {
-        Status = status;
-        Profile = profile;
+        Value = value ?? throw new ArgumentNullException(nameof(value));
+        Status = ProfileOperationStatus.Success;
     }
 
-    /// <summary>Gets the expected read status.</summary>
+    /// <summary>Initializes a rejected profile result with its expected status.</summary>
+    /// <param name="status">The failure status.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The status represents success.</exception>
+    public ProfileResult(ProfileOperationStatus status)
+    {
+        if (status == ProfileOperationStatus.Success)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(status),
+                "A rejected profile result cannot specify success status.");
+        }
+
+        Status = status;
+        Value = default;
+    }
+
+    /// <summary>Gets the authoritative operation status.</summary>
     public ProfileOperationStatus Status { get; }
 
-    /// <summary>Gets the public profile when the operation succeeds.</summary>
-    public PlayerProfile? Profile { get; }
+    /// <summary>Gets the payload when successful, or default when rejected.</summary>
+    public T? Value { get; }
 }
 
 /// <summary>Contains the expected result of a public profile image query.</summary>
 public sealed class GetProfileImageResult
 {
-    /// <summary>Initializes a public profile image result.</summary>
-    /// <param name="status">The expected read status.</param>
-    /// <param name="image">The optional custom image.</param>
-    public GetProfileImageResult(
-        ProfileOperationStatus status,
-        ProfileImageData? image = null)
+    /// <summary>Creates a rejected profile image query result.</summary>
+    /// <param name="status">The failure status.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The status represents success.</exception>
+    public GetProfileImageResult(ProfileOperationStatus status)
     {
+        if (status == ProfileOperationStatus.Success)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(status),
+                "A rejected profile image result cannot specify success status.");
+        }
+
         Status = status;
+        Image = null;
+    }
+
+    /// <summary>
+    /// Creates a successful profile image query result with an optional custom image.
+    /// </summary>
+    /// <param name="image">The custom image, or null when using the default image.</param>
+    public GetProfileImageResult(ProfileImageData? image)
+    {
+        Status = ProfileOperationStatus.Success;
         Image = image;
     }
 
@@ -123,92 +155,4 @@ public sealed class GetProfileImageResult
 
     /// <summary>Gets the custom image, or null when the profile uses the default.</summary>
     public ProfileImageData? Image { get; }
-}
-
-/// <summary>Represents whether an active public profile was found.</summary>
-public sealed class PlayerProfileLookupResult
-{
-    private readonly PlayerProfile? _profile;
-
-    private PlayerProfileLookupResult(bool isFound, PlayerProfile? profile)
-    {
-        IsFound = isFound;
-        _profile = profile;
-    }
-
-    /// <summary>Gets whether the active profile was found.</summary>
-    public bool IsFound { get; }
-
-    /// <summary>Creates a successful lookup containing the active profile.</summary>
-    /// <param name="profile">The active profile that was found.</param>
-    /// <returns>A successful lookup result.</returns>
-    /// <exception cref="ArgumentNullException">The profile is absent.</exception>
-    public static PlayerProfileLookupResult CreateFound(PlayerProfile profile)
-    {
-        if (profile == null)
-        {
-            throw new ArgumentNullException(nameof(profile));
-        }
-
-        return new PlayerProfileLookupResult(true, profile);
-    }
-
-    /// <summary>Creates a lookup indicating that no active profile exists.</summary>
-    /// <returns>A not-found lookup result.</returns>
-    public static PlayerProfileLookupResult CreateNotFound()
-    {
-        return new PlayerProfileLookupResult(false, null);
-    }
-
-    /// <summary>Gets the profile contained in a successful lookup.</summary>
-    /// <returns>The active profile.</returns>
-    /// <exception cref="InvalidOperationException">The lookup did not find a profile.</exception>
-    public PlayerProfile GetFoundProfile()
-    {
-        if (_profile == null)
-        {
-            throw new InvalidOperationException(
-                "A successful profile lookup must contain a profile.");
-        }
-
-        return _profile;
-    }
-}
-
-/// <summary>Represents the result of validating and storing a profile image.</summary>
-public sealed class ProfileImageSaveResult
-{
-    private ProfileImageSaveResult(bool isSaved, string imageReference)
-    {
-        IsSaved = isSaved;
-        ImageReference = imageReference;
-    }
-
-    /// <summary>Gets whether the image was valid and stored.</summary>
-    public bool IsSaved { get; }
-
-    /// <summary>Gets the stored image reference, or empty when rejected.</summary>
-    public string ImageReference { get; }
-
-    /// <summary>Creates a successful image save result.</summary>
-    /// <param name="imageReference">The stored server-owned image reference.</param>
-    /// <returns>A successful save result.</returns>
-    public static ProfileImageSaveResult CreateSaved(string imageReference)
-    {
-        if (string.IsNullOrWhiteSpace(imageReference))
-        {
-            throw new ArgumentException(
-                "An image reference is required.",
-                nameof(imageReference));
-        }
-
-        return new ProfileImageSaveResult(true, imageReference);
-    }
-
-    /// <summary>Creates a rejected image save result.</summary>
-    /// <returns>A rejected save result.</returns>
-    public static ProfileImageSaveResult CreateRejected()
-    {
-        return new ProfileImageSaveResult(false, string.Empty);
-    }
 }

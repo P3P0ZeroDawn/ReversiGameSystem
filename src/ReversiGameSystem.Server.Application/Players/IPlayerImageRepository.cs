@@ -13,9 +13,9 @@ public interface IPlayerImageRepository
 
     /// <summary>Validates, recodes and stores an image when its content is accepted.</summary>
     /// <param name="image">The proposed image content and media type.</param>
-    /// <returns>The explicit save result with the internal reference when stored.</returns>
+    /// <returns>The internal reference when stored, or InvalidImage when rejected.</returns>
     /// <exception cref="System.IO.IOException">The image cannot be stored.</exception>
-    public ProfileImageSaveResult SaveImage(ProfileImageData image);
+    public ProfileResult<string> SaveImage(ProfileImageData image);
 
     /// <summary>Removes a new image when its database association cannot be committed.</summary>
     /// <param name="imageReference">The unassociated server-owned image reference.</param>

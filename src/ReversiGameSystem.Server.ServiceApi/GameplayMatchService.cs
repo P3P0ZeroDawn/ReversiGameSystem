@@ -65,21 +65,9 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     /// <inheritdoc />
     public void OpenMatchChannel(string sessionToken, long matchId)
     {
-        MatchResult<Match> result = _applicationService.GetAuthorizedMatchSnapshot(
-            sessionToken,
-            matchId);
-        ThrowFaultIfFailed(result.Status);
-
-        Match match = RequireValue(result);
+        Match match = RequireAuthorizedMatch(sessionToken, matchId);
         MatchContractMapper.RequireStarted(match);
-
-        AuthenticatedSession session = RequireActiveSession(sessionToken);
-        MatchParticipant? participant = match.Participants.FirstOrDefault(
-            current => current.AccountId == session.AccountId);
-        if (participant == null)
-        {
-            throw CreateMatchFault(MatchFailure.Unauthorized);
-        }
+        MatchParticipant participant = RequireParticipant(match, sessionToken);
 
         _callbackSubscriptions.Register(sessionToken, matchId);
         AddPresence(
@@ -92,19 +80,8 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     /// <inheritdoc />
     public MatchInformation GetMatchInformation(string sessionToken, long matchId)
     {
-        MatchResult<Match> result = _applicationService.GetAuthorizedMatchSnapshot(
-            sessionToken,
-            matchId);
-        ThrowFaultIfFailed(result.Status);
-
-        Match match = RequireValue(result);
-        AuthenticatedSession session = RequireActiveSession(sessionToken);
-        MatchParticipant? participant = match.Participants.FirstOrDefault(
-            player => player.AccountId == session.AccountId);
-        if (participant == null)
-        {
-            throw CreateMatchFault(MatchFailure.Unauthorized);
-        }
+        Match match = RequireAuthorizedMatch(sessionToken, matchId);
+        MatchParticipant participant = RequireParticipant(match, sessionToken);
 
         return new MatchInformation
         {
@@ -479,4 +456,26 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         }, "The match request was rejected.");
     }
 
+    private Match RequireAuthorizedMatch(string sessionToken, long matchId)
+    {
+        MatchResult<Match> result = _applicationService.GetAuthorizedMatchSnapshot(
+            sessionToken,
+            matchId);
+        ThrowFaultIfFailed(result.Status);
+
+        return RequireValue(result);
+    }
+
+    private MatchParticipant RequireParticipant(Match match, string sessionToken)
+    {
+        AuthenticatedSession session = RequireActiveSession(sessionToken);
+        MatchParticipant? participant = match.Participants.FirstOrDefault(
+            current => current.AccountId == session.AccountId);
+        if (participant == null)
+        {
+            throw CreateMatchFault(MatchFailure.Unauthorized);
+        }
+
+        return participant;
+    }
 }

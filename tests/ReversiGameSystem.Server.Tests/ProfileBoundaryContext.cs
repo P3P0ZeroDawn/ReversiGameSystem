@@ -56,14 +56,14 @@ internal sealed class ProfileImageRepositoryStub : IPlayerImageRepository
         }
         return new ProfileImageData(new byte[] { 1, 2 }, "image/png");
     }
-    public ProfileImageSaveResult SaveImage(ProfileImageData image)
+    public ProfileResult<string> SaveImage(ProfileImageData image)
     {
         if (RejectSave)
         {
-            return ProfileImageSaveResult.CreateRejected();
+            return new ProfileResult<string>(ProfileOperationStatus.InvalidImage);
         }
 
-        return ProfileImageSaveResult.CreateSaved("new-image");
+        return new ProfileResult<string>("new-image");
     }
     public void DeleteImage(string imageReference)
     {

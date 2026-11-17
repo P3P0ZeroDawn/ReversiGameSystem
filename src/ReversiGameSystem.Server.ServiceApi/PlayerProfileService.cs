@@ -29,20 +29,12 @@ public sealed class PlayerProfileService : IPlayerProfileService
     /// <inheritdoc />
     public ContractProfile GetPlayerProfile(string sessionToken, long? targetAccountId)
     {
-        GetPlayerProfileResult result = _applicationService.GetProfile(
+        ProfileResult<ApplicationProfile> result = _applicationService.GetProfile(
             sessionToken,
             targetAccountId);
-        if (result.Status != ProfileOperationStatus.Success)
-        {
-            throw MapFailureToFault(result.Status);
-        }
-        if (result.Profile == null)
-        {
-            throw new InvalidOperationException(
-                "A successful profile result must contain a profile.");
-        }
+        ThrowFaultIfFailed(result.Status);
 
-        return MapProfile(result.Profile);
+        return MapProfile(RequireValue(result));
     }
 
     /// <inheritdoc />
@@ -51,25 +43,17 @@ public sealed class PlayerProfileService : IPlayerProfileService
         GetProfileImageResult result = _applicationService.GetImage(
             sessionToken,
             targetAccountId);
-        if (result.Status != ProfileOperationStatus.Success)
-        {
-            throw MapFailureToFault(result.Status);
-        }
-        ImageContent? image;
+        ThrowFaultIfFailed(result.Status);
         if (result.Image == null)
         {
-            image = null;
-        }
-        else
-        {
-            image = new ImageContent
-            {
-                MediaType = result.Image.MediaType,
-                Content = result.Image.Content
-            };
+            return null;
         }
 
-        return image;
+        return new ImageContent
+        {
+            MediaType = result.Image.MediaType,
+            Content = result.Image.Content
+        };
     }
 
     /// <inheritdoc />
@@ -78,10 +62,7 @@ public sealed class PlayerProfileService : IPlayerProfileService
         ProfileOperationStatus status = _applicationService.ChangeUsername(
             sessionToken,
             username);
-        if (status != ProfileOperationStatus.Success)
-        {
-            throw MapFailureToFault(status);
-        }
+        ThrowFaultIfFailed(status);
     }
 
     /// <inheritdoc />
@@ -92,59 +73,53 @@ public sealed class PlayerProfileService : IPlayerProfileService
         ProfileOperationStatus status = _applicationService.UpdateImage(
             sessionToken,
             imageData);
-        if (status != ProfileOperationStatus.Success)
-        {
-            throw MapFailureToFault(status);
-        }
+        ThrowFaultIfFailed(status);
     }
 
-    private static FaultException MapFailureToFault(ProfileOperationStatus status)
+    private static ApplicationProfile RequireValue(ProfileResult<ApplicationProfile> result)
     {
-        FaultException fault;
+        return result.Value
+            ?? throw new InvalidOperationException(
+                "A successful profile result must contain its value.");
+    }
+
+    private static void ThrowFaultIfFailed(ProfileOperationStatus status)
+    {
+        if (status == ProfileOperationStatus.Success)
+        {
+            return;
+        }
         if (status == ProfileOperationStatus.MissingSessionToken)
         {
-            fault = SessionFaultFactory.Create(SessionFailure.MissingSessionToken);
+            throw SessionFaultFactory.Create(SessionFailure.MissingSessionToken);
         }
-        else if (status == ProfileOperationStatus.InvalidSession)
+        if (status == ProfileOperationStatus.InvalidSession)
         {
-            fault = SessionFaultFactory.Create(SessionFailure.InvalidSession);
+            throw SessionFaultFactory.Create(SessionFailure.InvalidSession);
         }
-        else
+
+        throw CreateProfileFault(MapProfileFailure(status));
+    }
+
+    private static ProfileFailure MapProfileFailure(ProfileOperationStatus status)
+    {
+        switch (status)
         {
-            ProfileFailure failure;
-            if (status == ProfileOperationStatus.InactiveAccount)
-            {
-                failure = ProfileFailure.InactiveAccount;
-            }
-            else if (status == ProfileOperationStatus.InvalidAccountId)
-            {
-                failure = ProfileFailure.InvalidAccountId;
-            }
-            else if (status == ProfileOperationStatus.AccountNotFound)
-            {
-                failure = ProfileFailure.AccountNotFound;
-            }
-            else if (status == ProfileOperationStatus.InvalidUsername)
-            {
-                failure = ProfileFailure.InvalidUsername;
-            }
-            else if (status == ProfileOperationStatus.UsernameUnavailable)
-            {
-                failure = ProfileFailure.UsernameUnavailable;
-            }
-            else if (status == ProfileOperationStatus.InvalidImage)
-            {
-                failure = ProfileFailure.InvalidImage;
-            }
-            else
-            {
+            case ProfileOperationStatus.InactiveAccount:
+                return ProfileFailure.InactiveAccount;
+            case ProfileOperationStatus.InvalidAccountId:
+                return ProfileFailure.InvalidAccountId;
+            case ProfileOperationStatus.AccountNotFound:
+                return ProfileFailure.AccountNotFound;
+            case ProfileOperationStatus.InvalidUsername:
+                return ProfileFailure.InvalidUsername;
+            case ProfileOperationStatus.UsernameUnavailable:
+                return ProfileFailure.UsernameUnavailable;
+            case ProfileOperationStatus.InvalidImage:
+                return ProfileFailure.InvalidImage;
+            default:
                 throw new ArgumentOutOfRangeException(nameof(status));
-            }
-
-            fault = CreateProfileFault(failure);
         }
-
-        return fault;
     }
 
     private static FaultException<ProfileFault> CreateProfileFault(ProfileFailure failure)
