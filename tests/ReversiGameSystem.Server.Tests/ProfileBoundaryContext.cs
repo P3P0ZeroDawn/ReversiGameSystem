@@ -47,7 +47,7 @@ internal sealed class ProfileImageRepositoryStub : IPlayerImageRepository
     internal bool RejectSave { get; set; }
     internal bool ReadCalled { get; private set; }
     internal string? Deleted { get; private set; }
-    public ProfileImageData Read(string imageReference)
+    public ProfileImageData ReadImage(string imageReference)
     {
         ReadCalled = true;
         if (FailRead)
@@ -56,12 +56,16 @@ internal sealed class ProfileImageRepositoryStub : IPlayerImageRepository
         }
         return new ProfileImageData(new byte[] { 1, 2 }, "image/png");
     }
-    public bool TrySave(ProfileImageData image, out string imageReference)
+    public ProfileImageSaveResult SaveImage(ProfileImageData image)
     {
-        imageReference = "new-image";
-        return !RejectSave;
+        if (RejectSave)
+        {
+            return ProfileImageSaveResult.CreateRejected();
+        }
+
+        return ProfileImageSaveResult.CreateSaved("new-image");
     }
-    public void Delete(string imageReference)
+    public void DeleteImage(string imageReference)
     {
         Deleted = imageReference;
     }

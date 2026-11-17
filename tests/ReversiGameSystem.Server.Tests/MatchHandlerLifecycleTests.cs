@@ -16,7 +16,7 @@ public sealed class MatchApplicationServiceLifecycleTests
         AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore { FailCancel = true };
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context);
-        _ = handler.Create(player.SessionToken, new MatchSettings()).Value;
+        _ = handler.CreateMatch(player.SessionToken, new MatchSettings()).Value;
 
         // Act
         TestAssert.Throws<InvalidOperationException>(
@@ -38,7 +38,7 @@ public sealed class MatchApplicationServiceLifecycleTests
         AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore { FailCancel = true };
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context);
-        _ = handler.Create(player.SessionToken, new MatchSettings()).Value;
+        _ = handler.CreateMatch(player.SessionToken, new MatchSettings()).Value;
         context.Sessions.Revoke(player.SessionToken);
 
         // Act
@@ -60,7 +60,7 @@ public sealed class MatchApplicationServiceLifecycleTests
         AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore { Started = true };
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context);
-        _ = handler.Create(player.SessionToken, new MatchSettings()).Value;
+        _ = handler.CreateMatch(player.SessionToken, new MatchSettings()).Value;
 
         // Act
         long[] cancelled = handler.CancelWaitingForSession(player.SessionToken);
@@ -82,7 +82,7 @@ public sealed class MatchApplicationServiceLifecycleTests
         context.UtcNow = player.ExpiresAtUtc;
 
         // Act
-        MatchResult<Match> result = handler.Create(
+        MatchResult<Match> result = handler.CreateMatch(
             player.SessionToken,
             new MatchSettings());
 
@@ -103,7 +103,7 @@ public sealed class MatchApplicationServiceLifecycleTests
 
         // Act
         TestAssert.Throws<InvalidOperationException>(() =>
-            handler.Invite(player.SessionToken, 100, new MatchSettings()));
+            handler.InviteToMatch(player.SessionToken, 100, new MatchSettings()));
 
         // Assert
         TestAssert.AreEqual(1, store.CancelAttempts);
@@ -120,7 +120,7 @@ public sealed class MatchApplicationServiceLifecycleTests
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
 
         // Act
-        MatchResult<Match> result = handler.Invite(
+        MatchResult<Match> result = handler.InviteToMatch(
             guest.SessionToken,
             100,
             new MatchSettings());
@@ -154,13 +154,13 @@ public sealed class MatchApplicationServiceLifecycleTests
         internal int CancelAttempts { get; private set; }
         internal int CreateAttempts { get; private set; }
 
-        public MatchResult<Match> Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
+        public MatchResult<Match> CreateMatch(AuthenticatedSession player, MatchSettings settings, DateTime now)
         {
             CreateAttempts++;
             return new MatchResult<Match>(new Match { Id = 7 });
         }
 
-        public MatchStatus Cancel(long accountId, long matchId)
+        public MatchStatus CancelMatch(long accountId, long matchId)
         {
             CancelAttempts++;
             if (FailCancel)
@@ -175,11 +175,11 @@ public sealed class MatchApplicationServiceLifecycleTests
             return MatchStatus.Success;
         }
 
-        public MatchResult<Match[]> Available(long accountId)
+        public MatchResult<Match[]> GetAvailableMatches(long accountId)
         {
             throw new NotSupportedException();
         }
-        public MatchResult<Match> Join(AuthenticatedSession player, string code, DateTime now)
+        public MatchResult<Match> JoinMatch(AuthenticatedSession player, string code, DateTime now)
         {
             throw new NotSupportedException();
         }

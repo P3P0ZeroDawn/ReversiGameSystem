@@ -224,15 +224,15 @@ public sealed class MatchBoundaryTests
         }
         internal bool AllowRead { get; set; }
         internal bool FailStorage { get; set; }
-        public MatchResult<Match> Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
+        public MatchResult<Match> CreateMatch(AuthenticatedSession player, MatchSettings settings, DateTime now)
         {
             throw new NotSupportedException();
         }
-        public MatchResult<Match[]> Available(long accountId)
+        public MatchResult<Match[]> GetAvailableMatches(long accountId)
         {
             throw new InvalidOperationException("private storage failure");
         }
-        public MatchResult<Match> Join(AuthenticatedSession player, string code, DateTime now)
+        public MatchResult<Match> JoinMatch(AuthenticatedSession player, string code, DateTime now)
         {
             throw new NotSupportedException();
         }
@@ -240,7 +240,7 @@ public sealed class MatchBoundaryTests
         {
             throw new NotSupportedException();
         }
-        public MatchStatus Cancel(long accountId, long matchId)
+        public MatchStatus CancelMatch(long accountId, long matchId)
         {
             throw new NotSupportedException();
         }

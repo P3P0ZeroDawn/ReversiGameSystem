@@ -136,13 +136,13 @@ public sealed class LobbyAuthorizationTests
             return MatchStatus.Success;
         }
 
-        public MatchResult<Match[]> Available(long accountId)
+        public MatchResult<Match[]> GetAvailableMatches(long accountId)
         {
             AvailableCalls++;
             throw new InvalidOperationException("Authorization must not enumerate lobbies.");
         }
 
-        public MatchResult<Match> Create(
+        public MatchResult<Match> CreateMatch(
             AuthenticatedSession player, MatchSettings settings, DateTime now)
         {
             throw new NotSupportedException();
@@ -162,7 +162,7 @@ public sealed class LobbyAuthorizationTests
             throw new NotSupportedException();
         }
 
-        public MatchResult<Match> Join(AuthenticatedSession player, string code, DateTime now)
+        public MatchResult<Match> JoinMatch(AuthenticatedSession player, string code, DateTime now)
         {
             throw new NotSupportedException();
         }
@@ -182,7 +182,7 @@ public sealed class LobbyAuthorizationTests
             throw new NotSupportedException();
         }
 
-        public MatchStatus Cancel(long accountId, long matchId)
+        public MatchStatus CancelMatch(long accountId, long matchId)
         {
             throw new NotSupportedException();
         }

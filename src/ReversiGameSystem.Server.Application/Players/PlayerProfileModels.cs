@@ -174,3 +174,41 @@ public sealed class PlayerProfileLookupResult
         return _profile;
     }
 }
+
+/// <summary>Represents the result of validating and storing a profile image.</summary>
+public sealed class ProfileImageSaveResult
+{
+    private ProfileImageSaveResult(bool isSaved, string imageReference)
+    {
+        IsSaved = isSaved;
+        ImageReference = imageReference;
+    }
+
+    /// <summary>Gets whether the image was valid and stored.</summary>
+    public bool IsSaved { get; }
+
+    /// <summary>Gets the stored image reference, or empty when rejected.</summary>
+    public string ImageReference { get; }
+
+    /// <summary>Creates a successful image save result.</summary>
+    /// <param name="imageReference">The stored server-owned image reference.</param>
+    /// <returns>A successful save result.</returns>
+    public static ProfileImageSaveResult CreateSaved(string imageReference)
+    {
+        if (string.IsNullOrWhiteSpace(imageReference))
+        {
+            throw new ArgumentException(
+                "An image reference is required.",
+                nameof(imageReference));
+        }
+
+        return new ProfileImageSaveResult(true, imageReference);
+    }
+
+    /// <summary>Creates a rejected image save result.</summary>
+    /// <returns>A rejected save result.</returns>
+    public static ProfileImageSaveResult CreateRejected()
+    {
+        return new ProfileImageSaveResult(false, string.Empty);
+    }
+}

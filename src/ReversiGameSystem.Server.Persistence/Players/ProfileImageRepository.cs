@@ -29,9 +29,9 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
     }
 
     /// <inheritdoc />
-    public ProfileImageData Read(string imageReference)
+    public ProfileImageData ReadImage(string imageReference)
     {
-        string path = ResolvePath(imageReference);
+        string path = ResolveImageFilePath(imageReference);
         FileInfo file = new FileInfo(path);
         if (!file.Exists || file.Length < 1 || file.Length > ProfileImagePolicy.MaximumFileBytes)
         {
@@ -42,7 +42,7 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
         string mediaType = string.Equals(Path.GetExtension(path), ".png",
             StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
         ProfileImageData data = new ProfileImageData(content, mediaType);
-        if (!IsValid(data))
+        if (!IsValidProfileImage(data))
         {
             throw new IOException("The stored profile image content is invalid.");
         }
@@ -51,18 +51,18 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
     }
 
     /// <inheritdoc />
-    public bool TrySave(ProfileImageData image, out string imageReference)
+    public ProfileImageSaveResult SaveImage(ProfileImageData image)
     {
-        imageReference = string.Empty;
-        if (!TryRecode(image, out byte[] recoded))
+        byte[]? recoded = RecodeImage(image);
+        if (recoded == null)
         {
-            return false;
+            return ProfileImageSaveResult.CreateRejected();
         }
 
         string reference = ReferencePrefix + Guid.NewGuid().ToString("N")
             + (image.MediaType.Equals("image/png", StringComparison.OrdinalIgnoreCase)
                 ? ".png" : ".jpg");
-        string path = ResolvePath(reference);
+        string path = ResolveImageFilePath(reference);
         string temporaryPath = path + ".tmp";
         Directory.CreateDirectory(_directory);
         try
@@ -78,17 +78,16 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
             }
         }
 
-        imageReference = reference;
-        return true;
+        return ProfileImageSaveResult.CreateSaved(reference);
     }
 
     /// <inheritdoc />
-    public void Delete(string imageReference)
+    public void DeleteImage(string imageReference)
     {
-        File.Delete(ResolvePath(imageReference));
+        File.Delete(ResolveImageFilePath(imageReference));
     }
 
-    private string ResolvePath(string reference)
+    private string ResolveImageFilePath(string reference)
     {
         if (reference == null || !reference.StartsWith(ReferencePrefix, StringComparison.Ordinal))
         {
@@ -107,15 +106,14 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
         return Path.Combine(_directory, fileName);
     }
 
-    private static bool TryRecode(ProfileImageData image, out byte[] recoded)
+    private static byte[]? RecodeImage(ProfileImageData image)
     {
-        recoded = Array.Empty<byte>();
-        if (!IsValid(image))
+        if (!IsValidProfileImage(image))
         {
-            return false;
+            return null;
         }
 
-        bool wasRecoded;
+        byte[]? recoded;
         try
         {
             using (MemoryStream input = new MemoryStream(image.Content, writable: false))
@@ -128,24 +126,23 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
                         ? ImageFormat.Png : ImageFormat.Jpeg);
                 if (output.Length > ProfileImagePolicy.MaximumFileBytes)
                 {
-                    wasRecoded = false;
+                    recoded = null;
                 }
                 else
                 {
                     recoded = output.ToArray();
-                    wasRecoded = true;
                 }
             }
         }
         catch (Exception exception) when (IsInvalidImageException(exception))
         {
-            wasRecoded = false;
+            recoded = null;
         }
 
-        return wasRecoded;
+        return recoded;
     }
 
-    private static bool IsValid(ProfileImageData image)
+    private static bool IsValidProfileImage(ProfileImageData image)
     {
         if (image == null || !ProfileImagePolicy.IsSupported(image.Content, image.MediaType))
         {

@@ -68,12 +68,12 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         MatchResult<Match> result = _applicationService.GetAuthorizedMatchSnapshot(
             sessionToken,
             matchId);
-        ThrowFailure(result.Status);
+        ThrowFaultIfFailed(result.Status);
 
         Match match = RequireValue(result);
         MatchContractMapper.RequireStarted(match);
 
-        AuthenticatedSession session = GetSession(sessionToken);
+        AuthenticatedSession session = RequireActiveSession(sessionToken);
         MatchParticipant? participant = match.Participants.FirstOrDefault(
             current => current.AccountId == session.AccountId);
         if (participant == null)
@@ -95,10 +95,10 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         MatchResult<Match> result = _applicationService.GetAuthorizedMatchSnapshot(
             sessionToken,
             matchId);
-        ThrowFailure(result.Status);
+        ThrowFaultIfFailed(result.Status);
 
         Match match = RequireValue(result);
-        AuthenticatedSession session = GetSession(sessionToken);
+        AuthenticatedSession session = RequireActiveSession(sessionToken);
         MatchParticipant? participant = match.Participants.FirstOrDefault(
             player => player.AccountId == session.AccountId);
         if (participant == null)
@@ -119,7 +119,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     public MatchStateSnapshot GetMatchState(string sessionToken, long matchId)
     {
         MatchResult<Match> result = _applicationService.GetMatchState(sessionToken, matchId);
-        ThrowFailure(result.Status);
+        ThrowFaultIfFailed(result.Status);
 
         Match match = RequireValue(result);
         return MatchContractMapper.State(match);
@@ -137,7 +137,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         MatchResult<Match> result = _applicationService.PlacePiece(
             sessionToken,
             domainPlacement);
-        ThrowFailure(result.Status);
+        ThrowFaultIfFailed(result.Status);
 
         Match match = RequireValue(result);
         MatchStateSnapshot snapshot = MatchContractMapper.State(match);
@@ -149,7 +149,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     public MatchConclusion ForfeitMatch(string sessionToken, long matchId)
     {
         MatchResult<Match> result = _applicationService.ForfeitMatch(sessionToken, matchId);
-        ThrowFailure(result.Status);
+        ThrowFaultIfFailed(result.Status);
 
         Match match = RequireValue(result);
         MatchStateSnapshot snapshot = MatchContractMapper.State(match);
@@ -161,7 +161,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     public MatchStateSnapshot ObserveMatch(string sessionToken, long matchId)
     {
         MatchResult<Match> result = _applicationService.ObserveMatch(sessionToken, matchId);
-        ThrowFailure(result.Status);
+        ThrowFaultIfFailed(result.Status);
 
         Match match = RequireValue(result);
         _callbackSubscriptions.Register(sessionToken, matchId);
@@ -171,9 +171,9 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     /// <inheritdoc />
     public MatchSummary[] GetMatchHistory(string sessionToken)
     {
-        AuthenticatedSession session = GetSession(sessionToken);
+        AuthenticatedSession session = RequireActiveSession(sessionToken);
         MatchResult<Match[]> result = _applicationService.GetMatchHistory(sessionToken);
-        ThrowFailure(result.Status);
+        ThrowFaultIfFailed(result.Status);
 
         Match[] matches = RequireValue(result);
         return matches
@@ -187,7 +187,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         MatchResult<Match> result = _applicationService.GetAuthorizedMatchSnapshot(
             sessionToken,
             matchId);
-        ThrowFailure(result.Status);
+        ThrowFaultIfFailed(result.Status);
 
         Match match = RequireValue(result);
         return MatchContractMapper.Details(match);
@@ -199,7 +199,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         MatchResult<MatchMove[]> result = _applicationService.GetMoveHistory(
             sessionToken,
             matchId);
-        ThrowFailure(result.Status);
+        ThrowFaultIfFailed(result.Status);
 
         MatchMove[] moves = RequireValue(result);
         return moves.Select(MatchContractMapper.Move).ToArray();
@@ -303,7 +303,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
                 "A successful match result must contain its value.");
     }
 
-    private AuthenticatedSession GetSession(string sessionToken)
+    private AuthenticatedSession RequireActiveSession(string sessionToken)
     {
         if (string.IsNullOrWhiteSpace(sessionToken))
         {
@@ -421,7 +421,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             placement.Column);
     }
 
-    private static void ThrowFailure(MatchStatus status)
+    private static void ThrowFaultIfFailed(MatchStatus status)
     {
         if (status == MatchStatus.Success)
         {
@@ -436,11 +436,11 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             throw SessionFaultFactory.Create(SessionFailure.InvalidSession);
         }
 
-        MatchFailure failure = GetMatchFailure(status);
+        MatchFailure failure = MapMatchFailure(status);
         throw CreateMatchFault(failure);
     }
 
-    private static MatchFailure GetMatchFailure(MatchStatus status)
+    private static MatchFailure MapMatchFailure(MatchStatus status)
     {
         switch (status)
         {

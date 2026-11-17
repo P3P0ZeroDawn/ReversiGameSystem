@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Players;
@@ -12,7 +11,7 @@ namespace ReversiGameSystem.Server.Tests;
 public sealed class PlayerProfileApplicationServiceTests
 {
     [TestMethod]
-    public void GetAsync_CurrentPlayer_ReturnsCalculatedStatistics()
+    public void GetProfile_CurrentPlayer_ReturnsCalculatedStatistics()
     {
         PlayerProfileSessionStoreStub sessions = new PlayerProfileSessionStoreStub
         {
@@ -28,8 +27,7 @@ public sealed class PlayerProfileApplicationServiceTests
             2));
         PlayerProfileApplicationService applicationService = CreateService(sessions, profiles);
 
-        GetPlayerProfileResult result = applicationService.GetProfileAsync("session-token", null)
-            .GetAwaiter().GetResult();
+        GetPlayerProfileResult result = applicationService.GetProfile("session-token", null);
 
         TestAssert.AreEqual(ProfileOperationStatus.Success, result.Status);
         TestAssert.AreEqual("session-token", sessions.SessionToken);
@@ -45,7 +43,7 @@ public sealed class PlayerProfileApplicationServiceTests
     }
 
     [TestMethod]
-    public void GetAsync_PublicProfile_VerifiesCallerThenUsesTargetAccount()
+    public void GetProfile_PublicProfile_VerifiesCallerThenUsesTargetAccount()
     {
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         profiles.Profiles.Add(42, new PlayerProfile(42, "PlayerOne", null, 1, 0, 0));
@@ -54,8 +52,7 @@ public sealed class PlayerProfileApplicationServiceTests
             new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
             profiles);
 
-        GetPlayerProfileResult result = applicationService.GetProfileAsync("session-token", 99)
-            .GetAwaiter().GetResult();
+        GetPlayerProfileResult result = applicationService.GetProfile("session-token", 99);
 
         TestAssert.AreEqual(ProfileOperationStatus.Success, result.Status);
         TestAssert.AreEqual(2, profiles.AccountIds.Count);
@@ -66,19 +63,17 @@ public sealed class PlayerProfileApplicationServiceTests
     }
 
     [TestMethod]
-    public void GetAsync_InvalidInput_RejectsBeforeRepositoryAccess()
+    public void GetProfile_InvalidInput_RejectsBeforeRepositoryAccess()
     {
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         PlayerProfileApplicationService applicationService = CreateService(
             new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
             profiles);
 
-        GetPlayerProfileResult missingToken = applicationService.GetProfileAsync("", null)
-            .GetAwaiter().GetResult();
-        GetPlayerProfileResult invalidAccount = applicationService.GetProfileAsync(
+        GetPlayerProfileResult missingToken = applicationService.GetProfile("", null);
+        GetPlayerProfileResult invalidAccount = applicationService.GetProfile(
             "session-token",
-            0)
-            .GetAwaiter().GetResult();
+            0);
 
         TestAssert.AreEqual(ProfileOperationStatus.MissingSessionToken, missingToken.Status);
         TestAssert.AreEqual(ProfileOperationStatus.InvalidAccountId, invalidAccount.Status);
@@ -86,47 +81,44 @@ public sealed class PlayerProfileApplicationServiceTests
     }
 
     [TestMethod]
-    public void GetAsync_InvalidSession_PrecedesInvalidTargetAccount()
+    public void GetProfile_InvalidSession_PrecedesInvalidTargetAccount()
     {
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         PlayerProfileApplicationService applicationService = CreateService(
             new PlayerProfileSessionStoreStub(),
             profiles);
 
-        GetPlayerProfileResult result = applicationService.GetProfileAsync("unknown-token", 0)
-            .GetAwaiter().GetResult();
+        GetPlayerProfileResult result = applicationService.GetProfile("unknown-token", 0);
 
         TestAssert.AreEqual(ProfileOperationStatus.InvalidSession, result.Status);
         TestAssert.AreEqual(0, profiles.AccountIds.Count);
     }
 
     [TestMethod]
-    public void GetAsync_UnknownSession_RejectsBeforeRepositoryAccess()
+    public void GetProfile_UnknownSession_RejectsBeforeRepositoryAccess()
     {
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         PlayerProfileApplicationService applicationService = CreateService(
             new PlayerProfileSessionStoreStub(),
             profiles);
 
-        GetPlayerProfileResult result = applicationService.GetProfileAsync(
+        GetPlayerProfileResult result = applicationService.GetProfile(
             "unknown-token",
-            null)
-            .GetAwaiter().GetResult();
+            null);
 
         TestAssert.AreEqual(ProfileOperationStatus.InvalidSession, result.Status);
         TestAssert.AreEqual(0, profiles.AccountIds.Count);
     }
 
     [TestMethod]
-    public void GetAsync_InactiveCaller_DoesNotReadRequestedTarget()
+    public void GetProfile_InactiveCaller_DoesNotReadRequestedTarget()
     {
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         PlayerProfileApplicationService applicationService = CreateService(
             new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
             profiles);
 
-        GetPlayerProfileResult result = applicationService.GetProfileAsync("session-token", 99)
-            .GetAwaiter().GetResult();
+        GetPlayerProfileResult result = applicationService.GetProfile("session-token", 99);
 
         TestAssert.AreEqual(ProfileOperationStatus.InactiveAccount, result.Status);
         TestAssert.AreEqual(1, profiles.AccountIds.Count);
@@ -134,7 +126,7 @@ public sealed class PlayerProfileApplicationServiceTests
     }
 
     [TestMethod]
-    public void GetAsync_MissingTarget_ReturnsAccountNotFound()
+    public void GetProfile_MissingTarget_ReturnsAccountNotFound()
     {
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         profiles.Profiles.Add(42, new PlayerProfile(42, "PlayerOne", null, 1, 0, 0));
@@ -142,36 +134,34 @@ public sealed class PlayerProfileApplicationServiceTests
             new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
             profiles);
 
-        GetPlayerProfileResult result = applicationService.GetProfileAsync("session-token", 99)
-            .GetAwaiter().GetResult();
+        GetPlayerProfileResult result = applicationService.GetProfile("session-token", 99);
 
         TestAssert.AreEqual(ProfileOperationStatus.AccountNotFound, result.Status);
         TestAssert.AreEqual(2, profiles.AccountIds.Count);
     }
 
     [TestMethod]
-    public void GetAsync_RepositoryFailure_PropagatesException()
+    public void GetProfile_RepositoryFailure_PropagatesException()
     {
         PlayerProfileApplicationService applicationService = CreateService(
             new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
             new PlayerProfileRepositoryStub { ThrowOnGet = true });
 
         TestAssert.Throws<InvalidOperationException>(() =>
-            applicationService.GetProfileAsync("session-token", null)
-                .GetAwaiter().GetResult());
+            applicationService.GetProfile("session-token", null));
     }
 
     [TestMethod]
-    public void ChangeUsernameAsync_ValidUsername_NormalizesAndUpdatesCaller()
+    public void ChangeUsername_ValidUsername_NormalizesAndUpdatesCaller()
     {
         PlayerProfileRepositoryStub profiles = CreateActiveProfiles();
         PlayerProfileApplicationService applicationService = CreateService(
             new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
             profiles);
 
-        ProfileOperationStatus status = applicationService.ChangeUsernameAsync(
+        ProfileOperationStatus status = applicationService.ChangeUsername(
             "session-token",
-            "  NewPlayer  ").GetAwaiter().GetResult();
+            "  NewPlayer  ");
 
         TestAssert.AreEqual(ProfileOperationStatus.Success, status);
         TestAssert.AreEqual<long?>(42, profiles.ChangedAccountId);
@@ -179,7 +169,7 @@ public sealed class PlayerProfileApplicationServiceTests
     }
 
     [TestMethod]
-    public void ChangeUsernameAsync_UnavailableUsername_ReturnsExpectedStatus()
+    public void ChangeUsername_UnavailableUsername_ReturnsExpectedStatus()
     {
         PlayerProfileRepositoryStub profiles = CreateActiveProfiles();
         profiles.ChangeUsernameStatus = ProfileRepositoryUpdateStatus.UsernameUnavailable;
@@ -187,15 +177,15 @@ public sealed class PlayerProfileApplicationServiceTests
             new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
             profiles);
 
-        ProfileOperationStatus status = applicationService.ChangeUsernameAsync(
+        ProfileOperationStatus status = applicationService.ChangeUsername(
             "session-token",
-            "OtherPlayer").GetAwaiter().GetResult();
+            "OtherPlayer");
 
         TestAssert.AreEqual(ProfileOperationStatus.UsernameUnavailable, status);
     }
 
     [TestMethod]
-    public void UpdateImageAsync_AssociationFailure_RemovesStoredImageAndPropagates()
+    public void UpdateImage_AssociationFailure_RemovesStoredImageAndPropagates()
     {
         PlayerProfileRepositoryStub profiles = CreateActiveProfiles();
         profiles.ThrowOnSetImage = true;
@@ -206,10 +196,9 @@ public sealed class PlayerProfileApplicationServiceTests
             images);
 
         TestAssert.Throws<InvalidOperationException>(() =>
-            applicationService.UpdateImageAsync(
+            applicationService.UpdateImage(
                 "session-token",
-                new ProfileImageData(new byte[] { 1 }, "image/png"))
-                .GetAwaiter().GetResult());
+                new ProfileImageData(new byte[] { 1 }, "image/png")));
         TestAssert.AreEqual("new-image", images.Deleted);
     }
 
@@ -318,7 +307,7 @@ internal sealed class PlayerProfileRepositoryStub : IPlayerProfileRepository
 
     internal string? ImageReference { get; private set; }
 
-    public Task<PlayerProfileLookupResult> GetAsync(long accountId)
+    public PlayerProfileLookupResult GetProfile(long accountId)
     {
         AccountIds.Add(accountId);
         if (ThrowOnGet)
@@ -328,27 +317,27 @@ internal sealed class PlayerProfileRepositoryStub : IPlayerProfileRepository
 
         if (!Profiles.TryGetValue(accountId, out PlayerProfile? profile))
         {
-            return Task.FromResult(PlayerProfileLookupResult.CreateNotFound());
+            return PlayerProfileLookupResult.CreateNotFound();
         }
 
-        return Task.FromResult(PlayerProfileLookupResult.CreateFound(profile));
+        return PlayerProfileLookupResult.CreateFound(profile);
     }
 
-    public Task<bool> IsActiveAsync(long accountId)
+    public bool IsActive(long accountId)
     {
-        return Task.FromResult(Profiles.ContainsKey(accountId));
+        return Profiles.ContainsKey(accountId);
     }
 
-    public Task<ProfileRepositoryUpdateStatus> ChangeUsernameAsync(
+    public ProfileRepositoryUpdateStatus ChangeUsername(
         long accountId,
         string username)
     {
         ChangedAccountId = accountId;
         ChangedUsername = username;
-        return Task.FromResult(ChangeUsernameStatus);
+        return ChangeUsernameStatus;
     }
 
-    public Task<ProfileRepositoryUpdateStatus> SetProfileImageAsync(
+    public ProfileRepositoryUpdateStatus SetProfileImage(
         long accountId,
         string imageReference)
     {
@@ -359,6 +348,6 @@ internal sealed class PlayerProfileRepositoryStub : IPlayerProfileRepository
             throw new InvalidOperationException("private-provider-message");
         }
 
-        return Task.FromResult(SetImageStatus);
+        return SetImageStatus;
     }
 }

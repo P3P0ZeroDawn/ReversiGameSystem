@@ -45,9 +45,9 @@ public sealed class MatchApplicationService
     }
 
     /// <summary>Creates a waiting lobby and its creator seat atomically.</summary>
-    public MatchResult<Match> Create(string token, MatchSettings? settings)
+    public MatchResult<Match> CreateMatch(string token, MatchSettings? settings)
     {
-        MatchResult<AuthenticatedSession> playerResult = GetPlayer(token);
+        MatchResult<AuthenticatedSession> playerResult = ResolveActiveSession(token);
         if (playerResult.Status != MatchStatus.Success)
         {
             return new MatchResult<Match>(playerResult.Status);
@@ -67,8 +67,8 @@ public sealed class MatchApplicationService
                 "Successful settings validation requires a value.");
         lock (_lobbySync)
         {
-            PrepareCreation(token);
-            MatchResult<Match> creationResult = _matches.Create(
+            CancelPriorLobbiesForToken(token);
+            MatchResult<Match> creationResult = _matches.CreateMatch(
                 player,
                 acceptedSettings,
                 _clock.UtcNow);
@@ -86,7 +86,7 @@ public sealed class MatchApplicationService
     }
 
     /// <summary>Creates and emails a private waiting match for an accepted friend.</summary>
-    public MatchResult<Match> Invite(
+    public MatchResult<Match> InviteToMatch(
         string token,
         long friendAccountId,
         MatchSettings? settings)
@@ -103,7 +103,7 @@ public sealed class MatchApplicationService
             return new MatchResult<Match>(MatchStatus.Unauthorized);
         }
 
-        MatchResult<AuthenticatedSession> playerResult = GetPlayer(token);
+        MatchResult<AuthenticatedSession> playerResult = ResolveActiveSession(token);
         if (playerResult.Status != MatchStatus.Success)
         {
             return new MatchResult<Match>(playerResult.Status);
@@ -133,7 +133,7 @@ public sealed class MatchApplicationService
         MatchInvitationPreparation preparation;
         lock (_lobbySync)
         {
-            PrepareCreation(token);
+            CancelPriorLobbiesForToken(token);
             MatchResult<MatchInvitationPreparation> prepareResult = _matches.PreparePrivateInvitation(
                 player,
                 friendAccountId,
@@ -157,7 +157,7 @@ public sealed class MatchApplicationService
     /// <summary>Verifies that a live registered session belongs to an active account.</summary>
     public MatchStatus EvaluateLobbyAccess(string token)
     {
-        MatchResult<AuthenticatedSession> playerResult = GetPlayer(token);
+        MatchResult<AuthenticatedSession> playerResult = ResolveActiveSession(token);
         if (playerResult.Status != MatchStatus.Success)
         {
             return playerResult.Status;
@@ -170,9 +170,9 @@ public sealed class MatchApplicationService
     }
 
     /// <summary>Lists public waiting lobbies available to the caller.</summary>
-    public MatchResult<Match[]> Available(string token)
+    public MatchResult<Match[]> GetAvailableMatches(string token)
     {
-        MatchResult<AuthenticatedSession> playerResult = GetPlayer(token);
+        MatchResult<AuthenticatedSession> playerResult = ResolveActiveSession(token);
         if (playerResult.Status != MatchStatus.Success)
         {
             return new MatchResult<Match[]>(playerResult.Status);
@@ -181,11 +181,11 @@ public sealed class MatchApplicationService
         AuthenticatedSession player = playerResult.Value
             ?? throw new InvalidOperationException(
                 "A successful match result must contain its value.");
-        return _matches.Available(player.AccountId);
+        return _matches.GetAvailableMatches(player.AccountId);
     }
 
     /// <summary>Occupies the second seat and starts a waiting match atomically.</summary>
-    public MatchResult<Match> Join(string token, string code)
+    public MatchResult<Match> JoinMatch(string token, string code)
     {
         if (string.IsNullOrWhiteSpace(token))
         {
@@ -212,7 +212,7 @@ public sealed class MatchApplicationService
             return new MatchResult<Match>(MatchStatus.Unauthorized);
         }
 
-        MatchResult<AuthenticatedSession> playerResult = GetPlayer(token);
+        MatchResult<AuthenticatedSession> playerResult = ResolveActiveSession(token);
         if (playerResult.Status != MatchStatus.Success)
         {
             return new MatchResult<Match>(playerResult.Status);
@@ -221,7 +221,7 @@ public sealed class MatchApplicationService
         AuthenticatedSession player = playerResult.Value
             ?? throw new InvalidOperationException(
                 "A successful match result must contain its value.");
-        MatchResult<Match> joinResult = _matches.Join(player, normalized, _clock.UtcNow);
+        MatchResult<Match> joinResult = _matches.JoinMatch(player, normalized, _clock.UtcNow);
         if (joinResult.Status == MatchStatus.Success && joinResult.Value != null)
         {
             Action<Match>? handler = MatchStarted;
@@ -235,9 +235,9 @@ public sealed class MatchApplicationService
     }
 
     /// <summary>Loads confirmed match data for an authorized participant.</summary>
-    public MatchResult<Match> Get(string token, long matchId)
+    public MatchResult<Match> GetParticipantMatch(string token, long matchId)
     {
-        MatchResult<AuthenticatedSession> playerResult = GetPlayer(token);
+        MatchResult<AuthenticatedSession> playerResult = ResolveActiveSession(token);
         if (playerResult.Status != MatchStatus.Success)
         {
             return new MatchResult<Match>(playerResult.Status);
@@ -259,7 +259,7 @@ public sealed class MatchApplicationService
         long matchId,
         int seconds)
     {
-        MatchResult<AuthenticatedSession> playerResult = GetPlayer(token);
+        MatchResult<AuthenticatedSession> playerResult = ResolveActiveSession(token);
         if (playerResult.Status != MatchStatus.Success)
         {
             return new MatchResult<Match>(playerResult.Status);
@@ -280,9 +280,9 @@ public sealed class MatchApplicationService
     }
 
     /// <summary>Cancels a waiting match owned by the caller.</summary>
-    public MatchStatus Cancel(string token, long matchId)
+    public MatchStatus CancelMatch(string token, long matchId)
     {
-        MatchResult<AuthenticatedSession> playerResult = GetPlayer(token);
+        MatchResult<AuthenticatedSession> playerResult = ResolveActiveSession(token);
         if (playerResult.Status != MatchStatus.Success)
         {
             return playerResult.Status;
@@ -295,7 +295,7 @@ public sealed class MatchApplicationService
         AuthenticatedSession player = playerResult.Value
             ?? throw new InvalidOperationException(
                 "A successful match result must contain its value.");
-        MatchStatus status = _matches.Cancel(player.AccountId, matchId);
+        MatchStatus status = _matches.CancelMatch(player.AccountId, matchId);
         if (status == MatchStatus.Success)
         {
             lock (_lobbySync)
@@ -313,7 +313,7 @@ public sealed class MatchApplicationService
         lock (_lobbySync)
         {
             _sessionsPendingLobbyCleanup.Add(token);
-            return CancelTracked(token);
+            return CancelTrackedMatches(token);
         }
     }
 
@@ -332,7 +332,7 @@ public sealed class MatchApplicationService
                     || session == null
                     || session.ExpiresAtUtc <= _clock.UtcNow)
                 {
-                    cancelled.AddRange(CancelTracked(token));
+                    cancelled.AddRange(CancelTrackedMatches(token));
                 }
             }
 
@@ -340,7 +340,7 @@ public sealed class MatchApplicationService
         }
     }
 
-    private MatchResult<AuthenticatedSession> GetPlayer(string token)
+    private MatchResult<AuthenticatedSession> ResolveActiveSession(string token)
     {
         if (string.IsNullOrWhiteSpace(token))
         {
@@ -409,7 +409,7 @@ public sealed class MatchApplicationService
 
             try
             {
-                MatchStatus cancellationStatus = _matches.Cancel(player.AccountId, preparation.Match.Id);
+                MatchStatus cancellationStatus = _matches.CancelMatch(player.AccountId, preparation.Match.Id);
                 if (cancellationStatus != MatchStatus.Success && cancellationStatus != MatchStatus.MatchNotWaiting)
                 {
                     throw new InvalidOperationException("Prepared match cancellation rejected: " + cancellationStatus);
@@ -461,19 +461,19 @@ public sealed class MatchApplicationService
 
     private void CancelPreparedMatch(long accountId, long matchId)
     {
-        MatchStatus status = _matches.Cancel(accountId, matchId);
+        MatchStatus status = _matches.CancelMatch(accountId, matchId);
         if (status != MatchStatus.Success && status != MatchStatus.MatchNotWaiting)
         {
             throw new InvalidOperationException("Failed to cancel prepared match: " + status);
         }
     }
 
-    private void PrepareCreation(string token)
+    private void CancelPriorLobbiesForToken(string token)
     {
         if (_sessionsPendingLobbyCleanup.Contains(token)
             || _createdMatches.ContainsKey(token))
         {
-            CancelTracked(token);
+            CancelTrackedMatches(token);
         }
     }
 
@@ -507,7 +507,7 @@ public sealed class MatchApplicationService
         }
     }
 
-    private long[] CancelTracked(string token)
+    private long[] CancelTrackedMatches(string token)
     {
         if (!_createdMatches.TryGetValue(token, out Dictionary<long, long>? matches))
         {
@@ -520,7 +520,7 @@ public sealed class MatchApplicationService
         for (int index = 0; index < tracked.Length; index++)
         {
             KeyValuePair<long, long> match = tracked[index];
-            MatchStatus status = _matches.Cancel(match.Value, match.Key);
+            MatchStatus status = _matches.CancelMatch(match.Value, match.Key);
             if (status == MatchStatus.Success)
             {
                 cancelled.Add(match.Key);

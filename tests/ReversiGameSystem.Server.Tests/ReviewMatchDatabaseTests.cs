@@ -31,17 +31,17 @@ internal static class ReviewMatchDatabaseTests
             .GetValue().SessionToken;
         MatchApplicationService matches = new MatchApplicationService(store, new MatchRepository(), new SystemUtcClock());
         ChatApplicationService chat = new ChatApplicationService(store, new ChatRepository(), new SystemUtcClock());
-        Match waiting = matches.Create(alpha, new MatchSettings()).Value
+        Match waiting = matches.CreateMatch(alpha, new MatchSettings()).Value
             ?? throw new InvalidOperationException("Match expected.");
 
         // Act / Assert: a rejected operation must leave the waiting match unchanged.
-        TestAssert.AreEqual(0, (matches.Available(alpha).Value
+        TestAssert.AreEqual(0, (matches.GetAvailableMatches(alpha).Value
             ?? throw new InvalidOperationException("Matches expected.")).Length);
-        TestAssert.AreEqual(waiting.Id, (matches.Available(beta).Value
+        TestAssert.AreEqual(waiting.Id, (matches.GetAvailableMatches(beta).Value
             ?? throw new InvalidOperationException("Matches expected.")).Single().Id);
         TestAssert.AreEqual(
             MatchStatus.CannotJoinOwnMatch,
-            matches.Join(alpha, waiting.Code!).Status);
+            matches.JoinMatch(alpha, waiting.Code!).Status);
         TestAssert.AreEqual(
             ChatStatus.MatchNotInProgress,
             chat.LoadChatHistory(alpha, waiting.Id).Status);
@@ -49,11 +49,11 @@ internal static class ReviewMatchDatabaseTests
             ChatStatus.Unauthorized,
             chat.LoadChatHistory(beta, waiting.Id).Status);
         Join_ConcurrentRequests_RegistersOneSecondSeat(matches, beta, waiting);
-        TestAssert.AreEqual("InProgress", (matches.Get(alpha, waiting.Id).Value
+        TestAssert.AreEqual("InProgress", (matches.GetParticipantMatch(alpha, waiting.Id).Value
             ?? throw new InvalidOperationException("Match expected.")).State);
-        TestAssert.AreEqual(2, (matches.Get(beta, waiting.Id).Value
+        TestAssert.AreEqual(2, (matches.GetParticipantMatch(beta, waiting.Id).Value
             ?? throw new InvalidOperationException("Match expected.")).Participants.Length);
-        TestAssert.AreEqual(0, (matches.Available(beta).Value
+        TestAssert.AreEqual(0, (matches.GetAvailableMatches(beta).Value
             ?? throw new InvalidOperationException("Matches expected.")).Length);
         Send_ConcurrentRequests_AssignsUniqueOrderedNumbers(chat, alpha, waiting.Id);
         Moderate_RepeatedMessages_CommitsAccountMute(chat, alpha, waiting.Id);
@@ -64,7 +64,7 @@ internal static class ReviewMatchDatabaseTests
         sessions.CloseSession(alpha);
         TestAssert.AreEqual(
             MatchStatus.InvalidSession,
-            matches.Available(alpha).Status);
+            matches.GetAvailableMatches(alpha).Status);
         Console.WriteLine("Passed real match SQL checks: atomic join, chat ordering, "
             + "moderation, authorization, cancellation and session revocation.");
     }
@@ -75,7 +75,7 @@ internal static class ReviewMatchDatabaseTests
         // Arrange / Act
         Task<bool>[] joins = Enumerable.Range(0, 2).Select(_ => Task.Run(() =>
         {
-            MatchResult<Match> result = matches.Join(token, waiting.Code!);
+            MatchResult<Match> result = matches.JoinMatch(token, waiting.Code!);
             return result.Status == MatchStatus.Success;
         })).ToArray();
         Task.WaitAll(joins);
@@ -148,32 +148,32 @@ internal static class ReviewMatchDatabaseTests
         MatchApplicationService matches, string creator, string other)
     {
         // Arrange
-        Match waiting = matches.Create(creator, new MatchSettings()).Value
+        Match waiting = matches.CreateMatch(creator, new MatchSettings()).Value
             ?? throw new InvalidOperationException("Match expected.");
 
         // Act
         TestAssert.AreEqual(
             MatchStatus.Success,
-            matches.Cancel(creator, waiting.Id));
+            matches.CancelMatch(creator, waiting.Id));
         TestAssert.AreEqual(
             MatchStatus.Success,
-            matches.Cancel(creator, waiting.Id));
+            matches.CancelMatch(creator, waiting.Id));
 
         // Assert
         TestAssert.AreEqual(
             "Cancelled",
-            (matches.Get(creator, waiting.Id).Value
+            (matches.GetParticipantMatch(creator, waiting.Id).Value
                 ?? throw new InvalidOperationException("Match expected.")).State);
         TestAssert.AreEqual(
             MatchStatus.MatchCodeUnavailable,
-            matches.Join(other, waiting.Code!).Status);
+            matches.JoinMatch(other, waiting.Code!).Status);
     }
 
     private static void Restart_AbandonedWaitingMatch_InvalidatesCode(
         MatchApplicationService matches, string creator, string other)
     {
         // Arrange
-        Match abandoned = matches.Create(creator, new MatchSettings()).Value
+        Match abandoned = matches.CreateMatch(creator, new MatchSettings()).Value
             ?? throw new InvalidOperationException("Match expected.");
         MatchRepository restartedStore = new MatchRepository();
 
@@ -184,28 +184,28 @@ internal static class ReviewMatchDatabaseTests
         TestAssert.AreEqual(0, restartedStore.CancelAbandonedWaitingMatches());
         TestAssert.AreEqual(
             "Cancelled",
-            (matches.Get(creator, abandoned.Id).Value
+            (matches.GetParticipantMatch(creator, abandoned.Id).Value
                 ?? throw new InvalidOperationException("Match expected.")).State);
         TestAssert.AreEqual(
             MatchStatus.MatchCodeUnavailable,
-            matches.Join(other, abandoned.Code!).Status);
+            matches.JoinMatch(other, abandoned.Code!).Status);
     }
 
     private static void Join_InactiveCreator_RejectsWithoutOccupyingSecondSeat(
         MatchApplicationService matches, string creator, string other)
     {
         // Arrange
-        Match waiting = matches.Create(creator, new MatchSettings()).Value
+        Match waiting = matches.CreateMatch(creator, new MatchSettings()).Value
             ?? throw new InvalidOperationException("Match expected.");
         SetCreatorStatus("INACTIVE");
         try
         {
             // Act / Assert
-            TestAssert.AreEqual(0, (matches.Available(other).Value
+            TestAssert.AreEqual(0, (matches.GetAvailableMatches(other).Value
                 ?? throw new InvalidOperationException("Matches expected.")).Length);
             TestAssert.AreEqual(
                 MatchStatus.InactiveAccount,
-                matches.Join(other, waiting.Code!).Status);
+                matches.JoinMatch(other, waiting.Code!).Status);
         }
         finally
         {
@@ -213,11 +213,11 @@ internal static class ReviewMatchDatabaseTests
         }
         TestAssert.AreEqual(
             1,
-            (matches.Get(creator, waiting.Id).Value
+            (matches.GetParticipantMatch(creator, waiting.Id).Value
                 ?? throw new InvalidOperationException("Match expected.")).Participants.Length);
         TestAssert.AreEqual(
             MatchStatus.Success,
-            matches.Cancel(creator, waiting.Id));
+            matches.CancelMatch(creator, waiting.Id));
     }
 
     private static void SetCreatorStatus(string status)

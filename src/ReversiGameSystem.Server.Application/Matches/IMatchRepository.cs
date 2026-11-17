@@ -10,19 +10,19 @@ public interface IMatchRepository
     public MatchStatus EvaluateLobbyAccess(long accountId);
 
     /// <summary>Cancels a waiting match owned by the account.</summary>
-    public MatchStatus Cancel(long accountId, long matchId);
+    public MatchStatus CancelMatch(long accountId, long matchId);
 
     /// <summary>Determines the status applicable to a guest join attempt.</summary>
     public MatchStatus ValidateGuestJoin(string code);
 
     /// <summary>Creates a waiting match and its creator atomically.</summary>
-    public MatchResult<Match> Create(AuthenticatedSession player, MatchSettings settings, DateTime now);
+    public MatchResult<Match> CreateMatch(AuthenticatedSession player, MatchSettings settings, DateTime now);
 
     /// <summary>Lists public waiting matches available to an account.</summary>
-    public MatchResult<Match[]> Available(long accountId);
+    public MatchResult<Match[]> GetAvailableMatches(long accountId);
 
     /// <summary>Occupies the second seat and starts the waiting match atomically.</summary>
-    public MatchResult<Match> Join(AuthenticatedSession player, string code, DateTime now);
+    public MatchResult<Match> JoinMatch(AuthenticatedSession player, string code, DateTime now);
 
     /// <summary>Loads a match for one authorized participant.</summary>
     public MatchResult<Match> LoadParticipantMatch(long accountId, long matchId);

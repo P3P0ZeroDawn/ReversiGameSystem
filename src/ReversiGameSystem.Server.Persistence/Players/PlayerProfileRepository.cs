@@ -5,7 +5,6 @@ using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
 using System.Data.SqlClient;
 using System.Linq;
-using System.Threading.Tasks;
 using ReversiGameSystem.Server.Application.Players;
 using ReversiGameSystem.Server.Persistence.Model;
 
@@ -21,7 +20,7 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
     private const string DrawResultCode = "DRAW";
 
     /// <inheritdoc />
-    public async Task<PlayerProfileLookupResult> GetAsync(long accountId)
+    public PlayerProfileLookupResult GetProfile(long accountId)
     {
         if (accountId <= 0)
         {
@@ -30,12 +29,12 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
 
         using (ReversiGameSystemEntities context = new ReversiGameSystemEntities())
         {
-            return await LoadProfileAsync(context, accountId);
+            return LoadProfile(context, accountId);
         }
     }
 
     /// <inheritdoc />
-    public async Task<bool> IsActiveAsync(long accountId)
+    public bool IsActive(long accountId)
     {
         if (accountId <= 0)
         {
@@ -44,13 +43,13 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
 
         using (ReversiGameSystemEntities context = new ReversiGameSystemEntities())
         {
-            return await context.Account.AnyAsync(account => account.accountId == accountId
+            return context.Account.Any(account => account.accountId == accountId
                 && account.statusCode == ActiveAccountStatusCode);
         }
     }
 
     /// <inheritdoc />
-    public async Task<ProfileRepositoryUpdateStatus> ChangeUsernameAsync(
+    public ProfileRepositoryUpdateStatus ChangeUsername(
         long accountId,
         string username)
     {
@@ -61,7 +60,7 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
             using (DbContextTransaction transaction = context.Database.BeginTransaction(
                 IsolationLevel.Serializable))
             {
-                Account? account = await context.Account.SingleOrDefaultAsync(item =>
+                Account? account = context.Account.SingleOrDefault(item =>
                     item.accountId == accountId
                     && item.statusCode == ActiveAccountStatusCode);
                 if (account == null)
@@ -70,7 +69,7 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
                 }
                 else
                 {
-                    bool usernameUnavailable = await context.Account.AnyAsync(other =>
+                    bool usernameUnavailable = context.Account.Any(other =>
                         other.accountId != accountId
                         && other.statusCode == ActiveAccountStatusCode
                         && other.username == username);
@@ -81,11 +80,10 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
                     else
                     {
                         account.username = username;
-                        await context.SaveChangesAsync();
+                        context.SaveChanges();
                         transaction.Commit();
                         updateStatus = ProfileRepositoryUpdateStatus.Success;
                     }
-
                 }
             }
         }
@@ -98,7 +96,7 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
     }
 
     /// <inheritdoc />
-    public async Task<ProfileRepositoryUpdateStatus> SetProfileImageAsync(
+    public ProfileRepositoryUpdateStatus SetProfileImage(
         long accountId,
         string imageReference)
     {
@@ -106,7 +104,7 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
         using (DbContextTransaction transaction = context.Database.BeginTransaction(
             IsolationLevel.Serializable))
         {
-            Account? account = await context.Account.SingleOrDefaultAsync(item =>
+            Account? account = context.Account.SingleOrDefault(item =>
                 item.accountId == accountId
                 && item.statusCode == ActiveAccountStatusCode);
             if (account == null)
@@ -115,17 +113,17 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
             }
 
             account.profileImageUri = imageReference;
-            await context.SaveChangesAsync();
+            context.SaveChanges();
             transaction.Commit();
             return ProfileRepositoryUpdateStatus.Success;
         }
     }
 
-    private static async Task<PlayerProfileLookupResult> LoadProfileAsync(
+    private static PlayerProfileLookupResult LoadProfile(
         ReversiGameSystemEntities context,
         long accountId)
     {
-        PlayerIdentity? identity = await context.Account
+        PlayerIdentity? identity = context.Account
             .AsNoTracking()
             .Where(account => account.accountId == accountId
                 && account.statusCode == ActiveAccountStatusCode)
@@ -135,13 +133,13 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
                 Username = account.username,
                 ProfileImageUri = account.profileImageUri
             })
-            .FirstOrDefaultAsync();
+            .FirstOrDefault();
         if (identity == null)
         {
             return PlayerProfileLookupResult.CreateNotFound();
         }
 
-        List<ResultCount> resultCounts = await LoadResultCountsAsync(context, accountId);
+        List<ResultCount> resultCounts = LoadResultCounts(context, accountId);
         PlayerProfile profile = new PlayerProfile(
             identity.AccountId,
             identity.Username,
@@ -152,7 +150,7 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
         return PlayerProfileLookupResult.CreateFound(profile);
     }
 
-    private static Task<List<ResultCount>> LoadResultCountsAsync(
+    private static List<ResultCount> LoadResultCounts(
         ReversiGameSystemEntities context,
         long accountId)
     {
@@ -168,7 +166,7 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
                 ResultCode = group.Key,
                 Count = group.Count()
             })
-            .ToListAsync();
+            .ToList();
     }
 
     private static int GetResultCount(

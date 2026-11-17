@@ -127,17 +127,17 @@ internal static class LegacyTestSuite
             new PlayerProfileApplicationServiceTests();
         return new Action[]
         {
-            tests.GetAsync_CurrentPlayer_ReturnsCalculatedStatistics,
-            tests.GetAsync_PublicProfile_VerifiesCallerThenUsesTargetAccount,
-            tests.GetAsync_InvalidInput_RejectsBeforeRepositoryAccess,
-            tests.GetAsync_InvalidSession_PrecedesInvalidTargetAccount,
-            tests.GetAsync_UnknownSession_RejectsBeforeRepositoryAccess,
-            tests.GetAsync_InactiveCaller_DoesNotReadRequestedTarget,
-            tests.GetAsync_MissingTarget_ReturnsAccountNotFound,
-            tests.GetAsync_RepositoryFailure_PropagatesException,
-            tests.ChangeUsernameAsync_ValidUsername_NormalizesAndUpdatesCaller,
-            tests.ChangeUsernameAsync_UnavailableUsername_ReturnsExpectedStatus,
-            tests.UpdateImageAsync_AssociationFailure_RemovesStoredImageAndPropagates,
+            tests.GetProfile_CurrentPlayer_ReturnsCalculatedStatistics,
+            tests.GetProfile_PublicProfile_VerifiesCallerThenUsesTargetAccount,
+            tests.GetProfile_InvalidInput_RejectsBeforeRepositoryAccess,
+            tests.GetProfile_InvalidSession_PrecedesInvalidTargetAccount,
+            tests.GetProfile_UnknownSession_RejectsBeforeRepositoryAccess,
+            tests.GetProfile_InactiveCaller_DoesNotReadRequestedTarget,
+            tests.GetProfile_MissingTarget_ReturnsAccountNotFound,
+            tests.GetProfile_RepositoryFailure_PropagatesException,
+            tests.ChangeUsername_ValidUsername_NormalizesAndUpdatesCaller,
+            tests.ChangeUsername_UnavailableUsername_ReturnsExpectedStatus,
+            tests.UpdateImage_AssociationFailure_RemovesStoredImageAndPropagates,
         };
     }
 
@@ -147,7 +147,7 @@ internal static class LegacyTestSuite
         return new Action[]
         {
             tests.SaveAndDelete_ValidImage_UsesRelativeUri,
-            tests.TrySave_ValidAndInvalidImages_ReturnsExpectedOutcome,
+            tests.SaveImage_ValidAndInvalidImages_ReturnsExpectedOutcome,
         };
     }
 

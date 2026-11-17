@@ -5,7 +5,6 @@ using System.Threading;
 using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Contracts.Callbacks;
-using ReversiGameSystem.Server.Contracts.Common;
 using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.Contracts.Matches;
 using ReversiGameSystem.Server.Contracts.Services;
@@ -34,14 +33,14 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
             ?? throw new ArgumentNullException(nameof(applicationService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _callbackSubscriptions = new MatchCallbackSubscriptions<IMatchLobbyServiceCallback>(
-            AuthorizeChannel, (token, matchId) => Cleanup(token), _logger);
-        _expiryTimer = new Timer(_ => SweepExpired(), null, SweepInterval, SweepInterval);
+            AuthorizeChannel, (token, matchId) => CancelWaitingLobbiesForSession(token), _logger);
+        _expiryTimer = new Timer(_ => SweepExpiredLobbies(), null, SweepInterval, SweepInterval);
     }
 
     /// <inheritdoc />
     public void OpenLobbyChannel(string sessionToken)
     {
-        ThrowFailure(_applicationService.EvaluateLobbyAccess(sessionToken));
+        ThrowFaultIfFailed(_applicationService.EvaluateLobbyAccess(sessionToken));
         _callbackSubscriptions.RegisterForAllMatches(sessionToken);
     }
 
@@ -49,7 +48,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
     public LobbySnapshot CreateMatch(string sessionToken, MatchConfiguration configuration)
     {
         MatchSettings? settings = configuration == null ? null : MapSettings(configuration);
-        Match match = GetMatch(_applicationService.Create(sessionToken, settings));
+        Match match = RequireMatchValue(_applicationService.CreateMatch(sessionToken, settings));
         return MatchContractMapper.Lobby(match);
     }
 
@@ -60,7 +59,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
         MatchConfiguration configuration)
     {
         MatchSettings? settings = configuration == null ? null : MapSettings(configuration);
-        Match match = GetMatch(_applicationService.Invite(
+        Match match = RequireMatchValue(_applicationService.InviteToMatch(
             sessionToken,
             friendAccountId,
             settings));
@@ -70,8 +69,8 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
     /// <inheritdoc />
     public AvailableMatch[] GetAvailableMatches(string sessionToken)
     {
-        MatchResult<Match[]> result = _applicationService.Available(sessionToken);
-        ThrowFailure(result.Status);
+        MatchResult<Match[]> result = _applicationService.GetAvailableMatches(sessionToken);
+        ThrowFaultIfFailed(result.Status);
         Match[] matches = result.Value
             ?? throw new InvalidOperationException(
                 "A successful match result must contain its value.");
@@ -81,9 +80,9 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
     /// <inheritdoc />
     public LobbySnapshot JoinMatch(string sessionToken, string matchCode)
     {
-        Match match = GetMatch(_applicationService.Join(sessionToken, matchCode));
+        Match match = RequireMatchValue(_applicationService.JoinMatch(sessionToken, matchCode));
         _callbackSubscriptions.Publish(match.Id, (recipientToken, callback) =>
-            PublishStarted(recipientToken, callback, match.Id));
+            PublishMatchStarted(recipientToken, callback, match.Id));
         return MatchContractMapper.Lobby(match);
     }
 
@@ -97,7 +96,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
             sessionToken,
             matchId,
             turnDurationSeconds);
-        return MatchContractMapper.Lobby(GetMatch(result));
+        return MatchContractMapper.Lobby(RequireMatchValue(result));
     }
 
     /// <inheritdoc />
@@ -109,8 +108,8 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
     /// <inheritdoc />
     public void CancelMatch(string sessionToken, long matchId)
     {
-        ThrowFailure(_applicationService.Cancel(sessionToken, matchId));
-        PublishClosed(matchId);
+        ThrowFaultIfFailed(_applicationService.CancelMatch(sessionToken, matchId));
+        PublishLobbyClosed(matchId);
     }
 
     private bool AuthorizeChannel(string token, long matchId)
@@ -118,9 +117,9 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
         return _applicationService.EvaluateLobbyAccess(token) == MatchStatus.Success;
     }
 
-    private void PublishStarted(string token, IMatchLobbyServiceCallback callback, long matchId)
+    private void PublishMatchStarted(string token, IMatchLobbyServiceCallback callback, long matchId)
     {
-        MatchResult<Match> result = _applicationService.Get(token, matchId);
+        MatchResult<Match> result = _applicationService.GetParticipantMatch(token, matchId);
         if (result.Status == MatchStatus.Success)
         {
             Match match = result.Value
@@ -155,7 +154,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
     public void RemoveSession(string sessionToken)
     {
         _callbackSubscriptions.RemoveSession(sessionToken);
-        Cleanup(sessionToken);
+        CancelWaitingLobbiesForSession(sessionToken);
     }
 
     /// <inheritdoc />
@@ -165,7 +164,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
         _callbackSubscriptions.Dispose();
     }
 
-    private void SweepExpired()
+    private void SweepExpiredLobbies()
     {
         if (Interlocked.Exchange(ref _sweeping, 1) != 0)
         {
@@ -175,7 +174,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
         {
             foreach (long id in _applicationService.CancelExpiredWaitingSessions())
             {
-                PublishClosed(id);
+                PublishLobbyClosed(id);
             }
         }
         catch (Exception exception)
@@ -183,7 +182,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
             _logger.LogError(
                 exception,
                 "The {Operation} background operation failed. CorrelationId: {CorrelationId}",
-                nameof(SweepExpired),
+                nameof(SweepExpiredLobbies),
                 CorrelationContext.GetOrCreate());
         }
         finally
@@ -192,15 +191,15 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
         }
     }
 
-    private void Cleanup(string token)
+    private void CancelWaitingLobbiesForSession(string token)
     {
         foreach (long id in _applicationService.CancelWaitingForSession(token))
         {
-            PublishClosed(id);
+            PublishLobbyClosed(id);
         }
     }
 
-    private void PublishClosed(long id)
+    private void PublishLobbyClosed(long id)
     {
         _callbackSubscriptions.Publish(
             id,
@@ -212,22 +211,22 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
         IMatchLobbyServiceCallback callback,
         long matchId)
     {
-        MatchResult<Match> result = _applicationService.Get(token, matchId);
+        MatchResult<Match> result = _applicationService.GetParticipantMatch(token, matchId);
         if (result.Status == MatchStatus.Success)
         {
             callback.OnLobbyClosed(matchId);
         }
     }
 
-    private static Match GetMatch(MatchResult<Match> result)
+    private static Match RequireMatchValue(MatchResult<Match> result)
     {
-        ThrowFailure(result.Status);
+        ThrowFaultIfFailed(result.Status);
         return result.Value
             ?? throw new InvalidOperationException(
                 "A successful match result must contain its value.");
     }
 
-    private static void ThrowFailure(MatchStatus status)
+    private static void ThrowFaultIfFailed(MatchStatus status)
     {
         if (status == MatchStatus.Success)
         {

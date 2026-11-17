@@ -1,5 +1,3 @@
-using System.Threading.Tasks;
-
 namespace ReversiGameSystem.Server.Application.Players;
 
 /// <summary>Loads active public profiles and their calculated match totals.</summary>
@@ -8,18 +6,18 @@ public interface IPlayerProfileRepository
     /// <summary>Gets the expected lookup result for an active public profile.</summary>
     /// <param name="accountId">The account to query.</param>
     /// <returns>The explicit found or not-found result.</returns>
-    public Task<PlayerProfileLookupResult> GetAsync(long accountId);
+    public PlayerProfileLookupResult GetProfile(long accountId);
 
     /// <summary>Checks whether an account remains active.</summary>
     /// <param name="accountId">The account to check.</param>
     /// <returns>Whether the account exists and remains active.</returns>
-    public Task<bool> IsActiveAsync(long accountId);
+    public bool IsActive(long accountId);
 
     /// <summary>Changes the username of an active account when it remains available.</summary>
     /// <param name="accountId">The account to modify.</param>
     /// <param name="username">The normalized and validated username.</param>
     /// <returns>The expected persistence outcome.</returns>
-    public Task<ProfileRepositoryUpdateStatus> ChangeUsernameAsync(
+    public ProfileRepositoryUpdateStatus ChangeUsername(
         long accountId,
         string username);
 
@@ -27,7 +25,7 @@ public interface IPlayerProfileRepository
     /// <param name="accountId">The account to modify.</param>
     /// <param name="imageReference">The server-owned image reference.</param>
     /// <returns>The expected persistence outcome.</returns>
-    public Task<ProfileRepositoryUpdateStatus> SetProfileImageAsync(
+    public ProfileRepositoryUpdateStatus SetProfileImage(
         long accountId,
         string imageReference);
 }

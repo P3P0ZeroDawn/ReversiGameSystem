@@ -29,12 +29,12 @@ public sealed class PlayerProfileService : IPlayerProfileService
     /// <inheritdoc />
     public ContractProfile GetPlayerProfile(string sessionToken, long? targetAccountId)
     {
-        GetPlayerProfileResult result = _applicationService.GetProfileAsync(
+        GetPlayerProfileResult result = _applicationService.GetProfile(
             sessionToken,
-            targetAccountId).GetAwaiter().GetResult();
+            targetAccountId);
         if (result.Status != ProfileOperationStatus.Success)
         {
-            throw MapFailure(result.Status);
+            throw MapFailureToFault(result.Status);
         }
         if (result.Profile == null)
         {
@@ -48,12 +48,12 @@ public sealed class PlayerProfileService : IPlayerProfileService
     /// <inheritdoc />
     public ImageContent? GetProfileImage(string sessionToken, long? targetAccountId)
     {
-        GetProfileImageResult result = _applicationService.GetImageAsync(
+        GetProfileImageResult result = _applicationService.GetImage(
             sessionToken,
-            targetAccountId).GetAwaiter().GetResult();
+            targetAccountId);
         if (result.Status != ProfileOperationStatus.Success)
         {
-            throw MapFailure(result.Status);
+            throw MapFailureToFault(result.Status);
         }
         ImageContent? image;
         if (result.Image == null)
@@ -75,12 +75,12 @@ public sealed class PlayerProfileService : IPlayerProfileService
     /// <inheritdoc />
     public void ChangeUsername(string sessionToken, string username)
     {
-        ProfileOperationStatus status = _applicationService.ChangeUsernameAsync(
+        ProfileOperationStatus status = _applicationService.ChangeUsername(
             sessionToken,
-            username).GetAwaiter().GetResult();
+            username);
         if (status != ProfileOperationStatus.Success)
         {
-            throw MapFailure(status);
+            throw MapFailureToFault(status);
         }
     }
 
@@ -89,16 +89,16 @@ public sealed class PlayerProfileService : IPlayerProfileService
     {
         ProfileImageData? imageData = image == null ? null
             : new ProfileImageData(image.Content, image.MediaType);
-        ProfileOperationStatus status = _applicationService.UpdateImageAsync(
+        ProfileOperationStatus status = _applicationService.UpdateImage(
             sessionToken,
-            imageData).GetAwaiter().GetResult();
+            imageData);
         if (status != ProfileOperationStatus.Success)
         {
-            throw MapFailure(status);
+            throw MapFailureToFault(status);
         }
     }
 
-    private static FaultException MapFailure(ProfileOperationStatus status)
+    private static FaultException MapFailureToFault(ProfileOperationStatus status)
     {
         FaultException fault;
         if (status == ProfileOperationStatus.MissingSessionToken)

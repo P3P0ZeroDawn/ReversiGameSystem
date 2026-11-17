@@ -42,7 +42,7 @@ public class MatchChatService : IMatchChatService, IDisposable
         ChatChannelAccess access = _applicationService.PrepareChatChannel(
             sessionToken,
             matchId);
-        ThrowExpectedFault(access.Status);
+        ThrowFaultIfFailed(access.Status);
         _callbackSubscriptions.Register(sessionToken, matchId);
 
         if (access.ActiveMute is not null)
@@ -67,7 +67,7 @@ public class MatchChatService : IMatchChatService, IDisposable
             PublishMuteNotification(sessionToken, submission.Mute);
         }
 
-        ThrowExpectedFault(submission.Status, submission.Mute);
+        ThrowFaultIfFailed(submission.Status, submission.Mute);
         ChatMessage message = submission.Message
             ?? throw new InvalidOperationException(
                 "A successful chat submission must contain its message.");
@@ -84,7 +84,7 @@ public class MatchChatService : IMatchChatService, IDisposable
         ChatHistory history = _applicationService.LoadChatHistory(
             sessionToken,
             matchId);
-        ThrowExpectedFault(history.Status);
+        ThrowFaultIfFailed(history.Status);
 
         ChatMessage[] messages = history.Messages;
         MatchChatEntry[] entries = new MatchChatEntry[messages.Length];
@@ -143,7 +143,7 @@ public class MatchChatService : IMatchChatService, IDisposable
         });
     }
 
-    private static void ThrowExpectedFault(
+    private static void ThrowFaultIfFailed(
         ChatStatus status,
         ChatMute? mute = null)
     {

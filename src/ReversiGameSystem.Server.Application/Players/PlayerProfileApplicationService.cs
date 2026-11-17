@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Domain.Accounts;
 
@@ -31,7 +30,7 @@ public sealed class PlayerProfileApplicationService
     /// <param name="sessionToken">The caller's authenticated session token.</param>
     /// <param name="targetAccountId">The target account, or null for the caller.</param>
     /// <returns>The expected profile result.</returns>
-    public async Task<GetPlayerProfileResult> GetProfileAsync(
+    public GetPlayerProfileResult GetProfile(
         string sessionToken,
         long? targetAccountId)
     {
@@ -50,7 +49,7 @@ public sealed class PlayerProfileApplicationService
         }
 
         long callerAccountId = session.AccountId;
-        PlayerProfileLookupResult callerLookup = await _profiles.GetAsync(callerAccountId);
+        PlayerProfileLookupResult callerLookup = _profiles.GetProfile(callerAccountId);
         if (!callerLookup.IsFound)
         {
             return new GetPlayerProfileResult(ProfileOperationStatus.InactiveAccount);
@@ -65,7 +64,7 @@ public sealed class PlayerProfileApplicationService
         }
         else
         {
-            PlayerProfileLookupResult targetLookup = await _profiles.GetAsync(
+            PlayerProfileLookupResult targetLookup = _profiles.GetProfile(
                 targetAccountId.Value);
             if (!targetLookup.IsFound)
             {
@@ -87,11 +86,11 @@ public sealed class PlayerProfileApplicationService
     /// <param name="sessionToken">The caller's authenticated session token.</param>
     /// <param name="targetAccountId">The target account, or null for the caller.</param>
     /// <returns>The expected image result; an absent image is successful.</returns>
-    public async Task<GetProfileImageResult> GetImageAsync(
+    public GetProfileImageResult GetImage(
         string sessionToken,
         long? targetAccountId)
     {
-        GetPlayerProfileResult profileResult = await GetProfileAsync(
+        GetPlayerProfileResult profileResult = GetProfile(
             sessionToken,
             targetAccountId);
         if (profileResult.Status != ProfileOperationStatus.Success)
@@ -112,7 +111,7 @@ public sealed class PlayerProfileApplicationService
         }
         else
         {
-            ProfileImageData image = _images.Read(imageReference);
+            ProfileImageData image = _images.ReadImage(imageReference);
             result = new GetProfileImageResult(ProfileOperationStatus.Success, image);
         }
 
@@ -123,7 +122,7 @@ public sealed class PlayerProfileApplicationService
     /// <param name="sessionToken">The caller's authenticated session token.</param>
     /// <param name="username">The proposed public username.</param>
     /// <returns>The expected modification status.</returns>
-    public async Task<ProfileOperationStatus> ChangeUsernameAsync(
+    public ProfileOperationStatus ChangeUsername(
         string sessionToken,
         string username)
     {
@@ -137,7 +136,7 @@ public sealed class PlayerProfileApplicationService
             return ProfileOperationStatus.InvalidSession;
         }
         long accountId = session.AccountId;
-        if (!await _profiles.IsActiveAsync(accountId))
+        if (!_profiles.IsActive(accountId))
         {
             return ProfileOperationStatus.InactiveAccount;
         }
@@ -148,7 +147,7 @@ public sealed class PlayerProfileApplicationService
             return ProfileOperationStatus.InvalidUsername;
         }
 
-        ProfileRepositoryUpdateStatus updateStatus = await _profiles.ChangeUsernameAsync(
+        ProfileRepositoryUpdateStatus updateStatus = _profiles.ChangeUsername(
             accountId,
             normalized);
         return MapUpdateStatus(updateStatus);
@@ -159,7 +158,7 @@ public sealed class PlayerProfileApplicationService
     /// <param name="image">The proposed image content and media type.</param>
     /// <returns>The expected modification status.</returns>
     /// <exception cref="AggregateException">Association and cleanup both failed.</exception>
-    public async Task<ProfileOperationStatus> UpdateImageAsync(
+    public ProfileOperationStatus UpdateImage(
         string sessionToken,
         ProfileImageData? image)
     {
@@ -173,25 +172,33 @@ public sealed class PlayerProfileApplicationService
             return ProfileOperationStatus.InvalidSession;
         }
         long accountId = session.AccountId;
-        if (!await _profiles.IsActiveAsync(accountId))
+        if (!_profiles.IsActive(accountId))
         {
             return ProfileOperationStatus.InactiveAccount;
         }
-        if (image == null || !_images.TrySave(image, out string imageReference))
+        if (image == null)
         {
             return ProfileOperationStatus.InvalidImage;
         }
 
+        ProfileImageSaveResult saveResult = _images.SaveImage(image);
+        if (!saveResult.IsSaved)
+        {
+            return ProfileOperationStatus.InvalidImage;
+        }
+
+        string imageReference = saveResult.ImageReference;
+
         ProfileRepositoryUpdateStatus updateStatus;
         try
         {
-            updateStatus = await _profiles.SetProfileImageAsync(accountId, imageReference);
+            updateStatus = _profiles.SetProfileImage(accountId, imageReference);
         }
         catch (Exception failure)
         {
             try
             {
-                _images.Delete(imageReference);
+                _images.DeleteImage(imageReference);
             }
             catch (Exception cleanupFailure)
             {
@@ -206,7 +213,7 @@ public sealed class PlayerProfileApplicationService
 
         if (updateStatus != ProfileRepositoryUpdateStatus.Success)
         {
-            _images.Delete(imageReference);
+            _images.DeleteImage(imageReference);
         }
 
         return MapUpdateStatus(updateStatus);

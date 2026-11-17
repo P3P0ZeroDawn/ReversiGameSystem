@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Players;
 using ReversiGameSystem.Server.Persistence.Accounts;
 using ReversiGameSystem.Server.Persistence.Players;
 
@@ -45,7 +46,7 @@ internal sealed class ProfileImageStoreIntegrationTests
         }
     }
 
-    internal void TrySave_ValidAndInvalidImages_ReturnsExpectedOutcome()
+    internal void SaveImage_ValidAndInvalidImages_ReturnsExpectedOutcome()
     {
         string root = Path.Combine(
             Path.GetTempPath(),
@@ -59,20 +60,18 @@ internal sealed class ProfileImageStoreIntegrationTests
                 "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwC"
                 + "AAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
 
-            bool saved = repository.TrySave(
-                new ProfileImageData(imageContent, "image/png"),
-                out string imageReference);
-            bool rejected = repository.TrySave(
-                new ProfileImageData(new byte[] { 1, 2 }, "image/png"),
-                out string rejectedReference);
+            ProfileImageSaveResult saved = repository.SaveImage(
+                new ProfileImageData(imageContent, "image/png"));
+            ProfileImageSaveResult rejected = repository.SaveImage(
+                new ProfileImageData(new byte[] { 1, 2 }, "image/png"));
 
-            TestAssert.AreEqual(true, saved);
-            TestAssert.AreEqual(true, imageReference.StartsWith("profile-images/"));
-            TestAssert.AreEqual(false, rejected);
-            TestAssert.AreEqual(string.Empty, rejectedReference);
+            TestAssert.AreEqual(true, saved.IsSaved);
+            TestAssert.AreEqual(true, saved.ImageReference.StartsWith("profile-images/"));
+            TestAssert.AreEqual(false, rejected.IsSaved);
+            TestAssert.AreEqual(string.Empty, rejected.ImageReference);
             TestAssert.AreEqual(1, Directory.GetFiles(root).Length);
 
-            repository.Delete(imageReference);
+            repository.DeleteImage(saved.ImageReference);
             TestAssert.AreEqual(0, Directory.GetFiles(root).Length);
         }
         finally

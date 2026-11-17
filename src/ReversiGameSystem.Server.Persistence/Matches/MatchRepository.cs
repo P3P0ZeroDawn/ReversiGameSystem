@@ -53,7 +53,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
     }
 
     /// <summary>Creates the waiting lobby and its creator seat atomically.</summary>
-    public MatchResult<Match> Create(AuthenticatedSession player, MatchSettings settings, DateTime now)
+    public MatchResult<Match> CreateMatch(AuthenticatedSession player, MatchSettings settings, DateTime now)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
@@ -66,7 +66,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         string code;
         do
         {
-            code = CreateCode();
+            code = GenerateMatchCode();
         }
         while (context.GameMatch.Any(match => match.matchCode == code));
         GameMatch match = new GameMatch
@@ -121,7 +121,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         string code;
         do
         {
-            code = CreateCode();
+            code = GenerateMatchCode();
         }
         while (context.GameMatch.Any(match => match.matchCode == code));
 
@@ -208,7 +208,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
     }
 
     /// <summary>Lists joinable waiting lobbies belonging to other players.</summary>
-    public MatchResult<Match[]> Available(long accountId)
+    public MatchResult<Match[]> GetAvailableMatches(long accountId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         if (!context.Account.Any(account => account.accountId == accountId && account.statusCode == "ACTIVE"))
@@ -234,7 +234,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
     }
 
     /// <summary>Occupies the second seat and starts the waiting match atomically.</summary>
-    public MatchResult<Match> Join(AuthenticatedSession player, string code, DateTime now)
+    public MatchResult<Match> JoinMatch(AuthenticatedSession player, string code, DateTime now)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
@@ -604,7 +604,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
     }
 
     /// <summary>Cancels a waiting lobby owned by the requesting account.</summary>
-    public MatchStatus Cancel(long accountId, long matchId)
+    public MatchStatus CancelMatch(long accountId, long matchId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(IsolationLevel.Serializable);
@@ -745,7 +745,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         };
     }
 
-    private static string CreateCode()
+    private static string GenerateMatchCode()
     {
         byte[] random = new byte[6];
         using (RandomNumberGenerator generator = RandomNumberGenerator.Create())
