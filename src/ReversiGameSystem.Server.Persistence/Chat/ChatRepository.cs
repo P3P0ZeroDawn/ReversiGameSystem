@@ -2,6 +2,7 @@ using System;
 using System.Data;
 using System.Data.Entity;
 using System.Linq;
+using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Chat;
 using ReversiGameSystem.Server.Domain.Chat;
 using ReversiGameSystem.Server.Persistence.Matches;
@@ -20,6 +21,12 @@ public class ChatRepository : IChatRepository
     private const string InProgressMatchStatusCode = "IN_PROGRESS";
     private const string AccountLockResourcePrefix = "chat-account:";
     private const string MatchLockResourcePrefix = "chat-match:";
+    private readonly IUtcClock _clock;
+
+    public ChatRepository(IUtcClock clock)
+    {
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+    }
 
     /// <inheritdoc />
     public ChatStatus EvaluateParticipantAccess(long accountId, long matchId)
@@ -81,7 +88,8 @@ public class ChatRepository : IChatRepository
         long accountId,
         long matchId,
         string content,
-        DateTime sentAtUtc)
+        int maximumMessages,
+        TimeSpan rateWindow)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction = context.Database.BeginTransaction(
@@ -93,6 +101,7 @@ public class ChatRepository : IChatRepository
             context,
             MatchLockResourcePrefix + matchId);
 
+        DateTime sentAtUtc = _clock.UtcNow;
         ChatStatus accessStatus = EvaluateAccessStatus(context, accountId, matchId);
         if (accessStatus != ChatStatus.Success)
         {
@@ -119,6 +128,11 @@ public class ChatRepository : IChatRepository
                 sentAtUtc,
                 pattern);
         }
+        else if (CountRecentMessages(
+            context, accountId, sentAtUtc.Subtract(rateWindow), maximumMessages) >= maximumMessages)
+        {
+            return new ChatMessageSubmission(ChatStatus.RateLimitExceeded);
+        }
         else
         {
             result = AddMessage(
@@ -132,6 +146,23 @@ public class ChatRepository : IChatRepository
         context.SaveChanges();
         transaction.Commit();
         return result;
+    }
+
+    private static int CountRecentMessages(
+        ReversiGameSystemEntities context,
+        long accountId,
+        DateTime cutoffUtc,
+        int maximumMessages)
+    {
+        int count = context.ChatMessage
+            .Where(message => message.sentAtUtc > cutoffUtc
+                && context.MatchParticipant.Any(participant =>
+                    participant.accountId == accountId
+                    && participant.matchId == message.matchId
+                    && participant.seatNumber == message.senderSeatNumber))
+            .Take(maximumMessages)
+            .Count();
+        return count;
     }
 
     private static ChatStatus EvaluateAccessStatus(

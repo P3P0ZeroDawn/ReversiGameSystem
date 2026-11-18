@@ -30,7 +30,8 @@ internal static class ReviewMatchHost
         GameplayMatchApplicationService gameplayMatches =
             new GameplayMatchApplicationService(store, matchRepository, clock);
         matches.MatchStarted += gameplayMatches.TrackStartedMatch;
-        ChatApplicationService messages = new ChatApplicationService(store, new ChatRepository(), clock);
+        ChatApplicationService messages = new ChatApplicationService(
+            store, new ChatRepository(clock), clock);
         SessionService session = new SessionService(
             applicationService,
             NullLogger<SessionService>.Instance);

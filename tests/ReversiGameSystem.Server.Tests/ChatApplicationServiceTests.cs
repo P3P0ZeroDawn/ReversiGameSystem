@@ -163,7 +163,8 @@ public sealed class ChatApplicationServiceTests
             long accountId,
             long matchId,
             string content,
-            DateTime sentAtUtc)
+            int maximumMessages,
+            TimeSpan rateWindow)
         {
             SubmissionCalls++;
             LastContent = content;

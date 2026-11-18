@@ -21,6 +21,7 @@ internal static class RemoteMatchMessages
             { MatchStatus.MessageTooLong, "Chat_MessageTooLongMessage" },
             { MatchStatus.MessageBlocked, "Chat_MessageBlockedMessage" },
             { MatchStatus.PlayerMuted, "Chat_PlayerMutedMessage" },
+            { MatchStatus.RateLimitExceeded, "Chat_RateLimitExceeded" },
             { MatchStatus.InvalidPosition, "Game_InvalidPositionMessage" },
             { MatchStatus.ServiceUnavailable, "RemoteMatch_ConnectionFailed" }
         };

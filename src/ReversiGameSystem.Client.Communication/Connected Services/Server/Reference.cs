@@ -2519,6 +2519,9 @@ namespace ReversiGameSystem.ServerProxy
         
         [System.Runtime.Serialization.EnumMemberAttribute()]
         PlayerMuted = 3,
+
+        [System.Runtime.Serialization.EnumMemberAttribute()]
+        RateLimitExceeded = 4,
     }
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]

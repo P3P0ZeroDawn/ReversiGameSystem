@@ -31,4 +31,8 @@ public enum ChatFailure
     /// </summary>
     [EnumMember]
     PlayerMuted,
+
+    /// <summary>The account has reached the message rate limit.</summary>
+    [EnumMember]
+    RateLimitExceeded,
 }

@@ -7,6 +7,8 @@ namespace ReversiGameSystem.Server.Application.Chat;
 /// <summary>Coordinates authorization, validation, moderation, and chat history.</summary>
 public class ChatApplicationService
 {
+    private const int MaximumMessagesPerWindow = 2;
+    private static readonly TimeSpan MessageRateWindow = TimeSpan.FromSeconds(1);
     private readonly ISessionRepository _sessions;
     private readonly IChatRepository _chat;
     private readonly IUtcClock _clock;
@@ -107,7 +109,8 @@ public class ChatApplicationService
             session.GetValue().AccountId,
             matchId,
             trimmedContent,
-            _clock.UtcNow);
+            MaximumMessagesPerWindow,
+            MessageRateWindow);
     }
 
     /// <summary>Loads the authorized durable conversation in message order.</summary>

@@ -845,6 +845,10 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
         {
             status = MatchStatus.PlayerMuted;
         }
+        else if (failure == Proxy.ChatFailure.RateLimitExceeded)
+        {
+            status = MatchStatus.RateLimitExceeded;
+        }
         return status;
     }
 

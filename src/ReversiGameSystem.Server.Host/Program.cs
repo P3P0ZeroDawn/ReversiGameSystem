@@ -104,7 +104,7 @@ internal static class Program
                                 gameplayMatchApplicationService,
                                 sessions,
                                 loggerFactory.CreateLogger<GameplayMatchService>());
-                        ChatRepository chatRepository = new ChatRepository();
+                        ChatRepository chatRepository = new ChatRepository(clock);
                         ChatApplicationService chatApplicationService =
                             new ChatApplicationService(sessions, chatRepository, clock);
                         using MatchChatService matchChatService = new MatchChatService(

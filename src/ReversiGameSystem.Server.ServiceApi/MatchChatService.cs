@@ -171,6 +171,8 @@ public class MatchChatService : IMatchChatService, IDisposable
                 throw CreateChatFault(ChatFailure.MessageTooLong, mute);
             case ChatStatus.PlayerMuted:
                 throw CreateChatFault(ChatFailure.PlayerMuted, mute);
+            case ChatStatus.RateLimitExceeded:
+                throw CreateChatFault(ChatFailure.RateLimitExceeded, null);
             case ChatStatus.MessageBlocked:
                 throw CreateChatFault(ChatFailure.MessageBlocked, mute);
             default:

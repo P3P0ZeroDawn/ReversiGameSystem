@@ -30,6 +30,7 @@ internal enum MatchStatus
     MessageTooLong,
     MessageBlocked,
     PlayerMuted,
+    RateLimitExceeded,
     ServiceUnavailable
 }
 

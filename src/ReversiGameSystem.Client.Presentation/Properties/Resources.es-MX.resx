@@ -1273,6 +1273,7 @@
   <data name="Chat_EmptyMessageMessage" xml:space="preserve"><value>Escribe un mensaje antes de enviarlo.</value></data>
   <data name="Chat_MessageTooLongTitle" xml:space="preserve"><value>Mensaje demasiado largo</value></data>
   <data name="Chat_MessageTooLongMessage" xml:space="preserve"><value>Los mensajes del chat pueden contener como máximo 200 caracteres.</value></data>
+  <data name="Chat_RateLimitExceeded" xml:space="preserve"><value>Puedes enviar hasta dos mensajes por segundo. Inténtalo de nuevo en un momento.</value></data>
   <data name="Chat_UnauthorizedTitle" xml:space="preserve"><value>Acceso al chat denegado</value></data>
   <data name="Chat_UnauthorizedMessage" xml:space="preserve"><value>Ya no tienes autorización para participar en esta conversación.</value></data>
   <data name="Chat_PlayerMutedTitle" xml:space="preserve"><value>Chat temporalmente no disponible</value></data>

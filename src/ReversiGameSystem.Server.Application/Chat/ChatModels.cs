@@ -60,7 +60,8 @@ public enum ChatStatus
     /// <summary>Moderation rejected the message.</summary>
     MessageBlocked,
     /// <summary>The account has an active moderation sanction.</summary>
-    PlayerMuted
+    PlayerMuted,
+    RateLimitExceeded
 }
 
 /// <summary>Describes access to a live chat callback channel.</summary>

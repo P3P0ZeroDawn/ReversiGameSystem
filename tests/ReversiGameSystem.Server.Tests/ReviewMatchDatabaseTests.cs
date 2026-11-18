@@ -30,7 +30,9 @@ internal static class ReviewMatchDatabaseTests
         string beta = sessions.CompleteLogin("ReviewBeta", "000002")
             .GetValue().SessionToken;
         MatchApplicationService matches = new MatchApplicationService(store, new MatchRepository(), new SystemUtcClock());
-        ChatApplicationService chat = new ChatApplicationService(store, new ChatRepository(), new SystemUtcClock());
+        MutableTestClock chatClock = new MutableTestClock(DateTime.UtcNow);
+        ChatApplicationService chat = new ChatApplicationService(
+            store, new ChatRepository(chatClock), chatClock);
         Match waiting = matches.CreateMatch(alpha, new MatchSettings()).Value
             ?? throw new InvalidOperationException("Match expected.");
 
@@ -55,7 +57,7 @@ internal static class ReviewMatchDatabaseTests
             ?? throw new InvalidOperationException("Match expected.")).Participants.Length);
         TestAssert.AreEqual(0, (matches.GetAvailableMatches(beta).Value
             ?? throw new InvalidOperationException("Matches expected.")).Length);
-        Send_ConcurrentRequests_AssignsUniqueOrderedNumbers(chat, alpha, waiting.Id);
+        Send_ConcurrentRequests_EnforcesAccountLimit(chat, chatClock, alpha, waiting.Id);
         Moderate_RepeatedMessages_CommitsAccountMute(chat, alpha, waiting.Id);
         Gameplay_RealMovePersistence_UpdatesBoardAndHistory(new MatchRepository(), alphaAccountId, waiting.Id);
         Cancel_RepeatedRequest_InvalidatesCode(matches, alpha, beta);
@@ -84,11 +86,11 @@ internal static class ReviewMatchDatabaseTests
         TestAssert.AreEqual(1, joins.Count(task => task.Result));
     }
 
-    private static void Send_ConcurrentRequests_AssignsUniqueOrderedNumbers(
-        ChatApplicationService chat, string token, long id)
+    private static void Send_ConcurrentRequests_EnforcesAccountLimit(
+        ChatApplicationService chat, MutableTestClock clock, string token, long id)
     {
         // Arrange / Act
-        Task<ChatMessageSubmission>[] sends = Enumerable.Range(0, 8)
+        Task<ChatMessageSubmission>[] sends = Enumerable.Range(0, 3)
             .Select(number => Task.Run(() => chat.SubmitChatMessage(
                 token,
                 id,
@@ -97,13 +99,15 @@ internal static class ReviewMatchDatabaseTests
         Task.WaitAll(sends);
 
         // Assert
-        TestAssert.IsTrue(
-            sends.All(task => task.Result.Status == ChatStatus.Success),
-            "Every concurrent message must be accepted.");
+        TestAssert.AreEqual(2, sends.Count(task => task.Result.Status == ChatStatus.Success));
+        TestAssert.AreEqual(1, sends.Count(task => task.Result.Status == ChatStatus.RateLimitExceeded));
+        clock.Advance(TimeSpan.FromSeconds(1));
+        TestAssert.AreEqual(ChatStatus.Success,
+            chat.SubmitChatMessage(token, id, "Next message").Status);
         ChatMessage[] history = chat.LoadChatHistory(token, id).Messages;
-        TestAssert.AreEqual(8, history.Length);
+        TestAssert.AreEqual(3, history.Length);
         TestAssert.IsTrue(history.Select(entry => entry.MessageNumber)
-            .SequenceEqual(Enumerable.Range(1, 8)), "Concurrent messages must have stable unique numbers.");
+            .SequenceEqual(Enumerable.Range(1, 3)), "Accepted messages must keep their order.");
     }
 
     private static void Moderate_RepeatedMessages_CommitsAccountMute(
@@ -141,7 +145,7 @@ internal static class ReviewMatchDatabaseTests
         TestAssert.IsTrue(
             muted.Mute is not null,
             "A muted result must contain its durable sanction.");
-        TestAssert.AreEqual(8, chat.LoadChatHistory(token, id).Messages.Length);
+        TestAssert.AreEqual(3, chat.LoadChatHistory(token, id).Messages.Length);
     }
 
     private static void Cancel_RepeatedRequest_InvalidatesCode(

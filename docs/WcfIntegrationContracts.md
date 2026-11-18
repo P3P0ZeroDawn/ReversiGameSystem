@@ -237,7 +237,7 @@ retornos opcionales están marcados con `?`. Las fechas que representan instante
 | `LeaderboardFailure` | `InvalidMaximumEntries` |
 | `FriendshipFailure` | `InvalidAccountId`, `CannotSendRequestToSelf`, `AccountUnavailable`, `FriendshipAlreadyExists`, `RequestAlreadyPending`, `MissingRequestId`, `RequestUnavailable`, `UnauthorizedRequest`, `FriendshipNotFound`, `InactiveAccount` |
 | `MatchFailure` | `InvalidMatchId`, `InvalidConfiguration`, `InvalidTurnDuration`, `MatchNotFound`, `CannotJoinOwnMatch`, `InvalidMatchCode`, `MatchCodeUnavailable`, `Unauthorized`, `MatchNotWaiting`, `InactiveAccount`, `MissingPlacement`, `InvalidMatchStateVersion`, `StaleMatchStateVersion`, `MatchNotInProgress`, `NotPlayersTurn`, `InvalidPosition`, `SpectatingUnavailable` |
-| `ChatFailure` | `EmptyMessage`, `MessageTooLong`, `MessageBlocked`, `PlayerMuted` |
+| `ChatFailure` | `EmptyMessage`, `MessageTooLong`, `MessageBlocked`, `PlayerMuted`, `RateLimitExceeded` |
 | `OpponentKind` | `Human`, `System` |
 | `ParticipantKind` | `Registered`, `Guest`, `System` |
 | `MatchState` | `Waiting`, `InProgress`, `Finished`, `Cancelled` |

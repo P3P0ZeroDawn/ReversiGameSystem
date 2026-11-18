@@ -25,13 +25,15 @@ public interface IChatRepository
     /// <param name="accountId">The authenticated account identifier.</param>
     /// <param name="matchId">The durable match identifier.</param>
     /// <param name="content">The validated message content.</param>
-    /// <param name="sentAtUtc">The authoritative send instant.</param>
+    /// <param name="maximumMessages">The maximum number of messages in the window.</param>
+    /// <param name="rateWindow">The time interval used to check recent messages.</param>
     /// <returns>The persisted message or moderation result.</returns>
     public ChatMessageSubmission ProcessMessageSubmission(
         long accountId,
         long matchId,
         string content,
-        DateTime sentAtUtc);
+        int maximumMessages,
+        TimeSpan rateWindow);
 
     /// <summary>Authorizes and loads the conversation in stable message order.</summary>
     /// <param name="accountId">The authenticated account identifier.</param>
