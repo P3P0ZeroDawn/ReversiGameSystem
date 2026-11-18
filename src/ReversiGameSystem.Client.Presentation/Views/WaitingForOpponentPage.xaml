@@ -70,7 +70,7 @@
                     <Button x:Name="modifySettingsButton"
                             Content="{Binding [WaitingForOpponent_ModifySettingsButton]}"
                             Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                            Margin="0,0,0,14" />
+                            Click="OnModifySettingsClick" Margin="0,0,0,14" />
 
                     <TextBlock Text="{Binding [WaitingForOpponent_SystemPrompt]}"
                                Style="{StaticResource AuthenticationSupportingTextStyle}"

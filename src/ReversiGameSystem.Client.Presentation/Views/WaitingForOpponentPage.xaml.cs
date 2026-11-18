@@ -11,7 +11,7 @@ namespace ReversiGameSystem.Views;
 public partial class WaitingForOpponentPage : Page
 {
     private readonly RemoteMatchClient _client;
-    private readonly LobbySnapshot _lobby;
+    private LobbySnapshot _lobby;
     private readonly string? _guestName;
     private readonly DialogService _dialogs =
         new DialogService(LocalizationManager.Instance);
@@ -30,9 +30,7 @@ public partial class WaitingForOpponentPage : Page
         _guestName = guestName;
         matchCodeTextBlock.Text = lobby.MatchCode;
         UpdateTurnTimeText();
-        modifySettingsButton.IsEnabled = false;
         playAgainstSystemButton.IsEnabled = false;
-        modifySettingsButton.ToolTip = LocalizationManager.Instance["RemoteMatch_NotAvailable"];
         playAgainstSystemButton.ToolTip = LocalizationManager.Instance["RemoteMatch_NotAvailable"];
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
@@ -134,6 +132,42 @@ public partial class WaitingForOpponentPage : Page
     {
         _keepalive.Start();
         OnKeepalive(sender, args);
+    }
+
+    private async void OnModifySettingsClick(object sender, RoutedEventArgs args)
+    {
+        int selectedTurnDuration = _dialogs.SelectTurnDuration(this, _lobby.TurnDurationSeconds);
+        if (selectedTurnDuration == _lobby.TurnDurationSeconds)
+        {
+            return;
+        }
+
+        IsEnabled = false;
+        MatchResult<LobbySnapshot> result = await _client.ChangeTurnDuration(
+            _lobby.MatchId,
+            selectedTurnDuration);
+        IsEnabled = true;
+
+        if (_navigated || !IsLoaded)
+        {
+            return;
+        }
+
+        if (result.Status == MatchStatus.Success && result.Value != null)
+        {
+            _lobby = result.Value;
+            UpdateTurnTimeText();
+            return;
+        }
+
+        _dialogs.ShowError(
+            this,
+            "MatchSettings_PersistenceErrorTitle",
+            RemoteMatchMessages.Key(result.Status, _guestName != null));
+        if (result.Status == MatchStatus.MatchNotWaiting)
+        {
+            ReturnToMenu();
+        }
     }
 
     private async void OnCancelClick(object sender, RoutedEventArgs args)

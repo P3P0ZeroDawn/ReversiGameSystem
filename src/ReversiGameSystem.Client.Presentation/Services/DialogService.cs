@@ -208,6 +208,30 @@ internal sealed class DialogService
         return dialog.ShowDialog() == true;
     }
 
+    internal int SelectTurnDuration(DependencyObject source, int currentTurnTimeSeconds)
+    {
+        MatchSettingsDialogWindow dialog = new MatchSettingsDialogWindow(
+            _localization,
+            this,
+            currentTurnTimeSeconds);
+        Window? owner = Window.GetWindow(source);
+        if (owner != null)
+        {
+            dialog.Owner = owner;
+        }
+        else
+        {
+            dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
+
+        if (dialog.ShowDialog() == true)
+        {
+            return dialog.SelectedTurnTimeSeconds;
+        }
+
+        return currentTurnTimeSeconds;
+    }
+
     private void Show(DependencyObject source, LocalizedAlert alert, MessageBoxImage icon)
     {
         Window? owner = Window.GetWindow(source);

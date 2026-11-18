@@ -246,6 +246,19 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
         return SendMatchCommand(PrepareLobby, () => _lobby.CancelMatchAsync(_token, id));
     }
 
+    internal Task<MatchResult<LobbySnapshot>> ChangeTurnDuration(long id, int seconds)
+    {
+        async Task<LobbySnapshot> RequestDurationChange()
+        {
+            await OpenLobbyChannel();
+            Proxy.LobbySnapshot updatedLobby = await _lobby.ChangeTurnDurationAsync(
+                _token, id, seconds);
+            return MapLobby(updatedLobby);
+        }
+
+        return SendMatchCall(PrepareLobby, RequestDurationChange);
+    }
+
     private async Task OpenLobbyChannel()
     {
         if (!_lobbyOpen)

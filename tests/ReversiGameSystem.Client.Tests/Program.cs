@@ -44,11 +44,16 @@ internal static class Program
             new ServerConnectionFactoryTests();
         AccountCreationViewModelTests accountCreationTests =
             new AccountCreationViewModelTests();
+        LobbySettingsTests lobbySettingsTests =
+            new LobbySettingsTests();
         Action[] tests =
         {
             accountCreationTests.CreateAccount_MissingInformation_DoesNotCallServer,
             accountCreationTests.CreateAccount_ValidInput_NormalizesAndCallsServer,
             accountCreationTests.CreateAccount_ConcurrentSubmission_ReturnsSubmissionInProgress,
+            lobbySettingsTests.ChangeTurnDuration_UnreachableServer_ReturnsServiceUnavailable,
+            lobbySettingsTests.RemoteMatchMessages_InvalidTurnDuration_ResolvesExpectedResourceKey,
+            lobbySettingsTests.LocalizationResources_MatchSettingsKeys_ExistInSupportedCultures,
             RemoteMatchClientTests.Callbacks_StaleVersionsAndDuplicateMessages_PreserveConfirmedState,
             RemoteMatchClientTests.Callbacks_ConclusionSnapshot_PreservesWinnerAndAbandonmentReason,
             RemoteMatchClientTests.Faults_SupportedCultures_ResolveLocalizedRecoveryAndRejectionMessages,

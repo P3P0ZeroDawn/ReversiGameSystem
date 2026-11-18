@@ -13,9 +13,20 @@ namespace ReversiGameSystem.Views;
 internal partial class MatchSettingsDialogWindow : Window
 {
     private readonly DialogService _dialogService;
-    private readonly MatchSession _session;
-    private readonly string _requestingPlayerName;
-    private readonly MatchSettingsService _matchSettingsService;
+    private readonly MatchSession? _session;
+    private readonly string? _requestingPlayerName;
+    private readonly MatchSettingsService? _matchSettingsService;
+
+    internal MatchSettingsDialogWindow(
+        LocalizationManager localization,
+        DialogService dialogService,
+        int currentTurnTimeSeconds)
+    {
+        InitializeComponent();
+        _dialogService = dialogService;
+        SelectedTurnTimeSeconds = currentTurnTimeSeconds;
+        InitializeContent(localization, currentTurnTimeSeconds);
+    }
 
     internal MatchSettingsDialogWindow(
         LocalizationManager localization,
@@ -29,7 +40,14 @@ internal partial class MatchSettingsDialogWindow : Window
         _session = session;
         _requestingPlayerName = requestingPlayerName;
         _matchSettingsService = matchSettingsService;
+        SelectedTurnTimeSeconds = session.TurnTimeSeconds;
+        InitializeContent(localization, session.TurnTimeSeconds);
+    }
 
+    internal int SelectedTurnTimeSeconds { get; private set; }
+
+    private void InitializeContent(LocalizationManager localization, int currentTurnTimeSeconds)
+    {
         Title = localization["MatchSettings_Title"];
         dialogTitleTextBlock.Text = Title;
         dialogMessageTextBlock.Text = localization["MatchSettings_Description"];
@@ -38,7 +56,7 @@ internal partial class MatchSettingsDialogWindow : Window
         turnTimeHintTextBlock.Text = localization["MatchSettings_TurnTimeHint"];
         cancelButton.Content = localization["Common_CancelButton"];
         saveButton.Content = localization["MatchSettings_SaveButton"];
-        turnTimeTextBox.Text = session.TurnTimeSeconds.ToString();
+        turnTimeTextBox.Text = currentTurnTimeSeconds.ToString();
         Loaded += OnDialogLoaded;
     }
 
@@ -67,6 +85,13 @@ internal partial class MatchSettingsDialogWindow : Window
         {
             ShowWarning("InvalidTurnTime");
             FocusTurnTime();
+            return;
+        }
+
+        if (_session == null || _matchSettingsService == null || _requestingPlayerName == null)
+        {
+            SelectedTurnTimeSeconds = turnTimeSeconds;
+            DialogResult = true;
             return;
         }
 
