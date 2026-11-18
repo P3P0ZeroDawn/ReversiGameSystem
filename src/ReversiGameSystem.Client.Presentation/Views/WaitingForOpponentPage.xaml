@@ -64,6 +64,10 @@
                             <TextBlock x:Name="turnTimeTextBlock" FontSize="14"
                                        Foreground="#52685B" TextAlignment="Center"
                                        Margin="0,8,0,0" />
+                            <TextBlock x:Name="connectionStatusTextBlock" FontSize="13"
+                                       FontWeight="SemiBold" Foreground="#B35900"
+                                       TextWrapping="Wrap" TextAlignment="Center"
+                                       Margin="0,8,0,0" Visibility="Collapsed" />
                         </StackPanel>
                     </Border>
 
@@ -81,10 +85,6 @@
                             Content="{Binding [WaitingForOpponent_PlayAgainstSystemButton]}"
                             Style="{StaticResource AuthenticationPrimaryButtonStyle}"
                             Margin="0,0,0,10" />
-
-                    <Button Content="{Binding [AvailableMatches_RefreshButton]}"
-                            Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                            Click="OnRefreshClick" Margin="0,0,0,10" />
 
                     <Button x:Name="cancelButton"
                             Content="{Binding [Common_CancelButton]}"

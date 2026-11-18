@@ -10,6 +10,13 @@ namespace ReversiGameSystem.Views;
 /// <summary>Waits for a confirmed second participant on the remote lobby channel.</summary>
 public partial class WaitingForOpponentPage : Page
 {
+    private const string ReconnectingKey = "Game_Reconnecting";
+    private const string ServerConnectionFailedTitleKey =
+        "AvailableMatches_ServerConnectionFailedTitle";
+    private static readonly TimeSpan NormalKeepaliveInterval = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan ReconnectingRetryInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan ReconnectionWindow = TimeSpan.FromSeconds(30);
+
     private readonly RemoteMatchClient _client;
     private LobbySnapshot _lobby;
     private readonly string? _guestName;
@@ -17,10 +24,11 @@ public partial class WaitingForOpponentPage : Page
         new DialogService(LocalizationManager.Instance);
     private readonly DispatcherTimer _keepalive = new DispatcherTimer
     {
-        Interval = TimeSpan.FromSeconds(15)
+        Interval = NormalKeepaliveInterval
     };
     private bool _navigated;
     private bool _refreshing;
+    private DateTime? _reconnectingStartedUtc;
 
     internal WaitingForOpponentPage(RemoteMatchClient client, LobbySnapshot lobby, string? guestName)
     {
@@ -92,46 +100,78 @@ public partial class WaitingForOpponentPage : Page
         {
             return;
         }
+
         _refreshing = true;
-        MatchResult<RemoteAvailableMatch[]> availableResult =
-            await _client.LoadAvailableMatches();
-        MatchResult<RemoteMatchInformation> informationResult =
-            await _client.LoadRemoteMatchInformation(_lobby.MatchId);
-        MatchResult<MatchStateSnapshot> stateResult =
-            await _client.LoadMatchState(_lobby.MatchId);
-        if (stateResult.Status == MatchStatus.Success && stateResult.Value != null)
+        try
         {
-            OnState(stateResult.Value);
+            MatchResult<MatchStateSnapshot> stateResult =
+                await _client.LoadMatchState(_lobby.MatchId);
+            if (stateResult.Status == MatchStatus.Success && stateResult.Value != null)
+            {
+                SetReconnecting(false);
+                OnState(stateResult.Value);
+            }
+            else if (stateResult.Status == MatchStatus.MatchNotInProgress)
+            {
+                SetReconnecting(false);
+            }
+            else if (stateResult.Status == MatchStatus.MatchNotWaiting)
+            {
+                ReturnToMenu();
+            }
+            else
+            {
+                HandleKeepaliveFailure(stateResult.Status);
+            }
         }
-        else if (stateResult.Status == MatchStatus.MatchNotInProgress)
+        finally
         {
-            // A confirmed waiting lobby remains on this screen until the server starts it.
+            _refreshing = false;
         }
-        else if (stateResult.Status == MatchStatus.MatchNotWaiting
-            || informationResult.Status == MatchStatus.MatchNotWaiting)
-        {
-            ReturnToMenu();
-        }
-        else if (availableResult.Status != MatchStatus.Success
-            || informationResult.Status != MatchStatus.Success
-            || stateResult.Status != MatchStatus.Success)
-        {
-            _keepalive.Stop();
-            MatchStatus failure = stateResult.Status != MatchStatus.Success
-                ? stateResult.Status
-                : informationResult.Status != MatchStatus.Success
-                    ? informationResult.Status
-                    : availableResult.Status;
-            _dialogs.ShowError(this, "AvailableMatches_ServerConnectionFailedTitle",
-                RemoteMatchMessages.Key(failure, _guestName != null));
-        }
-        _refreshing = false;
     }
 
-    private void OnRefreshClick(object sender, RoutedEventArgs args)
+    private void HandleKeepaliveFailure(MatchStatus failure)
     {
-        _keepalive.Start();
-        OnKeepalive(sender, args);
+        if (!_reconnectingStartedUtc.HasValue)
+        {
+            _reconnectingStartedUtc = DateTime.UtcNow;
+            _keepalive.Interval = ReconnectingRetryInterval;
+        }
+
+        SetReconnecting(true);
+        if (DateTime.UtcNow - _reconnectingStartedUtc.Value < ReconnectionWindow)
+        {
+            return;
+        }
+
+        _keepalive.Stop();
+        _dialogs.ShowError(
+            this,
+            ServerConnectionFailedTitleKey,
+            RemoteMatchMessages.Key(failure, _guestName != null));
+        ReturnToMenu();
+    }
+
+    private void SetReconnecting(bool isReconnecting)
+    {
+        if (!isReconnecting && !_reconnectingStartedUtc.HasValue)
+        {
+            return;
+        }
+
+        if (!isReconnecting)
+        {
+            _reconnectingStartedUtc = null;
+            _keepalive.Interval = NormalKeepaliveInterval;
+        }
+
+        modifySettingsButton.IsEnabled = !isReconnecting;
+        connectionStatusTextBlock.Text = isReconnecting
+            ? LocalizationManager.Instance[ReconnectingKey]
+            : string.Empty;
+        connectionStatusTextBlock.Visibility = isReconnecting
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     private async void OnModifySettingsClick(object sender, RoutedEventArgs args)
@@ -202,6 +242,7 @@ public partial class WaitingForOpponentPage : Page
         {
             UpdateTurnTimeText();
         }
+        SetReconnecting(_reconnectingStartedUtc.HasValue);
     }
     private void UpdateTurnTimeText()
     {
