@@ -612,6 +612,12 @@ public partial class GamePage
 
         _remoteStatusKey = RemoteMatchMessages.Key(
             submission.Status, _remoteGuestName != null);
+        if (submission.Status == MatchStatus.ServiceUnavailable)
+        {
+            _remoteChatReady = false;
+            return;
+        }
+
         if (IsLoaded)
         {
             _dialogService.ShowError(this, "Game_ChatTitle", _remoteStatusKey);
@@ -811,10 +817,8 @@ public partial class GamePage
         }
         if (status == MatchStatus.ServiceUnavailable)
         {
-            _dialogService.ShowError(
-                this,
-                AbandonMatchFailedTitleKey,
-                "AbandonMatch_ServerConnectionFailedMessage");
+            _remoteStatusKey = "AbandonMatch_ServerConnectionFailedMessage";
+            UpdateRemoteStatus();
             return;
         }
         if (status == MatchStatus.MatchNotInProgress)
