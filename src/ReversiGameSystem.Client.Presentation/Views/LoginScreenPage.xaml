@@ -63,6 +63,7 @@
 
                     <Button x:Name="loginButton"
                             Content="{Binding [LoginScreen_SignInButton]}"
+                            IsDefault="True"
                             Click="OnLoginClick"
                             Style="{StaticResource AuthenticationPrimaryButtonStyle}" />
                     <Button x:Name="loginAsGuestButton"
