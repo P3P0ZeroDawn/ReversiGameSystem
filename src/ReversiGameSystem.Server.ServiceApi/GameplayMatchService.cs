@@ -91,7 +91,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         MatchInformation information = new MatchInformation
         {
             MatchId = match.Id,
-            Participants = MatchContractMapper.Participants(match),
+            Participants = MatchContractMapper.MapParticipants(match),
             TurnDurationSeconds = match.TurnDurationSeconds,
             AssignedSeatNumber = participant.SeatNumber
         };
@@ -105,7 +105,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         ThrowFaultIfFailed(result.Status);
 
         Match match = RequireValue(result);
-        return MatchContractMapper.State(match);
+        return MatchContractMapper.MapState(match);
     }
 
     /// <inheritdoc />
@@ -123,7 +123,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         ThrowFaultIfFailed(result.Status);
 
         Match match = RequireValue(result);
-        MatchStateSnapshot snapshot = MatchContractMapper.State(match);
+        MatchStateSnapshot snapshot = MatchContractMapper.MapState(match);
         PublishMatchStateChanged(match.Id, snapshot);
         return snapshot;
     }
@@ -135,9 +135,9 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         ThrowFaultIfFailed(result.Status);
 
         Match match = RequireValue(result);
-        MatchStateSnapshot snapshot = MatchContractMapper.State(match);
+        MatchStateSnapshot snapshot = MatchContractMapper.MapState(match);
         PublishMatchStateChanged(match.Id, snapshot);
-        return MatchContractMapper.Conclusion(match);
+        return MatchContractMapper.MapConclusion(match);
     }
 
     /// <inheritdoc />
@@ -148,7 +148,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
 
         Match match = RequireValue(result);
         _callbackSubscriptions.Register(sessionToken, matchId);
-        return MatchContractMapper.State(match);
+        return MatchContractMapper.MapState(match);
     }
 
     /// <inheritdoc />
@@ -160,7 +160,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
 
         Match[] matches = RequireValue(result);
         MatchSummary[] summaries = matches
-            .Select(match => MatchContractMapper.Summary(match, session.AccountId))
+            .Select(match => MatchContractMapper.MapSummary(match, session.AccountId))
             .ToArray();
         return summaries;
     }
@@ -174,7 +174,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         ThrowFaultIfFailed(result.Status);
 
         Match match = RequireValue(result);
-        return MatchContractMapper.Details(match);
+        return MatchContractMapper.MapDetails(match);
     }
 
     /// <inheritdoc />
@@ -186,7 +186,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         ThrowFaultIfFailed(result.Status);
 
         MatchMove[] moves = RequireValue(result);
-        return moves.Select(MatchContractMapper.Move).ToArray();
+        return moves.Select(MatchContractMapper.MapMove).ToArray();
     }
 
     /// <summary>Removes all match subscriptions for a revoked session.</summary>
@@ -216,7 +216,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
             for (int i = 0; i < transitionedMatches.Length; i++)
             {
                 Match match = transitionedMatches[i];
-                MatchStateSnapshot snapshot = MatchContractMapper.State(match);
+                MatchStateSnapshot snapshot = MatchContractMapper.MapState(match);
                 PublishMatchStateChanged(match.Id, snapshot);
             }
         }

@@ -49,7 +49,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
     {
         MatchSettings? settings = configuration == null ? null : MapSettings(configuration);
         Match match = RequireMatchValue(_applicationService.CreateMatch(sessionToken, settings));
-        return MatchContractMapper.Lobby(match);
+        return MatchContractMapper.MapLobby(match);
     }
 
     /// <inheritdoc />
@@ -63,7 +63,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
             sessionToken,
             friendAccountId,
             settings));
-        return MatchContractMapper.Lobby(match);
+        return MatchContractMapper.MapLobby(match);
     }
 
     /// <inheritdoc />
@@ -83,7 +83,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
         Match match = RequireMatchValue(_applicationService.JoinMatch(sessionToken, matchCode));
         _callbackSubscriptions.Publish(match.Id, (recipientToken, callback) =>
             PublishMatchStarted(recipientToken, callback, match.Id));
-        return MatchContractMapper.Lobby(match);
+        return MatchContractMapper.MapLobby(match);
     }
 
     /// <inheritdoc />
@@ -96,7 +96,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
             sessionToken,
             matchId,
             turnDurationSeconds);
-        return MatchContractMapper.Lobby(RequireMatchValue(result));
+        return MatchContractMapper.MapLobby(RequireMatchValue(result));
     }
 
     /// <inheritdoc />
@@ -125,7 +125,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
             Match match = result.Value
                 ?? throw new InvalidOperationException(
                     "A successful match result must contain its value.");
-            callback.OnMatchStarted(MatchContractMapper.InitialState(match));
+            callback.OnMatchStarted(MatchContractMapper.MapInitialState(match));
         }
     }
 

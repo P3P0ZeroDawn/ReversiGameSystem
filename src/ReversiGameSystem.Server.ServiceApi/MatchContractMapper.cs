@@ -19,42 +19,43 @@ internal static class MatchContractMapper
     private const string OriginSystem = "System";
     private const string EndReasonInactivity = "INACTIVITY";
     private const string EndReasonAbandonment = "ABANDONMENT";
+    private const string MatchRequestRejectedMessage = "The match request was rejected.";
     private const int DefaultSeatNumber = 1;
 
-    internal static MatchParticipantSummary[] Participants(Match match)
+    internal static MatchParticipantSummary[] MapParticipants(Match match)
     {
-        return match.Participants.Select(player => new MatchParticipantSummary
-        {
-            SeatNumber = player.SeatNumber,
-            AccountId = player.AccountId,
-            DisplayName = player.DisplayName,
-            Kind = ParticipantKind.Registered
-        }).ToArray();
+        MatchParticipantSummary[] participants = match.Participants
+            .Select(MapParticipant)
+            .ToArray();
+        return participants;
     }
 
-    internal static LobbySnapshot Lobby(Match match)
+    internal static LobbySnapshot MapLobby(Match match)
     {
-        return new LobbySnapshot
+        MatchConfiguration configuration = new MatchConfiguration
+        {
+            TurnDurationSeconds = match.TurnDurationSeconds,
+            OpponentKind = OpponentKind.Human,
+            CountsTowardStatistics = match.CountsTowardStatistics
+        };
+
+        LobbySnapshot lobby = new LobbySnapshot
         {
             MatchId = match.Id,
             MatchCode = match.Code,
             State = MapMatchState(match.State),
-            Participants = Participants(match),
-            Configuration = new MatchConfiguration
-            {
-                TurnDurationSeconds = match.TurnDurationSeconds,
-                OpponentKind = OpponentKind.Human,
-                CountsTowardStatistics = match.CountsTowardStatistics
-            }
+            Participants = MapParticipants(match),
+            Configuration = configuration
         };
+        return lobby;
     }
 
-    internal static MatchStateSnapshot State(Match match)
+    internal static MatchStateSnapshot MapState(Match match)
     {
         MatchConclusion? conclusion = null;
         if (IsConcluded(match))
         {
-            conclusion = Conclusion(match);
+            conclusion = MapConclusion(match);
         }
 
         int[] board = match.Board ?? ReversiEngine.CreateInitialBoard();
@@ -66,10 +67,10 @@ internal static class MatchContractMapper
         MoveRecord? lastMove = null;
         if (match.LastMove != null)
         {
-            lastMove = Move(match.LastMove);
+            lastMove = MapMove(match.LastMove);
         }
 
-        return new MatchStateSnapshot
+        MatchStateSnapshot snapshot = new MatchStateSnapshot
         {
             MatchId = match.Id,
             MatchStateVersion = match.MatchStateVersion,
@@ -83,18 +84,19 @@ internal static class MatchContractMapper
             SkippedSeatNumber = match.SkippedSeatNumber,
             Conclusion = conclusion
         };
+        return snapshot;
     }
 
-    internal static MatchStateSnapshot InitialState(Match match)
+    internal static MatchStateSnapshot MapInitialState(Match match)
     {
         RequireStarted(match);
-        return State(match);
+        return MapState(match);
     }
 
-    internal static MatchConclusion Conclusion(Match match)
+    internal static MatchConclusion MapConclusion(Match match)
     {
         int[] board = match.Board ?? ReversiEngine.CreateInitialBoard();
-        return new MatchConclusion
+        MatchConclusion conclusion = new MatchConclusion
         {
             MatchId = match.Id,
             MatchStateVersion = match.MatchStateVersion,
@@ -105,9 +107,10 @@ internal static class MatchContractMapper
             WhitePieceCount = board.Count(cell => cell == ReversiEngine.White),
             EndedAtUtc = match.EndedAtUtc ?? DateTime.UtcNow
         };
+        return conclusion;
     }
 
-    internal static MoveRecord Move(MatchMove move)
+    internal static MoveRecord MapMove(MatchMove move)
     {
         MoveOrigin origin = MoveOrigin.Manual;
         if (string.Equals(move.Origin, OriginTimeout, StringComparison.OrdinalIgnoreCase))
@@ -119,7 +122,7 @@ internal static class MatchContractMapper
             origin = MoveOrigin.System;
         }
 
-        return new MoveRecord
+        MoveRecord record = new MoveRecord
         {
             MoveNumber = move.MoveNumber,
             SeatNumber = move.SeatNumber,
@@ -129,24 +132,25 @@ internal static class MatchContractMapper
             FlippedPieceCount = move.FlippedPieceCount,
             Origin = origin
         };
+        return record;
     }
 
-    internal static MatchDetails Details(Match match)
+    internal static MatchDetails MapDetails(Match match)
     {
         MatchConclusion? conclusion = null;
         if (IsConcluded(match))
         {
-            conclusion = Conclusion(match);
+            conclusion = MapConclusion(match);
         }
 
-        MoveRecord[] moves = match.Moves.Select(Move).ToArray();
+        MoveRecord[] moves = match.Moves.Select(MapMove).ToArray();
         BoardCellState[][] boardFrames = GenerateBoardFrames(match.Moves.ToArray());
 
-        return new MatchDetails
+        MatchDetails details = new MatchDetails
         {
             MatchId = match.Id,
             MatchStateVersion = match.MatchStateVersion,
-            Participants = Participants(match),
+            Participants = MapParticipants(match),
             TurnDurationSeconds = match.TurnDurationSeconds,
             State = MapMatchState(match.State),
             RecordedAtUtc = match.StartedAtUtc ?? DateTime.UtcNow,
@@ -154,9 +158,10 @@ internal static class MatchContractMapper
             Moves = moves,
             BoardFrames = boardFrames
         };
+        return details;
     }
 
-    internal static MatchSummary Summary(Match match, long accountId)
+    internal static MatchSummary MapSummary(Match match, long accountId)
     {
         MatchParticipant? participant = match.Participants
             .FirstOrDefault(p => p.AccountId == accountId);
@@ -166,13 +171,13 @@ internal static class MatchContractMapper
         MatchConclusion? conclusion = null;
         if (IsConcluded(match))
         {
-            conclusion = Conclusion(match);
+            conclusion = MapConclusion(match);
         }
 
-        return new MatchSummary
+        MatchSummary summary = new MatchSummary
         {
             MatchId = match.Id,
-            Participants = Participants(match),
+            Participants = MapParticipants(match),
             AssignedSeatNumber = assignedSeat,
             State = MapMatchState(match.State),
             RecordedAtUtc = match.StartedAtUtc ?? DateTime.UtcNow,
@@ -180,6 +185,19 @@ internal static class MatchContractMapper
             WhitePieceCount = board.Count(cell => cell == ReversiEngine.White),
             Conclusion = conclusion
         };
+        return summary;
+    }
+
+    private static MatchParticipantSummary MapParticipant(MatchParticipant participant)
+    {
+        MatchParticipantSummary summary = new MatchParticipantSummary
+        {
+            SeatNumber = participant.SeatNumber,
+            AccountId = participant.AccountId,
+            DisplayName = participant.DisplayName,
+            Kind = ParticipantKind.Registered
+        };
+        return summary;
     }
 
     internal static BoardCellState[][] GenerateBoardFrames(MatchMove[] moves)
@@ -241,7 +259,7 @@ internal static class MatchContractMapper
             throw new FaultException<MatchFault>(new MatchFault
             {
                 Reason = MatchFailure.MatchNotWaiting
-            }, "The match request was rejected.");
+            }, MatchRequestRejectedMessage);
         }
 
         if (!string.Equals(match.State, StateInProgress, StringComparison.Ordinal))
@@ -249,7 +267,7 @@ internal static class MatchContractMapper
             throw new FaultException<MatchFault>(new MatchFault
             {
                 Reason = MatchFailure.MatchNotInProgress
-            }, "The match request was rejected.");
+            }, MatchRequestRejectedMessage);
         }
     }
 
