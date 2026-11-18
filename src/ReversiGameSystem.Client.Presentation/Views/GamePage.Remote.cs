@@ -25,6 +25,8 @@ public partial class GamePage
     private const string AbandonMatchFailedTitleKey = "AbandonMatch_ServerConnectionFailedTitle";
     private const string GameMatchResultTitleKey = "Game_MatchResultTitle";
     private const int CountdownRefreshSeconds = 1;
+    private static readonly TimeSpan ConnectionCheckInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan ConnectionCheckTimeout = TimeSpan.FromSeconds(3);
     private const string ReconnectingKey = "Game_Reconnecting";
     private const string ReconnectionFailedKey = "Game_ReconnectionFailed";
     private static readonly TimeSpan ReconnectionWindow = TimeSpan.FromSeconds(30);
@@ -33,12 +35,17 @@ public partial class GamePage
     private readonly long _remoteMatchId;
     private readonly string? _remoteGuestName;
     private readonly TurnCountdownViewModel _turnCountdown = new TurnCountdownViewModel();
+    private readonly DispatcherTimer _connectionCheckTimer = new DispatcherTimer
+    {
+        Interval = ConnectionCheckInterval
+    };
     private readonly DispatcherTimer _turnCountdownTimer = new DispatcherTimer
     {
         Interval = TimeSpan.FromSeconds(CountdownRefreshSeconds)
     };
     private RemoteMatchInformation? _remoteInformation;
     private CancellationTokenSource? _matchRecovery;
+    private CancellationTokenSource? _connectionCheck;
     private bool _matchRecoveryFailed;
     private bool _remoteLoading;
     private bool _remotePlacing;
@@ -77,6 +84,7 @@ public partial class GamePage
         Loaded += OnRemotePageLoaded;
         Unloaded += OnRemotePageUnloaded;
         _turnCountdownTimer.Tick += OnTurnCountdownTick;
+        _connectionCheckTimer.Tick += OnConnectionCheckTick;
     }
 
     private async void OnRemotePageLoaded(object sender, RoutedEventArgs e)
@@ -92,6 +100,7 @@ public partial class GamePage
         if (IsLoaded)
         {
             _turnCountdownTimer.Start();
+            _connectionCheckTimer.Start();
         }
     }
 
@@ -99,6 +108,8 @@ public partial class GamePage
     {
         LocalizationManager.Instance.PropertyChanged -= OnRemoteCultureChanged;
         _turnCountdownTimer.Stop();
+        _connectionCheckTimer.Stop();
+        _connectionCheck?.Cancel();
         _remoteClient.StateChanged -= OnRemoteStateChanged;
         _remoteClient.GameplayConnectionLost -= OnGameplayConnectionLost;
         _matchRecovery?.Cancel();
@@ -133,6 +144,35 @@ public partial class GamePage
         {
             MatchStateSnapshot state = _remoteClient.ReadMatchState(_remoteMatchId);
             _turnCountdown.Update(state, _remoteInformation.TurnDurationSeconds, DateTime.UtcNow);
+        }
+    }
+
+    private async void OnConnectionCheckTick(object? sender, EventArgs e)
+    {
+        if (!IsLoaded || _remoteInformation == null || _remoteLoading
+            || _remotePlacing || _remoteSending || _remoteLeaving
+            || _connectionCheck != null || _matchRecovery != null
+            || _matchRecoveryFailed || IsRemoteMatchFinished())
+        {
+            return;
+        }
+
+        using CancellationTokenSource check = new CancellationTokenSource(ConnectionCheckTimeout);
+        _connectionCheck = check;
+        try
+        {
+            await _remoteClient.LoadMatchState(_remoteMatchId, check.Token);
+        }
+        catch (OperationCanceledException) when (check.IsCancellationRequested)
+        {
+            if (IsLoaded)
+            {
+                BeginMatchRecovery();
+            }
+        }
+        finally
+        {
+            _connectionCheck = null;
         }
     }
 

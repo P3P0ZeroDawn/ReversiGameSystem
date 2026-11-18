@@ -275,7 +275,8 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
         return result;
     }
 
-    internal async Task<MatchResult<MatchStateSnapshot>> LoadMatchState(long id)
+    internal async Task<MatchResult<MatchStateSnapshot>> LoadMatchState(
+        long id, CancellationToken cancellation = default)
     {
         MatchResult<MatchStateSnapshot> result = await SendMatchCall(
             PrepareGameplay,
@@ -283,7 +284,7 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
             {
                 await OpenGameplayChannel(id);
                 return MapState(await _gameplay.GetMatchStateAsync(_token, id));
-            });
+            }, cancellation);
         if (result.Status == MatchStatus.Success && result.Value != null)
         {
             StoreState(result.Value);
