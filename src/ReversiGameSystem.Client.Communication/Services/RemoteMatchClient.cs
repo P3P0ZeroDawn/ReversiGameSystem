@@ -649,6 +649,7 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
             state.WhitePieceCount,
             state.CurrentTurnSeatNumber)
         {
+            TurnStartedAtUtc = state.TurnStartedAtUtc,
             Conclusion = conclusion
         };
     }

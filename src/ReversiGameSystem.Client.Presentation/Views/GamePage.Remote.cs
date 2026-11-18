@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Threading;
+using ReversiGameSystem.Features.Gameplay;
 using ReversiGameSystem.Game;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
@@ -22,6 +23,7 @@ public partial class GamePage
     private const string GameContinueMatchButtonKey = "Game_ContinueMatchButton";
     private const string AbandonMatchFailedTitleKey = "AbandonMatch_ServerConnectionFailedTitle";
     private const string GameMatchResultTitleKey = "Game_MatchResultTitle";
+    private const int CountdownRefreshSeconds = 1;
 
     private readonly RemoteMatchClient _remoteClient;
     private readonly long _remoteMatchId;
@@ -29,6 +31,11 @@ public partial class GamePage
     private readonly DispatcherTimer _remoteRefreshTimer = new DispatcherTimer
     {
         Interval = TimeSpan.FromSeconds(15)
+    };
+    private readonly TurnCountdownViewModel _turnCountdown = new TurnCountdownViewModel();
+    private readonly DispatcherTimer _turnCountdownTimer = new DispatcherTimer
+    {
+        Interval = TimeSpan.FromSeconds(CountdownRefreshSeconds)
     };
     private RemoteMatchInformation? _remoteInformation;
     private bool _remoteLoading;
@@ -47,13 +54,19 @@ public partial class GamePage
         _remoteMatchId = matchId;
         _remoteGuestName = guestName;
         InitializeComponent();
-        // The server owns match state. Local rules only identify selectable positions.
+
         sendMessageButton.IsEnabled = false;
         refreshRemoteMatchButton.Visibility = Visibility.Visible;
         creatorConnectionTextBlock.Visibility = Visibility.Visible;
         opponentConnectionTextBlock.Visibility = Visibility.Visible;
         UpdateLeaveButtonContent(null);
         turnTimeTextBlock.TextWrapping = TextWrapping.Wrap;
+        turnTimeTextBlock.SetBinding(TextBlock.TextProperty,
+            new Binding(nameof(TurnCountdownViewModel.RemainingTime))
+            {
+                Source = _turnCountdown,
+                Mode = BindingMode.OneWay
+            });
         if (guestName != null)
         {
             chatPanel.Visibility = Visibility.Collapsed;
@@ -63,6 +76,7 @@ public partial class GamePage
         Loaded += OnRemotePageLoaded;
         Unloaded += OnRemotePageUnloaded;
         _remoteRefreshTimer.Tick += OnRemoteRefreshTick;
+        _turnCountdownTimer.Tick += OnTurnCountdownTick;
     }
 
     private async void OnRemotePageLoaded(object sender, RoutedEventArgs e)
@@ -77,6 +91,7 @@ public partial class GamePage
         if (IsLoaded)
         {
             _remoteRefreshTimer.Start();
+            _turnCountdownTimer.Start();
         }
     }
 
@@ -84,6 +99,7 @@ public partial class GamePage
     {
         LocalizationManager.Instance.PropertyChanged -= OnRemoteCultureChanged;
         _remoteRefreshTimer.Stop();
+        _turnCountdownTimer.Stop();
         _remoteClient.StateChanged -= OnRemoteStateChanged;
         _remoteClient.MessagesChanged -= OnRemoteMessagesChanged;
         _remoteClient.ParticipantConnectionChanged -= OnParticipantConnectionChanged;
@@ -113,6 +129,15 @@ public partial class GamePage
     private async void OnRemoteRefreshTick(object? sender, EventArgs e)
     {
         await LoadRemoteMatch();
+    }
+
+    private void OnTurnCountdownTick(object? sender, EventArgs e)
+    {
+        if (_remoteInformation != null && _remoteClient.HasMatchState(_remoteMatchId))
+        {
+            MatchStateSnapshot state = _remoteClient.ReadMatchState(_remoteMatchId);
+            _turnCountdown.Update(state, _remoteInformation.TurnDurationSeconds, DateTime.UtcNow);
+        }
     }
 
     private async void OnRefreshRemoteMatchClick(object sender, RoutedEventArgs e)
@@ -253,9 +278,7 @@ public partial class GamePage
         {
             gameBoardControl.ShowBoard(board, localColor);
         }
-        turnTimeTextBlock.Text = string.Format(
-            localization["MatchInformation_TurnTimeFormat"],
-            _remoteInformation.TurnDurationSeconds);
+        _turnCountdown.Update(state, _remoteInformation.TurnDurationSeconds, DateTime.UtcNow);
         RenderParticipantConnections();
         UpdateLeaveButtonContent(state.State);
         UpdateRemoteStatus();

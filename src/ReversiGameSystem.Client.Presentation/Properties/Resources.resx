@@ -1086,6 +1086,7 @@
   <data name="MatchInformation_FinishedState" xml:space="preserve"><value>Finished</value></data>
   <data name="MatchInformation_InProgressState" xml:space="preserve"><value>In progress</value></data>
   <data name="MatchInformation_TurnTimeFormat" xml:space="preserve"><value>Time per turn: {0} s</value></data>
+  <data name="Game_RemainingTurnTimeFormat" xml:space="preserve"><value>Time remaining: {0} s</value></data>
   <data name="MatchInformation_ResultLabel" xml:space="preserve"><value>Final result</value></data>
   <data name="MatchInformation_NoFinalResult" xml:space="preserve"><value>This match does not have a final result yet.</value></data>
   <data name="MatchInformation_DrawResult" xml:space="preserve"><value>The match ended in a draw.</value></data>

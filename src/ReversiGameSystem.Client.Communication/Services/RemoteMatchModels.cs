@@ -155,6 +155,7 @@ internal sealed class MatchStateSnapshot
     internal int BlackPieceCount { get; }
     internal int WhitePieceCount { get; }
     internal int? CurrentTurnSeatNumber { get; }
+    internal DateTime? TurnStartedAtUtc { get; set; }
     internal RemoteMatchConclusion? Conclusion { get; set; }
 }
 

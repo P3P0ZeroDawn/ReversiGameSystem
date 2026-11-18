@@ -1086,6 +1086,7 @@
   <data name="MatchInformation_FinishedState" xml:space="preserve"><value>Finalizada</value></data>
   <data name="MatchInformation_InProgressState" xml:space="preserve"><value>En curso</value></data>
   <data name="MatchInformation_TurnTimeFormat" xml:space="preserve"><value>Tiempo por turno: {0} s</value></data>
+  <data name="Game_RemainingTurnTimeFormat" xml:space="preserve"><value>Tiempo restante: {0} s</value></data>
   <data name="MatchInformation_ResultLabel" xml:space="preserve"><value>Resultado final</value></data>
   <data name="MatchInformation_NoFinalResult" xml:space="preserve"><value>Esta partida todavía no tiene un resultado definitivo.</value></data>
   <data name="MatchInformation_DrawResult" xml:space="preserve"><value>La partida terminó en empate.</value></data>
