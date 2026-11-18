@@ -553,8 +553,13 @@ public partial class GamePage
         }
 
         _remoteSending = true;
+        if (sendMessageButton.IsKeyboardFocused)
+        {
+            chatMessageTextBox.Focus();
+        }
+
         sendMessageButton.IsEnabled = false;
-        chatMessageTextBox.IsEnabled = false;
+        chatMessageTextBox.IsReadOnly = true;
         try
         {
             ChatSubmission submission =
@@ -564,7 +569,7 @@ public partial class GamePage
         finally
         {
             _remoteSending = false;
-            chatMessageTextBox.IsEnabled = true;
+            chatMessageTextBox.IsReadOnly = false;
             sendMessageButton.IsEnabled = IsLoaded && _remoteChatReady;
             UpdateRemoteStatus();
         }
