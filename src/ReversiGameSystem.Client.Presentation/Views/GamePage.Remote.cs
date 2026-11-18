@@ -474,6 +474,15 @@ public partial class GamePage
         chatMessagesListBox.ScrollIntoView(chatMessagesListBox.Items[chatMessagesListBox.Items.Count - 1]);
     }
 
+    private void OnChatScrollChanged(object sender, ScrollChangedEventArgs eventArguments)
+    {
+        if (eventArguments.ExtentHeightChange != 0
+            && eventArguments.OriginalSource is ScrollViewer chatScrollViewer)
+        {
+            chatScrollViewer.ScrollToEnd();
+        }
+    }
+
     private void OnRemoteMuted(RemoteChatMute mute)
     {
         if (mute.MatchId == _remoteMatchId)
