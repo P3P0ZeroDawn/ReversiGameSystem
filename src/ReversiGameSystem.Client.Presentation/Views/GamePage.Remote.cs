@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -24,6 +25,9 @@ public partial class GamePage
     private const string AbandonMatchFailedTitleKey = "AbandonMatch_ServerConnectionFailedTitle";
     private const string GameMatchResultTitleKey = "Game_MatchResultTitle";
     private const int CountdownRefreshSeconds = 1;
+    private const string ReconnectingKey = "Game_Reconnecting";
+    private const string ReconnectionFailedKey = "Game_ReconnectionFailed";
+    private static readonly TimeSpan ReconnectionWindow = TimeSpan.FromSeconds(30);
 
     private readonly RemoteMatchClient _remoteClient;
     private readonly long _remoteMatchId;
@@ -38,6 +42,8 @@ public partial class GamePage
         Interval = TimeSpan.FromSeconds(CountdownRefreshSeconds)
     };
     private RemoteMatchInformation? _remoteInformation;
+    private CancellationTokenSource? _matchRecovery;
+    private bool _matchRecoveryFailed;
     private bool _remoteLoading;
     private bool _remotePlacing;
     private bool _remoteSending;
@@ -83,6 +89,7 @@ public partial class GamePage
     {
         LocalizationManager.Instance.PropertyChanged += OnRemoteCultureChanged;
         _remoteClient.StateChanged += OnRemoteStateChanged;
+        _remoteClient.GameplayConnectionLost += OnGameplayConnectionLost;
         _remoteClient.MessagesChanged += OnRemoteMessagesChanged;
         _remoteClient.ParticipantConnectionChanged += OnParticipantConnectionChanged;
         _remoteClient.Muted += OnRemoteMuted;
@@ -101,6 +108,8 @@ public partial class GamePage
         _remoteRefreshTimer.Stop();
         _turnCountdownTimer.Stop();
         _remoteClient.StateChanged -= OnRemoteStateChanged;
+        _remoteClient.GameplayConnectionLost -= OnGameplayConnectionLost;
+        _matchRecovery?.Cancel();
         _remoteClient.MessagesChanged -= OnRemoteMessagesChanged;
         _remoteClient.ParticipantConnectionChanged -= OnParticipantConnectionChanged;
         _remoteClient.Muted -= OnRemoteMuted;
@@ -147,7 +156,7 @@ public partial class GamePage
 
     private async Task LoadRemoteMatch()
     {
-        if (_remoteLoading)
+        if (_remoteLoading || _matchRecovery != null || _matchRecoveryFailed)
         {
             return;
         }
@@ -168,9 +177,59 @@ public partial class GamePage
         finally
         {
             _remoteLoading = false;
-            refreshRemoteMatchButton.IsEnabled = true;
-            sendMessageButton.IsEnabled = IsLoaded && _remoteChatReady && !_remoteSending;
+            refreshRemoteMatchButton.IsEnabled = _matchRecovery == null && !_matchRecoveryFailed;
+            sendMessageButton.IsEnabled = IsLoaded && _remoteChatReady && !_remoteSending
+                && _matchRecovery == null && !_matchRecoveryFailed;
             UpdateRemoteStatus();
+        }
+    }
+
+    private void OnGameplayConnectionLost()
+    {
+        Dispatcher.BeginInvoke(new Action(BeginMatchRecovery));
+    }
+
+    private async void BeginMatchRecovery()
+    {
+        if (!IsLoaded || _matchRecovery != null || _matchRecoveryFailed
+            || _remoteInformation == null || IsRemoteMatchFinished())
+        {
+            return;
+        }
+
+        using CancellationTokenSource recovery = new CancellationTokenSource(ReconnectionWindow);
+        _matchRecovery = recovery;
+        _remoteChatReady = false;
+        refreshRemoteMatchButton.IsEnabled = false;
+        sendMessageButton.IsEnabled = false;
+        RenderRemoteMatch();
+
+        bool restored = false;
+        try
+        {
+            MatchStatus status = await _remoteClient.RecoverMatch(_remoteMatchId, recovery.Token);
+            restored = status == MatchStatus.Success;
+            if (restored && IsLoaded && !IsRemoteMatchFinished())
+            {
+                await InitializeRemoteChatAsync(recovery.Token);
+            }
+        }
+        catch (OperationCanceledException) when (recovery.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            _matchRecovery = null;
+            if (IsLoaded)
+            {
+                _matchRecoveryFailed = !restored;
+                _remoteStatusKey = restored && (_remoteChatReady || _remoteGuestName != null)
+                    ? null
+                    : _remoteStatusKey;
+                refreshRemoteMatchButton.IsEnabled = restored;
+                sendMessageButton.IsEnabled = restored && _remoteChatReady && !_remoteSending;
+                RenderRemoteMatch();
+            }
         }
     }
 
@@ -202,16 +261,16 @@ public partial class GamePage
         return true;
     }
 
-    private async Task InitializeRemoteChatAsync()
+    private async Task InitializeRemoteChatAsync(CancellationToken cancellation = default)
     {
         if (_remoteGuestName != null)
         {
             return;
         }
 
-        MatchStatus openStatus = await _remoteClient.OpenChatChannel(_remoteMatchId);
+        MatchStatus openStatus = await _remoteClient.OpenChatChannel(_remoteMatchId, cancellation);
         MatchStatus refreshStatus = openStatus == MatchStatus.Success
-            ? await _remoteClient.RefreshChat(_remoteMatchId)
+            ? await _remoteClient.RefreshChat(_remoteMatchId, cancellation)
             : openStatus;
         _remoteChatReady = IsLoaded && refreshStatus == MatchStatus.Success;
         if (_remoteChatReady)
@@ -264,7 +323,7 @@ public partial class GamePage
         DiscColor localColor = _remoteInformation.AssignedSeatNumber == 2
             ? DiscColor.White
             : DiscColor.Black;
-        bool canPlace = !_remotePlacing
+        bool canPlace = !_remotePlacing && _matchRecovery == null && !_matchRecoveryFailed
             && state.State == ConfirmedMatchState.InProgress
             && state.CurrentTurnSeatNumber == _remoteInformation.AssignedSeatNumber;
         if (canPlace)
@@ -289,7 +348,7 @@ public partial class GamePage
         object? sender,
         BoardSquareSelectedEventArgs e)
     {
-        if (_remotePlacing
+        if (_remotePlacing || _matchRecovery != null || _matchRecoveryFailed
             || _remoteInformation?.AssignedSeatNumber == null
             || !_remoteClient.HasMatchState(_remoteMatchId))
         {
@@ -320,7 +379,7 @@ public partial class GamePage
         else
         {
             _remoteStatusKey = RemoteMatchMessages.Key(placement.Status);
-            if (IsLoaded)
+            if (IsLoaded && placement.Status != MatchStatus.ServiceUnavailable)
             {
                 _dialogService.ShowWarning(this, "Game_Title", _remoteStatusKey);
             }
@@ -432,6 +491,13 @@ public partial class GamePage
 
     private void UpdateRemoteStatus()
     {
+        if (_matchRecovery != null || _matchRecoveryFailed)
+        {
+            string recoveryKey = _matchRecovery != null ? ReconnectingKey : ReconnectionFailedKey;
+            turnStatusTextBlock.Text = LocalizationManager.Instance[recoveryKey];
+            return;
+        }
+
         if (_remoteMutedUntil > DateTime.UtcNow)
         {
             turnStatusTextBlock.Text = string.Format(
@@ -497,7 +563,8 @@ public partial class GamePage
 
     private string? ValidateRemoteChatInput()
     {
-        if (_remoteSending || !_remoteChatReady || _remoteGuestName != null)
+        if (_remoteSending || !_remoteChatReady || _remoteGuestName != null
+            || _matchRecovery != null || _matchRecoveryFailed)
         {
             return null;
         }
@@ -665,7 +732,7 @@ public partial class GamePage
         {
             return;
         }
-        if (IsRemoteMatchFinished())
+        if (_matchRecovery != null || _matchRecoveryFailed || IsRemoteMatchFinished())
         {
             NavigateToMainMenu();
             return;

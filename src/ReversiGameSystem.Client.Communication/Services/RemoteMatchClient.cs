@@ -10,12 +10,13 @@ using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Services;
 
-/// <summary>Consumes confirmed lobby, board and chat state through the existing proxy.</summary>
 [CallbackBehavior(UseSynchronizationContext = false, ConcurrencyMode = ConcurrencyMode.Multiple)]
 internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceCallback,
     Proxy.IGameplayMatchServiceCallback, Proxy.IMatchChatServiceCallback
 {
     private const int RequestConcurrencyLimit = 1;
+    private static readonly TimeSpan RecoveryAttemptLimit = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan RecoveryRetryDelay = TimeSpan.FromSeconds(1);
     private static readonly IReadOnlyDictionary<Proxy.MatchFailure, MatchStatus>
         s_matchStatuses = new Dictionary<Proxy.MatchFailure, MatchStatus>
         {
@@ -120,6 +121,7 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
             client = ServerConnectionFactory.CreateGameplayClient(new InstanceContext(this));
         }
 
+        client.InnerChannel.Faulted += OnGameplayChannelFaulted;
         return client;
     }
 
@@ -185,6 +187,7 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
     }
 
     internal event Action<MatchStateSnapshot>? StateChanged;
+    internal event Action? GameplayConnectionLost;
     internal event Action<long>? LobbyClosed;
     internal event Action<long>? MessagesChanged;
     internal event Action<long>? ParticipantConnectionChanged;
@@ -192,67 +195,55 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
 
     internal Task<MatchResult<LobbySnapshot>> CreateMatch(int seconds)
     {
-        return Request(async () =>
-        {
-            Proxy.LobbySnapshot lobby = await Execute(() => PrepareLobby(), async () =>
+        Proxy.MatchConfiguration configuration = CreateConfiguration(seconds);
+        Task<MatchResult<LobbySnapshot>> result = SendMatchCall(
+            PrepareLobby, async () =>
             {
                 await OpenLobbyChannel();
-                return await _lobby.CreateMatchAsync(_token, CreateConfiguration(seconds));
+                return MapLobby(await _lobby.CreateMatchAsync(_token, configuration));
             });
-            return MapLobby(lobby);
-        });
+        return result;
     }
 
     internal Task<MatchResult<LobbySnapshot>> InviteToMatch(long friendAccountId, int seconds)
     {
-        return Request(async () =>
-        {
-            Proxy.LobbySnapshot lobby = await Execute(() => PrepareLobby(), async () =>
+        Proxy.MatchConfiguration configuration = CreateConfiguration(seconds);
+        Task<MatchResult<LobbySnapshot>> result = SendMatchCall(
+            PrepareLobby, async () =>
             {
                 await OpenLobbyChannel();
-                return await _lobby.InviteToMatchAsync(
-                    _token, friendAccountId, CreateConfiguration(seconds));
+                return MapLobby(await _lobby.InviteToMatchAsync(
+                    _token, friendAccountId, configuration));
             });
-            return MapLobby(lobby);
-        });
+        return result;
     }
 
     internal Task<MatchResult<RemoteAvailableMatch[]>> LoadAvailableMatches()
     {
-        return Request(async () =>
-        {
-            Proxy.AvailableMatch[] matches = await Execute(() => PrepareLobby(), async () =>
+        Task<MatchResult<RemoteAvailableMatch[]>> result = SendMatchCall(
+            PrepareLobby, async () =>
             {
                 await OpenLobbyChannel();
-                return await _lobby.GetAvailableMatchesAsync(_token);
+                return (await _lobby.GetAvailableMatchesAsync(_token))
+                    .Select(MapAvailableMatch).ToArray();
             });
-            return matches.Select(MapAvailableMatch).ToArray();
-        });
+        return result;
     }
 
     internal Task<MatchResult<LobbySnapshot>> JoinMatch(string code)
     {
-        return Request(async () =>
-        {
-            Proxy.LobbySnapshot lobby = await Execute(() => PrepareLobby(), async () =>
+        Task<MatchResult<LobbySnapshot>> result = SendMatchCall(
+            PrepareLobby, async () =>
             {
                 await OpenLobbyChannel();
-                return await _lobby.JoinMatchAsync(_token, code);
+                return MapLobby(await _lobby.JoinMatchAsync(_token, code));
             });
-            return MapLobby(lobby);
-        });
+        return result;
     }
 
     internal Task<MatchStatus> CancelMatch(long id)
     {
-        return RequestStatus(async () =>
-        {
-            await Execute(() => PrepareLobby(), async () =>
-            {
-                await _lobby.CancelMatchAsync(_token, id);
-                return true;
-            });
-        });
+        return SendMatchCommand(PrepareLobby, () => _lobby.CancelMatchAsync(_token, id));
     }
 
     private async Task OpenLobbyChannel()
@@ -275,28 +266,24 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
 
     internal Task<MatchResult<RemoteMatchInformation>> LoadRemoteMatchInformation(long id)
     {
-        return Request(async () =>
-        {
-            Proxy.MatchInformation information = await Execute(() => PrepareGameplay(), async () =>
+        Task<MatchResult<RemoteMatchInformation>> result = SendMatchCall(
+            PrepareGameplay, async () =>
             {
                 await OpenGameplayChannel(id);
-                return await _gameplay.GetMatchInformationAsync(_token, id);
+                return MapInformation(await _gameplay.GetMatchInformationAsync(_token, id));
             });
-            return MapInformation(information);
-        });
+        return result;
     }
 
     internal async Task<MatchResult<MatchStateSnapshot>> LoadMatchState(long id)
     {
-        MatchResult<MatchStateSnapshot> result = await Request(async () =>
-        {
-            Proxy.MatchStateSnapshot state = await Execute(() => PrepareGameplay(), async () =>
+        MatchResult<MatchStateSnapshot> result = await SendMatchCall(
+            PrepareGameplay,
+            async () =>
             {
                 await OpenGameplayChannel(id);
-                return await _gameplay.GetMatchStateAsync(_token, id);
+                return MapState(await _gameplay.GetMatchStateAsync(_token, id));
             });
-            return MapState(state);
-        });
         if (result.Status == MatchStatus.Success && result.Value != null)
         {
             StoreState(result.Value);
@@ -314,20 +301,17 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
             throw new ArgumentNullException(nameof(confirmedState));
         }
 
-        MatchResult<MatchStateSnapshot> result = await Request(async () =>
+        Proxy.PiecePlacement placement = new Proxy.PiecePlacement
         {
-            Proxy.MatchStateSnapshot state = await Execute(() => PrepareGameplay(), async () =>
-            {
-                await OpenGameplayChannel(confirmedState.MatchId);
-                return await _gameplay.PlacePieceAsync(_token, new Proxy.PiecePlacement
-                {
-                    MatchId = confirmedState.MatchId,
-                    Row = row,
-                    Column = column,
-                    ExpectedMatchStateVersion = confirmedState.Version
-                });
-            });
-            return MapState(state);
+            MatchId = confirmedState.MatchId,
+            Row = row,
+            Column = column,
+            ExpectedMatchStateVersion = confirmedState.Version
+        };
+        MatchResult<MatchStateSnapshot> result = await SendMatchCall(PrepareGameplay, async () =>
+        {
+            await OpenGameplayChannel(placement.MatchId);
+            return MapState(await _gameplay.PlacePieceAsync(_token, placement));
         });
         if (result.Status == MatchStatus.Success && result.Value != null)
         {
@@ -338,36 +322,70 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
 
     internal Task<MatchStatus> ForfeitMatch(long id)
     {
-        return RequestStatus(async () =>
+        Task<MatchStatus> status = SendMatchCommand(PrepareGameplay, async () =>
         {
-            _ = await Execute(() => PrepareGameplay(), async () =>
-            {
-                await OpenGameplayChannel(id);
-                return await _gameplay.ForfeitMatchAsync(_token, id);
-            });
+            await OpenGameplayChannel(id);
+            await _gameplay.ForfeitMatchAsync(_token, id);
         });
+        return status;
     }
 
-    internal Task<MatchStatus> OpenChatChannel(long id)
+    internal async Task<MatchStatus> RecoverMatch(long id, CancellationToken cancellation)
     {
-        return RequestStatus(async () =>
+        while (true)
         {
-            await Execute(() => PrepareChat(), async () =>
+            cancellation.ThrowIfCancellationRequested();
+            using CancellationTokenSource attempt = CancellationTokenSource
+                .CreateLinkedTokenSource(cancellation);
+            attempt.CancelAfter(RecoveryAttemptLimit);
+            try
             {
-                await _chat.OpenChatChannelAsync(_token, id);
-                return true;
-            });
-        });
+                MatchStatus status = await RecoverMatchState(id, attempt.Token)
+                    .ConfigureAwait(false);
+                cancellation.ThrowIfCancellationRequested();
+                if (status != MatchStatus.ServiceUnavailable
+                    && status != MatchStatus.MatchNotInProgress)
+                {
+                    return status;
+                }
+            }
+            catch (OperationCanceledException) when (!cancellation.IsCancellationRequested)
+            {
+            }
+
+            await Task.Delay(RecoveryRetryDelay, cancellation).ConfigureAwait(false);
+        }
     }
 
-    internal async Task<MatchStatus> RefreshChat(long id)
+    private async Task<MatchStatus> RecoverMatchState(long id, CancellationToken cancellation)
     {
-        MatchResult<MatchChatMessage[]> result = await Request(async () =>
+        MatchResult<MatchStateSnapshot> result = await SendMatchCall(
+            PrepareGameplay,
+            () => ReadStateAfterReopeningChannel(id), cancellation).ConfigureAwait(false);
+        if (result.Value is MatchStateSnapshot confirmedState)
         {
-            Proxy.MatchChatEntry[] messages = await Execute(() => PrepareChat(),
-                () => _chat.GetChatHistoryAsync(_token, id));
-            return messages.Select(MapMessage).ToArray();
-        });
+            StoreState(confirmedState);
+        }
+        return result.Status;
+    }
+
+    internal Task<MatchStatus> OpenChatChannel(
+        long id, CancellationToken cancellation = default)
+    {
+        return SendMatchCommand(
+            PrepareChat, () => _chat.OpenChatChannelAsync(_token, id), cancellation);
+    }
+
+    internal async Task<MatchStatus> RefreshChat(
+        long id, CancellationToken cancellation = default)
+    {
+        MatchResult<MatchChatMessage[]> result = await SendMatchCall(
+            PrepareChat,
+            async () =>
+            {
+                Proxy.MatchChatEntry[] messages = await _chat.GetChatHistoryAsync(_token, id);
+                return messages.Select(MapMessage).ToArray();
+            }, cancellation);
         if (result.Status == MatchStatus.Success && result.Value != null)
         {
             foreach (MatchChatMessage message in result.Value)
@@ -383,7 +401,7 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
         ChatSubmission submission;
         try
         {
-            Proxy.MatchChatEntry message = await Execute(() => PrepareChat(),
+            Proxy.MatchChatEntry message = await SendDuplexCall(PrepareChat,
                 () => _chat.SendChatMessageAsync(_token, id, content.Trim()));
             StoreMessage(MapMessage(message));
             submission = new ChatSubmission(MatchStatus.Success, null);
@@ -393,9 +411,13 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
             submission = new ChatSubmission(
                 MapChatFailure(fault.Detail.Reason), fault.Detail.MuteEndsAtUtc);
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        catch (CommunicationException exception)
         {
             submission = new ChatSubmission(MapFailure(exception), null);
+        }
+        catch (TimeoutException)
+        {
+            submission = new ChatSubmission(MatchStatus.ServiceUnavailable, null);
         }
         return submission;
     }
@@ -446,40 +468,90 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
         }
     }
 
-    private async Task<MatchResult<T>> Request<T>(Func<Task<T>> operation) where T : class
+    private async Task<MatchStateSnapshot> ReadStateAfterReopeningChannel(long id)
+    {
+        try
+        {
+            await OpenGameplayChannel(id).ConfigureAwait(false);
+        }
+        catch (FaultException<Proxy.MatchFault> fault)
+            when (fault.Detail.Reason == Proxy.MatchFailure.MatchNotInProgress)
+        {
+            Proxy.MatchStateSnapshot current = await _gameplay.GetMatchStateAsync(
+                _token, id).ConfigureAwait(false);
+            if ((ConfirmedMatchState)current.State != ConfirmedMatchState.Finished)
+            {
+                throw;
+            }
+
+            return MapState(current);
+        }
+
+        Proxy.MatchStateSnapshot state = await _gameplay.GetMatchStateAsync(_token, id)
+            .ConfigureAwait(false);
+        MatchStateSnapshot result = MapState(state);
+        return result;
+    }
+
+
+    private async Task<MatchResult<T>> SendMatchCall<T, TContract>(
+        Func<ClientBase<TContract>> prepareChannel,
+        Func<Task<T>> callOperation,
+        CancellationToken cancellation = default)
+        where T : class
+        where TContract : class
     {
         MatchResult<T> result;
         try
         {
-            result = new MatchResult<T>(MatchStatus.Success, await operation());
+            T value = await SendDuplexCall(prepareChannel, callOperation, cancellation);
+            result = new MatchResult<T>(MatchStatus.Success, value);
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        catch (CommunicationException exception)
         {
             result = new MatchResult<T>(MapFailure(exception), null);
+        }
+        catch (TimeoutException)
+        {
+            result = new MatchResult<T>(MatchStatus.ServiceUnavailable, null);
         }
         return result;
     }
 
-    private async Task<MatchStatus> RequestStatus(Func<Task> operation)
+    private async Task<MatchStatus> SendMatchCommand<TContract>(
+        Func<ClientBase<TContract>> prepareChannel,
+        Func<Task> callOperation,
+        CancellationToken cancellation = default)
+        where TContract : class
     {
         MatchStatus status;
         try
         {
-            await operation();
+            await SendDuplexCall(prepareChannel, async () =>
+            {
+                await callOperation();
+                return true;
+            }, cancellation);
             status = MatchStatus.Success;
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        catch (CommunicationException exception)
         {
             status = MapFailure(exception);
+        }
+        catch (TimeoutException)
+        {
+            status = MatchStatus.ServiceUnavailable;
         }
         return status;
     }
 
-    private async Task<T> Execute<T, TContract>(
-        Func<ClientBase<TContract>> getClient, Func<Task<T>> action)
+    private async Task<T> SendDuplexCall<T, TContract>(
+        Func<ClientBase<TContract>> prepareChannel,
+        Func<Task<T>> callOperation,
+        CancellationToken cancellation = default)
         where TContract : class
     {
-        await _requests.WaitAsync().ConfigureAwait(false);
+        await _requests.WaitAsync(cancellation).ConfigureAwait(false);
         ClientBase<TContract>? client = null;
         string correlationId = Guid.NewGuid().ToString("D");
         try
@@ -490,30 +562,69 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
                 {
                     throw new ObjectDisposedException(nameof(RemoteMatchClient));
                 }
-                client = getClient();
+                client = prepareChannel();
             }
-            Task<T> request;
-            using (OperationContextScope scope = new OperationContextScope(client.InnerChannel))
-            {
-                OperationContext.Current.OutgoingMessageHeaders.Add(MessageHeader.CreateHeader(
-                    "CorrelationId", "urn:reversi:diagnostics:v1", correlationId));
-                request = action();
-            }
-            return await request.ConfigureAwait(false);
+            using CancellationTokenRegistration registration = cancellation.Register(client.Abort);
+            cancellation.ThrowIfCancellationRequested();
+            Task<T> request = StartCorrelatedCall(
+                client.InnerChannel, callOperation, correlationId);
+            T result = await request.ConfigureAwait(false);
+            return result;
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        catch (CommunicationException exception) when (exception is not FaultException)
         {
-            if (exception is CommunicationException and not FaultException or TimeoutException)
-            {
-                client?.Abort();
-            }
-            _logger.LogWarning(FailureDiagnostics.ForLogging(exception),
-                "The match request failed. CorrelationId: {CorrelationId}", correlationId);
+            cancellation.ThrowIfCancellationRequested();
+            AbortFailedChannel(client, exception, correlationId);
+            throw;
+        }
+        catch (TimeoutException exception)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            AbortFailedChannel(client, exception, correlationId);
             throw;
         }
         finally
         {
             _requests.Release();
+        }
+    }
+
+    private void AbortFailedChannel(
+        ICommunicationObject? channel, Exception failure, string correlationId)
+    {
+        channel?.Abort();
+        if (ReferenceEquals(channel, _gameplay))
+        {
+            NotifyGameplayConnectionLost();
+        }
+
+        _logger.LogWarning(FailureDiagnostics.ForLogging(failure),
+            "The match request failed. CorrelationId: {CorrelationId}", correlationId);
+    }
+
+    private static Task<T> StartCorrelatedCall<T>(
+        IContextChannel channel, Func<Task<T>> callOperation, string correlationId)
+    {
+        using OperationContextScope scope = new OperationContextScope(channel);
+        OperationContext.Current.OutgoingMessageHeaders.Add(MessageHeader.CreateHeader(
+            "CorrelationId", "urn:reversi:diagnostics:v1", correlationId));
+        Task<T> request = callOperation();
+        return request;
+    }
+
+    private void OnGameplayChannelFaulted(object? sender, EventArgs eventArguments)
+    {
+        if (!_disposed && ReferenceEquals(sender, _gameplay.InnerChannel))
+        {
+            NotifyGameplayConnectionLost();
+        }
+    }
+
+    private void NotifyGameplayConnectionLost()
+    {
+        if (!_disposed)
+        {
+            GameplayConnectionLost?.Invoke();
         }
     }
 
