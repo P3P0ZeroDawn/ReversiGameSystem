@@ -68,6 +68,15 @@ internal class MatchCallbackSubscriptions<TCallback> : IDisposable
         Register(token, AllMatchesSubscription);
     }
 
+    internal bool HasSubscription(string token, long matchId)
+    {
+        lock (_subscriptionsSync)
+        {
+            return _subscriptions.Any(channel => channel.Token == token
+                && channel.MatchId == matchId);
+        }
+    }
+
     internal void RemoveSession(string token)
     {
         foreach (Subscription channel in Snapshot().Where(item => item.Token == token))

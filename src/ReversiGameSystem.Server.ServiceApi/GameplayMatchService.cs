@@ -29,12 +29,15 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     private const int TickRunning = 1;
     private static readonly TimeSpan TimeoutTickInterval = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan PersistenceTickInterval = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan ReconnectionWindow = TimeSpan.FromSeconds(30);
     private readonly GameplayMatchApplicationService _applicationService;
     private readonly ISessionRepository _sessions;
     private readonly ILogger<GameplayMatchService> _logger;
     private readonly MatchCallbackSubscriptions<IGameplayMatchServiceCallback>
         _callbackSubscriptions;
     private readonly object _presenceSync = new object();
+    private readonly Dictionary<(long MatchId, int SeatNumber), DateTime> _reconnectionDeadlines =
+        new Dictionary<(long MatchId, int SeatNumber), DateTime>();
     private readonly Dictionary<long, Dictionary<int, HashSet<string>>> _participantPresence =
         new Dictionary<long, Dictionary<int, HashSet<string>>>();
     private readonly Timer _timeoutTimer;
@@ -71,15 +74,46 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
     public void OpenMatchChannel(string sessionToken, long matchId)
     {
         Match match = RequireAuthorizedMatch(sessionToken, matchId);
-        MatchContractMapper.RequireStarted(match);
         MatchParticipant participant = RequireParticipant(match, sessionToken);
+        (long MatchId, int SeatNumber) key = (matchId, participant.SeatNumber);
+        KeyValuePair<int, bool>[] snapshot;
 
-        _callbackSubscriptions.Register(sessionToken, matchId);
-        AddPresence(
-            sessionToken,
-            matchId,
-            participant.SeatNumber,
-            match.Participants);
+        lock (_presenceSync)
+        {
+            bool reconnectionExpired =
+                _reconnectionDeadlines.TryGetValue(key, out DateTime deadline)
+                && DateTime.UtcNow >= deadline;
+            if (reconnectionExpired || !_applicationService.IsTrackedMatchInProgress(matchId))
+            {
+                throw CreateMatchFault(MatchFailure.MatchNotInProgress);
+            }
+
+            _callbackSubscriptions.Register(sessionToken, matchId);
+            _reconnectionDeadlines.Remove(key);
+            Dictionary<int, HashSet<string>> matchPresence = GetOrCreateMatchPresence(match);
+            matchPresence[participant.SeatNumber].Add(sessionToken);
+            snapshot = CreatePresenceSnapshot(matchPresence);
+        }
+
+        PublishPresence(matchId, snapshot);
+    }
+
+    private Dictionary<int, HashSet<string>> GetOrCreateMatchPresence(Match match)
+    {
+        if (!_participantPresence.TryGetValue(
+            match.Id,
+            out Dictionary<int, HashSet<string>>? matchPresence))
+        {
+            matchPresence = new Dictionary<int, HashSet<string>>();
+            foreach (MatchParticipant participant in match.Participants)
+            {
+                matchPresence.Add(participant.SeatNumber, new HashSet<string>(StringComparer.Ordinal));
+            }
+
+            _participantPresence.Add(match.Id, matchPresence);
+        }
+
+        return matchPresence;
     }
 
     /// <inheritdoc />
@@ -212,6 +246,7 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
 
         try
         {
+            ProcessExpiredReconnections();
             Match[] transitionedMatches = _applicationService.ProcessTurnTimeouts();
             for (int i = 0; i < transitionedMatches.Length; i++)
             {
@@ -307,55 +342,27 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         return session;
     }
 
-    private void AddPresence(
-        string sessionToken,
-        long matchId,
-        int seatNumber,
-        MatchParticipant[] participants)
-    {
-        KeyValuePair<int, bool>[]? snapshot = null;
-        lock (_presenceSync)
-        {
-            if (!_participantPresence.TryGetValue(
-                matchId,
-                out Dictionary<int, HashSet<string>>? matchPresence))
-            {
-                matchPresence = new Dictionary<int, HashSet<string>>();
-                for (int index = 0; index < participants.Length; index++)
-                {
-                    matchPresence.Add(
-                        participants[index].SeatNumber,
-                        new HashSet<string>(StringComparer.Ordinal));
-                }
-
-                _participantPresence.Add(matchId, matchPresence);
-            }
-
-            if (matchPresence.TryGetValue(seatNumber, out HashSet<string>? seatTokens))
-            {
-                seatTokens.Add(sessionToken);
-                snapshot = CreatePresenceSnapshot(matchPresence);
-            }
-        }
-
-        if (snapshot != null)
-        {
-            PublishPresence(matchId, snapshot);
-        }
-    }
-
     private void RemovePresence(string sessionToken, long matchId)
     {
         KeyValuePair<int, bool>[]? snapshot = null;
         lock (_presenceSync)
         {
+            if (_callbackSubscriptions.HasSubscription(sessionToken, matchId))
+            {
+                return;
+            }
+
             if (_participantPresence.TryGetValue(
                 matchId,
                 out Dictionary<int, HashSet<string>>? matchPresence))
             {
-                foreach (HashSet<string> tokens in matchPresence.Values)
+                foreach (KeyValuePair<int, HashSet<string>> seat in matchPresence)
                 {
-                    tokens.Remove(sessionToken);
+                    if (seat.Value.Remove(sessionToken) && seat.Value.Count == 0)
+                    {
+                        _reconnectionDeadlines[(matchId, seat.Key)] =
+                            DateTime.UtcNow.Add(ReconnectionWindow);
+                    }
                 }
 
                 snapshot = CreatePresenceSnapshot(matchPresence);
@@ -369,6 +376,35 @@ public sealed class GameplayMatchService : IGameplayMatchService, IDisposable
         if (snapshot != null)
         {
             PublishPresence(matchId, snapshot);
+        }
+    }
+
+    private void ProcessExpiredReconnections()
+    {
+        List<Match> concludedMatches = new List<Match>();
+        DateTime now = DateTime.UtcNow;
+        lock (_presenceSync)
+        {
+            (long MatchId, int SeatNumber)[] expiredSeats = _reconnectionDeadlines
+                .Where(entry => now >= entry.Value)
+                .OrderBy(entry => entry.Value)
+                .Select(entry => entry.Key)
+                .ToArray();
+            foreach ((long MatchId, int SeatNumber) key in expiredSeats)
+            {
+                MatchResult<Match> result = _applicationService.ForfeitDisconnectedParticipant(
+                    key.MatchId, key.SeatNumber);
+                _reconnectionDeadlines.Remove(key);
+                if (result.Status == MatchStatus.Success)
+                {
+                    concludedMatches.Add(RequireValue(result));
+                }
+            }
+        }
+
+        foreach (Match match in concludedMatches)
+        {
+            PublishMatchStateChanged(match.Id, MatchContractMapper.MapState(match));
         }
     }
 

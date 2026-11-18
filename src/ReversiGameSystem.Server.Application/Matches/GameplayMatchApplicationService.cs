@@ -122,8 +122,8 @@ public sealed class GameplayMatchApplicationService
 
         for (int index = 0; index < pendingMatchIds.Length; index++)
         {
-            Match? match = GetTrackedMatchOrNull(pendingMatchIds[index]);
-            if (match == null)
+            MatchResult<Match> lookup = FindTrackedMatch(pendingMatchIds[index]);
+            if (lookup.Value is not Match match)
             {
                 continue;
             }
@@ -149,7 +149,44 @@ public sealed class GameplayMatchApplicationService
             return new MatchResult<Match>(resolved.Status);
         }
 
-        Match match = resolved.Value.Match;
+        return ConcludeForfeit(resolved.Value.Match, resolved.Value.Player.AccountId, true);
+    }
+
+    public bool IsTrackedMatchInProgress(long matchId)
+    {
+        MatchResult<Match> lookup = FindTrackedMatch(matchId);
+        if (lookup.Value is not Match match)
+        {
+            return false;
+        }
+
+        lock (match.SyncRoot)
+        {
+            return string.Equals(match.State, StateInProgress, StringComparison.Ordinal);
+        }
+    }
+
+    public MatchResult<Match> ForfeitDisconnectedParticipant(long matchId, int seatNumber)
+    {
+        MatchResult<Match> lookup = FindTrackedMatch(matchId);
+        if (lookup.Value is not Match match)
+        {
+            return lookup;
+        }
+
+        MatchParticipant? participant = Array.Find(
+            match.Participants, player => player.SeatNumber == seatNumber);
+        if (participant == null)
+        {
+            return new MatchResult<Match>(MatchStatus.Unauthorized);
+        }
+
+        return ConcludeForfeit(match, participant.AccountId, false);
+    }
+
+    private MatchResult<Match> ConcludeForfeit(
+        Match match, long accountId, bool includeFinishedMatch)
+    {
         DateTime now = _clock.UtcNow;
         MatchStatus forfeitStatus;
         Match? snapshot = null;
@@ -158,10 +195,10 @@ public sealed class GameplayMatchApplicationService
         {
             forfeitStatus = GameplayMatchRules.ForfeitByParticipant(
                 match,
-                resolved.Value.Player.AccountId,
+                accountId,
                 now);
             bool hasConcludedSnapshot = forfeitStatus == MatchStatus.Success
-                || forfeitStatus == MatchStatus.MatchFinished;
+                || (includeFinishedMatch && forfeitStatus == MatchStatus.MatchFinished);
             if (hasConcludedSnapshot)
             {
                 snapshot = match.CreateSnapshot();
@@ -375,7 +412,7 @@ public sealed class GameplayMatchApplicationService
         return snapshot;
     }
 
-    private Match? GetTrackedMatchOrNull(long matchId)
+    private MatchResult<Match> FindTrackedMatch(long matchId)
     {
         Match? match;
         lock (_activeMatchesSync)
@@ -383,7 +420,10 @@ public sealed class GameplayMatchApplicationService
             _activeMatches.TryGetValue(matchId, out match);
         }
 
-        return match;
+        MatchResult<Match> result = match == null
+            ? new MatchResult<Match>(MatchStatus.MatchNotFound)
+            : new MatchResult<Match>(match);
+        return result;
     }
 
     private void MarkPersistencePending(long matchId)
@@ -407,8 +447,8 @@ public sealed class GameplayMatchApplicationService
             return false;
         }
 
-        Match? currentMatch = GetTrackedMatchOrNull(snapshot.Id);
-        if (currentMatch == null)
+        MatchResult<Match> lookup = FindTrackedMatch(snapshot.Id);
+        if (lookup.Value is not Match currentMatch)
         {
             return true;
         }
