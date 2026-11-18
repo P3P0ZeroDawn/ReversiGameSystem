@@ -32,10 +32,6 @@ public partial class GamePage
     private readonly RemoteMatchClient _remoteClient;
     private readonly long _remoteMatchId;
     private readonly string? _remoteGuestName;
-    private readonly DispatcherTimer _remoteRefreshTimer = new DispatcherTimer
-    {
-        Interval = TimeSpan.FromSeconds(15)
-    };
     private readonly TurnCountdownViewModel _turnCountdown = new TurnCountdownViewModel();
     private readonly DispatcherTimer _turnCountdownTimer = new DispatcherTimer
     {
@@ -62,7 +58,6 @@ public partial class GamePage
         InitializeComponent();
 
         sendMessageButton.IsEnabled = false;
-        refreshRemoteMatchButton.Visibility = Visibility.Visible;
         creatorConnectionTextBlock.Visibility = Visibility.Visible;
         opponentConnectionTextBlock.Visibility = Visibility.Visible;
         UpdateLeaveButtonContent(null);
@@ -81,7 +76,6 @@ public partial class GamePage
         }
         Loaded += OnRemotePageLoaded;
         Unloaded += OnRemotePageUnloaded;
-        _remoteRefreshTimer.Tick += OnRemoteRefreshTick;
         _turnCountdownTimer.Tick += OnTurnCountdownTick;
     }
 
@@ -97,7 +91,6 @@ public partial class GamePage
         await LoadRemoteMatch();
         if (IsLoaded)
         {
-            _remoteRefreshTimer.Start();
             _turnCountdownTimer.Start();
         }
     }
@@ -105,7 +98,6 @@ public partial class GamePage
     private void OnRemotePageUnloaded(object sender, RoutedEventArgs e)
     {
         LocalizationManager.Instance.PropertyChanged -= OnRemoteCultureChanged;
-        _remoteRefreshTimer.Stop();
         _turnCountdownTimer.Stop();
         _remoteClient.StateChanged -= OnRemoteStateChanged;
         _remoteClient.GameplayConnectionLost -= OnGameplayConnectionLost;
@@ -135,11 +127,6 @@ public partial class GamePage
         }
     }
 
-    private async void OnRemoteRefreshTick(object? sender, EventArgs e)
-    {
-        await LoadRemoteMatch();
-    }
-
     private void OnTurnCountdownTick(object? sender, EventArgs e)
     {
         if (_remoteInformation != null && _remoteClient.HasMatchState(_remoteMatchId))
@@ -147,11 +134,6 @@ public partial class GamePage
             MatchStateSnapshot state = _remoteClient.ReadMatchState(_remoteMatchId);
             _turnCountdown.Update(state, _remoteInformation.TurnDurationSeconds, DateTime.UtcNow);
         }
-    }
-
-    private async void OnRefreshRemoteMatchClick(object sender, RoutedEventArgs e)
-    {
-        await LoadRemoteMatch();
     }
 
     private async Task LoadRemoteMatch()
@@ -162,7 +144,6 @@ public partial class GamePage
         }
 
         _remoteLoading = true;
-        refreshRemoteMatchButton.IsEnabled = false;
         try
         {
             if (await LoadMatchSnapshotAsync() && IsLoaded)
@@ -177,7 +158,6 @@ public partial class GamePage
         finally
         {
             _remoteLoading = false;
-            refreshRemoteMatchButton.IsEnabled = _matchRecovery == null && !_matchRecoveryFailed;
             sendMessageButton.IsEnabled = IsLoaded && _remoteChatReady && !_remoteSending
                 && _matchRecovery == null && !_matchRecoveryFailed;
             UpdateRemoteStatus();
@@ -200,7 +180,6 @@ public partial class GamePage
         using CancellationTokenSource recovery = new CancellationTokenSource(ReconnectionWindow);
         _matchRecovery = recovery;
         _remoteChatReady = false;
-        refreshRemoteMatchButton.IsEnabled = false;
         sendMessageButton.IsEnabled = false;
         RenderRemoteMatch();
 
@@ -226,7 +205,6 @@ public partial class GamePage
                 _remoteStatusKey = restored && (_remoteChatReady || _remoteGuestName != null)
                     ? null
                     : _remoteStatusKey;
-                refreshRemoteMatchButton.IsEnabled = restored;
                 sendMessageButton.IsEnabled = restored && _remoteChatReady && !_remoteSending;
                 RenderRemoteMatch();
             }
@@ -704,7 +682,6 @@ public partial class GamePage
         }
 
         _remoteConclusionShown = true;
-        _remoteRefreshTimer.Stop();
         if (state.Conclusion == null)
         {
             return;
@@ -825,7 +802,6 @@ public partial class GamePage
         if (status == MatchStatus.Success)
         {
             _remoteConclusionShown = true;
-            _remoteRefreshTimer.Stop();
             NavigateToMainMenu();
             return;
         }

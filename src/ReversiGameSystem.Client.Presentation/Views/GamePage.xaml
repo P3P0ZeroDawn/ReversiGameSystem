@@ -136,10 +136,6 @@
                 </Viewbox>
 
                 <StackPanel Grid.Row="2" HorizontalAlignment="Center">
-                    <Button x:Name="refreshRemoteMatchButton"
-                            Content="{Binding [AvailableMatches_RefreshButton]}"
-                            Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                            Visibility="Collapsed" Click="OnRefreshRemoteMatchClick" />
                     <Button x:Name="leaveMatchButton"
                             Content="{Binding [Game_LeaveMatchButton]}"
                             Style="{StaticResource MainMenuLogoutButtonStyle}"
