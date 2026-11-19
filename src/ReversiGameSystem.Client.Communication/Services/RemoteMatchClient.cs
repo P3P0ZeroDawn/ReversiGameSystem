@@ -367,19 +367,22 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
             using CancellationTokenSource attempt = CancellationTokenSource
                 .CreateLinkedTokenSource(cancellation);
             attempt.CancelAfter(RecoveryAttemptLimit);
+            MatchStatus status;
             try
             {
-                MatchStatus status = await RecoverMatchState(id, attempt.Token)
+                status = await RecoverMatchState(id, attempt.Token)
                     .ConfigureAwait(false);
-                cancellation.ThrowIfCancellationRequested();
-                if (status != MatchStatus.ServiceUnavailable
-                    && status != MatchStatus.MatchNotInProgress)
-                {
-                    return status;
-                }
             }
             catch (OperationCanceledException) when (!cancellation.IsCancellationRequested)
             {
+                status = MatchStatus.ServiceUnavailable;
+            }
+
+            cancellation.ThrowIfCancellationRequested();
+            if (status != MatchStatus.ServiceUnavailable
+                && status != MatchStatus.MatchNotInProgress)
+            {
+                return status;
             }
 
             await Task.Delay(RecoveryRetryDelay, cancellation).ConfigureAwait(false);
