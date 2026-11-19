@@ -218,6 +218,11 @@ public sealed class MatchBoundaryTests
 
     private sealed class BoundaryStore : IMatchRepository, IGameplayRepository
     {
+        public MatchResult<Match> StartSystemMatch(long accountId, long matchId, DateTime now)
+        {
+            throw new NotSupportedException();
+        }
+
         public MatchStatus EvaluateLobbyAccess(long accountId)
         {
             throw new InvalidOperationException("private storage failure");

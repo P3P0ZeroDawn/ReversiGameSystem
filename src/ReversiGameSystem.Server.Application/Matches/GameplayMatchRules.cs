@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using ReversiGameSystem.Server.Domain.Matches;
 
@@ -13,9 +14,33 @@ public static class GameplayMatchRules
     private const string StateFinished = "Finished";
     private const string MoveOriginPlayer = "Player";
     private const string MoveOriginTimeout = "Timeout";
+    private const string MoveOriginSystem = "System";
     private const string EndReasonNormal = "NORMAL";
     private const string EndReasonInactivity = "INACTIVITY";
     private const string EndReasonAbandonment = "ABANDONMENT";
+    private static readonly object RandomSyncRoot = new object();
+    private static readonly Random MoveRandom = new Random();
+    public static readonly TimeSpan SystemMoveDelay = TimeSpan.FromSeconds(5);
+
+    public static bool ApplySystemMoveIfReady(Match match, DateTime now)
+    {
+        MatchParticipant? participant = FindParticipantBySeat(match, match.CurrentTurnSeatNumber);
+        if (match.State != StateInProgress || participant == null || !participant.IsSystem
+            || !match.TurnStartedAtUtc.HasValue
+            || now < match.TurnStartedAtUtc.Value.Add(SystemMoveDelay))
+        {
+            return false;
+        }
+
+        MatchMove move = new MatchMove
+        {
+            SeatNumber = participant.SeatNumber,
+            PlayedAtUtc = now,
+            Origin = MoveOriginSystem
+        };
+        ApplyAutomaticMove(match, move);
+        return true;
+    }
 
     public static void InitializeStartedMatch(Match match, DateTime startedAtUtc)
     {
@@ -140,7 +165,13 @@ public static class GameplayMatchRules
             return true;
         }
 
-        ApplyTimeoutAutoMove(match, actingParticipant.SeatNumber, now);
+        MatchMove move = new MatchMove
+        {
+            SeatNumber = actingParticipant.SeatNumber,
+            PlayedAtUtc = now,
+            Origin = MoveOriginTimeout
+        };
+        ApplyAutomaticMove(match, move);
         return true;
     }
 
@@ -205,9 +236,11 @@ public static class GameplayMatchRules
         return FindParticipantBySeat(match, match.CurrentTurnSeatNumber);
     }
 
-    private static void ApplyTimeoutAutoMove(Match match, int currentSeat, DateTime now)
+    private static void ApplyAutomaticMove(Match match, MatchMove move)
     {
-        BoardCoordinate? legalCell = FindLegalPlacement(match.Board, currentSeat);
+        int currentSeat = move.SeatNumber;
+        DateTime now = move.PlayedAtUtc;
+        BoardCoordinate? legalCell = SelectAutomaticPlacement(match.Board, currentSeat);
         if (!legalCell.HasValue)
         {
             match.MatchStateVersion++;
@@ -218,17 +251,10 @@ public static class GameplayMatchRules
         int row = legalCell.Value.Row;
         int col = legalCell.Value.Column;
         int[] flipped = ReversiEngine.ApplyMove(match.Board, row, col, currentSeat);
-        MatchMove committedMove = new MatchMove
-        {
-            SeatNumber = currentSeat,
-            Row = row,
-            Column = col,
-            PlayedAtUtc = now,
-            FlippedPieceCount = flipped.Length,
-            Origin = MoveOriginTimeout
-        };
-
-        RecordCommittedMove(match, committedMove);
+        move.Row = row;
+        move.Column = col;
+        move.FlippedPieceCount = flipped.Length;
+        RecordCommittedMove(match, move);
         AdvanceTurnOrConclude(match, currentSeat, now);
     }
 
@@ -304,20 +330,33 @@ public static class GameplayMatchRules
         return seatNumber == BlackSeatNumber ? WhiteSeatNumber : BlackSeatNumber;
     }
 
-    private static BoardCoordinate? FindLegalPlacement(int[] board, int disc)
+    private static BoardCoordinate? SelectAutomaticPlacement(int[] board, int disc)
     {
+        List<BoardCoordinate> legalCells = new List<BoardCoordinate>();
         for (int row = 0; row < ReversiEngine.BoardSize; row++)
         {
             for (int col = 0; col < ReversiEngine.BoardSize; col++)
             {
                 if (ReversiEngine.IsLegalMove(board, row, col, disc))
                 {
-                    return new BoardCoordinate(row, col);
+                    legalCells.Add(new BoardCoordinate(row, col));
                 }
             }
         }
 
-        return null;
+        BoardCoordinate? selectedCell = null;
+        if (legalCells.Count > 0)
+        {
+            int selectedIndex;
+            lock (RandomSyncRoot)
+            {
+                selectedIndex = MoveRandom.Next(legalCells.Count);
+            }
+
+            selectedCell = legalCells[selectedIndex];
+        }
+
+        return selectedCell;
     }
 
     private static int? DetermineWinner(int blackCount, int whiteCount)

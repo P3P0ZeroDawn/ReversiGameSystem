@@ -64,6 +64,7 @@ public partial class GamePage
         _remoteGuestName = guestName;
         InitializeComponent();
 
+        chatPanel.Visibility = Visibility.Hidden;
         sendMessageButton.IsEnabled = false;
         creatorConnectionTextBlock.Visibility = Visibility.Visible;
         opponentConnectionTextBlock.Visibility = Visibility.Visible;
@@ -75,12 +76,6 @@ public partial class GamePage
                 Source = _turnCountdown,
                 Mode = BindingMode.OneWay
             });
-        if (guestName != null)
-        {
-            chatPanel.Visibility = Visibility.Collapsed;
-            chatSpacingColumn.Width = new GridLength(0);
-            chatColumn.Width = new GridLength(0);
-        }
         Loaded += OnRemotePageLoaded;
         Unloaded += OnRemotePageUnloaded;
         _turnCountdownTimer.Tick += OnTurnCountdownTick;
@@ -281,11 +276,15 @@ public partial class GamePage
 
     private async Task InitializeRemoteChatAsync(CancellationToken cancellation = default)
     {
-        if (_remoteGuestName != null)
+        if (_remoteGuestName != null
+            || (_remoteInformation != null
+                && _remoteInformation.Participants.Any(participant => participant.IsSystem)))
         {
+            chatPanel.Visibility = Visibility.Hidden;
             return;
         }
 
+        chatPanel.Visibility = Visibility.Visible;
         MatchStatus openStatus = await _remoteClient.OpenChatChannel(_remoteMatchId, cancellation);
         MatchStatus refreshStatus = openStatus == MatchStatus.Success
             ? await _remoteClient.RefreshChat(_remoteMatchId, cancellation)
@@ -453,6 +452,14 @@ public partial class GamePage
 
     private void RenderParticipantConnection(TextBlock textBlock, int seatNumber)
     {
+        if (_remoteInformation != null && _remoteInformation.Participants.Any(
+            participant => participant.SeatNumber == seatNumber && participant.IsSystem))
+        {
+            textBlock.Visibility = Visibility.Hidden;
+            return;
+        }
+
+        textBlock.Visibility = Visibility.Visible;
         ParticipantConnectionState state = _remoteClient.ReadParticipantConnection(
             _remoteMatchId,
             seatNumber);

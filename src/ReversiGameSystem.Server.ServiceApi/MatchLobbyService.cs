@@ -102,7 +102,9 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
     /// <inheritdoc />
     public MatchStateSnapshot StartSystemMatch(string sessionToken, long matchId)
     {
-        throw ServiceFaultFactory.Create(nameof(StartSystemMatch), CorrelationContext.GetOrCreate());
+        Match match = RequireMatchValue(
+            _applicationService.StartSystemMatch(sessionToken, matchId));
+        return MatchContractMapper.MapState(match);
     }
 
     /// <inheritdoc />

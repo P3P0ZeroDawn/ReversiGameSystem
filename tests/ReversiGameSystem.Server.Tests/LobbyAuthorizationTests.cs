@@ -119,6 +119,11 @@ public sealed class LobbyAuthorizationTests
 
     private sealed class AuthorizationStore : IMatchRepository
     {
+        public MatchResult<Match> StartSystemMatch(long accountId, long matchId, DateTime now)
+        {
+            throw new NotSupportedException();
+        }
+
         internal bool Active { get; set; } = true;
         internal long AuthorizedAccountId { get; private set; }
         internal int AuthorizationCalls { get; private set; }

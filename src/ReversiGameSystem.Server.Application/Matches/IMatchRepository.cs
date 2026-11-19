@@ -6,6 +6,8 @@ namespace ReversiGameSystem.Server.Application.Matches;
 /// <summary>Defines atomic durable match operations and state transitions.</summary>
 public interface IMatchRepository
 {
+    public MatchResult<Match> StartSystemMatch(long accountId, long matchId, DateTime now);
+
     /// <summary>Checks whether an active account participates or may access a waiting match.</summary>
     public MatchStatus EvaluateLobbyAccess(long accountId);
 

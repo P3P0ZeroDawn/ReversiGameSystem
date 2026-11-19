@@ -112,6 +112,7 @@ internal sealed class MatchParticipant
 
     internal int SeatNumber { get; }
     internal string DisplayName { get; }
+    internal bool IsSystem { get; set; }
 }
 
 internal enum ConfirmedMatchState

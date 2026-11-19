@@ -145,6 +145,11 @@ public sealed class MatchApplicationServiceLifecycleTests
 
     private sealed class LifecycleStore : IMatchRepository
     {
+        public MatchResult<Match> StartSystemMatch(long accountId, long matchId, DateTime now)
+        {
+            throw new NotSupportedException();
+        }
+
         public MatchStatus EvaluateLobbyAccess(long accountId)
         {
             return MatchStatus.Success;

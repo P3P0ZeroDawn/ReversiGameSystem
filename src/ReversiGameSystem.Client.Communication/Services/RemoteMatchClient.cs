@@ -246,6 +246,21 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
         return SendMatchCommand(PrepareLobby, () => _lobby.CancelMatchAsync(_token, id));
     }
 
+    internal async Task<MatchStatus> StartSystemMatch(long id)
+    {
+        MatchResult<MatchStateSnapshot> result = await SendMatchCall(PrepareLobby, async () =>
+        {
+            Proxy.MatchStateSnapshot state = await _lobby.StartSystemMatchAsync(_token, id);
+            return MapState(state);
+        });
+        if (result.Value != null)
+        {
+            StoreState(result.Value);
+        }
+
+        return result.Status;
+    }
+
     internal Task<MatchResult<LobbySnapshot>> ChangeTurnDuration(long id, int seconds)
     {
         async Task<LobbySnapshot> RequestDurationChange()
@@ -750,7 +765,10 @@ internal sealed class RemoteMatchClient : IDisposable, Proxy.IMatchLobbyServiceC
     {
         MatchParticipant[] participants = information.Participants
             .Select(participant => new MatchParticipant(
-                participant.SeatNumber, participant.DisplayName))
+                participant.SeatNumber, participant.DisplayName)
+            {
+                IsSystem = participant.Kind == Proxy.ParticipantKind.System
+            })
             .ToArray();
         return new RemoteMatchInformation(
             information.MatchId,

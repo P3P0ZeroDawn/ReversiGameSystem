@@ -30,7 +30,9 @@ internal static class ReviewMatchDatabaseTests
         string beta = sessions.CompleteLogin("ReviewBeta", "000002")
             .GetValue().SessionToken;
         MatchApplicationService matches = new MatchApplicationService(store, new MatchRepository(), new SystemUtcClock());
-        MutableTestClock chatClock = new MutableTestClock(DateTime.UtcNow);
+        DateTime now = DateTime.UtcNow;
+        DateTime wholeSecondUtc = now.AddTicks(-(now.Ticks % TimeSpan.TicksPerSecond));
+        MutableTestClock chatClock = new MutableTestClock(wholeSecondUtc);
         ChatApplicationService chat = new ChatApplicationService(
             store, new ChatRepository(chatClock), chatClock);
         Match waiting = matches.CreateMatch(alpha, new MatchSettings()).Value
@@ -67,6 +69,35 @@ internal static class ReviewMatchDatabaseTests
         TestAssert.AreEqual(
             MatchStatus.InvalidSession,
             matches.GetAvailableMatches(alpha).Status);
+        Match systemLobby = matches.CreateMatch(beta, new MatchSettings()).Value
+            ?? throw new InvalidOperationException("A system lobby was expected.");
+        Match systemMatch = matches.StartSystemMatch(beta, systemLobby.Id).Value
+            ?? throw new InvalidOperationException("A system match was expected.");
+        TestAssert.AreEqual(false, systemMatch.CountsTowardStatistics);
+        TestAssert.AreEqual(ChatStatus.Unauthorized,
+            chat.LoadChatHistory(beta, systemMatch.Id).Status);
+        MatchParticipant systemParticipant = systemMatch.Participants
+            .Single(player => player.SeatNumber == 2);
+        TestAssert.AreEqual(0L, systemParticipant.AccountId);
+        TestAssert.AreEqual(true, systemParticipant.IsSystem);
+        systemMatch.Board = ReversiEngine.CreateInitialBoard();
+        systemMatch.CurrentTurnSeatNumber = 1;
+        systemMatch.TurnStartedAtUtc = DateTime.UtcNow;
+        MatchPlacement placement = new MatchPlacement(systemMatch.Id, 0, 2, 3);
+        TestAssert.AreEqual(MatchStatus.Success,
+            GameplayMatchRules.ApplyPlayerMove(systemMatch, placement, DateTime.UtcNow));
+        DateTime systemTurnStart = systemMatch.TurnStartedAtUtc.Value;
+        TestAssert.AreEqual(false,
+            GameplayMatchRules.ApplySystemMoveIfReady(systemMatch, systemTurnStart.AddSeconds(4)));
+        TestAssert.AreEqual(true,
+            GameplayMatchRules.ApplySystemMoveIfReady(systemMatch, systemTurnStart.AddSeconds(5)));
+        TestAssert.AreEqual<int?>(1, systemMatch.CurrentTurnSeatNumber);
+        TestAssert.AreEqual(systemTurnStart.AddSeconds(5), systemMatch.TurnStartedAtUtc.Value);
+        TestAssert.AreEqual(0, systemMatch.Participants[1].ConsecutiveTimeoutCount);
+        MatchMove systemMove = systemMatch.LastMove
+            ?? throw new InvalidOperationException("A system move was expected.");
+        TestAssert.AreEqual("System", systemMove.Origin);
+        TestAssert.AreEqual(true, new MatchRepository().SynchronizeMatch(systemMatch));
         Console.WriteLine("Passed real match SQL checks: atomic join, chat ordering, "
             + "moderation, authorization, cancellation and session revocation.");
     }

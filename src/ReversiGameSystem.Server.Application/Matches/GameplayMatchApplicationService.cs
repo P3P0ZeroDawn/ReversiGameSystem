@@ -382,7 +382,12 @@ public sealed class GameplayMatchApplicationService
                 }
 
                 DateTime turnStart = match.TurnStartedAtUtc ?? match.StartedAtUtc ?? now;
-                if (now >= turnStart.AddSeconds(match.TurnDurationSeconds))
+                MatchParticipant? participant = Array.Find(
+                    match.Participants, player => player.SeatNumber == match.CurrentTurnSeatNumber);
+                TimeSpan duration = participant != null && participant.IsSystem
+                    ? GameplayMatchRules.SystemMoveDelay
+                    : TimeSpan.FromSeconds(match.TurnDurationSeconds);
+                if (now >= turnStart.Add(duration))
                 {
                     expiredMatches.Add(match);
                 }
@@ -397,7 +402,8 @@ public sealed class GameplayMatchApplicationService
         Match? snapshot = null;
         lock (match.SyncRoot)
         {
-            if (GameplayMatchRules.ApplyTimeoutIfExpired(match, now))
+            if (GameplayMatchRules.ApplySystemMoveIfReady(match, now)
+                || GameplayMatchRules.ApplyTimeoutIfExpired(match, now))
             {
                 snapshot = match.CreateSnapshot();
             }

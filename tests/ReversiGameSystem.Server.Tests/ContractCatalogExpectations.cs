@@ -442,6 +442,7 @@ internal static class ContractCatalogExpectations
             "MessageTooLong",
             "MessageBlocked",
             "PlayerMuted",
+            "RateLimitExceeded",
         },
         ["OpponentKind"] = new[]
         {

@@ -789,6 +789,11 @@ public sealed class MatchInvitationTests
 
     private sealed class InvitationMockStore : IMatchRepository
     {
+        public MatchResult<Match> StartSystemMatch(long accountId, long matchId, DateTime now)
+        {
+            throw new NotSupportedException();
+        }
+
         public MatchStatus EvaluateLobbyAccess(long accountId)
         {
             if (!Accounts.TryGetValue(accountId, out (string Email, bool IsActive) account)

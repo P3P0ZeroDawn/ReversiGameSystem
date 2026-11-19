@@ -15,6 +15,46 @@ public sealed class GameplayMatchRulesTests
         new DateTime(2026, 11, 15, 18, 0, 0, DateTimeKind.Utc);
 
     [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void AutomaticMove_OpeningBoard_SelectsLegalPlacement(bool isSystem)
+    {
+        Match match = CreateInProgressMatch(40);
+        GameplayMatchRules.InitializeStartedMatch(match, BaseUtc);
+        match.Participants[0].IsSystem = isSystem;
+        int[] originalBoard = (int[])match.Board.Clone();
+        DateTime expiredTurn = BaseUtc.AddSeconds(match.TurnDurationSeconds);
+
+        bool applied = isSystem
+            ? GameplayMatchRules.ApplySystemMoveIfReady(match, expiredTurn)
+            : GameplayMatchRules.ApplyTimeoutIfExpired(match, expiredTurn);
+
+        TestAssert.AreEqual(true, applied);
+        TestAssert.AreEqual(1, match.Moves.Count);
+        MatchMove move = match.Moves[0];
+        TestAssert.AreEqual(true, ReversiEngine.IsLegalMove(
+            originalBoard, move.Row, move.Column, ReversiEngine.Black));
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void ApplySystemMoveIfReady_AccountWithoutIdentifier_UsesParticipantKind(bool isSystem)
+    {
+        Match match = CreateInProgressMatch(40);
+        GameplayMatchRules.InitializeStartedMatch(match, BaseUtc);
+        match.Participants[0].AccountId = 0;
+        match.Participants[0].IsSystem = isSystem;
+
+        bool applied = GameplayMatchRules.ApplySystemMoveIfReady(
+            match,
+            BaseUtc.Add(GameplayMatchRules.SystemMoveDelay));
+
+        TestAssert.AreEqual(isSystem, applied);
+        TestAssert.AreEqual(isSystem ? 1 : 0, match.Moves.Count);
+    }
+
+    [TestMethod]
     public void InitializeStartedMatch_ActiveMatch_SetsOpeningBoardAndBlackTurn()
     {
         // Arrange
@@ -151,12 +191,14 @@ public sealed class GameplayMatchRulesTests
             match,
             new MatchPlacement(match.Id, 0, 2, 3),
             BaseUtc.AddSeconds(3));
+        match.Participants[1].IsSystem = true;
         Match snapshot = match.CreateSnapshot();
 
         // Act
         match.Board[(2 * 8) + 3] = ReversiEngine.Empty;
         match.Moves[0].Row = 7;
         match.Participants[0].ConsecutiveTimeoutCount = 3;
+        match.Participants[1].IsSystem = false;
         match.Moves.Clear();
 
         // Assert
@@ -164,6 +206,7 @@ public sealed class GameplayMatchRulesTests
         TestAssert.AreEqual(1, snapshot.Moves.Count);
         TestAssert.AreEqual(2, snapshot.Moves[0].Row);
         TestAssert.AreEqual(0, snapshot.Participants[0].ConsecutiveTimeoutCount);
+        TestAssert.AreEqual(true, snapshot.Participants[1].IsSystem);
     }
 
     private static Match CreateInProgressMatch(int turnDurationSeconds)

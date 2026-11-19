@@ -35,7 +35,9 @@ internal static class MatchContractMapper
         MatchConfiguration configuration = new MatchConfiguration
         {
             TurnDurationSeconds = match.TurnDurationSeconds,
-            OpponentKind = OpponentKind.Human,
+            OpponentKind = match.Participants.Any(participant => participant.IsSystem)
+                ? OpponentKind.System
+                : OpponentKind.Human,
             CountsTowardStatistics = match.CountsTowardStatistics
         };
 
@@ -195,7 +197,7 @@ internal static class MatchContractMapper
             SeatNumber = participant.SeatNumber,
             AccountId = participant.AccountId,
             DisplayName = participant.DisplayName,
-            Kind = ParticipantKind.Registered
+            Kind = participant.IsSystem ? ParticipantKind.System : ParticipantKind.Registered
         };
         return summary;
     }

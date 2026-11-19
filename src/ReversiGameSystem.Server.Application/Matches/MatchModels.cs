@@ -27,6 +27,8 @@ public sealed class MatchParticipant
     /// <summary>Gets or sets the stable server-resolved account identifier.</summary>
     public long AccountId { get; set; }
 
+    public bool IsSystem { get; set; }
+
     /// <summary>Gets or sets the public name recorded when joining.</summary>
     public string DisplayName { get; set; } = string.Empty;
 
@@ -40,6 +42,7 @@ public sealed class MatchParticipant
         {
             SeatNumber = SeatNumber,
             AccountId = AccountId,
+            IsSystem = IsSystem,
             DisplayName = DisplayName,
             ConsecutiveTimeoutCount = ConsecutiveTimeoutCount
         };

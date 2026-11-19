@@ -38,8 +38,6 @@ public partial class WaitingForOpponentPage : Page
         _guestName = guestName;
         matchCodeTextBlock.Text = lobby.MatchCode;
         UpdateTurnTimeText();
-        playAgainstSystemButton.IsEnabled = false;
-        playAgainstSystemButton.ToolTip = LocalizationManager.Instance["RemoteMatch_NotAvailable"];
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
         _keepalive.Tick += OnKeepalive;
@@ -172,6 +170,24 @@ public partial class WaitingForOpponentPage : Page
         connectionStatusTextBlock.Visibility = isReconnecting
             ? Visibility.Visible
             : Visibility.Collapsed;
+    }
+
+    private async void OnPlayAgainstSystemClick(object sender, RoutedEventArgs args)
+    {
+        IsEnabled = false;
+        try
+        {
+            MatchStatus status = await _client.StartSystemMatch(_lobby.MatchId);
+            if (status != MatchStatus.Success && IsLoaded)
+            {
+                _dialogs.ShowError(this, ServerConnectionFailedTitleKey,
+                    RemoteMatchMessages.Key(status, _guestName != null));
+            }
+        }
+        finally
+        {
+            IsEnabled = true;
+        }
     }
 
     private async void OnModifySettingsClick(object sender, RoutedEventArgs args)

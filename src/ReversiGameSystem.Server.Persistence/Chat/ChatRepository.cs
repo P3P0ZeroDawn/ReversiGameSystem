@@ -198,6 +198,11 @@ public class ChatRepository : IChatRepository
             {
                 status = ChatStatus.MatchNotInProgress;
             }
+            else if (context.MatchParticipant.Any(participant =>
+                participant.matchId == matchId && participant.participantTypeCode == "SYSTEM"))
+            {
+                status = ChatStatus.Unauthorized;
+            }
         }
 
         return status;

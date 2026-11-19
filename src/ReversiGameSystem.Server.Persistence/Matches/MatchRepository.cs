@@ -21,10 +21,66 @@ namespace ReversiGameSystem.Server.Persistence.Matches;
 /// </summary>
 public sealed class MatchRepository : IMatchRepository, IGameplayRepository
 {
+    private const string SystemParticipantType = "SYSTEM";
+    private const string SystemDisplayName = "System";
     private const string Alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private const string ActiveAccountStatusCode = "ACTIVE";
     private const string FinishedMatchStatusCode = "FINISHED";
     private const string InProgressMatchStatusCode = "IN_PROGRESS";
+    private const string WaitingMatchStatusCode = "WAITING";
+    private const string RegisteredParticipantType = "REGISTERED";
+    private const string WhitePieceColorCode = "WHITE";
+    private const string BlackPieceColorCode = "BLACK";
+    private const int CreatorSeatNumber = 1;
+    private const int WaitingParticipantCount = 1;
+    private const byte OpponentSeatNumber = 2;
+
+    public MatchResult<Match> StartSystemMatch(long accountId, long matchId, DateTime now)
+    {
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        using DbContextTransaction transaction =
+            context.Database.BeginTransaction(IsolationLevel.Serializable);
+        MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
+        if (!IsActiveAccount(context, accountId))
+        {
+            return new MatchResult<Match>(MatchStatus.InactiveAccount);
+        }
+
+        GameMatch? match = context.GameMatch.Include(candidate => candidate.MatchParticipant1)
+            .SingleOrDefault(candidate => candidate.matchId == matchId);
+        if (match == null)
+        {
+            return new MatchResult<Match>(MatchStatus.MatchNotFound);
+        }
+        if (!match.MatchParticipant1.Any(player =>
+            player.accountId == accountId && player.isCreator))
+        {
+            return new MatchResult<Match>(MatchStatus.Unauthorized);
+        }
+        if (match.statusCode != WaitingMatchStatusCode
+            || match.MatchParticipant1.Count != WaitingParticipantCount)
+        {
+            return new MatchResult<Match>(MatchStatus.MatchNotWaiting);
+        }
+
+        match.MatchParticipant1.Add(new PersistentMatchParticipant
+        {
+            seatNumber = OpponentSeatNumber,
+            participantTypeCode = SystemParticipantType,
+            displayNameSnapshot = SystemDisplayName,
+            pieceColorCode = WhitePieceColorCode,
+            joinedAtUtc = now
+        });
+        match.statusCode = InProgressMatchStatusCode;
+        match.countsTowardStatistics = false;
+        match.startedAtUtc = now;
+        match.currentTurnSeatNumber = CreatorSeatNumber;
+        match.turnStartedAtUtc = now;
+        context.SaveChanges();
+        Match started = MatchDatabase.Map(match);
+        transaction.Commit();
+        return new MatchResult<Match>(started);
+    }
 
     /// <inheritdoc />
     public MatchStatus EvaluateLobbyAccess(long accountId)
@@ -82,7 +138,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         GameMatch match = new GameMatch
         {
             matchCode = code,
-            statusCode = "WAITING",
+            statusCode = WaitingMatchStatusCode,
             turnDurationSeconds = (short)settings.TurnDurationSeconds,
             countsTowardStatistics = settings.CountsTowardStatistics,
             createdAtUtc = now
@@ -141,7 +197,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         GameMatch match = new GameMatch
         {
             matchCode = code,
-            statusCode = "WAITING",
+            statusCode = WaitingMatchStatusCode,
             turnDurationSeconds = (short)settings.TurnDurationSeconds,
             countsTowardStatistics = settings.CountsTowardStatistics,
             createdAtUtc = now
@@ -179,7 +235,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
 
         PersistentMatchParticipant? player = context.MatchParticipant.SingleOrDefault(candidate =>
             candidate.matchId == matchId && candidate.accountId == accountId
-            && candidate.participantTypeCode == "REGISTERED");
+            && candidate.participantTypeCode == RegisteredParticipantType);
         if (player == null || !player.isCreator)
         {
             return new MatchResult<Match>(MatchStatus.Unauthorized);
@@ -194,7 +250,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
             return new MatchResult<Match>(MatchStatus.MatchNotFound);
         }
 
-        if (match.statusCode != "WAITING")
+        if (match.statusCode != WaitingMatchStatusCode)
         {
             return new MatchResult<Match>(MatchStatus.MatchNotWaiting);
         }
@@ -242,7 +298,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
 
         Match[] matches = context.GameMatch.Include(match => match.MatchParticipant1)
             .Where(match => publicMatchIds.Contains(match.matchId)
-                && match.statusCode == "WAITING" && match.MatchParticipant1.Count == 1
+                && match.statusCode == WaitingMatchStatusCode && match.MatchParticipant1.Count == 1
                 && match.MatchParticipant1.All(player => player.Account.statusCode == "ACTIVE")
                 && !match.MatchParticipant1.Any(player => player.accountId == accountId))
             .OrderBy(match => match.matchId).ToArray().Select(MatchDatabase.Map).ToArray();
@@ -264,8 +320,8 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
 
         GameMatch? match = context.GameMatch.Include(candidate => candidate.MatchParticipant1)
             .SingleOrDefault(candidate =>
-                candidate.matchCode == code && candidate.statusCode == "WAITING");
-        if (match == null || match.MatchParticipant1.Count != 1)
+                candidate.matchCode == code && candidate.statusCode == WaitingMatchStatusCode);
+        if (match == null || match.MatchParticipant1.Count != WaitingParticipantCount)
         {
             return new MatchResult<Match>(MatchStatus.MatchCodeUnavailable);
         }
@@ -299,7 +355,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         match.MatchParticipant1.Add(CreateParticipant(player, 2, now));
         match.statusCode = "IN_PROGRESS";
         match.startedAtUtc = now;
-        match.currentTurnSeatNumber = 1;
+        match.currentTurnSeatNumber = CreatorSeatNumber;
         match.turnStartedAtUtc = now;
         context.SaveChanges();
         Match result = MatchDatabase.Map(match);
@@ -317,7 +373,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         GameMatch? match = context.GameMatch.SingleOrDefault(candidate =>
-            candidate.matchCode == code && candidate.statusCode == "WAITING");
+            candidate.matchCode == code && candidate.statusCode == WaitingMatchStatusCode);
         if (match == null)
         {
             return MatchStatus.MatchCodeUnavailable;
@@ -357,7 +413,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
             PersistentMatchParticipant? participant = context.MatchParticipant.SingleOrDefault(
                 candidate =>
                     candidate.matchId == matchId && candidate.accountId == accountId
-                    && candidate.participantTypeCode == "REGISTERED");
+                    && candidate.participantTypeCode == RegisteredParticipantType);
             if (participant == null)
             {
                 return new MatchResult<Match>(MatchStatus.Unauthorized);
@@ -596,7 +652,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
 
         PersistentMatchParticipant? player = context.MatchParticipant.SingleOrDefault(candidate =>
             candidate.matchId == matchId && candidate.accountId == accountId
-            && candidate.participantTypeCode == "REGISTERED");
+            && candidate.participantTypeCode == RegisteredParticipantType);
         if (player == null || !player.isCreator)
         {
             return new MatchResult<Match>(MatchStatus.Unauthorized);
@@ -611,7 +667,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
             return new MatchResult<Match>(MatchStatus.MatchNotFound);
         }
 
-        if (match.statusCode != "WAITING")
+        if (match.statusCode != WaitingMatchStatusCode)
         {
             return new MatchResult<Match>(MatchStatus.MatchNotWaiting);
         }
@@ -637,7 +693,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
 
         PersistentMatchParticipant? player = context.MatchParticipant.SingleOrDefault(candidate =>
             candidate.matchId == matchId && candidate.accountId == accountId
-            && candidate.participantTypeCode == "REGISTERED");
+            && candidate.participantTypeCode == RegisteredParticipantType);
         if (player == null || !player.isCreator)
         {
             return MatchStatus.Unauthorized;
@@ -652,7 +708,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
             return MatchStatus.MatchNotFound;
         }
 
-        if (match.statusCode != "WAITING" && match.statusCode != "CANCELLED")
+        if (match.statusCode != WaitingMatchStatusCode && match.statusCode != "CANCELLED")
         {
             return MatchStatus.MatchNotWaiting;
         }
@@ -708,7 +764,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
             .Include(candidate => candidate.MatchParticipant1)
             .Include(candidate => candidate.GameMove)
             .Where(candidate => candidate.MatchParticipant1.Any(player =>
-                player.accountId == accountId && player.participantTypeCode == "REGISTERED")
+                player.accountId == accountId && player.participantTypeCode == RegisteredParticipantType)
                 && candidate.statusCode == "FINISHED")
             .OrderByDescending(candidate => candidate.createdAtUtc)
             .ToArray();
@@ -773,9 +829,9 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         {
             seatNumber = seat,
             accountId = player.AccountId,
-            participantTypeCode = "REGISTERED",
+            participantTypeCode = RegisteredParticipantType,
             displayNameSnapshot = player.Username,
-            pieceColorCode = seat == 1 ? "BLACK" : "WHITE",
+            pieceColorCode = seat == 1 ? BlackPieceColorCode : WhitePieceColorCode,
             joinedAtUtc = now,
             isCreator = seat == 1
         };

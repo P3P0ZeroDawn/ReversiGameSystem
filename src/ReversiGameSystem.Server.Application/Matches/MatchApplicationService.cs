@@ -202,6 +202,25 @@ public sealed class MatchApplicationService
         return joinResult;
     }
 
+    public MatchResult<Match> StartSystemMatch(string token, long matchId)
+    {
+        MatchResult<AuthenticatedSession> session = ResolveActiveSession(token);
+        if (session.Value == null)
+        {
+            return new MatchResult<Match>(session.Status);
+        }
+
+        MatchResult<Match> result = _matches.StartSystemMatch(
+            session.Value.AccountId, matchId, _clock.UtcNow);
+        if (result.Value != null)
+        {
+            RemoveTrackedMatch(token, matchId);
+            MatchStarted?.Invoke(result.Value);
+        }
+
+        return result;
+    }
+
     public MatchResult<Match> GetParticipantMatch(string token, long matchId)
     {
         MatchResult<AuthenticatedSession> playerResult = ResolveActiveSession(token);
