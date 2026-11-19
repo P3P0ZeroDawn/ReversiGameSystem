@@ -1,101 +1,96 @@
-# C# Video Game Development Standard
-
 ## Table of Contents
 
-- [[#1. Introduction|1. Introduction]]
-  - [[#1.1 Problem Statement|1.1 Problem Statement]]
-  - [[#1.2 Purpose|1.2 Purpose]]
-- [[#2. Language|2. Language]]
-  - [[#2.1 Source Code Language|2.1 Source Code Language]]
-  - [[#2.2 User-Facing Language and Localization|2.2 User-Facing Language and Localization]]
-- [[#3. Naming Conventions|3. Naming Conventions]]
-  - [[#3.1 General Identifier Rules|3.1 General Identifier Rules]]
-  - [[#3.2 Namespaces|3.2 Namespaces]]
-  - [[#3.3 Classes|3.3 Classes]]
-  - [[#3.4 Interfaces|3.4 Interfaces]]
-  - [[#3.5 Enumerations|3.5 Enumerations]]
-  - [[#3.6 Enumeration Members|3.6 Enumeration Members]]
-  - [[#3.7 Fields|3.7 Fields]]
-  - [[#3.8 Properties|3.8 Properties]]
-  - [[#3.9 Local Variables|3.9 Local Variables]]
-  - [[#3.10 Parameters|3.10 Parameters]]
-  - [[#3.11 Constants|3.11 Constants]]
-  - [[#3.12 Methods|3.12 Methods]]
-  - [[#3.13 Events|3.13 Events]]
-  - [[#3.14 Test Classes|3.14 Test Classes]]
-  - [[#3.15 Test Methods|3.15 Test Methods]]
-  - [[#3.16 Prefixes and Suffixes|3.16 Prefixes and Suffixes]]
-  - [[#3.17 WPF Controls, Resource Keys, and Client Asset Files|3.17 WPF Controls, Resource Keys, and Client Asset Files]]
-- [[#4. Code Style and Formatting|4. Code Style and Formatting]]
-  - [[#4.1 General Formatting|4.1 General Formatting]]
-  - [[#4.2 Indentation|4.2 Indentation]]
-  - [[#4.3 Braces|4.3 Braces]]
-  - [[#4.4 Line Length|4.4 Line Length]]
-  - [[#4.5 Line Wrapping|4.5 Line Wrapping]]
-  - [[#4.6 Horizontal Whitespace|4.6 Horizontal Whitespace]]
-  - [[#4.7 Vertical Whitespace|4.7 Vertical Whitespace]]
-  - [[#4.8 Using Directives|4.8 Using Directives]]
-  - [[#4.9 Namespace Declarations|4.9 Namespace Declarations]]
-  - [[#4.10 Early Returns|4.10 Early Returns]]
-  - [[#4.11 Source File Organization|4.11 Source File Organization]]
-- [[#5. C# Programming Practices|5. C# Programming Practices]]
-  - [[#5.1 Access Modifiers|5.1 Access Modifiers]]
-  - [[#5.2 Auto-Implemented Properties and Property Accessors|5.2 Auto-Implemented Properties and Property Accessors]]
-  - [[#5.3 Immutability and `readonly` Usage|5.3 Immutability and `readonly` Usage]]
-  - [[#5.4 Constants and Magic Values|5.4 Constants and Magic Values]]
-  - [[#5.5 Method Responsibility|5.5 Method Responsibility]]
-  - [[#5.6 Don't Repeat Yourself (DRY)|5.6 Don't Repeat Yourself (DRY)]]
-  - [[#5.7 Method Size|5.7 Method Size]]
-  - [[#5.8 Parameters|5.8 Parameters]]
-  - [[#5.9 Cyclomatic Complexity|5.9 Cyclomatic Complexity]]
-  - [[#5.10 Nullable Reference Types|5.10 Nullable Reference Types]]
-  - [[#5.11 Null Handling|5.11 Null Handling]]
-  - [[#5.12 Pattern Matching|5.12 Pattern Matching]]
-  - [[#5.13 LINQ Usage|5.13 LINQ Usage]]
-  - [[#5.14 Lambda Expressions|5.14 Lambda Expressions]]
-  - [[#5.15 Events and Delegates|5.15 Events and Delegates]]
-  - [[#5.16 Resource Disposal|5.16 Resource Disposal]]
-  - [[#5.17 Serialization|5.17 Serialization]]
-  - [[#5.18 Explicit Local Variable Types|5.18 Explicit Local Variable Types]]
-  - [[#5.19 Conditional Operator|5.19 Conditional Operator]]
-  - [[#5.20 Thread Synchronization and Concurrency|5.20 Thread Synchronization and Concurrency]]
-  - [[#5.21 Asynchronous Mutual Exclusion|5.21 Asynchronous Mutual Exclusion]]
-  - [[#5.22 Atomic Operations|5.22 Atomic Operations]]
-  - [[#5.23 Concurrent Collections|5.23 Concurrent Collections]]
-  - [[#5.24 You Aren't Gonna Need It (YAGNI)|5.24 You Aren't Gonna Need It (YAGNI)]]
-- [[#6. Error Handling, Logging, and Diagnostics|6. Error Handling, Logging, and Diagnostics]]
-  - [[#6.1 Exception Handling|6.1 Exception Handling]]
-  - [[#6.2 Custom Exceptions|6.2 Custom Exceptions]]
-  - [[#6.3 Logging|6.3 Logging]]
-  - [[#6.4 Log Levels|6.4 Log Levels]]
-  - [[#6.5 Log Message Conventions|6.5 Log Message Conventions]]
-  - [[#6.6 Assertions|6.6 Assertions]]
-  - [[#6.7 Player-Facing Error Messages|6.7 Player-Facing Error Messages]]
-  - [[#6.8 Unhandled Exceptions and Diagnostic Reporting|6.8 Unhandled Exceptions and Diagnostic Reporting]]
-- [[#7. Comments and Documentation|7. Comments and Documentation]]
-  - [[#7.1 General Comment Rules|7.1 General Comment Rules]]
-  - [[#7.2 Implementation Comments|7.2 Implementation Comments]]
-  - [[#7.3 XML Documentation Comments|7.3 XML Documentation Comments]]
-  - [[#7.4 Public API Documentation|7.4 Public API Documentation]]
-  - [[#7.5 `TODO` Comments|7.5 `TODO` Comments]]
-  - [[#7.6 `FIXME` Comments|7.6 `FIXME` Comments]]
-- [[#8. Input Validation and Security|8. Input Validation and Security]]
-  - [[#8.1 Trust Boundaries|8.1 Trust Boundaries]]
-  - [[#8.2 Input Validation|8.2 Input Validation]]
-  - [[#8.3 File System Access|8.3 File System Access]]
-  - [[#8.4 Credential and Secret Management|8.4 Credential and Secret Management]]
-- [[#9. Testing and Quality Assurance|9. Testing and Quality Assurance]]
-  - [[#9.1 Testing Strategy|9.1 Testing Strategy]]
-  - [[#9.2 Unit Testing|9.2 Unit Testing]]
-  - [[#9.3 Integration Testing|9.3 Integration Testing]]
-  - [[#9.4 Arrange-Act-Assert Structure|9.4 Arrange-Act-Assert Structure]]
-- [[#10. Version Control and Collaboration|10. Version Control and Collaboration]]
-  - [[#10.1 Commit Messages and Atomicity|10.1 Commit Messages and Atomicity]]
-  - [[#10.2 Repository Hygiene and Sensitive Data|10.2 Repository Hygiene and Sensitive Data]]
-- [[#11. References|11. References]]
-- [[#12. AI Use Declaration|12. AI Use Declaration]]
-
----
+- [1. Introduction](#1.%20Introduction)
+    - [1.1 Problem Statement](#1.1%20Problem%20Statement)
+    - [1.2 Purpose](#1.2%20Purpose)
+- [2. Language](#2.%20Language)
+    - [2.1 Source Code Language](#2.1%20Source%20Code%20Language)
+    - [2.2 User-Facing Language and Localization](#2.2%20User-Facing%20Language%20and%20Localization)
+- [3. Naming Conventions](#3.%20Naming%20Conventions)
+    - [3.1 General Identifier Rules](#3.1%20General%20Identifier%20Rules)
+    - [3.2 Namespaces](#3.2%20Namespaces)
+    - [3.3 Classes](#3.3%20Classes)
+    - [3.4 Interfaces](#3.4%20Interfaces)
+    - [3.5 Enumerations](#3.5%20Enumerations)
+    - [3.6 Enumeration Members](#3.6%20Enumeration%20Members)
+    - [3.7 Fields](#3.7%20Fields)
+    - [3.8 Properties](#3.8%20Properties)
+    - [3.9 Local Variables](#3.9%20Local%20Variables)
+    - [3.10 Parameters](#3.10%20Parameters)
+    - [3.11 Constants](#3.11%20Constants)
+    - [3.12 Methods](#3.12%20Methods)
+    - [3.13 Events](#3.13%20Events)
+    - [3.14 Test Classes](#3.14%20Test%20Classes)
+    - [3.15 Test Methods](#3.15%20Test%20Methods)
+    - [3.16 Prefixes and Suffixes](#3.16%20Prefixes%20and%20Suffixes)
+    - [3.17 WPF Controls, Resource Keys, and Client Asset Files](#3.17%20WPF%20Controls%2C%20Resource%20Keys%2C%20and%20Client%20Asset%20Files)
+- [4. Code Style and Formatting](#4.%20Code%20Style%20and%20Formatting)
+    - [4.1 General Formatting](#4.1%20General%20Formatting)
+    - [4.2 Indentation](#4.2%20Indentation)
+    - [4.3 Braces](#4.3%20Braces)
+    - [4.4 Line Length](#4.4%20Line%20Length)
+    - [4.5 Line Wrapping](#4.5%20Line%20Wrapping)
+    - [4.6 Horizontal Whitespace](#4.6%20Horizontal%20Whitespace)
+    - [4.7 Vertical Whitespace](#4.7%20Vertical%20Whitespace)
+    - [4.8 Using Directives](#4.8%20Using%20Directives)
+    - [4.9 Namespace Declarations](#4.9%20Namespace%20Declarations)
+    - [4.10 Early Returns and Final Assignment](#4.10%20Early%20Returns%20and%20Final%20Assignment)
+- [5. C# Programming Practices](#5.%20C%23%20Programming%20Practices)
+    - [5.1 Access Modifiers](#5.1%20Access%20Modifiers)
+    - [5.2 Auto-Implemented Properties and Property Accessors](#5.2%20Auto-Implemented%20Properties%20and%20Property%20Accessors)
+    - [5.3 Immutability and readonly Usage](#5.3%20Immutability%20and%20readonly%20Usage)
+    - [5.4 Constants and Magic Values](#5.4%20Constants%20and%20Magic%20Values)
+    - [5.5 Method Responsibility](#5.5%20Method%20Responsibility)
+    - [5.6 Don't Repeat Yourself (DRY)](#5.6%20Don%27t%20Repeat%20Yourself%20%28DRY%29)
+    - [5.7 Method Size](#5.7%20Method%20Size)
+    - [5.8 Parameters](#5.8%20Parameters)
+    - [5.9 Cyclomatic Complexity](#5.9%20Cyclomatic%20Complexity)
+    - [5.10 Nullable Reference Types](#5.10%20Nullable%20Reference%20Types)
+    - [5.11 Null Handling](#5.11%20Null%20Handling)
+    - [5.12 Pattern Matching](#5.12%20Pattern%20Matching)
+    - [5.13 LINQ Usage](#5.13%20LINQ%20Usage)
+    - [5.14 Lambda Expressions](#5.14%20Lambda%20Expressions)
+    - [5.15 Events and Delegates](#5.15%20Events%20and%20Delegates)
+    - [5.16 Resource Disposal](#5.16%20Resource%20Disposal)
+    - [5.17 Serialization](#5.17%20Serialization)
+    - [5.18 Explicit Local Variable Types](#5.18%20Explicit%20Local%20Variable%20Types)
+    - [5.19 Conditional Operator](#5.19%20Conditional%20Operator)
+    - [5.20 Thread Synchronization and Concurrency](#5.20%20Thread%20Synchronization%20and%20Concurrency)
+    - [5.21 Semaphores and Asynchronous Mutual Exclusion](#5.21%20Semaphores%20and%20Asynchronous%20Mutual%20Exclusion)
+    - [5.22 Atomic Operations](#5.22%20Atomic%20Operations)
+    - [5.23 Concurrent Collections](#5.23%20Concurrent%20Collections)
+    - [5.24 You Aren't Gonna Need It (YAGNI)](#5.24%20You%20Aren%27t%20Gonna%20Need%20It%20%28YAGNI%29)
+    - [5.25 Local Functions](#5.25%20Local%20Functions)
+    - [5.26 Asynchronous Operations](#5.26%20Asynchronous%20Operations)
+- [6. Error Handling, Logging, and Diagnostics](#6.%20Error%20Handling%2C%20Logging%2C%20and%20Diagnostics)
+    - [6.1 Exception Handling](#6.1%20Exception%20Handling)
+    - [6.2 Custom Exceptions](#6.2%20Custom%20Exceptions)
+    - [6.3 Logging](#6.3%20Logging)
+    - [6.4 Log Levels](#6.4%20Log%20Levels)
+    - [6.5 Log Message Conventions](#6.5%20Log%20Message%20Conventions)
+    - [6.6 Player-Facing Error Messages](#6.6%20Player-Facing%20Error%20Messages)
+    - [6.7 Unhandled Exceptions and Diagnostic Reporting](#6.7%20Unhandled%20Exceptions%20and%20Diagnostic%20Reporting)
+- [7. Comments and Documentation](#7.%20Comments%20and%20Documentation)
+    - [7.1 General Comment Rules](#7.1%20General%20Comment%20Rules)
+    - [7.2 Implementation Comments](#7.2%20Implementation%20Comments)
+    - [7.3 XML Documentation Comments](#7.3%20XML%20Documentation%20Comments)
+    - [7.4 Public API Documentation](#7.4%20Public%20API%20Documentation)
+    - [7.5 TODO Comments](#7.5%20TODO%20Comments)
+- [8. Input Validation and Security](#8.%20Input%20Validation%20and%20Security)
+    - [8.1 Trust Boundaries](#8.1%20Trust%20Boundaries)
+    - [8.2 Input Validation](#8.2%20Input%20Validation)
+    - [8.3 File System Access](#8.3%20File%20System%20Access)
+    - [8.4 Credential and Secret Management](#8.4%20Credential%20and%20Secret%20Management)
+- [9. Testing and Quality Assurance](#9.%20Testing%20and%20Quality%20Assurance)
+    - [9.1 Testing Strategy](#9.1%20Testing%20Strategy)
+    - [9.2 Unit Testing](#9.2%20Unit%20Testing)
+    - [9.3 Integration Testing](#9.3%20Integration%20Testing)
+    - [9.4 Atomic Test Structure](#9.4%20Atomic%20Test%20Structure)
+- [10. Version Control and Collaboration](#10.%20Version%20Control%20and%20Collaboration)
+    - [10.1 Commit Messages and Atomicity](#10.1%20Commit%20Messages%20and%20Atomicity)
+    - [10.2 Repository Hygiene and Sensitive Data](#10.2%20Repository%20Hygiene%20and%20Sensitive%20Data)
+- [11. References](#11.%20References)
+- [12. AI Use Declaration](#12.%20AI%20Use%20Declaration)
 
 ## 1. Introduction
 
@@ -103,7 +98,7 @@ This development standard defines the coding rules and practices governing C# vi
 
 ### 1.1 Problem Statement
 
-C# permits expressing identical behavior in multiple syntactic forms that are accepted by the compiler without enforcing consistent naming, formatting, null safety, error handling, or test organization (Microsoft, 2026a). Without verifiable rules, stylistic divergence increases cognitive load, hides defects, and complicates code reviews.
+C# permits expressing identical behavior in multiple syntactic forms that are accepted by the compiler without enforcing consistent naming, formatting, null safety, error handling, or test organization (Microsoft, 2026b). Without verifiable rules, stylistic divergence increases cognitive load, hides defects, and complicates code reviews.
 
 ### 1.2 Purpose
 
@@ -116,7 +111,9 @@ This standard establishes clear, verifiable, and consistently applicable rules t
 
 This standard complements the C# language specification and official .NET guidance without replacing them.
 
-**Code Example Scope:** Code examples are intentionally minimal and omit surrounding namespaces, `using` directives, XML documentation, and unrelated members when irrelevant to the rule demonstrated. Every **Correct** example complies with all substantive rules applicable to the behavior shown.
+**Code Example Scope:** Each example demonstrates only its section concept and omits unrelated surrounding declarations. Examples contain no code comments and use APIs compatible with the supported target framework. Correct examples must satisfy the other applicable rules; incorrect examples should isolate the stated violation. Documentation examples show text or XML content without C# comment markers.
+
+Language requirements are distinct from the naming and review conventions selected here. A construct not mentioned in this standard requires review when it introduces unfamiliar complexity, but its omission alone does not make it invalid C#. Keep feature architecture and business rules in their own design documents.
 
 ---
 
@@ -124,44 +121,33 @@ This standard complements the C# language specification and official .NET guidan
 
 ### 2.1 Source Code Language
 
-All handwritten source-code identifiers, comments, XML documentation, and technical log templates must be written in **English** using clear terminology (Microsoft, 2026a). Player-facing text is governed separately by Section 2.2. Automatically generated code is excluded and must retain the generator's original language and structure.
+Write handwritten identifiers, comments, documentation, and technical logs in English; generated code retains its original language and structure (Microsoft, 2026b).
 
 #### Correct
 
 ```csharp
 int remainingLives = player.RemainingLives;
-bool isBossDefeated = false;
-
-// Prevent the player from moving during the cutscene.
-
-// Generated file: preserve the generator output without manual translation.
 ```
 
-The handwritten names use English while generated output remains untouched.
+The identifier describes the value in English.
 
 #### Incorrect
 
 ```csharp
 int vidasRestantes = player.RemainingLives;
-bool jefeDerrotado = false;
-
-// Prevent player movement during la cinemática.
-
-// Manually translated generated code.
 ```
 
-The handwritten code mixes languages and proposes editing generated output.
+The handwritten identifier does not follow the agreed language.
 
 ### 2.2 User-Facing Language and Localization
 
-All culture-dependent player-facing text must be stored in localization resource dictionaries rather than hardcoded in UI markup or C# logic. Supported cultures (`en-US` and `es-MX`) must define identical, stable English resource keys with matching format placeholders. Image assets containing embedded text must provide localized variants; language-neutral visual assets must not be duplicated per culture.
+Store culture-dependent player-facing text in localization resources rather than UI markup or C# literals. All configured cultures must share stable English keys and compatible format placeholders; localize images with embedded text without duplicating language-neutral assets (Microsoft, n.d.-i).
 
 #### Correct
 
 ```csharp
 string turnBanner = string.Format(
-    CultureInfo.CurrentUICulture,
-    Strings.Combat_CurrentTurnFormat,
+    LocalizationManager.Instance["Combat_CurrentTurnFormat"],
     activePlayerName);
 ```
 
@@ -181,7 +167,7 @@ The literal cannot follow the selected user interface culture.
 
 ### 3.1 General Identifier Rules
 
-Identifiers must use descriptive domain names that communicate intent without inspecting the implementation. Unclear abbreviations and consecutive underscores (`__`, reserved for compiler-generated names) are prohibited. Single-letter names are permitted only for trivial local loop counters (Microsoft, 2026a).
+Identifiers must use descriptive domain names that communicate intent without inspecting the implementation. Unclear abbreviations and consecutive underscores (`__`, reserved for compiler-generated names) are prohibited. Single-letter names are permitted only for trivial local loop counters (Microsoft, 2026b).
 
 #### Correct
 
@@ -201,7 +187,7 @@ The abbreviation hides intent and uses a reserved double underscore pattern.
 
 ### 3.2 Namespaces
 
-Namespace names must use **PascalCase** separated by periods to form a clear hierarchy starting with the root product name followed by the architectural layer or functional area, such as `Gameplay`, `Combat`, `Contracts`, or `Persistence` (Microsoft, 2023e).
+Namespace names must use **PascalCase** separated by periods to form a clear hierarchy starting with the root product name followed by the architectural layer or functional area, such as `Gameplay`, `Combat`, `Contracts`, or `Persistence` (Microsoft, 2023f).
 
 #### Correct
 
@@ -221,43 +207,31 @@ The namespace replaces the required hierarchy with lowercase words and underscor
 
 ### 3.3 Classes
 
-Class names must use **PascalCase** nouns or noun phrases that represent a single concept or responsibility, without type prefixes such as `C` (Microsoft, 2025j; Microsoft, 2026a):
-
-- Stateless application coordinators that group cohesive operations for one capability must use `{Capability}ApplicationService`. Do not fragment one capability across `UseCase`, `Handler`, `Reader`, `Editor`, or `Operations` classes unless an independent abstraction is justified.
-- Persistence repository implementations must be named `{Aggregate}Repository` after the domain aggregate they manage, without embedding technology names such as `EntityFramework` or `SqlServer`.
-- Dedicated `Command`, `Handler`, or `Mapper` classes must encapsulate a distinct, reusable responsibility. Single-boundary data conversion belongs in a private method, and `Command` types must not duplicate existing transport DTOs.
+Use PascalCase nouns that identify one responsibility (Microsoft, 2025k). Suffixes such as ApplicationService and Repository are examples of responsibility-based names, not mandatory suffixes or architectural requirements. Choose names that describe the actual role without unnecessary technology details, and avoid types that merely forward calls without a distinct responsibility.
 
 #### Correct
 
 ```csharp
-public sealed class QuestApplicationService
-{
-}
-
-public sealed class QuestRepository : IQuestRepository
+public sealed class InventoryRepository : IInventoryRepository
 {
 }
 ```
 
-Each class name identifies its responsibility without naming an implementation technology.
+The name describes the responsibility without exposing its implementation technology.
 
 #### Incorrect
 
 ```csharp
-public sealed class Cquest_operations
-{
-}
-
-public sealed class EntityFrameworkQuestRepository : IQuestRepository
+public sealed class EntityFrameworkInventoryRepository : IInventoryRepository
 {
 }
 ```
 
-The names use invalid casing and expose a persistence technology.
+The name unnecessarily couples the repository to a persistence technology.
 
 ### 3.4 Interfaces
 
-Interface names must use **PascalCase** prefixed with `I` and describe a capability, behavior, or contract using an adjective phrase or noun phrase (Microsoft, 2025j; Microsoft, 2026a). The word `Interface` must not appear in the name.
+Interface names must use **PascalCase** prefixed with `I` and describe a capability, behavior, or contract using an adjective phrase or noun phrase (Microsoft, 2025k; Microsoft, 2026b). The word `Interface` must not appear in the name.
 
 #### Correct
 
@@ -281,7 +255,7 @@ The name omits the required prefix and adds the redundant `Interface` suffix.
 
 ### 3.5 Enumerations
 
-Enumeration names must use **PascalCase** singular nouns, except `[Flags]` bitmask enumerations, which must use plural nouns. The suffixes `Enum`, `Flag`, and `Flags` are prohibited (Microsoft, 2025j; Microsoft, 2026a).
+Enumeration names must use **PascalCase** singular nouns, except `[Flags]` bitmask enumerations, which must use plural nouns. The suffixes `Enum`, `Flag`, and `Flags` are prohibited (Microsoft, 2025k; Microsoft, 2026b).
 
 #### Correct
 
@@ -311,85 +285,59 @@ The `Enum` suffix repeats information already expressed by the type declaration.
 
 ### 3.6 Enumeration Members
 
-Enumeration member names must use **PascalCase** and must not repeat the enumeration type name as a prefix (Microsoft, 2025j).
+Use PascalCase members without repeating the enumeration name as a prefix (Microsoft, 2025k).
 
 #### Correct
 
 ```csharp
-public enum AttackType
+public enum TurnState
 {
-    LightAttack,
-    HeavyAttack,
-    SpecialAttack
+    Waiting,
+    Active
 }
 ```
 
-Each member uses PascalCase without repeating the enumeration name.
+The members are readable without repeating TurnState.
 
 #### Incorrect
 
 ```csharp
-public enum AttackType
+public enum TurnState
 {
-    attack_light,
-    attack_heavy,
-    attack_special
+    TurnStateWaiting,
+    TurnStateActive
 }
 ```
 
-The members use underscores and lowercase prefixes instead of PascalCase.
+Each member repeats information already supplied by the enumeration type.
 
 ### 3.7 Fields
 
-Field naming must distinguish instance state, immutable runtime constants, and mutable static state (Microsoft, 2026a):
-
-- Private and internal **instance** fields (both mutable and `readonly`) must use `_camelCase`.
-- Immutable `static readonly` fields must use **PascalCase**.
-- Mutable `private static` fields must use `s_camelCase`, and `[ThreadStatic]` fields must use `t_camelCase`.
-- Mutable `public`, `protected`, or `internal` fields are prohibited.
+Use *_camelCase* for private or internal instance fields, PascalCase for static readonly fields, and s_camelCase for mutable private static fields; do not expose mutable fields (Microsoft, 2026b). As a layout convention, place constants first, followed by fields, constructors, properties, and methods.
 
 #### Correct
 
 ```csharp
-public sealed class SessionTracker
-{
-    private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
-    private static int s_activeTrackerCount;
-    private readonly ISessionStore _sessionStore;
-    private int _retryCount;
-
-    public SessionTracker(ISessionStore sessionStore)
-    {
-        _sessionStore = sessionStore
-            ?? throw new ArgumentNullException(nameof(sessionStore));
-    }
-}
+private const int MaximumLives = 3;
+private readonly IPlayerRepository _players;
+private int _remainingLives;
 ```
 
-The field names reveal whether state belongs to an instance or the type.
+Constants and fields use their required names and precede behavioral members.
 
 #### Incorrect
 
 ```csharp
-public sealed class SessionTracker
-{
-    private static readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(30);
-    public static int ActiveTrackerCount;
-    private readonly ISessionStore SessionStore;
-    private int retryCount;
-
-    public SessionTracker(ISessionStore sessionStore)
-    {
-        SessionStore = sessionStore;
-    }
-}
+private const int maximumLives = 3;
+private readonly IPlayerRepository players;
+public int RemainingLives;
 ```
 
-The fields use inconsistent casing and expose mutable static state publicly.
+The fields use inconsistent names and expose mutable state directly.
 
 ### 3.8 Properties
 
-Property names must use **PascalCase** nouns, noun phrases, or adjectives. Boolean properties must use affirmative names prefixed with `Is`, `Has`, `Can`, or `Should` when doing so clarifies state (Microsoft, 2023f).
+Property names must use **PascalCase** nouns, noun phrases, or adjectives. Boolean properties must use affirmative names prefixed with `Is`, `Has`, `Can`, or `Should` when doing so clarifies state (Microsoft, 2023g).
 
 #### Correct
 
@@ -413,7 +361,7 @@ The property casing is invalid and the negative Boolean name is harder to interp
 
 ### 3.9 Local Variables
 
-Local variable names must use **camelCase** and clearly identify the stored value without arbitrary abbreviations or underscores (Microsoft, 2026a).
+Local variable names must use **camelCase** and clearly identify the stored value without arbitrary abbreviations or underscores (Microsoft, 2026b).
 
 #### Correct
 
@@ -433,7 +381,7 @@ The local name combines invalid casing with an unclear abbreviation.
 
 ### 3.10 Parameters
 
-Method and constructor parameters must use **camelCase** and describe the semantic role of the argument rather than repeating only its data type (Microsoft, 2023g). Rules governing `out` and `ref` parameters are defined in Section 5.8.
+Method and constructor parameters must use **camelCase** and describe the semantic role of the argument rather than repeating only its data type (Microsoft, 2023h). Rules governing `out` and `ref` parameters are defined in Section 5.8.
 
 #### Correct
 
@@ -457,7 +405,7 @@ The abbreviation does not explain what the numeric value controls.
 
 ### 3.11 Constants
 
-Compile-time `const` identifiers must use **PascalCase** regardless of accessibility; `UPPER_SNAKE_CASE` is prohibited (Microsoft, 2026a).
+Compile-time `const` identifiers must use **PascalCase** regardless of accessibility; `UPPER_SNAKE_CASE` is prohibited (Microsoft, 2026b).
 
 #### Correct
 
@@ -477,33 +425,33 @@ The constant uses a casing convention that this standard prohibits.
 
 ### 3.12 Methods
 
-Method names must use **PascalCase** and start with a verb or verb phrase describing the action performed rather than only the data returned or modified (Microsoft, 2023f; Microsoft, 2026a).
+Use PascalCase verbs that describe the actual operation (Microsoft, 2023g). Include enough domain context to distinguish the action; verbs such as Get, Send, or Create are acceptable when the complete name explains their purpose.
 
 #### Correct
 
 ```csharp
-public int CalculateDamage(int baseDamage)
+public int CountOccupiedCells(int[] board)
 {
-    return baseDamage;
+    return board.Count(cell => cell != EmptyCell);
 }
 ```
 
-The method begins with a PascalCase verb that describes its action.
+The complete name identifies what the method counts.
 
 #### Incorrect
 
 ```csharp
-public int damage_calculation(int baseDamage)
+public int Execute(int[] board)
 {
-    return baseDamage;
+    return board.Count(cell => cell != EmptyCell);
 }
 ```
 
-The method uses invalid casing and names a result instead of an action.
+The generic verb hides the operation performed.
 
 ### 3.13 Events
 
-Event names must use **PascalCase** verb phrases. Use verb tense (such as `Closing` and `Closed`) to distinguish pre-action and post-action notifications; prefixes `Before` and `After` are prohibited (Microsoft, 2023f).
+Event names must use **PascalCase** verb phrases. Use verb tense (such as `Closing` and `Closed`) to distinguish pre-action and post-action notifications; prefixes `Before` and `After` are prohibited (Microsoft, 2023g).
 
 #### Correct
 
@@ -523,65 +471,43 @@ The `After` prefix replaces the required event tense convention.
 
 ### 3.14 Test Classes
 
-Test classes and test support types must use **PascalCase** suffixes that identify their verification scope (Microsoft, 2026o; van der Til et al., 2026):
-
-- `<TypeUnderTest>Tests` for unit tests targeting a single production class.
-- `<Feature>IntegrationTests` for tests verifying collaboration across real components or infrastructure.
-- `<Feature>SerializationTests` for WCF data-contract round-trip and compatibility tests.
-- `Stub`, `Fake`, or `Context` suffixes for reusable test doubles and fixture support classes.
+Name unit tests TypeUnderTestTests and integration tests FeatureIntegrationTests; use descriptive Stub or Fake suffixes for controlled test doubles (Microsoft, 2026o; Reese, 2025). These suffixes are naming conventions that make verification scope visible.
 
 #### Correct
 
 ```csharp
 [TestClass]
-public sealed class PlayerHealthTests
-{
-}
-
-[TestClass]
-public sealed class InventoryPersistenceIntegrationTests
-{
-}
-
-internal sealed class InMemoryInventoryRepositoryFake : IInventoryRepository
+public sealed class DamageCalculatorTests
 {
 }
 ```
 
-Each type name states whether it verifies one class, an integration, or supports a test.
+The name identifies the production type being tested.
 
 #### Incorrect
 
 ```csharp
 [TestClass]
-public sealed class TestPlayerStuff
-{
-}
-
-internal sealed class MockHelper : IInventoryRepository
+public sealed class TestStuff
 {
 }
 ```
 
-The names do not identify the verified scope or the test double's behavior.
+The name does not identify what the tests verify.
 
 ### 3.15 Test Methods
 
-Test method names must contain three or four underscore-separated **PascalCase** segments: `Method_Scenario_ExpectedBehavior` or `Method_Scenario_ExpectedBehavior_Flow` (Reese, 2025).
+Use Functionality_Flow_ExpectedBehavior with PascalCase segments, omitting the redundant Test prefix (Reese, 2025). An additional segment is acceptable when it clarifies the expected result; do not replace meaningful behavior with a generic success label.
 
 #### Correct
 
 ```csharp
-public void TakeDamage_HealthAboveZero_DecreasesHealth()
-{
-}
-
-public void TakeDamage_NegativeAmount_ThrowsArgumentOutOfRange_Failed()
+public void TakeDamage_ValidAmount_DecreasesHealth()
 {
 }
 ```
 
-Each test name identifies the method, scenario, and expected behavior.
+The name states the functionality, exercised flow, and expected effect.
 
 #### Incorrect
 
@@ -591,107 +517,55 @@ public void TestDamage()
 }
 ```
 
-The name does not reveal the tested scenario or expected result.
+The name does not state the flow or expected behavior.
 
 ### 3.16 Prefixes and Suffixes
 
-Prefixes and suffixes are restricted to meanings established by .NET guidelines or this standard (Microsoft, 2025b; Microsoft, 2025j; Microsoft, 2026a, 2026b):
-
-| Element | Required Form |
-| --- | --- |
-| Interface | Prefix `I` (`IDamageable`, `IQuestRepository`). |
-| Descriptive generic type parameter | Prefix `T` (`TItem`). |
-| Private/internal instance field | Prefix `_` (`_currentHealth`). |
-| Mutable private static / thread-static field | Prefix `s_` / `t_` (`s_instanceCount`, `t_requestId`). |
-| Application service / repository | Suffix `ApplicationService` / `Repository`. |
-| Asynchronous method | Use `Async` when synchronous and asynchronous alternatives coexist. |
-| Custom exception | Suffix `Exception` (`InventoryFullException`). |
-| Custom event payload | Suffix `EventArgs` (`ItemEquippedEventArgs`). |
-| Custom delegates | Suffix `EventHandler` or `Callback`. |
-
-- Class prefixes such as `C` and suffixes such as `Enum`, `Delegate`, `Impl`, `Ex`, and `New` are prohibited (`CA1711`).
-- Methods returning `Task`, `Task<T>`, `ValueTask`, or `ValueTask<T>` should use the
-  `Async` suffix when synchronous and asynchronous alternatives coexist. A cohesive
-  abstraction that exposes only asynchronous operations and has no synchronous alternative
-  may omit the suffix. The selected convention must remain consistent throughout that
-  abstraction. Event handlers, framework overrides, generated members, and external contract
-  signatures retain their required names. Synchronous methods must never end with `Async` and
-  must not wrap asynchronous calls through blocking operations (`.Result`, `.Wait()`, or
-  `.GetAwaiter().GetResult()`) (Microsoft, 2025b).
+Use meaningful established affixes, including I for interfaces and Exception for custom exception types (Microsoft, 2025k, 2026c). Do not add redundant type markers. For asynchronous abstractions, omit Async consistently when no synchronous alternative exists; retain required framework or generated names, and distinguish synchronous and asynchronous alternatives when both exist (Microsoft, 2025a).
 
 #### Correct
 
 ```csharp
-public interface IMatchChannel
+public interface IInventory
 {
-    Task SendMessage(string content);
-
-    Task CloseChannel();
 }
 ```
 
-The suffix is omitted consistently because the abstraction exposes only asynchronous
-operations.
+The interface uses the established I prefix without a redundant type suffix.
 
 #### Incorrect
 
 ```csharp
-public interface IMatchChannel
+public interface InventoryInterface
 {
-    Task SendMessageAsync(string content);
-
-    Task CloseChannel();
 }
 ```
 
-The abstraction mixes two naming conventions without offering synchronous alternatives.
+The name replaces the established I prefix with the redundant Interface suffix.
 
 ### 3.17 WPF Controls, Resource Keys, and Client Asset Files
 
-Named WPF controls (`x:Name`) must use **camelCase** combining semantic purpose and control type (such as `languageComboBox`, `usernameTextBox`, `confirmSelectionButton`); Hungarian prefixes (`btn`, `txt`, `lbl`, `img`) are prohibited. View classes and XAML styles must use **PascalCase** (`QuestJournalPage`, `PrimaryActionButtonStyle`).
-
-Localization resource keys must use `<Feature>_<Purpose>` in English **PascalCase** separated by one underscore:
-
-- Keys must describe semantic purpose rather than literal wording, avoid spaces/hyphens/accents/abbreviated control prefixes, and exist identically across all supported `.resx` cultures.
-- Keys must not be renamed when only display wording changes, and formatted strings containing `{0}` placeholders must end with `Format` and preserve placeholder compatibility across cultures.
-
-| Resource Purpose | Pattern | Example |
-| --- | --- | --- |
-| Window, page, or section title | `<Feature>_Title` | `QuestJournal_Title` |
-| Field or control label | `<Feature>_<Meaning>Label` | `Settings_MasterVolumeLabel` |
-| Button text | `<Feature>_<Action>Button` | `Inventory_DropItemButton` |
-| Validation or status message | `<Feature>_<Meaning>Message` | `SignIn_InvalidCredentialsMessage` |
-| Formatted runtime string | `<Feature>_<Meaning>Format` | `Combat_CurrentTurnFormat` |
-| Input hint or placeholder | `<Feature>_<Meaning>Placeholder` | `GuildSearch_NamePlaceholder` |
-| Control tooltip | `<Feature>_<Meaning>Tooltip` | `Hud_LeaveDungeonTooltip` |
-
-Client asset files must use descriptive English **PascalCase** names. Store them under a
-folder that identifies the media kind, such as `Assets/Images`. Do not use spaces, hyphens,
-sequence numbers, or generic names such as `image` and `icon1`.
+Use purpose-and-control-type camelCase for named WPF controls and PascalCase for views and styles. Use stable Feature_Purpose English localization keys and descriptive PascalCase asset filenames, without spaces or sequence numbers (Microsoft, 2026b). These naming conventions keep resources recognizable when display wording changes.
 
 #### Correct
 
 ```text
-QuestJournal_Title
-Combat_CurrentTurnFormat
+usernameTextBox
+SignIn_InvalidCredentialsMessage
 DefaultProfilePicture.png
-BoardMask.png
 ```
 
-The resource keys and asset files use stable English names that describe their purpose.
+The names identify each control, resource purpose, and asset.
 
 #### Incorrect
 
 ```text
-tituloMisiones
-Combat_ItIsNowTheTurnOfPlayer
-default profile picture.png
-image1.png
+txtUser
+SignIn_PleaseTryAgainNow
+default picture 1.png
 ```
 
-The names mix languages, encode display wording, or fail to identify the asset purpose.
-
----
+The names use a control prefix, encode display wording, or fail the asset naming convention.
 
 ## 4. Code Style and Formatting
 
@@ -755,43 +629,35 @@ The block uses inconsistent two-space and three-space indentation.
 
 ### 4.3 Braces
 
-All braces must follow the **Allman style**, placing `{` and `}` on dedicated lines aligned with their owning declaration or control statement (Microsoft, 2023a; Microsoft, 2025f):
-
-- Every `if`, `else`, `for`, `foreach`, `while`, `do`, and `lock` statement must use braces even when its body contains a single statement (`IDE0011`).
-- Handwritten methods, constructors, properties, indexers, and custom accessors must use explicit block bodies (`{ ... }`). Expression-bodied members (`=>`) are prohibited in handwritten code; inline lambda expressions passed as delegates remain governed by Section 5.14.
+Use Allman braces for control-flow blocks and handwritten member bodies; never omit braces around a single statement (Microsoft, 2023a, 2025f). Auto-implemented accessors such as { get; set; } remain permitted; expression-bodied members are prohibited, while lambda and switch-expression arrows follow Sections 5.12 and 5.14.
 
 #### Correct
 
 ```csharp
-public int CalculateEffectiveArmor(int baseArmor, bool isShieldRaised)
+public void CloseSession()
 {
-    if (isShieldRaised)
+    if (_isClosed)
     {
-        return baseArmor + ShieldArmorBonus;
+        return;
     }
 
-    return baseArmor;
+    _isClosed = true;
 }
 ```
 
-The method and conditional use Allman braces with explicit block bodies.
+Both the method and its guard use explicit Allman blocks.
 
 #### Incorrect
 
 ```csharp
-public int DefaultArmor => DefaultArmorValue;
-
-public int CalculateEffectiveArmor(int baseArmor, bool isShieldRaised)
+public void CloseSession()
 {
-    if (isShieldRaised) {
-        return baseArmor + ShieldArmorBonus;
-    }
-    else
-        return baseArmor;
+    if (_isClosed) return;
+    _isClosed = true;
 }
 ```
 
-The member uses an expression body and the conditional omits required brace placement.
+The guard omits the required block and compresses its return onto the condition line.
 
 ### 4.4 Line Length
 
@@ -851,7 +717,7 @@ The arbitrary breaks obscure expression boundaries and continuation levels.
 
 ### 4.6 Horizontal Whitespace
 
-Apply horizontal spacing consistently (Microsoft, 2025d):
+Apply horizontal spacing consistently (Microsoft, 2025c):
 
 - One space after control-flow keywords (`if`, `for`, `foreach`, `while`, `switch`, `catch`, `lock`) and after commas.
 - One space on both sides of binary and ternary operators (`=`, `+`, `-`, `==`, `!=`, `&&`, `||`, `?`, `:`).
@@ -925,40 +791,35 @@ The example contains excessive blank lines and no separation between methods.
 
 ### 4.8 Using Directives
 
-Place `using` directives at the top of the file outside the namespace (`IDE0065`), sorted alphabetically with `System.*` namespaces first, and remove unused imports (`IDE0005`) (Microsoft, 2022a; Microsoft, 2023h, 2023i; Microsoft, 2025f). Type alias directives (`using Alias = Namespace.Type;`) are permitted only at the bottom of the `using` block to disambiguate colliding type names across layers or libraries, never as arbitrary shorthand (Microsoft, 2026h).
+Place using directives outside the namespace, ordered alphabetically with System namespaces first, and remove unused imports (Microsoft, 2022a, 2023i). Put type aliases last and use them only to resolve name collisions, not as arbitrary abbreviations.
 
 #### Correct
 
 ```csharp
 using System;
 using System.Collections.Generic;
+using GameProject.Inventory;
 
-using GameProject.Gameplay.Items;
-using GameProject.UI.Hud;
-
-using ContractItemDto = GameProject.Contracts.Inventory.InventoryItemDto;
-
-namespace GameProject.Client.Inventory;
+namespace GameProject.Client;
 ```
 
-The imports are ordered and the alias resolves a real type collision.
+The imports precede the namespace and place System namespaces first.
 
 #### Incorrect
 
 ```csharp
-namespace GameProject.Client.Inventory;
+namespace GameProject.Client;
 
-using GameProject.UI.Hud;
+using GameProject.Inventory;
+using System.Collections.Generic;
 using System;
-using System.IO;
-using ListAlias = System.Collections.Generic.List<int>;
 ```
 
-The imports appear after the namespace and the alias only shortens a type name.
+The imports appear after the namespace and are not ordered consistently.
 
 ### 4.9 Namespace Declarations
 
-Every source file must declare an explicit namespace matching its logical module. Prefer **file-scoped namespaces** (`namespace GameProject.Gameplay.Combat;`) unless a file legitimately requires multiple namespaces (Microsoft, 2026h).
+Every source file that declares types must declare an explicit namespace matching its logical module; files containing only assembly attributes do not need one. Prefer **file-scoped namespaces** (`namespace GameProject.Gameplay.Combat;`) unless a file legitimately requires multiple namespaces (Microsoft, 2026h).
 
 #### Correct
 
@@ -994,259 +855,124 @@ namespace GameProject
 
 Nested namespace blocks add structure that a file-scoped declaration expresses directly.
 
-### 4.10 Early Returns
+### 4.10 Early Returns and Final Assignment
 
-Check guard conditions, invalid inputs, and legitimate no-operation states at the beginning of a method and return early so the primary execution path remains at base indentation (Ecma International, 2023; JetBrains, 2026):
-
-- Guard clauses must always use Allman braces (Section 4.3).
-- Early returns must not be placed mid-operation where they bypass mandatory state updates, persistence, or cleanup; use `using` or `finally` when deterministic cleanup is required.
-- Early returns reduce nesting but still contribute to cyclomatic complexity (Section 5.9).
+Use early returns for initial guards so the main operation stays at base indentation (JetBrains, 2026). For the main decision, prefer assigning the output and returning once when that makes the flow clearer; never bypass required updates or cleanup.
 
 #### Correct
 
 ```csharp
-public void TryPerformAttack(Player player, Enemy target)
+public int CalculateReward(bool hasBonus)
 {
-    if (!player.IsAlive || !player.HasWeapon)
+    int reward = BaseReward;
+    if (hasBonus)
     {
-        return;
+        reward += BonusReward;
     }
 
-    if (!target.IsAlive || !player.CanReach(target))
-    {
-        return;
-    }
-
-    PerformAttack(player, target);
+    return reward;
 }
 ```
 
-The guard clauses leave the valid operation at the base indentation level.
+The method keeps one readable output assignment without adding redundant exits.
 
 #### Incorrect
 
 ```csharp
-public void CompleteDungeonFloor(Player player)
+public int CalculateReward(bool hasBonus)
 {
-    if (player.IsAlive)
+    if (hasBonus)
     {
-        SaveCheckpoint(player);
-
-        if (!player.HasBonusChestKey)
-        {
-            return;
-        }
-
-        GrantBonusTreasure(player);
-        MarkFloorCompleted(player);
+        return BaseReward + BonusReward;
+    }
+    else
+    {
+        return BaseReward;
     }
 }
 ```
 
-The return occurs after persistence and skips the required completion update.
-
-### 4.11 Source File Organization
-
-Each behavioral class, domain entity, application service, repository, contract interface, or custom `Exception` class must reside in its own `.cs` file whose filename matches the type identifier (`<TypeName>.cs`) (Microsoft, 2025j):
-
-- A `{Capability}Models.cs` container file is permitted solely to group small, passive input/output data models and status enumerations that are cohesive and exclusive to one capability.
-- `*Models.cs` files must never contain `Exception` types, interfaces, services, or domain entities with business rules or state initialization logic.
-
-#### Correct
-
-```csharp
-// File: ArenaSession.cs
-public sealed class ArenaSession
-{
-    public Guid SessionId { get; }
-
-    public ArenaSession(Guid sessionId)
-    {
-        SessionId = sessionId;
-    }
-}
-
-// File: ArenaModels.cs (passive data models and status enums only)
-public enum ArenaJoinStatus
-{
-    Joined,
-    ArenaFull,
-    ArenaClosed
-}
-
-public sealed class ArenaParticipantSummary
-{
-    public long AccountId { get; init; }
-
-    public string DisplayName { get; init; } = string.Empty;
-}
-```
-
-The behavioral type has its own file while the container holds only passive models.
-
-#### Incorrect
-
-```csharp
-// File: ArenaModels.cs (mixes domain entity logic, exception, and DTOs)
-public sealed class ArenaSession
-{
-    public void InitializeSpawnGrid(int width, int height)
-    {
-        // Domain initialization rules embedded in a Models container file.
-    }
-}
-
-public sealed class ArenaCapacityExceededException : Exception
-{
-}
-```
-
-The container mixes domain behavior with an exception type.
-
----
+The else and separate returns add structure to a simple value calculation.
 
 ## 5. C# Programming Practices
 
 ### 5.1 Access Modifiers
 
-Declare access modifiers explicitly on every type and member where C# permits one, selecting the **most restrictive visibility** (`private`, `internal`, `protected`, `public`, `private protected`, `protected internal`) required for valid collaboration (Ecma International, 2023). Do not expose mutable fields publicly or widen visibility merely to simplify testing.
+Declare explicit access modifiers where the language permits them and select the narrowest visibility required by callers; do not widen access only to simplify tests (Ecma International, 2023).
 
 #### Correct
 
 ```csharp
-public sealed class PlayerHealth
+private int CountOccupiedCells(int[] board)
 {
-    private const int InitialHealth = 100;
-    private const int MinimumHealth = 0;
-
-    public int CurrentHealth { get; private set; } = InitialHealth;
-
-    public void TakeDamage(int damage)
-    {
-        int clampedDamage = NormalizeDamage(damage);
-        CurrentHealth = Math.Max(CurrentHealth - clampedDamage, MinimumHealth);
-    }
-
-    private int NormalizeDamage(int damage)
-    {
-        return Math.Max(damage, 0);
-    }
+    return board.Count(cell => cell != EmptyCell);
 }
 ```
 
-Every member declares the narrowest visibility needed by its callers.
+The helper explicitly limits access to its owning type.
 
 #### Incorrect
 
 ```csharp
-class PlayerHealth
+int CountOccupiedCells(int[] board)
 {
-    public int CurrentHealth { get; set; } = MaximumHealth;
-
-    int NormalizeDamage(int damage)
-    {
-        return Math.Max(damage, 0);
-    }
+    return board.Count(cell => cell != EmptyCell);
 }
 ```
 
-The implicit access modifiers and public setter expose more access than required.
+The helper relies on an implicit access modifier.
 
 ### 5.2 Auto-Implemented Properties and Property Accessors
 
-Use auto-implemented properties whenever custom accessor logic is unnecessary, exposing only required accessors (`{ get; }`, `{ get; init; }`, `{ get; private set; }`, or `{ get; set; }`). Declare an explicit backing field only when validation, clamping, or state coordination is required (Microsoft, 2025k).
+Use auto-implemented properties when accessors need no validation or state coordination, exposing only the access each caller needs (Microsoft, 2025l). Use a backing field only when an accessor performs meaningful work.
 
 #### Correct
 
 ```csharp
-public sealed class AudioSettings
-{
-    private const int MinimumVolume = 0;
-    private const int MaximumVolume = 100;
-    private int _masterVolume;
-
-    public string OutputDeviceName { get; init; } = string.Empty;
-
-    public int MasterVolume
-    {
-        get
-        {
-            return _masterVolume;
-        }
-        set
-        {
-            _masterVolume = Math.Clamp(value, MinimumVolume, MaximumVolume);
-        }
-    }
-}
+public string DisplayName { get; set; } = string.Empty;
 ```
 
-The backing field exists because the setter enforces a valid range.
+The property needs no backing field because its accessors have no additional behavior.
 
 #### Incorrect
 
 ```csharp
-public sealed class AudioSettings
-{
-    private string _outputDeviceName = string.Empty;
+private string _displayName = string.Empty;
 
-    public string OutputDeviceName
+public string DisplayName
+{
+    get
     {
-        get
-        {
-            return _outputDeviceName;
-        }
-        set
-        {
-            _outputDeviceName = value;
-        }
+        return _displayName;
+    }
+    set
+    {
+        _displayName = value;
     }
 }
 ```
 
-The backing field repeats behavior already provided by an auto-implemented property.
+The explicit field and accessors repeat the behavior of an auto-implemented property.
 
-### 5.3 Immutability and `readonly` Usage
+### 5.3 Immutability and readonly Usage
 
-Model configuration data, definitions, identifiers, and injected dependencies as immutable after construction using `{ get; }` or `{ get; init; }` properties and `readonly` fields (`IDE0044`) (Microsoft, 2023b; Microsoft, 2026e, 2026l). Note that `readonly` on a reference-type field prevents reassigning the reference without making the referenced object itself immutable (Microsoft, 2026j). Keep gameplay state mutable where mutation reflects domain behavior.
+Use readonly fields for dependencies and state that must not be reassigned after construction (Microsoft, 2023b, 2026a). A readonly reference does not make its object immutable; keep gameplay state mutable when the behavior requires it.
 
 #### Correct
 
 ```csharp
-internal sealed class EnemySpawner
-{
-    private readonly IEnemyFactory _enemyFactory;
-
-    internal EnemySpawner(IEnemyFactory enemyFactory)
-    {
-        _enemyFactory = enemyFactory
-            ?? throw new ArgumentNullException(nameof(enemyFactory));
-    }
-
-    internal Enemy SpawnEnemy(EnemyDefinition definition)
-    {
-        return _enemyFactory.CreateEnemy(definition);
-    }
-}
+private readonly IPlayerRepository _players;
 ```
 
-The injected dependency cannot be reassigned after construction.
+The dependency reference cannot be replaced after construction.
 
 #### Incorrect
 
 ```csharp
-internal sealed class EnemySpawner
-{
-    private IEnemyFactory _enemyFactory;
-
-    internal EnemySpawner(IEnemyFactory enemyFactory)
-    {
-        _enemyFactory = enemyFactory;
-    }
-}
+private IPlayerRepository _players;
 ```
 
-The dependency remains mutable even though reassignment is not part of the behavior.
+The dependency remains replaceable without a behavioral need.
 
 ### 5.4 Constants and Magic Values
 
@@ -1278,655 +1004,358 @@ The literal does not explain why five is the relevant threshold.
 
 ### 5.5 Method Responsibility
 
-Apply the **Single Responsibility Principle (SRP)** and **Keep It Simple (KISS)**: each class must have one cohesive reason to change, and the simplest design that clearly satisfies the required behavior must be preferred. Do not add pass-through types, layers, or indirection without a distinct responsibility (Microsoft, 2023c).
+Apply Single Responsibility and Keep It Simple (KISS): keep each operation cohesive and prefer the simplest design that satisfies its behavior (Microsoft, 2023c). Do not add wrappers, types, or layers that only pass an existing operation onward.
 
 #### Correct
 
 ```csharp
-public sealed class PlayerHealth
+public void TakeDamage(int damage)
 {
-    public int CurrentHealth { get; private set; }
-
-    public PlayerHealth(int initialHealth)
-    {
-        CurrentHealth = initialHealth;
-    }
-
-    public void TakeDamage(int damage)
-    {
-        CurrentHealth = Math.Max(CurrentHealth - damage, 0);
-    }
+    CurrentHealth = Math.Max(CurrentHealth - damage, 0);
 }
 ```
 
-The class changes only the health state that it owns.
+The method changes only the health state it owns.
 
 #### Incorrect
 
 ```csharp
-public sealed class PlayerHealth
+public void TakeDamage(int damage)
 {
-    public int CurrentHealth { get; private set; }
-
-    public void TakeDamageAndPersist(int damage)
-    {
-        CurrentHealth = Math.Max(CurrentHealth - damage, 0);
-        SaveHealthToDatabase();
-        PlayDamageSoundEffect();
-    }
-
-    private void SaveHealthToDatabase()
-    {
-    }
-
-    private void PlayDamageSoundEffect()
-    {
-    }
+    CurrentHealth = Math.Max(CurrentHealth - damage, 0);
+    _repository.SaveHealth(CurrentHealth);
+    _soundPlayer.PlayDamageSound();
 }
 ```
 
-The method combines domain state with persistence and presentation effects.
+The method mixes health rules with storage and sound playback.
 
 ### 5.6 Don't Repeat Yourself (DRY)
 
-Apply the **Don't Repeat Yourself (DRY)** principle by keeping each rule or calculation in
-one authoritative location (Microsoft, 2023c; Microsoft, 2026d). Reuse that implementation
-when the meaning is identical. Similar-looking code may remain separate when it represents
-different domain concepts.
+Keep each shared rule in one authoritative implementation and call it directly when its meaning is identical; similar code may remain separate when it represents different concepts (Microsoft, 2023c, 2026e).
 
 #### Correct
 
 ```csharp
-private const int MinimumDamage = 1;
-
-public int CalculatePlayerAttack(int baseDamage, int enemyArmor)
+public int CalculateDamageAfterArmor(int damage, int armor)
 {
-    return CalculateDamageAfterArmor(baseDamage, enemyArmor);
-}
-
-public int CalculateEnemyAttack(int baseDamage, int playerArmor)
-{
-    return CalculateDamageAfterArmor(baseDamage, playerArmor);
-}
-
-private int CalculateDamageAfterArmor(int baseDamage, int armor)
-{
-    return Math.Max(baseDamage - armor, MinimumDamage);
+    return Math.Max(damage - armor, MinimumDamage);
 }
 ```
 
-One method owns the shared armor calculation.
+One method owns the calculation and can serve all callers directly.
 
 #### Incorrect
 
 ```csharp
-public int CalculatePlayerAttack(int baseDamage, int enemyArmor)
+public int CalculatePlayerDamage(int damage, int armor)
 {
-    return Math.Max(baseDamage - enemyArmor, 1);
+    return Math.Max(damage - armor, MinimumDamage);
 }
 
-public int CalculateEnemyAttack(int baseDamage, int playerArmor)
+public int CalculateEnemyDamage(int damage, int armor)
 {
-    return Math.Max(baseDamage - playerArmor, 1);
+    return Math.Max(damage - armor, MinimumDamage);
 }
 ```
 
-The same rule and unexplained limit are duplicated in separate methods.
+Two methods independently repeat the same damage rule.
 
 ### 5.7 Method Size
 
-Method length is a review signal, not an automatic reason to split code. Extract a helper only when it receives a clear name and owns a cohesive responsibility; keep a longer linear method when splitting it would hide the execution flow (Esposito, 2014).
+Treat method length as a review signal rather than a reason to split code automatically; extract only helpers with a clear responsibility (Esposito, 2014). Keep a longer linear method when extraction would hide its flow.
 
 #### Correct
 
 ```csharp
-public void ResolveEnemyDefeat(Enemy enemy)
+public void FinishTurn()
 {
-    AwardExperience(enemy);
-    TrySpawnLoot(enemy);
-    _enemyRegistry.Remove(enemy);
-}
-
-private void AwardExperience(Enemy enemy)
-{
-    _playerProgress.AddExperience(enemy.ExperienceReward);
-}
-
-private void TrySpawnLoot(Enemy enemy)
-{
-    if (enemy.LootTable is not null)
-    {
-        _lootSpawner.Spawn(enemy.LootTable, enemy.Position);
-    }
+    _match.AdvanceTurn();
+    _match.RestartTurnClock();
 }
 ```
 
-Each extracted method has a clear responsibility and name.
+The related turn updates remain visible in one short operation.
 
 #### Incorrect
 
 ```csharp
-public void ResolveEnemyDefeat(Enemy enemy)
+public void FinishTurn()
 {
-    // Combines experience scaling, loot drops, boss music transitions,
-    // door unlocking, achievements, checkpoint saving, UI refreshes,
-    // statistics tracking, and logging in a single 45-line method body
-    // instead of delegating to focused helper methods.
+    Advance();
+    Restart();
+}
+
+private void Advance()
+{
+    _match.AdvanceTurn();
+}
+
+private void Restart()
+{
+    _match.RestartTurnClock();
 }
 ```
 
-The method description shows unrelated responsibilities with no readable separation.
+The helpers merely rename existing calls and force readers to jump between methods.
 
 ### 5.8 Parameters
 
-Keep parameter lists short enough to read at the call site. Group values only when they form a cohesive concept; do not create artificial parameter objects to satisfy a numeric limit. Project-defined methods must not declare `out` parameters. Standard .NET `Try` methods may be called when they are the clearest non-throwing or atomic API. Use `ref` only when required by an atomic `Interlocked` operation, and never expose `out` or `ref` through a WCF operation (Microsoft, 2021e; Microsoft, 2025n).
+Keep signatures readable and group values only when they form a real concept (Microsoft, 2023h). As a convention, three or more parameters prompt review, not mandatory wrapping. Do not declare out parameters in owned APIs; framework Try calls are allowed. Use ref only for required framework signatures or atomic operations, never for application-defined WCF outputs.
 
 #### Correct
 
 ```csharp
-public SpawnResult SpawnEnemy(EnemySpawnRequest request)
+public void PlacePiece(PiecePlacement placement)
 {
-    Guid spawnId;
-    if (!Guid.TryParse(request.SpawnId, out spawnId))
-    {
-        return SpawnResult.InvalidIdentifier;
-    }
-
-    return Spawn(request, spawnId);
+    _board.Place(placement.Row, placement.Column);
 }
 ```
 
-The cohesive request keeps the signature small while the framework parse method avoids exceptions.
+The parameter groups coordinates that describe one piece placement.
 
 #### Incorrect
 
 ```csharp
-public bool TrySpawnEnemy(
-    string spawnId,
-    out Enemy enemy,
-    out string errorMessage)
+public bool PlacePiece(int row, int column, out string error)
 {
-    enemy = new Enemy();
-    errorMessage = string.Empty;
+    error = string.Empty;
+    _board.Place(row, column);
     return true;
 }
 ```
 
-The project-defined method exposes multiple output values through `out` parameters.
+The owned API exposes an output parameter instead of a clear return contract.
 
 ### 5.9 Cyclomatic Complexity
 
-Each method must maintain a cyclomatic complexity of **10 or lower** (`CA1502`) (Microsoft, 2023d; Microsoft, 2025e). Decompose methods with excessive independent branches into focused domain methods.
+Review methods above a cyclomatic complexity of 10, a team review threshold rather than a language limit (Microsoft, 2023d, 2025e). Reduce unrelated branches without creating pass-through helpers; a readable flat mapping may justify retaining more cases.
 
 #### Correct
 
 ```csharp
-public EnemyAction DecideAction(Enemy enemy)
+public bool CanMove(Player player)
 {
-    if (!enemy.IsAlive)
-    {
-        return EnemyAction.None;
-    }
-
-    if (enemy.IsStunned)
-    {
-        return EnemyAction.Wait;
-    }
-
-    return DecideCombatAction(enemy);
+    return player.IsAlive && !player.IsStunned;
 }
 ```
 
-The guard conditions keep the decision flow below the configured complexity limit.
+One Boolean expression directly states the movement condition.
 
 #### Incorrect
 
 ```csharp
-public int CalculatePriority(Enemy e)
+public bool CanMove(Player player)
 {
-    int p = 0;
-    if (e.IsAlive) { p++; }
-    if (e.IsVisible) { p++; }
-    if (e.HasTarget) { p++; }
-    if (e.CanSeePlayer) { p++; }
-    if (e.IsInAttackRange) { p++; }
-    if (e.HasEnoughStamina) { p++; }
-    if (e.IsBoss) { p++; }
-    if (e.IsEnraged) { p++; }
-    if (e.IsLowHealth) { p++; }
-    if (e.CanUseSpecialAttack) { p++; }
-    return p;
+    bool canMove = false;
+    if (player.IsAlive)
+    {
+        if (!player.IsStunned)
+        {
+            canMove = true;
+        }
+    }
+
+    return canMove;
 }
 ```
 
-The independent branches make the method difficult to reason about and test.
+Nested branches obscure a condition that needs no separate control-flow blocks.
 
 ### 5.10 Nullable Reference Types
 
-Enable nullable reference type analysis (`<Nullable>enable</Nullable>`) across all projects. Declare reference types as non-nullable unless absence is a valid, intentional part of the contract (`?`). Do not apply the null-forgiving operator (`!`) to silence compiler warnings without an established runtime invariant (Microsoft, 2026i).
+Enable nullable reference analysis and use ? only when absence is intentional; do not use the null-forgiving operator to hide missing initialization (Microsoft, 2026i).
 
 #### Correct
 
 ```csharp
-public sealed class PlayerProfile
-{
-    public string DisplayName { get; }
+public string DisplayName { get; set; } = string.Empty;
 
-    public string? ClanTag { get; }
-
-    public PlayerProfile(string displayName, string? clanTag)
-    {
-        DisplayName = displayName
-            ?? throw new ArgumentNullException(nameof(displayName));
-        ClanTag = clanTag;
-    }
-}
+public string? ClanTag { get; set; }
 ```
 
-Only the genuinely optional clan tag is declared nullable.
+Required text is initialized while the optional clan tag explicitly permits absence.
 
 #### Incorrect
 
 ```csharp
-public sealed class PlayerProfile
-{
-    public string DisplayName { get; set; } = null!;
-}
+public string DisplayName { get; set; } = null!;
 ```
 
-The null-forgiving operator hides an uninitialized required property.
+The null-forgiving operator suppresses a warning without establishing valid state.
 
 ### 5.11 Null Handling
 
-Methods must not return `null` as an ambiguous sentinel value; return empty collections or explicit result objects instead (Ecma International, 2023; Microsoft, 2026i, 2026n):
-
-- **Null-coalescing (`??` and `?? throw`):** Use `??` only to supply a valid domain fallback for an optional value, and use `parameter ?? throw new ArgumentNullException(nameof(parameter))` to reject missing required arguments or constructor dependencies immediately. Never use `??` to substitute a silent default that masks invalid state.
-- **Null-conditional (`?.`):** Single-level `?.` is permitted on legitimately optional references when skipping the call is safe (such as `NavigationService?.Navigate(page)` or `stream?.Dispose()`). Deep chains (`a?.b?.c`) and using `?.` to bypass required parameter validation are prohibited.
+Do not return null as an ambiguous sentinel; use an empty collection or an explicit status when appropriate (Microsoft, 2026i, 2026l). Use ?? for a valid optional fallback, ?? throw for required arguments, and single-level ?. only when skipping the operation is safe; avoid deep chains that conceal missing required state.
 
 #### Correct
 
 ```csharp
-public sealed class GuildRosterService
+public PlayerService(IPlayerRepository players)
 {
-    private readonly IGuildRepository _guildRepository;
-
-    public GuildRosterService(IGuildRepository guildRepository)
-    {
-        _guildRepository = guildRepository
-            ?? throw new ArgumentNullException(nameof(guildRepository));
-    }
-
-    public IReadOnlyList<GuildMember> GetOnlineMembers(IReadOnlyList<GuildMember>? members)
-    {
-        if (members is null || members.Count == 0)
-        {
-            return Array.Empty<GuildMember>();
-        }
-
-        return members.Where(member => member.IsOnline).ToArray();
-    }
-
-    public void ClosePreviewStream(Stream? previewStream)
-    {
-        previewStream?.Dispose();
-    }
+    _players = players ?? throw new ArgumentNullException(nameof(players));
 }
 ```
 
-Required state is rejected immediately while optional values have explicit behavior.
+The constructor immediately rejects its missing required dependency.
 
 #### Incorrect
 
 ```csharp
-public sealed class GuildRosterService
+public PlayerService(IPlayerRepository? players)
 {
-    private readonly IGuildRepository? _guildRepository;
-
-    public GuildRosterService(IGuildRepository? guildRepository)
-    {
-        _guildRepository = guildRepository ?? null;
-    }
-
-    public IReadOnlyList<GuildMember>? GetOnlineMembers(SessionContext? context)
-    {
-        bool allowLookup = context?.Account?.Guild?.Permissions?.CanViewRoster == true;
-        if (!allowLookup)
-        {
-            return null;
-        }
-
-        return Array.Empty<GuildMember>();
-    }
+    _players = players;
 }
 ```
 
-The code masks a missing dependency and returns `null` with ambiguous meaning.
+The constructor accepts a missing dependency without defining valid behavior.
 
 ### 5.12 Pattern Matching
 
-Prefer declaration patterns (`value is Type typedValue`), negative guard patterns (`value is not Type typedValue`), and explicit null patterns (`is null`, `is not null`) over `as` followed by a null check (`IDE0019`) or `is` followed by an explicit cast (`IDE0020`, `IDE0038`) (Ecma International, 2023; Microsoft, 2023k; Microsoft, 2024):
+Use declaration patterns to check a type and obtain its value without a separate cast; `is null` and `is not null` explicitly test absence (Microsoft, 2023e, 2024). Simple and/or patterns and flat switch expressions are allowed when clearer than alternatives; avoid nested patterns and keep multi-condition domain rules in named methods. Switch-arm arrows are not expression-bodied members.
 
-- Relational and logical combinator patterns (`and`, `or`) and flat `switch` expressions are permitted when each arm maps directly to a single readable value without nested switches or side effects.
-- Extract multi-condition domain rules into named methods rather than nesting property patterns, and never use the `var` pattern (Section 5.18).
-
-#### Correct: Guard Pattern and Flat `switch` Expression
+#### Correct
 
 ```csharp
-private void OnInventorySlotClick(object sender, RoutedEventArgs eventArgs)
+if (sender is Button button)
 {
-    if (sender is not Button slotButton
-        || slotButton.DataContext is not InventorySlotItem slotItem)
-    {
-        return;
-    }
-
-    InspectSlotItem(slotItem);
-}
-
-private static int GetRaritySortWeight(ItemRarity rarity)
-{
-    const int UnknownWeight = 0;
-    const int CommonWeight = 1;
-    const int RareWeight = 2;
-    const int LegendaryWeight = 3;
-
-    return rarity switch
-    {
-        ItemRarity.Common or ItemRarity.Uncommon => CommonWeight,
-        ItemRarity.Rare => RareWeight,
-        ItemRarity.Legendary => LegendaryWeight,
-        _ => UnknownWeight
-    };
+    button.IsEnabled = false;
 }
 ```
 
-The patterns remove casts and the flat switch maps each value directly.
+The pattern checks the type and supplies the typed variable in one operation.
 
-#### Incorrect: Redundant Casts and Nested `switch` Expressions
+#### Incorrect
 
 ```csharp
-private void OnInventorySlotClick(object sender, RoutedEventArgs eventArgs)
+if (sender is Button)
 {
-    Button? slotButton = sender as Button;
-    if (slotButton != null && slotButton.DataContext is InventorySlotItem)
-    {
-        InventorySlotItem slotItem = (InventorySlotItem)slotButton.DataContext;
-        InspectSlotItem(slotItem);
-    }
-}
-
-private static int GetItemWeight(InventorySlotItem item)
-{
-    const int HighLevelThreshold = 50;
-    const int HighLevelLegendaryWeight = 10;
-    const int LegendaryWeight = 5;
-    const int DefaultWeight = 1;
-
-    return item.Rarity switch
-    {
-        ItemRarity.Legendary => item.Level switch
-        {
-            > HighLevelThreshold => HighLevelLegendaryWeight,
-            _ => LegendaryWeight
-        },
-        _ => DefaultWeight
-    };
+    Button button = (Button)sender;
+    button.IsEnabled = false;
 }
 ```
 
-The code repeats type checks and nests a second decision inside the switch.
+The code repeats a type conversion already implied by the check.
 
 ### 5.13 LINQ Usage
 
-Use LINQ method syntax (`Where`, `Select`, `OrderBy`, `Any`, `ToArray`, `ToList`) for side-effect-free collection queries when clearer than manual loops (Microsoft, 2025m):
+Use LINQ method syntax for readable, side-effect-free queries; filter before materializing and use AsNoTracking for read-only Entity Framework queries (Microsoft, 2020a, 2020b, 2025j). Materialize shared mutable collections under their owning lock; copy mutable elements when an isolated snapshot is required.
 
-- Materialize (`ToArray()` or `ToList()`) before exiting a `lock` block so deferred execution cannot enumerate shared mutable state outside synchronization.
-- In Entity Framework queries, apply filtering and projection before materialization and use `AsNoTracking()` for read-only queries (Microsoft, 2020a, 2020b).
-- Declare explicit result types rather than `var` (Section 5.18).
-
-#### Correct: Synchronized Snapshot and Read-Only Database Projection
+#### Correct
 
 ```csharp
-internal IReadOnlyList<GuildInvite> GetPendingInvites(string recipientName)
-{
-    GuildInvite[] snapshot;
-    lock (_syncRoot)
-    {
-        snapshot = _invites
-            .Where(invite => invite.State == GuildInviteState.Pending)
-            .Where(invite => string.Equals(
-                invite.RecipientName,
-                recipientName,
-                StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(invite => invite.CreatedAtUtc)
-            .ToArray();
-    }
-
-    return snapshot;
-}
-
-private static Task<List<PlayerScoreSummary>> LoadActiveScoresAsync(
-    GameDbContext context)
-{
-    return context.PlayerAccounts
-        .AsNoTracking()
-        .Where(account => account.IsActive)
-        .Select(account => new PlayerScoreSummary
-        {
-            AccountId = account.AccountId,
-            DisplayName = account.DisplayName
-        })
-        .ToListAsync();
-}
+Player[] activePlayers = players
+    .Where(player => player.IsActive)
+    .ToArray();
 ```
 
-The shared collection is materialized under lock and the database query filters before loading.
+The query filters the source before materializing its result.
 
-#### Incorrect: Deferred Lock Escape and Premature Table Materialization
+#### Incorrect
 
 ```csharp
-internal IEnumerable<GuildInvite> GetPendingInvites(string recipientName)
-{
-    lock (_syncRoot)
-    {
-        return _invites.Where(invite => invite.RecipientName == recipientName);
-    }
-}
-
-private static async Task<List<PlayerScoreSummary>> LoadActiveScoresAsync(
-    GameDbContext context)
-{
-    List<PlayerAccount> allAccounts = await context.PlayerAccounts.ToListAsync();
-    return allAccounts
-        .Where(account => account.IsActive)
-        .Select(account => new PlayerScoreSummary
-        {
-            AccountId = account.AccountId,
-            DisplayName = account.DisplayName
-        })
-        .ToList();
-}
+Player[] activePlayers = players
+    .ToArray()
+    .Where(player => player.IsActive)
+    .ToArray();
 ```
 
-Deferred enumeration escapes the lock and the database table is loaded before filtering.
+The query copies the complete source before applying its filter.
 
 ### 5.14 Lambda Expressions
 
-Lambda expressions are permitted for short, side-effect-free predicates, projections, and inline callbacks containing one expression or at most two simple statements (Google, n.d.; Microsoft, 2025f, 2026f). Extract reused logic or branching into a named method.
+Use short lambdas for side-effect-free predicates and projections, or simple callbacks with at most two statements (Microsoft, 2026f). Side effects belong in explicit callbacks, not query predicates; give branching or reused logic a descriptive method name.
 
 #### Correct
 
 ```csharp
-IEnumerable<Enemy> activeEnemies = enemies.Where(enemy => enemy.IsAlive);
+Player[] activePlayers = players.Where(player => player.IsActive).ToArray();
 ```
 
-The lambda is a short predicate without side effects.
+The predicate only checks the property used to select players.
 
 #### Incorrect
 
 ```csharp
-IEnumerable<Enemy> targetableEnemies = enemies.Where(enemy =>
+Player[] activePlayers = players.Where(player =>
 {
-    UpdateDetectionState(enemy);
-    if (!enemy.IsAlive || enemy.IsStunned)
-    {
-        return false;
-    }
-
-    RegisterPotentialTarget(enemy);
-    return enemy.IsInAttackRange;
-});
+    player.RefreshActivity();
+    return player.IsActive;
+}).ToArray();
 ```
 
-The lambda mutates state and contains branching that belongs in a named method.
+The query predicate unexpectedly changes each player while filtering.
 
 ### 5.15 Events and Delegates
 
-Use `event EventHandler` or `event EventHandler<TEventArgs>` (where `TEventArgs` derives from `EventArgs`) for publisher-subscriber notifications, raising events via `EventName?.Invoke(this, args)` (Microsoft, 2021d; Microsoft, 2026p):
-
-- Use `Action<T>` or `Func<T, TResult>` delegates instead of events when a callback or return value is required.
-- Subscribe with a named handler method whenever the subscriber must later unsubscribe (`-=`) from a longer-lived publisher.
+Use event for notifications so subscribers cannot replace or invoke the publisher delegate (Microsoft, n.d.-b). EventHandler is the recommended .NET event pattern. As an adopted convention, notifications used only within the application may use Action without artificial EventArgs types, regardless of their access modifier. Use Func for callbacks that return a value and named handlers when later unsubscription is required (Microsoft, 2021d).
 
 #### Correct
 
 ```csharp
-public sealed class ItemSlotSelectedEventArgs : EventArgs
-{
-    public int SlotIndex { get; }
-
-    public ItemSlotSelectedEventArgs(int slotIndex)
-    {
-        SlotIndex = slotIndex;
-    }
-}
-
-public sealed class InventoryGridControl
-{
-    public event EventHandler<ItemSlotSelectedEventArgs>? SlotSelected;
-
-    public void SelectSlot(int slotIndex)
-    {
-        SlotSelected?.Invoke(this, new ItemSlotSelectedEventArgs(slotIndex));
-    }
-}
+public event Action<long>? PlayerConnected;
 ```
 
-The event follows the .NET event pattern and carries a typed payload.
+The event allows subscription while retaining invocation control in its owner.
 
 #### Incorrect
 
 ```csharp
-public sealed class InventoryGridControl
-{
-    public Action<int>? SlotSelected;
-    public event Func<string, string>? TooltipTextRequested;
-}
+public Action<long>? PlayerConnected;
 ```
 
-The public delegate field can be overwritten and the event incorrectly expects a return value.
+The public delegate field can be replaced or invoked by callers.
 
 ### 5.16 Resource Disposal
 
-Dispose every locally owned `IDisposable` instance deterministically using a `using` statement or `using` declaration (`CA2000`) so early returns and exceptions cannot leak resources (Microsoft, 2020c; Microsoft, 2025n; Microsoft, 2026q).
+Dispose locally owned IDisposable resources using `using` or a deterministic finally block; do not dispose a borrowed dependency unless ownership is transferred (Microsoft, 2025d, 2026n).
 
 #### Correct
 
 ```csharp
-public async Task<IReadOnlyList<QuestRecord>> GetCompletedQuestsAsync(long accountId)
-{
-    using (GameDbContext context = new GameDbContext())
-    {
-        return await context.QuestRecords
-            .AsNoTracking()
-            .Where(record => record.AccountId == accountId && record.IsCompleted)
-            .ToListAsync();
-    }
-}
+using MemoryStream stream = new MemoryStream();
+serializer.WriteObject(stream, state);
 ```
 
-The context is disposed even when the asynchronous query throws.
+The owned stream is disposed even if serialization fails.
 
 #### Incorrect
 
 ```csharp
-public async Task<IReadOnlyList<QuestRecord>> GetCompletedQuestsAsync(long accountId)
-{
-    GameDbContext context = new GameDbContext();
-    List<QuestRecord> records = await context.QuestRecords
-        .Where(record => record.AccountId == accountId && record.IsCompleted)
-        .ToListAsync();
-
-    context.Dispose();
-    return records;
-}
+MemoryStream stream = new MemoryStream();
+serializer.WriteObject(stream, state);
+stream.Dispose();
 ```
 
-An exception before the explicit disposal leaks the context.
+An exception during serialization bypasses the explicit disposal.
 
 ### 5.17 Serialization
 
-Define DTOs only for an actual transport boundary. Do not introduce equivalent DTOs between internal layers that can share an existing model. Service-boundary transport DTOs must use explicit `DataContractSerializer` attributes rather than exposing domain entities, persistence models, or presentation types (Microsoft, 2021a, 2021b, 2021e):
+Create DTOs for actual transport boundaries, reusing meaningful internal models between internal layers (Microsoft, 2021e). For WCF, use explicit DataContract and DataMember attributes, including EnumMember on serialized enum values; preserve existing member order and validate received data (Microsoft, 2021a, 2021b).
 
-- Decorate classes with `[DataContract(Namespace = ContractNamespaces.Data)]` and serialized properties with `[DataMember(Order = n)]`. Never renumber existing `Order` values; append new optional members with higher `Order` numbers, and avoid combining `IsRequired = true` with `EmitDefaultValue = false`.
-- Decorate contract enumerations with `[DataContract]` and every serialized value with `[EnumMember]`.
-- Treat deserialized payloads as untrusted input requiring full domain validation (Section 8.2), and verify contract changes with round-trip serialization tests.
-
-#### Correct: Explicit Data Contract and Round-Trip Helper
+#### Correct
 
 ```csharp
 [DataContract(Namespace = ContractNamespaces.Data)]
-public enum SaveSyncStatusCode
+public sealed class PlayerSummary
 {
-    [EnumMember]
-    Synced,
-
-    [EnumMember]
-    ConflictDetected
-}
-
-[DataContract(Namespace = ContractNamespaces.Data)]
-public sealed class SaveSlotUploadRequest
-{
-    [DataMember(Order = 1, IsRequired = true)]
-    public int SlotNumber { get; set; }
-
-    [DataMember(Order = 2, IsRequired = true)]
-    public string ChecksumHex { get; set; } = string.Empty;
-
-    [DataMember(Order = 3, EmitDefaultValue = false)]
-    public string? OptionalNotes { get; set; }
-}
-
-private static TContract RoundTripContract<TContract>(TContract contract)
-{
-    DataContractSerializer serializer = new DataContractSerializer(typeof(TContract));
-    using MemoryStream stream = new MemoryStream();
-
-    serializer.WriteObject(stream, contract);
-    stream.Position = 0;
-
-    object? deserialized = serializer.ReadObject(stream);
-    Assert.IsNotNull(deserialized);
-    return (TContract)deserialized;
+    [DataMember(Order = 1)]
+    public string DisplayName { get; set; } = string.Empty;
 }
 ```
 
-The attributes define stable wire members and the helper verifies serialization compatibility.
+The attributes explicitly identify the transport type and stable member order.
 
-#### Incorrect: Implicit Contract and Renumbered Member Order
+#### Incorrect
 
 ```csharp
-// Implicit contract without [DataContract]/[DataMember] governance, or breaking
-// wire compatibility by swapping Order = 1 and Order = 2 on an existing DTO.
-public sealed class SaveSlotUploadRequest
+public sealed class PlayerSummary
 {
-    public string ChecksumHex { get; set; } = string.Empty;
-
-    public int SlotNumber { get; set; }
+    public string DisplayName { get; set; } = string.Empty;
 }
 ```
 
-The implicit contract provides no stable member order for future compatibility.
+The type provides no explicit WCF data-contract definition.
 
 ### 5.18 Explicit Local Variable Types
 
@@ -1986,485 +1415,332 @@ The nested conditional requires the reader to resolve a second branch inside the
 
 ### 5.20 Thread Synchronization and Concurrency
 
-Protect shared mutable state with `lock` on a dedicated `private readonly object`. The `object` is a private reference used only as the identity of the monitor acquired by the `lock` statement. It does not store business data. This standard uses `object` because `System.Threading.Lock` requires newer target frameworks and language versions. Keep the block short and perform external work after releasing it. Never lock on `this`, a type, or a string, and never use `await` inside `lock` (Microsoft, n.d.-b).
+Protect related shared-state updates with a short lock on a dedicated private readonly object, using a static readonly object for static state (Microsoft, n.d.-e). The object identifies the monitor; it holds no business data. Use object rather than System.Threading.Lock for framework compatibility, and never await or perform remote work inside the block.
 
 #### Correct
 
 ```csharp
-public sealed class ActiveLobbyRegistry
+lock (_syncRoot)
 {
-    private readonly object _syncRoot = new object();
-    private readonly HashSet<Guid> _activeLobbyIds = new HashSet<Guid>();
-
-    public bool RegisterLobby(Guid lobbyId)
-    {
-        bool wasAdded;
-        lock (_syncRoot)
-        {
-            wasAdded = _activeLobbyIds.Add(lobbyId);
-        }
-
-        return wasAdded;
-    }
+    _players.Add(player);
+    _playerCount++;
 }
 ```
 
-The dedicated object protects one collection and the method returns after releasing the lock.
+The dedicated monitor keeps the related collection and count updates together.
 
 #### Incorrect
 
 ```csharp
-public sealed class ActiveLobbyRegistry
+lock (this)
 {
-    private readonly HashSet<Guid> _activeLobbyIds = new HashSet<Guid>();
-
-    public void RegisterLobby(Guid lobbyId)
-    {
-        lock (this)
-        {
-            _activeLobbyIds.Add(lobbyId);
-            _remoteService.NotifyLobbyCreated(lobbyId);
-        }
-    }
+    _players.Add(player);
+    _playerCount++;
 }
 ```
 
-The public instance can be locked by other code, and the remote call extends the critical section.
+Other code can lock the public instance and interfere with its synchronization.
 
-### 5.21 Asynchronous Mutual Exclusion
+### 5.21 Semaphores and Asynchronous Mutual Exclusion
 
-Use `SemaphoreSlim` with an initial and maximum count of one only when mutual exclusion must continue across `await`. Await `WaitAsync`, release the semaphore in `finally`, and dispose an owned semaphore with its containing object (Microsoft, n.d.-c).
+Use SemaphoreSlim for bounded concurrent access or exclusion that spans await; a permit count of one provides mutual exclusion (Microsoft, n.d.-a, n.d.-g). Use named limits, release only an acquired permit in finally, and dispose an owned semaphore after its users finish.
 
 #### Correct
 
 ```csharp
-public sealed class StateRefresher : IDisposable
+await _requests.WaitAsync(cancellationToken);
+try
 {
-    private const int MutualExclusionPermitCount = 1;
-    private readonly SemaphoreSlim _refreshSemaphore = new SemaphoreSlim(
-        MutualExclusionPermitCount,
-        MutualExclusionPermitCount);
-
-    public async Task RefreshAsync(CancellationToken cancellationToken)
-    {
-        await _refreshSemaphore.WaitAsync(cancellationToken);
-        try
-        {
-            await RefreshStateAsync(cancellationToken);
-        }
-        finally
-        {
-            _refreshSemaphore.Release();
-        }
-    }
-
-    public void Dispose()
-    {
-        _refreshSemaphore.Dispose();
-    }
+    await _channel.RefreshState();
+}
+finally
+{
+    _requests.Release();
 }
 ```
 
-The owned semaphore is released after every wait and disposed with its containing object.
+The acquired permit is released even when the remote operation fails.
 
 #### Incorrect
 
 ```csharp
-public async Task RefreshAsync(CancellationToken cancellationToken)
-{
-    await _refreshSemaphore.WaitAsync(cancellationToken);
-    await RefreshStateAsync(cancellationToken);
-    _refreshSemaphore.Release();
-}
+await _requests.WaitAsync(cancellationToken);
+await _channel.RefreshState();
+_requests.Release();
 ```
 
-An exception can skip `Release` and prevent later callers from entering.
+An exception can skip the release and block later callers.
 
 ### 5.22 Atomic Operations
 
-Use `Interlocked` for one atomic field update. A sequence of operations that forms one invariant still requires explicit synchronization (Microsoft, n.d.-d).
+Use Interlocked for one atomic shared-field update; related operations that preserve one invariant still need coordinated synchronization (Microsoft, n.d.-c). Do not add multiple synchronization mechanisms for the same already-protected invariant.
 
 #### Correct
 
 ```csharp
-public bool BeginSweep()
-{
-    const int SweepIdle = 0;
-    const int SweepInProgress = 1;
-
-    int previousValue = Interlocked.Exchange(ref _isSweeping, SweepInProgress);
-    return previousValue == SweepIdle;
-}
+int count = Interlocked.Increment(ref _connectedPlayerCount);
 ```
 
-The exchange changes and reads the shared flag as one atomic operation.
+The increment and returned value form one atomic operation.
 
 #### Incorrect
 
 ```csharp
-public bool BeginSweep()
-{
-    if (_isSweeping == 1)
-    {
-        return false;
-    }
-
-    _isSweeping = 1;
-    return true;
-}
+_connectedPlayerCount++;
+int count = _connectedPlayerCount;
 ```
 
-Two threads can read zero before either thread writes the new value.
+The increment and later read can interleave with other threads.
 
 ### 5.23 Concurrent Collections
 
-Use a concurrent collection when independent collection operations occur from multiple threads. Use explicit synchronization when several operations must preserve one shared invariant (Microsoft, n.d.-e).
+Use concurrent collections for independent operations performed by multiple threads; sequences spanning several operations still require synchronization when they preserve one invariant (Microsoft, n.d.-h).
 
 #### Correct
 
 ```csharp
-public sealed class SessionRegistry
-{
-    private readonly ConcurrentDictionary<Guid, Session> _sessions =
-        new ConcurrentDictionary<Guid, Session>();
-
-    public bool Register(Session session)
-    {
-        return _sessions.TryAdd(session.Id, session);
-    }
-}
+bool added = _sessions.TryAdd(token, session);
 ```
 
-The concurrent collection makes the independent registration operation thread-safe.
+ConcurrentDictionary performs the attempted insertion atomically.
 
 #### Incorrect
 
 ```csharp
-public sealed class SessionRegistry
+bool added = !_sessions.ContainsKey(token);
+if (added)
 {
-    private readonly Dictionary<Guid, Session> _sessions =
-        new Dictionary<Guid, Session>();
-
-    public void Register(Session session)
-    {
-        _sessions.Add(session.Id, session);
-    }
+    _sessions[token] = session;
 }
 ```
 
-The dictionary can be modified simultaneously because the method has no synchronization.
+Another caller can change the collection between the existence check and assignment.
 
 ### 5.24 You Aren't Gonna Need It (YAGNI)
 
-Apply the **You Aren't Gonna Need It (YAGNI)** principle by implementing only the types,
-operations, abstractions, and extension points required by the current task (Microsoft, 2023c).
-Do not add speculative interfaces, configuration flags, or unused branches for hypothetical
-future requirements; introduce abstractions only when an actual requirement or second concrete
-implementation justifies them.
+Implement only abstractions and options required by current behavior; introduce extension points when a real requirement justifies them (Microsoft, 2023c).
 
 #### Correct
 
 ```csharp
-internal sealed class MatchTimeoutMonitor
+public bool IsTurnExpired(DateTime turnStartedAtUtc, DateTime utcNow)
 {
-    private readonly int _turnDurationSeconds;
-
-    internal MatchTimeoutMonitor(int turnDurationSeconds)
-    {
-        _turnDurationSeconds = turnDurationSeconds;
-    }
-
-    internal bool IsExpired(DateTime turnStartedAtUtc, DateTime utcNow)
-    {
-        return (utcNow - turnStartedAtUtc).TotalSeconds >= _turnDurationSeconds;
-    }
+    return utcNow - turnStartedAtUtc >= _turnDuration;
 }
 ```
 
-The class models only the timeout behavior required now without speculative extension points.
+The method implements only the turn-expiration rule currently required.
 
 #### Incorrect
 
 ```csharp
-internal interface ITurnRuleStrategy
+public bool IsTurnExpired(DateTime turnStartedAtUtc, DateTime utcNow)
 {
-    bool Evaluate(DateTime turnStartedAtUtc, DateTime utcNow);
-}
-
-internal sealed class ConfigurableTimeoutMonitor
-{
-    private readonly ITurnRuleStrategy? _customStrategy;
-    private readonly bool _enableGracePeriod;
-    private readonly int _turnDurationSeconds;
-
-    internal ConfigurableTimeoutMonitor(
-        int turnDurationSeconds,
-        bool enableGracePeriod = false,
-        ITurnRuleStrategy? customStrategy = null)
+    if (_enableFutureGracePeriod)
     {
-        _turnDurationSeconds = turnDurationSeconds;
-        _enableGracePeriod = enableGracePeriod;
-        _customStrategy = customStrategy;
+        return utcNow - turnStartedAtUtc >= _turnDuration + _futureGracePeriod;
     }
 
-    internal bool IsExpired(DateTime turnStartedAtUtc, DateTime utcNow)
-    {
-        if (_customStrategy != null)
-        {
-            return _customStrategy.Evaluate(turnStartedAtUtc, utcNow);
-        }
-        if (_enableGracePeriod)
-        {
-            return (utcNow - turnStartedAtUtc).TotalSeconds >= _turnDurationSeconds + 5;
-        }
-
-        return (utcNow - turnStartedAtUtc).TotalSeconds >= _turnDurationSeconds;
-    }
+    return utcNow - turnStartedAtUtc >= _turnDuration;
 }
 ```
 
-The code adds an unrequested strategy interface, unused configuration flag, and dead branch for
-hypothetical future rules.
+The branch adds an unused option for behavior that has not been requested.
 
----
+### 5.25 Local Functions
+
+Use a local function to group a sequence of work exclusive to one operation when keeping the steps together makes the flow clearer (Microsoft, n.d.-d). Use explicit block bodies, avoid deep nesting, and keep shared behavior in an ordinary method. Do not introduce local functions that merely hide a simple expression or rename an existing call.
+
+#### Correct
+
+```csharp
+public Task<int> ChangeTurnDuration(int seconds)
+{
+    async Task<int> ApplyDurationChange()
+    {
+        await _channel.Open();
+        int acceptedSeconds = await _channel.ChangeTurnDuration(seconds);
+        return acceptedSeconds;
+    }
+
+    return _communication.HandleFailures(ApplyDurationChange);
+}
+```
+
+The local function groups channel preparation and the remote update into one operation passed to the shared failure handler.
+
+#### Incorrect
+
+```csharp
+public int ReadScore(Player player)
+{
+    int ReadValue()
+    {
+        return player.Score;
+    }
+
+    return ReadValue();
+}
+```
+
+The local function only hides an already clear property access.
+
+### 5.26 Asynchronous Operations
+
+Use Task and await for real asynchronous work, keeping UI threads responsive; keep simple calculations synchronous (Microsoft, 2025a). Do not wrap asynchronous I/O in Task.Run, add async without needed awaiting, or block the UI with Result or Wait. Keep async void only for framework event handlers that require it.
+
+#### Correct
+
+```csharp
+public int CountPlayers(Player[] players)
+{
+    return players.Length;
+}
+```
+
+The immediate calculation needs no asynchronous machinery.
+
+#### Incorrect
+
+```csharp
+public Task<int> CountPlayers(Player[] players)
+{
+    return Task.Run(() => players.Length);
+}
+```
+
+The task schedules background work for an immediate collection count.
 
 ## 6. Error Handling, Logging, and Diagnostics
 
 ### 6.1 Exception Handling
 
-Reserve exceptions for **unexpected technical failures, broken invariants, and unrecoverable infrastructure errors**; represent expected validation rejections, authorization denials, and domain conflicts through explicit return statuses or result types rather than throwing exceptions for normal control flow (Ecma International, 2023; Microsoft, 2025c):
+Return explicit statuses for expected validation or domain rejections; let unexpected technical failures reach the responsible error boundary (Microsoft, 2025b). Catch specific exceptions only for meaningful local recovery, preserve the stack with throw;, and keep exception filters side-effect-free. Broad catches belong only at explicit last-chance boundaries, not as substitutes for normal results.
 
-- Catch the most specific exception type applicable only when local recovery or cleanup is possible; empty `catch` blocks are prohibited, and rethrowing must use `throw;` rather than `throw ex;`.
-- Exception filters (`catch (SpecificException ex) when (condition)`) are permitted when only a subset of causes can be recovered locally without unwinding the stack; filter conditions must be side-effect-free.
-
-#### Correct: Specific Recovery and Side-Effect-Free Exception Filter
+#### Correct
 
 ```csharp
-public GameSettings LoadSettingsOrDefault(string settingsPath)
+try
 {
-    try
-    {
-        string content = File.ReadAllText(settingsPath);
-        return DeserializeSettings(content);
-    }
-    catch (FileNotFoundException)
-    {
-        return GameSettings.CreateDefault();
-    }
+    channel.Close();
 }
-
-public async Task<bool> TryPingServerAsync(
-    IServerProbe probe,
-    CancellationToken callerToken)
+catch (CommunicationException)
 {
-    try
-    {
-        await probe.PingAsync(callerToken);
-        return true;
-    }
-    catch (OperationCanceledException) when (!callerToken.IsCancellationRequested)
-    {
-        _logger.LogWarning("Server probe timed out internally.");
-        return false;
-    }
+    channel.Abort();
 }
 ```
 
-The specific catches recover only from conditions the method can handle locally.
+The specific catch performs the recovery required for a failed channel close.
 
-#### Incorrect: Broad Catch Masking Failures and Stack-Resetting Rethrow
+#### Incorrect
 
 ```csharp
-public GameSettings? LoadSettingsOrDefault(string settingsPath)
+try
 {
-    try
-    {
-        return DeserializeSettings(File.ReadAllText(settingsPath));
-    }
-    catch (Exception ex)
-    {
-        if (ex is UnauthorizedAccessException)
-        {
-            throw ex;
-        }
-
-        return null;
-    }
+    channel.Close();
+}
+catch (Exception)
+{
 }
 ```
 
-The broad catch masks failures and `throw ex` replaces the original stack location.
+The broad empty catch hides every failure without recovery or diagnostics.
 
 ### 6.2 Custom Exceptions
 
-Prefer standard .NET exception types. Define a custom exception only when no standard type represents the failure and callers need to distinguish that condition programmatically. Expected validation, authorization, and domain outcomes must use explicit statuses or results instead of exceptions (Microsoft, 2025c).
+Prefer standard .NET exceptions for programming errors or technical failures (Microsoft, 2025b). Define a custom exception only when callers must distinguish a failure that standard types cannot express; normal user-input rejection remains an explicit status.
 
 #### Correct
 
 ```csharp
-public void SetDifficulty(int difficulty)
+if (players == null)
 {
-    const int MinimumDifficulty = 1;
-    const int MaximumDifficulty = 5;
-
-    if (difficulty < MinimumDifficulty || difficulty > MaximumDifficulty)
-    {
-        throw new ArgumentOutOfRangeException(nameof(difficulty));
-    }
+    throw new ArgumentNullException(nameof(players));
 }
 ```
 
-The standard exception already describes an argument outside its allowed range.
+The standard exception precisely identifies a missing required programming argument.
 
 #### Incorrect
 
 ```csharp
-public sealed class InvalidDifficultyException : Exception
+if (players == null)
 {
+    throw new MissingPlayersException();
 }
 ```
 
-The custom type adds no meaning beyond `ArgumentOutOfRangeException`.
+The custom exception duplicates the meaning of ArgumentNullException.
 
 ### 6.3 Logging
 
-Emit all diagnostics through constructor-injected `Microsoft.Extensions.Logging.ILogger<T>` stored in a `readonly` field (authorized as a fourth constructor parameter under Section 5.8) (Microsoft, 2026g). Configure logging providers and filters solely in executable composition roots, include at least one persistent provider in released server builds, and never substitute `Console.WriteLine`, `Debug.WriteLine`, or direct OS `EventLog` calls in application classes.
+Emit diagnostics through an injected ILogger stored in a readonly field, configuring providers at executable composition roots (Microsoft, 2026g). Released server builds need persistent output; application classes must not bypass the logging pipeline with Console or Debug writes. A logger does not justify an arbitrary parameter-count exception.
 
 #### Correct
 
 ```csharp
-public sealed class ArenaSessionCoordinator
-{
-    private readonly ILogger<ArenaSessionCoordinator> _logger;
-
-    public ArenaSessionCoordinator(ILogger<ArenaSessionCoordinator> logger)
-    {
-        _logger = logger
-            ?? throw new ArgumentNullException(nameof(logger));
-    }
-
-    public void StartSession(Guid sessionId)
-    {
-        _logger.LogInformation("Arena session {SessionId} started.", sessionId);
-    }
-}
+_logger.LogInformation("Match {MatchId} started.", matchId);
 ```
 
-The injected logger receives a static template with a named placeholder.
+The diagnostic follows the configured structured logging pipeline.
 
 #### Incorrect
 
 ```csharp
-public sealed class ArenaSessionCoordinator
-{
-    public void StartSession(Guid sessionId)
-    {
-        Console.WriteLine("Arena session " + sessionId + " started.");
-    }
-}
+Console.WriteLine("Match " + matchId + " started.");
 ```
 
-Direct console output bypasses the configured logging pipeline.
+The direct console write bypasses configured providers and filtering.
 
 ### 6.4 Log Levels
 
-Assign `LogLevel` strictly by technical impact, logging each unhandled failure once at the responsible boundary rather than repeating it across layers (Microsoft, 2026g):
+Choose log levels by technical impact and record an unexpected failure once at the boundary responsible for it (Microsoft, 2026g).
 
-| Level | Technical Usage |
+| Level | Usage |
 | --- | --- |
-| `Trace` / `Debug` | Granular step or development state; disabled by default in released builds. |
-| `Information` | Significant lifecycle milestones; not emitted per routine call or validation check. |
-| `Warning` | Abnormal or recoverable condition (such as transient retry or timeout) where execution continues safely. |
-| `Error` | Current operation failed unexpectedly, while the process continues serving other operations. |
-| `Critical` | Process-threatening failure, startup abort, or data-integrity hazard. |
+| Trace / Debug | Detailed development diagnostics, disabled by default in released builds. |
+| Information | Significant lifecycle events. |
+| Warning | Abnormal or recoverable conditions where execution can continue safely. |
+| Error | An unexpected operation failure while the process continues serving other operations. |
+| Critical | Process-threatening failures, startup aborts, or data-integrity hazards. |
 
 #### Correct
 
 ```csharp
-_logger.LogInformation(
-    "Arena session {SessionId} completed.",
-    sessionId);
-
-_logger.LogWarning(
-    "Client {SessionId} missed heartbeat ({ElapsedMs} ms); awaiting reconnect.",
-    sessionId,
-    elapsedMilliseconds);
-
-_logger.LogError(
-    exception,
-    "Failed to persist reward summary for session {SessionId}.",
-    sessionId);
+_logger.LogWarning("Connection interrupted; attempting recovery.");
 ```
 
-Each message uses the level that matches its technical impact.
+The warning describes a recoverable interruption.
 
 #### Incorrect
 
 ```csharp
-_logger.LogCritical("Player {AccountId} opened audio settings.", accountId);
-_logger.LogInformation("Database transaction failed.");
+_logger.LogCritical("Player opened the settings view.");
 ```
 
-The levels invert routine activity and an operation failure.
+A routine UI action does not indicate a process-threatening failure.
 
 ### 6.5 Log Message Conventions
 
-Write English static log message templates (`CA2254`) with **PascalCase** named placeholders (`{SessionId}`, `{CorrelationId}`), pass `Exception` instances to the dedicated logger parameter rather than interpolating `exception.Message`, and propagate correlation identifiers via `BeginScope` across process boundaries (Microsoft, 2026c; Microsoft, 2026g). Never log passwords, hashes, salts, session tokens, verification codes, connection strings, cryptographic keys, or unredacted personal data.
+Use static English templates with PascalCase placeholders, preserving correlation identifiers across boundaries (Microsoft, 2026d, 2026g). Pass exceptions through the logger exception parameter and use sanitizing providers; never record credentials, session tokens, verification codes, connection strings, or unredacted personal data.
 
 #### Correct
 
 ```csharp
-public void LogPersistenceFailure(
-    Exception exception,
-    Guid sessionId,
-    string correlationId)
-{
-    using IDisposable? scope = _logger.BeginScope(
-        "CorrelationId:{CorrelationId}",
-        correlationId);
-
-    _logger.LogError(
-        exception,
-        "Failed to save state for session {SessionId}.",
-        sessionId);
-}
+_logger.LogError(exception, "Failed to save match {MatchId}.", matchId);
 ```
 
-The structured template preserves the exception and correlation context without secrets.
+The static template preserves structured context and the exception for safe diagnostics.
 
 #### Incorrect
 
 ```csharp
-_logger.LogError(
-    $"Login for {emailAddress} with password {password} and token {token} " +
-    $"failed: {exception.Message}");
+_logger.LogError($"Failed to save match {matchId}: {exception.Message}");
 ```
 
-The interpolated message exposes credentials and discards structured exception data.
+Interpolation discards structured exception information and may expose sensitive details.
 
-### 6.6 Assertions
-
-Use `Debug.Assert` solely to document and check internal development invariants that are always true in correct code; never rely on assertions to validate external input, files, or network responses because `Debug` calls are omitted from Release builds (Microsoft, 2025a).
-
-#### Correct
-
-```csharp
-Debug.Assert(
-    player.MaximumHealth > 0,
-    "Player maximum health invariant must be positive.");
-```
-
-The assertion checks an invariant controlled by the program during development.
-
-#### Incorrect
-
-```csharp
-Debug.Assert(File.Exists(saveFilePath), "Save file must exist on disk.");
-```
-
-An external file can be absent in Release and requires normal error handling.
-
-### 6.7 Player-Facing Error Messages
+### 6.6 Player-Facing Error Messages
 
 Present localized, specific, user-centered, and actionable messages to players without exposing exception type names, stack traces, SQL/storage errors, or physical file paths (Microsoft, 2025h).
 
@@ -2486,647 +1762,368 @@ Unexpected end of stream at offset 0x000014A2.
 
 The message exposes implementation details that do not help the player recover.
 
-### 6.8 Unhandled Exceptions and Diagnostic Reporting
+### 6.7 Unhandled Exceptions and Diagnostic Reporting
 
-Configure independent last-chance exception hooks on client and server executables (`DispatcherUnhandledException`, `AppDomain.CurrentDomain.UnhandledException`, `TaskScheduler.UnobservedTaskException`), and implement a centralized WCF `IErrorHandler` on server endpoints (Microsoft, 2021c):
-
-- `ProvideFault` must pass declared contractual `FaultException<TFault>` instances through unchanged and convert any unexpected exception into a sanitized `FaultException<ServiceFault>` carrying only a stable error code and correlation identifier.
-- `HandleError` must log unexpected exceptions once through `ILogger` (`Error` or `Critical`) without leaking server internals to clients. Background timers and tasks outside WCF operation contexts must maintain their own exception boundaries because `IErrorHandler` covers only WCF dispatch operations.
+Install last-chance executable hooks and a centralized WCF IErrorHandler (Microsoft, 2021c). Preserve declared contractual faults, sanitize unexpected faults, and retain one correlation identifier through fault creation and logging; background timers and callbacks need their own boundaries. HandleError logging must not imply that corrupted state can safely continue.
 
 #### Correct
 
 ```csharp
-public sealed class ServiceErrorHandler : IErrorHandler
-{
-    private readonly ILogger<ServiceErrorHandler> _logger;
-
-    public ServiceErrorHandler(ILogger<ServiceErrorHandler> logger)
-    {
-        _logger = logger
-            ?? throw new ArgumentNullException(nameof(logger));
-    }
-
-    public void ProvideFault(Exception error, MessageVersion version, ref Message fault)
-    {
-        if (error is FaultException)
-        {
-            return;
-        }
-
-        string correlationId = Guid.NewGuid().ToString("N");
-        ServiceFault detail = new ServiceFault
-        {
-            ErrorCode = "UnexpectedServiceError",
-            CorrelationId = correlationId
-        };
-        FaultException<ServiceFault> faultException =
-            new FaultException<ServiceFault>(detail, new FaultReason("Service error."));
-        MessageFault messageFault = faultException.CreateMessageFault();
-        fault = Message.CreateMessage(version, messageFault, faultException.Action);
-    }
-
-    public bool HandleError(Exception error)
-    {
-        if (error is not FaultException)
-        {
-            _logger.LogError(error, "Unhandled WCF service operation failure.");
-        }
-
-        return true;
-    }
-}
-```
-
-The handler sanitizes unexpected faults and logs them at the WCF boundary.
-
-#### Incorrect
-
-```csharp
-public void ProvideFault(Exception error, MessageVersion version, ref Message fault)
-{
-    // Exposes internal exception type, message, and stack trace to remote callers.
-    FaultException<string> leakedFault =
-        new FaultException<string>(error.ToString(), new FaultReason(error.Message));
-    fault = Message.CreateMessage(
-        version,
-        leakedFault.CreateMessageFault(),
-        leakedFault.Action);
-}
-```
-
-The fault exposes the server exception and stack information to the remote caller.
-
----
-
-## 7. Comments and Documentation
-
-### 7.1 General Comment Rules
-
-Write single-line `//` comments on their own line above the relevant code, formatted as complete English sentences starting with an uppercase letter and ending with a period (except structural test markers `// Arrange`, `// Act`, and `// Assert`). Do not place trailing comments at the end of statements or restate self-evident code (Microsoft, 2025f).
-
-#### Correct
-
-```csharp
-// Prevent movement while the player is interacting with the pause menu.
-if (isGamePaused)
+if (error is FaultException<ServiceFault>)
 {
     return;
 }
 ```
 
-The comment explains why the guard exists and follows the required sentence form.
+The handler preserves an already constructed contractual service fault.
 
 #### Incorrect
 
 ```csharp
-if (isGamePaused)
-{
-    return; // return if paused
-}
+throw new FaultException<string>(error.ToString());
 ```
 
-The trailing comment repeats the statement instead of explaining intent.
+The fault exposes internal exception details to the remote caller.
+
+## 7. Comments and Documentation
+
+### 7.1 General Comment Rules
+
+When a comment is necessary, write a short English sentence above the code and explain information the declaration cannot express; omit comments that merely repeat it (Microsoft, 2025f).
+
+#### Correct
+
+```text
+Copy the board before publishing it so later moves cannot change the sent state.
+```
+
+The text explains the reason for copying the board.
+
+#### Incorrect
+
+```text
+Copy the board.
+```
+
+The text only repeats the operation name.
 
 ### 7.2 Implementation Comments
 
-Use `//` implementation comments only to explain **why** a non-obvious constraint, workaround, or algorithmic decision exists; avoid `/* ... */` multi-line block comments and line-by-line narration (Microsoft, 2025f).
+Document only non-obvious constraints or workarounds, avoiding line-by-line narration and block-comment essays (Microsoft, 2025f). Prefer clearer names or simpler code when those remove the need for an explanation.
 
 #### Correct
 
-```csharp
-// Reset vertical velocity before applying the jump impulse so mid-air
-// double jumps produce a consistent upward height.
-playerVelocity.Y = 0f;
-playerVelocity.Y += jumpImpulse;
+```text
+Keep the turn clock running during reconnection so network loss cannot pause play.
 ```
 
-The comment records the reason for resetting velocity before the impulse.
+The text records a behavioral constraint that might otherwise be changed accidentally.
 
 #### Incorrect
 
-```csharp
-// Set Y velocity to zero.
-playerVelocity.Y = 0f;
-// Add jump impulse.
-playerVelocity.Y += jumpImpulse;
+```text
+Read the clock, compare the time, and update the turn.
 ```
 
-The comments narrate assignments that are already clear from the code.
+The text narrates implementation steps rather than explaining their reason.
 
 ### 7.3 XML Documentation Comments
 
-Write well-formed `///` XML documentation immediately above documented types and members, including at minimum a complete-sentence `<summary>` and applicable `<param>`, `<returns>`, `<exception>`, or `<remarks>` tags matching the exact signature (Microsoft, 2025g, 2026k).
+Use well-formed XML with an informative summary and applicable parameter, return, and exception descriptions matching the signature (Microsoft, 2025g, 2026j).
 
 #### Correct
 
-```csharp
-/// <summary>
-/// Calculates the final damage dealt by an attack.
-/// </summary>
-/// <param name="baseDamage">The unmitigated base damage.</param>
-/// <param name="multiplier">The critical or combo multiplier.</param>
-/// <returns>The total calculated damage.</returns>
-public float CalculateDamage(float baseDamage, float multiplier)
-{
-    return baseDamage * multiplier;
-}
+```xml
+<summary>Returns the number of occupied cells on the board.</summary>
 ```
 
-The XML tags match the signature and describe the public contract.
+The XML summary describes the meaning of the returned value.
 
 #### Incorrect
 
-```csharp
-/// Calculates damage
-/// <param name="damage">Damage value</param>
-public float CalculateDamage(float baseDamage, float multiplier)
-{
-    return baseDamage * multiplier;
-}
+```xml
+<sumary>Counts cells.</sumary>
 ```
 
-The documentation omits required tags and names a parameter that does not exist.
+The misspelled XML tag is not a recognized summary element.
 
 ### 7.4 Public API Documentation
 
-XML documentation produces information for API consumers, and Microsoft recommends it for publicly visible APIs. For this project, detailed XML documentation is required only for types and members that form an externally consumed service or library boundary. Public implementation types used only between solution assemblies should remain undocumented when their identifiers and signatures already explain their behavior. Add documentation when a constraint, side effect, or failure cannot be understood from the declaration. Concrete boundary implementations may use `/// <inheritdoc />` when their documented interface already describes the complete contract. Public test types and methods are exempt (Microsoft, 2025i, 2026k).
+Document externally consumed service or library contracts and any non-obvious side effects or failures (Microsoft, 2025i). Do not require repetitive XML documentation on internal implementation types or tests merely because they are public; an implementation may inherit its interface documentation.
 
 #### Correct
 
-```csharp
-public sealed class MatchApplicationService
-{
-    public MatchStatus PlacePiece(MatchPlacement placement)
-    {
-        return MatchStatus.Success;
-    }
-}
+```text
+Only the creator can cancel a waiting room.
 ```
 
-The internal application boundary remains readable without comments that repeat its identifiers.
+The documentation states an authorization constraint that the method name cannot express.
 
 #### Incorrect
 
-```csharp
-/// <summary>
-/// Provides match application services.
-/// </summary>
-public sealed class MatchApplicationService
-{
-    /// <summary>
-    /// Places a piece.
-    /// </summary>
-    public MatchStatus PlacePiece(MatchPlacement placement)
-    {
-        return MatchStatus.Success;
-    }
-}
+```text
+Provides room cancellation methods.
 ```
 
-The comments repeat the type and method names without adding information for an external consumer.
+The documentation repeats the API name without describing its contract.
 
-### 7.5 `TODO` Comments
+### 7.5 TODO Comments
 
-Mark intentionally deferred implementation work using uppercase `// TODO: Specific pending action.` with sufficient detail for any contributor to execute it; vague notes (`fix later`, `finish`) are prohibited (Microsoft, 2025l).
+Use TODO followed by a specific deferred action, and remove it when the work is complete; avoid vague reminders (Microsoft, 2025m). The examples show the note content without embedding a comment in code.
 
 #### Correct
 
-```csharp
-// TODO: Replace default spawn coordinates with stage configuration table entries.
-SpawnEnemies(defaultSpawnPositions);
+```text
+TODO: Replace the local image path with the stored profile-image reference.
 ```
 
-The TODO identifies a specific replacement that another contributor can implement.
+The note identifies a concrete change that a contributor can implement.
 
 #### Incorrect
 
-```csharp
-// todo: finish later
-SpawnEnemies(defaultSpawnPositions);
+```text
+TODO: Finish later.
 ```
 
-The note does not describe the missing work.
-
-### 7.6 `FIXME` Comments
-
-Mark known defective or temporary behavior requiring correction using uppercase `// FIXME: Specific defect and trigger condition.` so it can be tracked alongside Task List tokens (Microsoft, 2025l).
-
-#### Correct
-
-```csharp
-// FIXME: Collision damage triggers twice when two hitboxes overlap in the same frame.
-ApplyCollisionDamage(impactDamage);
-```
-
-The FIXME identifies the defect and the condition that triggers it.
-
-#### Incorrect
-
-```csharp
-// FIXME: broken
-ApplyCollisionDamage(impactDamage);
-```
-
-The note gives no information needed to reproduce the defect.
-
----
+The note does not identify the missing work.
 
 ## 8. Input Validation and Security
 
 ### 8.1 Trust Boundaries
 
-Treat data received from outside the current trust boundary as untrusted (Microsoft, 2023j; OWASP Foundation, n.d.-b):
-
-- Preventive WPF client checks never replace authoritative server validation and authorization.
-- Resolve caller identity and permissions exclusively from a server-validated session token rather than client-supplied account IDs, usernames, or role flags.
-- Enforce domain and authorization policies inside application services before mutating state, returning expected rejection statuses (Section 6.1) mapped to declared WCF faults at the service adapter.
+Validate identity and permissions on the server using the authenticated session, never a caller-supplied account identifier (Microsoft, 2023j; OWASP Foundation, n.d.-b). Client checks improve usability but cannot replace authoritative authorization before access or mutation.
 
 #### Correct
 
 ```csharp
-public async Task<LoadoutRenameStatus> RenameLoadoutAsync(
-    string sessionToken,
-    int slotIndex,
-    string proposedName)
-{
-    SessionIdentity? caller = await _sessionValidator.GetActiveCallerAsync(sessionToken);
-    if (caller is null)
-    {
-        return LoadoutRenameStatus.Unauthorized;
-    }
-
-    LoadoutNameResult nameResult = LoadoutNamePolicy.Normalize(proposedName);
-    if (nameResult.Status != LoadoutNameStatus.Success)
-    {
-        return LoadoutRenameStatus.InvalidName;
-    }
-
-    await _loadoutRepository.RenameSlotAsync(
-        caller.AccountId,
-        slotIndex,
-        nameResult.GetValue());
-    return LoadoutRenameStatus.Success;
-}
+long accountId = authenticatedSession.AccountId;
 ```
 
-The server derives identity from the session and validates the name before persistence.
+The operation obtains caller identity from the server-validated session.
 
 #### Incorrect
 
 ```csharp
-public async Task RenameLoadoutAsync(long clientSuppliedAccountId, int slotIndex, string name)
-{
-    // Trusts the account ID sent by the client and assumes the UI validated the name.
-    await _loadoutRepository.RenameSlotAsync(clientSuppliedAccountId, slotIndex, name);
-}
+long accountId = request.AccountId;
 ```
 
-The method trusts caller identity and validation supplied by the client.
+The operation trusts an identity chosen by the remote caller.
 
 ### 8.2 Input Validation
 
-Validate input presence, length, format, allowlisted values, inclusive numeric bounds, and domain invariants before executing any dependent operation (OWASP Foundation, n.d.-b; The MITRE Corporation, n.d.):
-
-- Apply field-specific normalization consistently before validation (for example, trimming display names while never trimming passwords) without silently clamping or truncating invalid input unless explicitly specified.
-- Return explicit validation statuses for expected input rejections while allowing unexpected repository or infrastructure exceptions to propagate to the error boundary (Section 6.1) rather than masking them as fake result codes.
+Validate presence, bounds, format, and domain invariants before dependent operations (OWASP Foundation, n.d.-b; The MITRE Corporation, n.d.). Apply field-specific normalization without truncating invalid input or modifying passwords; return expected rejection statuses and allow unexpected infrastructure failures to propagate.
 
 #### Correct
 
 ```csharp
-public async Task<HighScoreQueryResult> GetTopScoresAsync(int maximumEntries)
+if (content.Length > MaximumMessageLength)
 {
-    if (maximumEntries < 1 || maximumEntries > MaximumAllowedEntries)
-    {
-        return HighScoreQueryResult.InvalidMaximumEntries();
-    }
-
-    IReadOnlyList<HighScoreEntry> entries =
-        await _highScoreRepository.GetTopScoresAsync(maximumEntries);
-    return HighScoreQueryResult.Success(entries);
+    return MessageStatus.TooLong;
 }
 ```
 
-The method validates the complete range before querying the repository.
+The validation explicitly rejects text above the supported limit.
 
 #### Incorrect
 
 ```csharp
-public async Task<HighScoreQueryResult> GetTopScoresAsync(int maximumEntries)
-{
-    if (maximumEntries < 1)
-    {
-        return HighScoreQueryResult.InvalidMaximumEntries();
-    }
-
-    try
-    {
-        IReadOnlyList<HighScoreEntry> entries =
-            await _highScoreRepository.GetTopScoresAsync(maximumEntries);
-        return HighScoreQueryResult.Success(entries);
-    }
-    catch (Exception)
-    {
-        return HighScoreQueryResult.ServiceUnavailable();
-    }
-}
+content = content.Substring(0, Math.Min(content.Length, MaximumMessageLength));
 ```
 
-The method omits the upper bound and converts technical failures into a false domain result.
+The code silently alters invalid input instead of reporting its rejection.
 
 ### 8.3 File System Access
 
-Confine file reads, writes, and deletions to server-controlled root directories using server-generated GUID filenames and allowlisted extensions (Microsoft, n.d.-a; OWASP Foundation, n.d.-a):
-
-- Never pass client-supplied paths or raw filenames to `Path.Combine` without rejecting rooted paths, directory separators, and traversal segments (`..`).
-- Validate encoded byte size, decoded image headers, and pixel dimensions before storing uploaded media, dispose streams per Section 5.16, and never expose physical server paths in contracts or error messages.
+Store uploaded files beneath a server-controlled root using generated filenames and allowlisted extensions; never trust client paths (Microsoft, n.d.-f; OWASP Foundation, n.d.-a). Check uploaded size and actual media content before storage, and do not expose physical server paths.
 
 #### Correct
 
 ```csharp
-private string ResolveAvatarFilePath(string storedReference)
-{
-    if (string.IsNullOrEmpty(storedReference)
-        || !storedReference.StartsWith(ReferencePrefix, StringComparison.Ordinal))
-    {
-        throw new IOException("The stored avatar reference is invalid.");
-    }
-
-    string fileName = storedReference.Substring(ReferencePrefix.Length);
-    string extension = Path.GetExtension(fileName);
-    string nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
-
-    if ((extension != ".png" && extension != ".jpg")
-        || !Guid.TryParseExact(nameWithoutExtension, "N", out Guid _)
-        || fileName != Path.GetFileName(fileName))
-    {
-        throw new IOException("The stored avatar reference is invalid.");
-    }
-
-    return Path.Combine(_avatarRootDirectory, fileName);
-}
+string fileName = Guid.NewGuid().ToString("N") + PngExtension;
+string path = Path.Combine(_imageRoot, fileName);
 ```
 
-The method accepts only a validated stored reference beneath the controlled root.
+The filename is server-generated and cannot contain caller-controlled path segments.
 
 #### Incorrect
 
 ```csharp
-private string ResolveAvatarFilePath(string clientProvidedPath)
-{
-    return Path.Combine(_avatarRootDirectory, clientProvidedPath);
-}
+string path = Path.Combine(_imageRoot, request.FileName);
 ```
 
-The client-controlled path can escape the intended storage root.
+The caller-controlled name can redirect access outside the intended directory.
 
 ### 8.4 Credential and Secret Management
 
-Keep database connection strings and other secrets in server environment variables or untracked local configuration. Never place them in source code, client builds, logs, or version control (OWASP Foundation, n.d.-c, n.d.-d):
-
-- Fail server startup immediately when required secrets are missing or undersized rather than substituting fallback keys, and clear temporary decoded key buffers after initialization.
-- Hash passwords on the server with a salted cryptographic password hash (such as PBKDF2 with random salt), store verification codes as purpose-bound keyed digests, validate unpredictable session tokens against server state, and immediately revoke and rotate any exposed credential.
+Read required secrets from environment settings or untracked local configuration and fail clearly when they are absent; never supply predictable fallback keys (OWASP Foundation, n.d.-c, n.d.-d). Hash passwords with a salted password-hashing algorithm, protect verification codes with purpose-bound keyed digests, and revoke and rotate exposed credentials.
 
 #### Correct
 
 ```csharp
-private static TokenDigestProtector CreateTokenProtector()
-{
-    byte[] keyBytes = Convert.FromBase64String(
-        EnvironmentSettings.ReadRequired("GAME_TOKEN_SIGNING_KEY"));
-    try
-    {
-        return new TokenDigestProtector(keyBytes);
-    }
-    finally
-    {
-        Array.Clear(keyBytes, 0, keyBytes.Length);
-    }
-}
+string secret = EnvironmentSettings.ReadRequired(SecretVariableName);
 ```
 
-The secret comes from external configuration and its temporary byte array is cleared.
+The required secret comes from external configuration without a fallback.
 
 #### Incorrect
 
 ```csharp
-private static TokenDigestProtector CreateTokenProtector()
-{
-    const int TokenKeySizeInBytes = 32;
-    byte[] fallbackKeyBytes = new byte[TokenKeySizeInBytes];
-    return new TokenDigestProtector(fallbackKeyBytes);
-}
+string secret = Environment.GetEnvironmentVariable(SecretVariableName) ?? DefaultSecret;
 ```
 
-The predictable fallback key makes every generated digest reproducible by an attacker.
-
----
+The fallback hides missing configuration and substitutes a predictable secret.
 
 ## 9. Testing and Quality Assurance
 
 ### 9.1 Testing Strategy
 
-Verify new or modified behavior at the lowest practical automated testing level: prefer fast, isolated unit tests for domain rules and application logic, and use integration tests where correctness depends on multiple real components or infrastructure collaborating together (Microsoft, 2026m; Reese, 2025).
+Verify behavior at the lowest practical level: isolated rules use unit tests, and real component interactions use integration tests (Microsoft, 2026k; Reese, 2025). Manual UI checks complement automation rather than replacing verifiable regression coverage.
 
 #### Correct
 
 ```text
-Feature: Player combat
-
-Unit tests:
-- DamageCalculatorTests
-- CriticalHitCalculatorTests
-
-Integration tests:
-- CombatResolutionIntegrationTests (verifies Weapon, DamageCalculator, and CombatantHealth together)
+Turn-rule calculation: isolated unit test.
+Repository read/write: integration test with disposable data.
 ```
 
-The plan assigns isolated rules to unit tests and real collaboration to an integration test.
+Each behavior is verified at the level that owns its correctness.
 
 #### Incorrect
 
 ```text
-Feature: Player combat
-
-Testing:
-- Launch the desktop client manually, click Attack once, and visually check the health bar.
+Turn-rule calculation: open the client and check whether the board looks right.
 ```
 
-The manual check is not deterministic or self-verifying.
+The manual observation provides no isolated and repeatable rule verification.
 
 ### 9.2 Unit Testing
 
-For this project, unit test projects must reference `Microsoft.NET.Test.Sdk`, `MSTest.TestAdapter`, and `MSTest.TestFramework`. Test classes must use `[TestClass]`, and test methods must use `[TestMethod]`, so Visual Studio Test Explorer and `dotnet test` can discover and run an individual test. Each unit test must be fast, deterministic, self-checking via `Assert`, and isolated from file systems, databases, and networks by substituting controlled `Stub` or `Fake` doubles for external dependencies (Microsoft, 2026m, 2026o, 2026r; Reese, 2025).
+Use Microsoft.NET.Test.Sdk, MSTest.TestAdapter, and MSTest.TestFramework with TestClass and TestMethod so tests are individually discoverable in Visual Studio and dotnet test (Microsoft, 2026o, 2026m). Keep unit tests deterministic and isolated with controlled doubles, and compare explicit expected and actual values (Reese, 2025).
 
 #### Correct
 
 ```csharp
 [TestClass]
-public sealed class DamageCalculatorTests
+public sealed class ScoreCalculatorTests
 {
     [TestMethod]
-    public void CalculateDamage_ValidMultiplier_ReturnsScaledDamage()
+    public void CalculateTotal_NoScores_ReturnsZero()
     {
-        // Arrange
-        const int BaseDamage = 20;
-        const int DamageMultiplier = 2;
-        const int ExpectedDamage = 40;
-        DamageCalculator calculator = new DamageCalculator();
+        int[] scores = Array.Empty<int>();
+        ScoreCalculator calculator = new ScoreCalculator();
+        int expectedScore = 0;
 
-        // Act
-        int actualDamage = calculator.CalculateDamage(BaseDamage, DamageMultiplier);
+        int actualScore = calculator.CalculateTotal(scores);
 
-        // Assert
-        Assert.AreEqual(ExpectedDamage, actualDamage);
+        Assert.AreEqual(expectedScore, actualScore);
     }
 }
 ```
 
-The MSTest attributes make the isolated test discoverable and independently executable.
+The discoverable test verifies one isolated calculation with explicit expected and actual values.
 
 #### Incorrect
 
 ```csharp
-public static class DamageCalculatorChecks
+public sealed class ScoreCalculatorTests
 {
-    public static void RunDamageCheck()
+    public void CalculateTotal_NoScores_ReturnsZero()
     {
-        const int BaseDamage = 20;
-        const int DamageMultiplier = 2;
-        const int ExpectedDamage = 40;
-        DamageCalculator calculator = new DamageCalculator();
+        int[] scores = Array.Empty<int>();
+        ScoreCalculator calculator = new ScoreCalculator();
+        int expectedScore = 0;
 
-        int actualDamage = calculator.CalculateDamage(
-            BaseDamage,
-            DamageMultiplier);
+        int actualScore = calculator.CalculateTotal(scores);
 
-        Assert.AreEqual(ExpectedDamage, actualDamage);
+        Assert.AreEqual(expectedScore, actualScore);
     }
 }
 ```
 
-The custom static runner cannot be discovered or executed individually by MSTest.
+Without the MSTest attributes the check is not individually discoverable.
 
 ### 9.3 Integration Testing
 
-Integration tests must exercise real interactions across collaborating components (such as repositories, serialization, or temporary storage) and deterministically clean up created resources in `finally` or disposal scopes rather than replacing the tested integration boundary with mocks (Microsoft, 2026m; van der Til et al., 2026).
+Exercise the real boundary being tested and clean up disposable data or files deterministically (Microsoft, 2026k; van der Til et al., 2026). Keep one observable interaction per test; a save-and-load sequence can verify one persistence behavior.
 
 #### Correct
 
 ```csharp
-[TestClass]
-public sealed class SaveGameIntegrationTests
+[TestMethod]
+public void WriteAndRead_EmptyText_PreservesContent()
 {
-    [TestMethod]
-    public void SaveAndLoad_ValidGameState_RestoresPlayerHealth()
+    string path = Path.GetTempFileName();
+    string expectedContent = string.Empty;
+    try
     {
-        // Arrange
-        string savePath = Path.GetTempFileName();
-        try
-        {
-            const int ExpectedPlayerHealth = 75;
-            JsonSaveRepository repository = new JsonSaveRepository(savePath);
-            SaveGameApplicationService service = new SaveGameApplicationService(repository);
-            GameState expectedState = new GameState
-            {
-                PlayerHealth = ExpectedPlayerHealth
-            };
+        File.WriteAllText(path, expectedContent);
+        string actualContent = File.ReadAllText(path);
 
-            // Act
-            service.Save(expectedState);
-            GameState loadedState = service.Load();
-
-            // Assert
-            Assert.AreEqual(ExpectedPlayerHealth, loadedState.PlayerHealth);
-        }
-        finally
-        {
-            File.Delete(savePath);
-        }
+        Assert.AreEqual(expectedContent, actualContent);
+    }
+    finally
+    {
+        File.Delete(path);
     }
 }
 ```
 
-The test uses real temporary storage and removes it in `finally`.
+The test verifies one real storage interaction and deletes its temporary file.
 
 #### Incorrect
 
 ```csharp
-[TestClass]
-public sealed class SaveGameIntegrationTests
+[TestMethod]
+public void WriteAndRead_EmptyText_PreservesContent()
 {
-    [TestMethod]
-    public void SaveAndLoad_ValidGameState_RestoresPlayerHealth()
-    {
-        const int SavedPlayerHealth = 75;
+    string path = Path.GetTempFileName();
+    string expectedContent = string.Empty;
 
-        // Replaces the persistence component with an in-memory stub while claiming
-        // to test persistence integration.
-        InMemorySaveRepositoryStub stub = new InMemorySaveRepositoryStub(SavedPlayerHealth);
-        SaveGameApplicationService service = new SaveGameApplicationService(stub);
+    File.WriteAllText(path, expectedContent);
+    string actualContent = File.ReadAllText(path);
 
-        GameState loadedState = service.Load();
-
-        Assert.AreEqual(SavedPlayerHealth, loadedState.PlayerHealth);
-    }
+    Assert.AreEqual(expectedContent, actualContent);
 }
 ```
 
-The stub removes the persistence boundary that the integration test claims to verify.
+The test leaves its temporary file behind instead of cleaning it deterministically.
 
-### 9.4 Arrange-Act-Assert Structure
+### 9.4 Atomic Test Structure
 
-Structure every test into three blank-line-separated phases labeled with `// Arrange`, `// Act`, and `// Assert`, executing a **single `Act` operation** per test method so failures pinpoint one behavior (Microsoft, 2026o; Reese, 2025).
+Make each test verify one behavior in one flow, separating preparation, execution, and verification with blank lines rather than comments (Reese, 2025). Prefer one focused assertion; additional assertions must describe the same outcome, not unrelated scenarios. State expected and actual values clearly and use separate tests or data rows for different cases.
 
 #### Correct
 
 ```csharp
-[TestClass]
-public sealed class PlayerHealthTests
+[TestMethod]
+public void CountPlayers_EmptyCollection_ReturnsZero()
 {
-    [TestMethod]
-    public void TakeDamage_ValidAmount_DecreasesCurrentHealth()
-    {
-        // Arrange
-        const int InitialHealth = 100;
-        const int DamageAmount = 30;
-        const int ExpectedHealth = 70;
-        PlayerHealth playerHealth = new PlayerHealth(InitialHealth);
+    Player[] players = Array.Empty<Player>();
+    int expectedCount = 0;
 
-        // Act
-        playerHealth.TakeDamage(DamageAmount);
+    int actualCount = players.Length;
 
-        // Assert
-        Assert.AreEqual(ExpectedHealth, playerHealth.CurrentHealth);
-    }
+    Assert.AreEqual(expectedCount, actualCount);
 }
 ```
 
-The labeled phases contain one action followed by one focused assertion.
+The test has one outcome and visibly separates preparation, execution, and verification.
 
 #### Incorrect
 
 ```csharp
-[TestClass]
-public sealed class PlayerHealthTests
+[TestMethod]
+public void CountPlayers_EmptyCollection_ReturnsZero()
 {
-    [TestMethod]
-    public void TakeDamage_ValidAmount_DecreasesCurrentHealth()
-    {
-        const int InitialHealth = 100;
-        const int FirstDamageAmount = 30;
-        const int SecondDamageAmount = 10;
-        const int ExpectedHealth = 60;
-        PlayerHealth playerHealth = new PlayerHealth(InitialHealth);
-        playerHealth.TakeDamage(FirstDamageAmount);
-        playerHealth.TakeDamage(SecondDamageAmount);
-        Assert.AreEqual(ExpectedHealth, playerHealth.CurrentHealth);
-    }
+    Player[] players = Array.Empty<Player>();
+    int expectedCount = 0;
+    int actualCount = players.Length;
+    Assert.AreEqual(expectedCount, actualCount);
+    Assert.IsTrue(_connection.IsOnline);
 }
 ```
 
-The test performs the action twice and does not separate its phases.
-
----
+The connection assertion adds an unrelated behavior to the collection-count test.
 
 ## 10. Version Control and Collaboration
 
@@ -3197,19 +2194,31 @@ Ecma International. (2023, December). *ECMA-334: C# language specification* (7th
 
 Esposito, D. (2014, October). Cutting edge: Source code readability tips. *MSDN Magazine, 29*(10). Microsoft. [https://learn.microsoft.com/en-us/archive/msdn-magazine/2014/october/cutting-edge-source-code-readability-tips](https://learn.microsoft.com/en-us/archive/msdn-magazine/2014/october/cutting-edge-source-code-readability-tips)
 
-GitLab. (n.d.). *JavaScript style guide*. GitLab Docs. Retrieved August 29, 2026, from [https://docs.gitlab.com/development/fe_guide/style/javascript/](https://docs.gitlab.com/development/fe_guide/style/javascript/)
-
 Google. (n.d.). *C# at Google Style Guide*. Google Style Guides. Retrieved August 29, 2026, from [https://google.github.io/styleguide/csharp-style.html](https://google.github.io/styleguide/csharp-style.html)
 
 JetBrains. (2026, March 31). *Invert ‘if’ statement to reduce nesting*. Inspectopedia Documentation. [https://www.jetbrains.com/help/inspectopedia/InvertIf.html](https://www.jetbrains.com/help/inspectopedia/InvertIf.html)
 
-Microsoft. (n.d.-a). *Path.Combine method (System.IO)*. Microsoft Learn. Retrieved October 22, 2026, from [https://learn.microsoft.com/en-us/dotnet/api/system.io.path.combine](https://learn.microsoft.com/en-us/dotnet/api/system.io.path.combine)
+Microsoft. (n.d.-a). *Async semaphores, locks, and reader/writer coordination*. Microsoft Learn. Retrieved November 7, 2026, from [https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/async-coordination-primitives-advanced](https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/async-coordination-primitives-advanced)
+
+Microsoft. (n.d.-c). *Interlocked class*. Microsoft Learn. Retrieved November 7, 2026, from [https://learn.microsoft.com/en-us/dotnet/api/system.threading.interlocked](https://learn.microsoft.com/en-us/dotnet/api/system.threading.interlocked)
+
+Microsoft. (n.d.-d). *Local functions*. Microsoft Learn. Retrieved November 18, 2026, from [https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/building-software/local-functions](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/building-software/local-functions)
+
+Microsoft. (n.d.-f). *Path.Combine method (System.IO)*. Microsoft Learn. Retrieved October 22, 2026, from [https://learn.microsoft.com/en-us/dotnet/api/system.io.path.combine](https://learn.microsoft.com/en-us/dotnet/api/system.io.path.combine)
+
+Microsoft. (n.d.-g). *SemaphoreSlim class*. Microsoft Learn. Retrieved November 18, 2026, from [https://learn.microsoft.com/en-us/dotnet/api/system.threading.semaphoreslim?view=netframework-4.7.2](https://learn.microsoft.com/en-us/dotnet/api/system.threading.semaphoreslim?view=netframework-4.7.2)
+
+Microsoft. (n.d.-b). *The event keyword*. Microsoft Learn. Retrieved November 18, 2026, from [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/event](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/event)
+
+Microsoft. (n.d.-e). *The lock statement: ensure exclusive access to a shared resource*. Microsoft Learn. Retrieved November 7, 2026, from [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/lock](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/lock)
+
+Microsoft. (n.d.-h). *Thread-safe collections*. Microsoft Learn. Retrieved November 7, 2026, from [https://learn.microsoft.com/en-us/dotnet/standard/collections/thread-safe/](https://learn.microsoft.com/en-us/dotnet/standard/collections/thread-safe/)
+
+Microsoft. (n.d.-i). *WPF globalization and localization overview*. Microsoft Learn. Retrieved November 18, 2026, from [https://learn.microsoft.com/en-us/dotnet/desktop/wpf/advanced/wpf-globalization-and-localization-overview](https://learn.microsoft.com/en-us/dotnet/desktop/wpf/advanced/wpf-globalization-and-localization-overview)
 
 Microsoft. (2020a, October 14). *No-tracking queries*. Microsoft Learn. [https://learn.microsoft.com/en-us/ef/ef6/querying/no-tracking](https://learn.microsoft.com/en-us/ef/ef6/querying/no-tracking)
 
 Microsoft. (2020b, October 14). *Querying and finding entities*. Microsoft Learn. [https://learn.microsoft.com/en-us/ef/ef6/querying/](https://learn.microsoft.com/en-us/ef/ef6/querying/)
-
-Microsoft. (2020c, October 14). *Working with DbContext*. Microsoft Learn. [https://learn.microsoft.com/en-us/ef/ef6/fundamentals/working-with-dbcontext](https://learn.microsoft.com/en-us/ef/ef6/fundamentals/working-with-dbcontext)
 
 Microsoft. (2021a, September 15). *Data contract versioning*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/framework/wcf/feature-details/data-contract-versioning](https://learn.microsoft.com/en-us/dotnet/framework/wcf/feature-details/data-contract-versioning)
 
@@ -3233,29 +2242,27 @@ Microsoft. (2023c, May 9). *Architectural principles*. Microsoft Learn. [https:/
 
 Microsoft. (2023d, April 22). *CA1502: Avoid excessive complexity (code analysis)*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca1502](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca1502)
 
-Microsoft. (2023e, October 3). *Names of namespaces*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/names-of-namespaces](https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/names-of-namespaces)
+Microsoft. (2023e, July 27). *IDE0019: Use pattern matching to avoid 'as' followed by a 'null' check*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0019](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0019)
 
-Microsoft. (2023f, October 3). *Names of type members*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/names-of-type-members](https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/names-of-type-members)
+Microsoft. (2023f, October 3). *Names of namespaces*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/names-of-namespaces](https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/names-of-namespaces)
 
-Microsoft. (2023g, October 3). *Naming parameters*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/naming-parameters](https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/naming-parameters)
+Microsoft. (2023g, October 3). *Names of type members*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/names-of-type-members](https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/names-of-type-members)
 
-Microsoft. (2023h, July 25). *.NET formatting options*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/dotnet-formatting-options](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/dotnet-formatting-options)
+Microsoft. (2023h, October 3). *Naming parameters*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/naming-parameters](https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/naming-parameters)
 
 Microsoft. (2023i, December 16). *Remove unnecessary using directives (IDE0005)*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0005](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0005)
 
 Microsoft. (2023j, March 30). *Securing services*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/framework/wcf/securing-services](https://learn.microsoft.com/en-us/dotnet/framework/wcf/securing-services)
 
-Microsoft. (2023k, July 27). *IDE0019: Use pattern matching to avoid 'as' followed by a 'null' check*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0019](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0019)
-
 Microsoft. (2024, January 18). *Use pattern matching to avoid 'is' check followed by a cast (IDE0020 and IDE0038)*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0020-ide0038](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0020-ide0038)
 
-Microsoft. (2025a, October 30). *Assertions in managed code*. Microsoft Learn. [https://learn.microsoft.com/en-us/visualstudio/debugger/assertions-in-managed-code](https://learn.microsoft.com/en-us/visualstudio/debugger/assertions-in-managed-code)
+Microsoft. (2025a, August 15). *Asynchronous programming scenarios*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/asynchronous-programming/async-scenarios](https://learn.microsoft.com/en-us/dotnet/csharp/asynchronous-programming/async-scenarios)
 
-Microsoft. (2025b, August 15). *Asynchronous programming scenarios*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/asynchronous-programming/async-scenarios](https://learn.microsoft.com/en-us/dotnet/csharp/asynchronous-programming/async-scenarios)
+Microsoft. (2025b, October 22). *Best practices for exceptions*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/standard/exceptions/best-practices-for-exceptions](https://learn.microsoft.com/en-us/dotnet/standard/exceptions/best-practices-for-exceptions)
 
-Microsoft. (2025c, October 22). *Best practices for exceptions*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/standard/exceptions/best-practices-for-exceptions](https://learn.microsoft.com/en-us/dotnet/standard/exceptions/best-practices-for-exceptions)
+Microsoft. (2025c, January 30). *C# formatting options*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/csharp-formatting-options](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/csharp-formatting-options)
 
-Microsoft. (2025d, January 30). *C# formatting options*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/csharp-formatting-options](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/csharp-formatting-options)
+Microsoft. (2025d, February 4). *CA2000: Dispose objects before losing scope (code analysis)*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca2000](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca2000)
 
 Microsoft. (2025e, October 30). *Code metrics: Cyclomatic complexity*. Microsoft Learn. [https://learn.microsoft.com/en-us/visualstudio/code-quality/code-metrics-cyclomatic-complexity](https://learn.microsoft.com/en-us/visualstudio/code-quality/code-metrics-cyclomatic-complexity)
 
@@ -3267,25 +2274,23 @@ Microsoft. (2025h, July 14). *Error message guidelines*. Microsoft Learn. [https
 
 Microsoft. (2025i, June 17). *How to write good /// docs for .NET API reference*. Microsoft Learn. [https://learn.microsoft.com/en-us/contribute/content/dotnet/api-documentation](https://learn.microsoft.com/en-us/contribute/content/dotnet/api-documentation)
 
-Microsoft. (2025j, May 29). *Names of classes, structs, and interfaces*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/names-of-classes-structs-and-interfaces](https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/names-of-classes-structs-and-interfaces)
+Microsoft. (2025j, March 24). *Introduction to LINQ queries in C#*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/linq/get-started/introduction-to-linq-queries](https://learn.microsoft.com/en-us/dotnet/csharp/linq/get-started/introduction-to-linq-queries)
 
-Microsoft. (2025k, November 19). *Properties (C# Programming Guide)*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/properties](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/properties)
+Microsoft. (2025k, May 29). *Names of classes, structs, and interfaces*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/names-of-classes-structs-and-interfaces](https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/names-of-classes-structs-and-interfaces)
 
-Microsoft. (2025l, November 17). *Use Task List with code comments and shortcuts*. Microsoft Learn. [https://learn.microsoft.com/en-us/visualstudio/ide/using-the-task-list](https://learn.microsoft.com/en-us/visualstudio/ide/using-the-task-list)
+Microsoft. (2025l, November 19). *Properties (C# Programming Guide)*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/properties](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/properties)
 
-Microsoft. (2025m, March 24). *Introduction to LINQ queries in C#*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/linq/get-started/introduction-to-linq-queries](https://learn.microsoft.com/en-us/dotnet/csharp/linq/get-started/introduction-to-linq-queries)
+Microsoft. (2025m, November 17). *Use Task List with code comments and shortcuts*. Microsoft Learn. [https://learn.microsoft.com/en-us/visualstudio/ide/using-the-task-list](https://learn.microsoft.com/en-us/visualstudio/ide/using-the-task-list)
 
-Microsoft. (2025n, February 4). *CA2000: Dispose objects before losing scope (code analysis)*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca2000](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca2000)
+Microsoft. (2026a, January 26). *`readonly` (C# reference)*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/readonly](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/readonly)
 
-Microsoft. (2026a, July 14). *C# identifier naming rules and conventions*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/identifier-names](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/identifier-names)
+Microsoft. (2026b, July 14). *C# identifier naming rules and conventions*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/identifier-names](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/identifier-names)
 
-Microsoft. (2026b, April 2). *CA1711: Identifiers should not have incorrect suffix (code analysis)*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca1711](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca1711)
+Microsoft. (2026c, April 2). *CA1711: Identifiers should not have incorrect suffix (code analysis)*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca1711](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca1711)
 
-Microsoft. (2026c, April 2). *CA2254: Template should be a static expression*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca2254](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca2254)
+Microsoft. (2026d, April 2). *CA2254: Template should be a static expression*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca2254](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca2254)
 
-Microsoft. (2026d, April 13). *Extract and inline refactorings*. Microsoft Learn. [https://learn.microsoft.com/en-us/visualstudio/ide/reference/refactoring-extract-inline](https://learn.microsoft.com/en-us/visualstudio/ide/reference/refactoring-extract-inline)
-
-Microsoft. (2026e, January 26). *The `init` keyword (C# reference)*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/init](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/init)
+Microsoft. (2026e, April 13). *Extract and inline refactorings*. Microsoft Learn. [https://learn.microsoft.com/en-us/visualstudio/ide/reference/refactoring-extract-inline](https://learn.microsoft.com/en-us/visualstudio/ide/reference/refactoring-extract-inline)
 
 Microsoft. (2026f, January 24). *Lambda expressions and anonymous functions*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/lambda-expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/lambda-expressions)
 
@@ -3295,31 +2300,17 @@ Microsoft. (2026h, May 27). *Namespaces and using directives*. Microsoft Learn. 
 
 Microsoft. (2026i, May 26). *Nullable reference types*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/null-safety/nullable-reference-types](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/null-safety/nullable-reference-types)
 
-Microsoft. (2026j, January 26). *`readonly` (C# reference)*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/readonly](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/readonly)
+Microsoft. (2026j, June 22). *Recommended XML tags for C# documentation comments*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/xmldoc/recommended-tags](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/xmldoc/recommended-tags)
 
-Microsoft. (2026k, June 22). *Recommended XML tags for C# documentation comments*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/xmldoc/recommended-tags](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/xmldoc/recommended-tags)
+Microsoft. (2026k, April 27). *Testing in .NET*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/core/testing/](https://learn.microsoft.com/en-us/dotnet/core/testing/)
 
-Microsoft. (2026l, June 5). *Records (C# reference)*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/record](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/record)
+Microsoft. (2026l, May 26). *Tutorial: Express your design intent with nullable and non-nullable reference types*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/tutorials/nullable-reference-types](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/tutorials/nullable-reference-types)
 
-Microsoft. (2026m, April 27). *Testing in .NET*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/core/testing/](https://learn.microsoft.com/en-us/dotnet/core/testing/)
+Microsoft. (2026m, March 9). *Unit test basics with Test Explorer*. Microsoft Learn. [https://learn.microsoft.com/en-us/visualstudio/test/unit-test-basics](https://learn.microsoft.com/en-us/visualstudio/test/unit-test-basics)
 
-Microsoft. (2026n, May 26). *Tutorial: Express your design intent with nullable and non-nullable reference types*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/tutorials/nullable-reference-types](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/tutorials/nullable-reference-types)
+Microsoft. (2026n, January 20). *using statement - ensure the correct use of disposable objects*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/using](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/using)
 
 Microsoft. (2026o, June 24). *Write tests with MSTest*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-mstest-writing-tests](https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-mstest-writing-tests)
-
-Microsoft. (2026p, March 23). *Handle and raise events*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/standard/events/](https://learn.microsoft.com/en-us/dotnet/standard/events/)
-
-Microsoft. (2026q, January 20). *using statement - ensure the correct use of disposable objects*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/using](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/using)
-
-Microsoft. (2026r, March 9). *Unit test basics with Test Explorer*. Microsoft Learn. [https://learn.microsoft.com/en-us/visualstudio/test/unit-test-basics](https://learn.microsoft.com/en-us/visualstudio/test/unit-test-basics)
-
-Microsoft. (n.d.-b). *The lock statement: ensure exclusive access to a shared resource*. Microsoft Learn. Retrieved November 7, 2026, from [https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/lock](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/lock)
-
-Microsoft. (n.d.-c). *Async semaphores, locks, and reader/writer coordination*. Microsoft Learn. Retrieved November 7, 2026, from [https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/async-coordination-primitives-advanced](https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/async-coordination-primitives-advanced)
-
-Microsoft. (n.d.-d). *Interlocked class*. Microsoft Learn. Retrieved November 7, 2026, from [https://learn.microsoft.com/en-us/dotnet/api/system.threading.interlocked](https://learn.microsoft.com/en-us/dotnet/api/system.threading.interlocked)
-
-Microsoft. (n.d.-e). *Thread-safe collections*. Microsoft Learn. Retrieved November 7, 2026, from [https://learn.microsoft.com/en-us/dotnet/standard/collections/thread-safe/](https://learn.microsoft.com/en-us/dotnet/standard/collections/thread-safe/)
 
 OWASP Foundation. (n.d.-a). *File upload cheat sheet*. OWASP Cheat Sheet Series. Retrieved October 22, 2026, from [https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html)
 
@@ -3329,8 +2320,6 @@ OWASP Foundation. (n.d.-c). *Password storage cheat sheet*. OWASP Cheat Sheet Se
 
 OWASP Foundation. (n.d.-d). *Secrets management cheat sheet*. OWASP Cheat Sheet Series. Retrieved October 22, 2026, from [https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html)
 
-Reese, J. (2025, March 22). *Unit testing best practices for .NET*. Microsoft Learn. [https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices](https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices)
-
 The MITRE Corporation. (n.d.). *CWE-20: Improper input validation*. Common Weakness Enumeration. Retrieved October 22, 2026, from [https://cwe.mitre.org/data/definitions/20.html](https://cwe.mitre.org/data/definitions/20.html)
 
 van der Til, J., Costello, M., & Calvarro Nelson, J. (2026, March 10). *Integration tests in ASP.NET Core*. Microsoft Learn. [https://learn.microsoft.com/en-us/aspnet/core/test/integration-tests?view=aspnetcore-10.0](https://learn.microsoft.com/en-us/aspnet/core/test/integration-tests?view=aspnetcore-10.0)
@@ -3339,4 +2328,4 @@ van der Til, J., Costello, M., & Calvarro Nelson, J. (2026, March 10). *Integrat
 
 ## 12. AI Use Declaration
 
-Artificial Intelligence tools were used as a support resource during the drafting and refinement of this standard for structural organization, wording conciseness, example synthesis, cross-section consistency checks, and reference verification. All normative rules, examples, and citations were reviewed and verified against official language specifications, framework documentation, and security standards; full technical responsibility for this document remains with the engineering authors.
+Artificial Intelligence tools were used as a support resource during the drafting and refinement of this standard for structural organization, wording conciseness, example synthesis, cross-section consistency checks, and reference verification. The authors retain responsibility for approving the rules and checking examples against their supported environment; automated formatting checks do not replace technical review.
