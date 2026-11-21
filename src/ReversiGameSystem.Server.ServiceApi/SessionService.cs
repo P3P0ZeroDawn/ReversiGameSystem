@@ -153,7 +153,7 @@ public sealed class SessionService : ISessionService
             throw new ArgumentOutOfRangeException(nameof(status));
         }
 
-        return SessionFaultFactory.Create(failure);
+        return ServiceFaultFactory.CreateSessionFault(failure);
     }
 
     private static ContractAuthenticatedSession MapAuthenticatedSession(

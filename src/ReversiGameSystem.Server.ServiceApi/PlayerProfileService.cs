@@ -91,14 +91,18 @@ public sealed class PlayerProfileService : IPlayerProfileService
         }
         if (status == ProfileOperationStatus.MissingSessionToken)
         {
-            throw SessionFaultFactory.Create(SessionFailure.MissingSessionToken);
+            throw ServiceFaultFactory.CreateSessionFault(SessionFailure.MissingSessionToken);
         }
         if (status == ProfileOperationStatus.InvalidSession)
         {
-            throw SessionFaultFactory.Create(SessionFailure.InvalidSession);
+            throw ServiceFaultFactory.CreateSessionFault(SessionFailure.InvalidSession);
         }
 
-        throw CreateProfileFault(MapProfileFailure(status));
+        ProfileFailure failure = MapProfileFailure(status);
+        throw new FaultException<ProfileFault>(new ProfileFault
+        {
+            Reason = failure
+        }, "The profile request was rejected.");
     }
 
     private static ProfileFailure MapProfileFailure(ProfileOperationStatus status)
@@ -120,14 +124,6 @@ public sealed class PlayerProfileService : IPlayerProfileService
             default:
                 throw new ArgumentOutOfRangeException(nameof(status));
         }
-    }
-
-    private static FaultException<ProfileFault> CreateProfileFault(ProfileFailure failure)
-    {
-        return new FaultException<ProfileFault>(new ProfileFault
-        {
-            Reason = failure
-        }, "The profile request was rejected.");
     }
 
     private static ContractProfile MapProfile(ApplicationProfile profile)

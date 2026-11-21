@@ -6,7 +6,6 @@ using System.ServiceModel.Description;
 using System.ServiceModel.Dispatcher;
 using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Contracts.Common;
-using ReversiGameSystem.Server.Contracts.Faults;
 
 namespace ReversiGameSystem.Server.ServiceApi;
 
@@ -45,8 +44,7 @@ public sealed class ServiceErrorBehavior : IServiceBehavior, IErrorHandler
     {
         foreach (ChannelDispatcherBase dispatcherBase in serviceHostBase.ChannelDispatchers)
         {
-            ChannelDispatcher? dispatcher = dispatcherBase as ChannelDispatcher;
-            if (dispatcher != null)
+            if (dispatcherBase is ChannelDispatcher dispatcher)
             {
                 dispatcher.ErrorHandlers.Add(this);
             }
@@ -72,15 +70,26 @@ public sealed class ServiceErrorBehavior : IServiceBehavior, IErrorHandler
             return true;
         }
 
-        string? operation = ReadDiagnosticValue(error, OperationDataKey);
-        string? correlationId = ReadDiagnosticValue(error, CorrelationDataKey);
-        if (operation == null || correlationId == null)
+        string? storedOperation = error.Data[OperationDataKey] as string;
+        if (storedOperation == null
+            && (error is CommunicationException
+                || error is TimeoutException
+                || error is ObjectDisposedException))
         {
             return true;
         }
 
-        error.Data[LoggedDataKey] = true;
+        string operation = storedOperation ?? UnknownOperation;
+        string correlationId = error.Data[CorrelationDataKey] as string
+            ?? CorrelationContext.ReadOrGenerate();
+
+        SetDiagnosticValueIfWritable(error, LoggedDataKey, true);
         LogUnexpectedFailure(error, operation, correlationId);
+        if (IsFatalException(error))
+        {
+            return false;
+        }
+
         return true;
     }
 
@@ -97,30 +106,12 @@ public sealed class ServiceErrorBehavior : IServiceBehavior, IErrorHandler
 
         string operation = GetOperationName();
         string correlationId = CorrelationContext.GetOrCreate();
-        error.Data[OperationDataKey] = operation;
-        error.Data[CorrelationDataKey] = correlationId;
+        SetDiagnosticValueIfWritable(error, OperationDataKey, operation);
+        SetDiagnosticValueIfWritable(error, CorrelationDataKey, correlationId);
         FaultException<ServiceFault> serviceFault =
-            ServiceFaultFactory.Create(operation, correlationId);
+            ServiceFaultFactory.CreateUnexpectedFault(correlationId);
         MessageFault messageFault = serviceFault.CreateMessageFault();
         fault = Message.CreateMessage(version, messageFault, serviceFault.Action);
-    }
-
-    private static bool IsDeclaredFault(Exception error)
-    {
-        if (error is FaultException<AccountFault>
-            || error is FaultException<ChatFault>
-            || error is FaultException<FriendshipFault>
-            || error is FaultException<LeaderboardFault>
-            || error is FaultException<MatchFault>
-            || error is FaultException<PreferencesFault>
-            || error is FaultException<ProfileFault>
-            || error is FaultException<ServiceFault>
-            || error is FaultException<SessionFault>)
-        {
-            return true;
-        }
-
-        return false;
     }
 
     private void LogUnexpectedFailure(
@@ -130,33 +121,30 @@ public sealed class ServiceErrorBehavior : IServiceBehavior, IErrorHandler
     {
         try
         {
-            _logger.LogError(error,
+            _logger.LogError(
+                error,
                 "The {Operation} operation failed unexpectedly. "
                 + "CorrelationId: {CorrelationId}",
-                operation, correlationId);
+                operation,
+                correlationId);
         }
         catch (Exception loggingFailure)
         {
-            Console.Error.WriteLine(
-                "The service diagnostic logger failed. Operation: {0}. "
-                + "CorrelationId: {1}.{2}{3}{2}{4}",
-                operation,
-                correlationId,
-                Environment.NewLine,
-                FailureDiagnostics.Describe(error),
-                FailureDiagnostics.Describe(loggingFailure));
+            string context =
+                "The service diagnostic logger failed. Operation: "
+                + operation
+                + ". CorrelationId: "
+                + correlationId
+                + ".";
+            FailureDiagnostics.WriteLoggerFallback(context, error, loggingFailure);
         }
     }
 
     private static string GetOperationName()
     {
         OperationContext? context = OperationContext.Current;
-        string? action = context?.IncomingMessageHeaders.Action;
-        if (action == null)
-        {
-            return UnknownOperation;
-        }
-        if (string.IsNullOrWhiteSpace(action))
+        string? action = context?.IncomingMessageHeaders?.Action;
+        if (action == null || string.IsNullOrWhiteSpace(action))
         {
             return UnknownOperation;
         }
@@ -170,8 +158,31 @@ public sealed class ServiceErrorBehavior : IServiceBehavior, IErrorHandler
         return action.Substring(separatorIndex + 1);
     }
 
-    private static string? ReadDiagnosticValue(Exception error, string key)
+    private static bool IsDeclaredFault(Exception error)
     {
-        return error.Data[key] as string;
+        Type errorType = error.GetType();
+        if (!errorType.IsGenericType
+            || errorType.GetGenericTypeDefinition() != typeof(FaultException<>))
+        {
+            return false;
+        }
+
+        Type detailType = errorType.GetGenericArguments()[0];
+        return detailType.Assembly == typeof(ServiceFault).Assembly;
+    }
+
+    private static void SetDiagnosticValueIfWritable(Exception error, string key, object value)
+    {
+        if (!error.Data.IsReadOnly)
+        {
+            error.Data[key] = value;
+        }
+    }
+
+    private static bool IsFatalException(Exception error)
+    {
+        return error is OutOfMemoryException
+            or StackOverflowException
+            or AccessViolationException;
     }
 }

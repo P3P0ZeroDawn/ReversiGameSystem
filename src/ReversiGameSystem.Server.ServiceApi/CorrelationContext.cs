@@ -32,6 +32,14 @@ internal static class CorrelationContext
         return correlationId;
     }
 
+    internal static string ReadOrGenerate()
+    {
+        OperationContext? operationContext = OperationContext.Current;
+        return Read(operationContext?.OutgoingMessageHeaders)
+            ?? Read(operationContext?.IncomingMessageHeaders)
+            ?? Guid.NewGuid().ToString("D");
+    }
+
     private static string? Read(MessageHeaders? headers)
     {
         if (headers == null)

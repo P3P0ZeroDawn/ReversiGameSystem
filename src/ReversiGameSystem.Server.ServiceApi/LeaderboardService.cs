@@ -55,10 +55,10 @@ public sealed class LeaderboardService : ILeaderboardService
             }, "The leaderboard request was rejected.");
         }
 
-        throw new FaultException<LeaderboardFault>(new LeaderboardFault
-        {
-            Reason = LeaderboardFailure.InvalidMaximumEntries
-        }, "The leaderboard request was rejected.");
+        throw new ArgumentOutOfRangeException(
+            nameof(status),
+            status,
+            "Unsupported leaderboard status.");
     }
 
     private static ContractEntry MapEntry(ApplicationEntry entry)

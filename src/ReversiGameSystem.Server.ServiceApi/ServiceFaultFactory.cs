@@ -1,52 +1,26 @@
 using System.ServiceModel;
 using ReversiGameSystem.Server.Contracts.Common;
+using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.Contracts.Services;
 
 namespace ReversiGameSystem.Server.ServiceApi;
 
 internal static class ServiceFaultFactory
 {
-    private const string FaultReason = "The server could not complete the operation.";
-
-    internal static FaultException<ServiceFault> Create(
-        string operationName,
+    internal static FaultException<ServiceFault> CreateUnexpectedFault(
         string correlationId)
     {
-        string failureCode = operationName switch
+        string? contractName = OperationContext.Current?.EndpointDispatcher?.ContractName;
+        string failureCode = contractName switch
         {
-            nameof(IAccountAccessService.RegisterAccountAsync) => "ACCOUNT_REGISTRATION_FAILURE",
-            nameof(ILeaderboardService.GetLeaderboard) => "LEADERBOARD_OPERATION_FAILURE",
-            nameof(IMatchLobbyService.OpenLobbyChannel)
-                or nameof(IMatchLobbyService.CreateMatch)
-                or nameof(IMatchLobbyService.InviteToMatch)
-                or nameof(IMatchLobbyService.GetAvailableMatches)
-                or nameof(IMatchLobbyService.JoinMatch)
-                or nameof(IMatchLobbyService.ChangeTurnDuration)
-                or nameof(IMatchLobbyService.StartSystemMatch)
-                or nameof(IMatchLobbyService.CancelMatch) => "MATCH_LOBBY_OPERATION_FAILURE",
-            nameof(IGameplayMatchService.OpenMatchChannel)
-                or nameof(IGameplayMatchService.GetMatchInformation)
-                or nameof(IGameplayMatchService.GetMatchState)
-                or nameof(IGameplayMatchService.PlacePiece)
-                or nameof(IGameplayMatchService.ForfeitMatch)
-                or nameof(IGameplayMatchService.ObserveMatch)
-                or nameof(IGameplayMatchService.GetMatchHistory)
-                or nameof(IGameplayMatchService.GetMatchDetails)
-                or nameof(IGameplayMatchService.GetMoveHistory) => "GAMEPLAY_OPERATION_FAILURE",
-            nameof(IMatchChatService.OpenChatChannel)
-                or nameof(IMatchChatService.SendChatMessage)
-                or nameof(IMatchChatService.GetChatHistory) => "MATCH_CHAT_OPERATION_FAILURE",
-            nameof(IFriendshipService.OpenFriendshipChannel)
-                or nameof(IFriendshipService.GetFriends)
-                or nameof(IFriendshipService.FindPlayers)
-                or nameof(IFriendshipService.SendFriendRequest)
-                or nameof(IFriendshipService.GetPendingFriendRequests)
-                or nameof(IFriendshipService.RespondToFriendRequest)
-                or nameof(IFriendshipService.RemoveFriend) => "FRIENDSHIP_OPERATION_FAILURE",
-            nameof(IPlayerProfileService.GetPlayerProfile)
-                or nameof(IPlayerProfileService.GetProfileImage)
-                or nameof(IPlayerProfileService.ChangeUsername)
-                or nameof(IPlayerProfileService.UpdateProfileImage) => "PROFILE_OPERATION_FAILURE",
+            nameof(IAccountAccessService) => "ACCOUNT_REGISTRATION_FAILURE",
+            nameof(ISessionService) => "SESSION_OPERATION_FAILURE",
+            nameof(ILeaderboardService) => "LEADERBOARD_OPERATION_FAILURE",
+            nameof(IMatchLobbyService) => "MATCH_LOBBY_OPERATION_FAILURE",
+            nameof(IGameplayMatchService) => "GAMEPLAY_OPERATION_FAILURE",
+            nameof(IMatchChatService) => "MATCH_CHAT_OPERATION_FAILURE",
+            nameof(IFriendshipService) => "FRIENDSHIP_OPERATION_FAILURE",
+            nameof(IPlayerProfileService) => "PROFILE_OPERATION_FAILURE",
             _ => "UNEXPECTED_SERVICE_FAILURE"
         };
         ServiceFault detail = new ServiceFault
@@ -55,6 +29,32 @@ internal static class ServiceFaultFactory
             CorrelationId = correlationId,
             IsTransient = false
         };
-        return new FaultException<ServiceFault>(detail, FaultReason);
+        return new FaultException<ServiceFault>(
+            detail,
+            "The server could not complete the operation.");
+    }
+
+    internal static FaultException<MatchFault> CreateMatchFault(MatchFailure reason)
+    {
+        return new FaultException<MatchFault>(new MatchFault
+        {
+            Reason = reason
+        }, "The match request was rejected.");
+    }
+
+    internal static FaultException<SessionFault> CreateSessionFault(SessionFailure reason)
+    {
+        return new FaultException<SessionFault>(new SessionFault
+        {
+            Reason = reason
+        }, "The session request was rejected.");
+    }
+
+    internal static FaultException<FriendshipFault> CreateFriendshipFault(FriendshipFailure reason)
+    {
+        return new FaultException<FriendshipFault>(new FriendshipFault
+        {
+            Reason = reason
+        }, "The friendship request was rejected.");
     }
 }

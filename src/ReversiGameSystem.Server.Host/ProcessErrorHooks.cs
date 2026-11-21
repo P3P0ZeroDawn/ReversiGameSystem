@@ -31,16 +31,28 @@ internal sealed class ProcessErrorHooks : IDisposable
         {
             if (exception != null)
             {
-                _logger.LogCritical(exception, "The server process failed unexpectedly.");
+                _logger.LogCritical(
+                    exception,
+                    "The server process failed unexpectedly. IsTerminating: {IsTerminating}",
+                    eventArguments.IsTerminating);
             }
             else
             {
-                _logger.LogCritical("The server process failed with an unknown error.");
+                string exceptionType = eventArguments.ExceptionObject?.GetType().FullName
+                    ?? "UnknownExceptionType";
+                _logger.LogCritical(
+                    "The server process failed with non-exception type {ExceptionType}. "
+                    + "IsTerminating: {IsTerminating}",
+                    exceptionType,
+                    eventArguments.IsTerminating);
             }
         }
         catch (Exception loggingFailure)
         {
-            WriteFallback(exception, loggingFailure);
+            FailureDiagnostics.WriteLoggerFallback(
+                "The process diagnostic logger failed.",
+                exception,
+                loggingFailure);
         }
     }
 
@@ -56,23 +68,14 @@ internal sealed class ProcessErrorHooks : IDisposable
         }
         catch (Exception loggingFailure)
         {
-            WriteFallback(eventArguments.Exception, loggingFailure);
+            FailureDiagnostics.WriteLoggerFallback(
+                "The process diagnostic logger failed.",
+                eventArguments.Exception,
+                loggingFailure);
         }
         finally
         {
             eventArguments.SetObserved();
         }
-    }
-
-    private static void WriteFallback(Exception? failure, Exception loggingFailure)
-    {
-        string failureDescription = failure == null
-            ? "Unknown error."
-            : FailureDiagnostics.Describe(failure);
-        Console.Error.WriteLine(
-            "The process diagnostic logger failed.{0}{1}{0}{2}",
-            Environment.NewLine,
-            failureDescription,
-            FailureDiagnostics.Describe(loggingFailure));
     }
 }
