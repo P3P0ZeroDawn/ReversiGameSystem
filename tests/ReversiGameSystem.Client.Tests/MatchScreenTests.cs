@@ -11,13 +11,13 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Localization;
+using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Views;
 using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Client.Tests;
 
-/// <summary>Exercises the original game screen against the disposable real match host.</summary>
 internal static class MatchScreenTests
 {
     internal static void ExistingGamePage_RealMatch_RendersPlayersBoardAndChat()
@@ -57,8 +57,12 @@ internal static class MatchScreenTests
                 new EndpointAddress("net.tcp://localhost:18091/ReversiReview/Session")));
         AuthenticatedAccountSession alpha = Authenticate(sessions, "ReviewAlpha", "000001");
         AuthenticatedAccountSession beta = Authenticate(sessions, "ReviewBeta", "000002");
-        using RemoteMatchClient first = RemoteMatchClientTests.Create(alpha.SessionToken);
-        using RemoteMatchClient second = RemoteMatchClientTests.Create(beta.SessionToken);
+        using MatchLobbyClient firstLobby = MatchClientsTests.CreateLobby(alpha.SessionToken);
+        using GameplayClient first = MatchClientsTests.CreateGameplay(alpha.SessionToken);
+        using MatchChatClient firstChat = MatchClientsTests.CreateChat(alpha.SessionToken);
+        using MatchLobbyClient secondLobby = MatchClientsTests.CreateLobby(beta.SessionToken);
+        using GameplayClient second = MatchClientsTests.CreateGameplay(beta.SessionToken);
+        using MatchChatClient secondChat = MatchClientsTests.CreateChat(beta.SessionToken);
         Window window = new Window
         {
             Width = 1280,
@@ -70,14 +74,14 @@ internal static class MatchScreenTests
         };
         try
         {
-            MatchResult<LobbySnapshot> creation = first.CreateMatch(40).GetAwaiter().GetResult();
-            TestAssert.AreEqual(MatchStatus.Success, creation.Status);
-            LobbySnapshot waiting = TestAssert.IsNotNull(creation.Value);
-            second.JoinMatch(waiting.MatchCode).GetAwaiter().GetResult();
+            MatchStatus creation = firstLobby.CreateMatch(40).GetAwaiter().GetResult();
+            TestAssert.AreEqual(MatchStatus.Success, creation);
+            LobbySnapshot waiting = firstLobby.ReadCurrentLobby();
+            secondLobby.JoinMatch(waiting.MatchCode).GetAwaiter().GetResult();
             second.LoadMatchState(waiting.MatchId).GetAwaiter().GetResult();
             SynchronizationContext.SetSynchronizationContext(
                 new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));
-            GamePage page = new GamePage(first, waiting.MatchId, null);
+            GamePage page = new GamePage(first, firstChat, waiting.MatchId, null);
             window.Content = new Frame
             {
                 Content = page,
@@ -106,13 +110,16 @@ internal static class MatchScreenTests
                 .Count(square => square.Child != null));
 
             MatchStateSnapshot confirmedState = first.ReadMatchState(waiting.MatchId);
-            Task<MatchResult<MatchStateSnapshot>> placementRequest = first.PlacePiece(
-                confirmedState,
-                2,
-                3);
+            Task<MatchStatus> placementRequest = first.PlacePiece(new MatchPlacement
+            {
+                MatchId = confirmedState.MatchId,
+                ExpectedVersion = confirmedState.Version,
+                Row = 2,
+                Column = 3
+            });
             PumpUntil(() => placementRequest.IsCompleted);
-            MatchResult<MatchStateSnapshot> placement = placementRequest.GetAwaiter().GetResult();
-            TestAssert.AreEqual(MatchStatus.Success, placement.Status);
+            MatchStatus placement = placementRequest.GetAwaiter().GetResult();
+            TestAssert.AreEqual(MatchStatus.Success, placement);
             PumpUntil(() => Control<Grid>(board, "piecesGrid").Children.Count == 5);
 
             // Act: send through the existing composer, then receive the other player's callback.
@@ -121,9 +128,19 @@ internal static class MatchScreenTests
             PumpUntil(() => messages.Items.Cast<object>().Any(item =>
                 item.ToString().Contains("Hello from the original screen"))
                 && Control<TextBox>(page, "chatMessageTextBox").Text.Length == 0);
-            AwaitUi(second.OpenChatChannel(waiting.MatchId));
-            AwaitUi(second.SendChatMessage(waiting.MatchId, "Reply from the second player"));
+            AwaitUi(secondChat.OpenChatChannel(waiting.MatchId));
+            AwaitUi(secondChat.SendChatMessage(waiting.MatchId, "Reply from the second player"));
             PumpUntil(() => messages.Items.Count == 2);
+
+            const int MuteDurationSeconds = 2;
+            firstChat.OnPlayerMuted(new Proxy.ChatMuteNotification
+            {
+                MatchId = waiting.MatchId,
+                EndsAtUtc = DateTime.UtcNow.AddSeconds(MuteDurationSeconds)
+            });
+            TextBox composer = Control<TextBox>(page, "chatMessageTextBox");
+            PumpUntil(() => !composer.IsEnabled && !send.IsEnabled);
+            PumpUntil(() => composer.IsEnabled && send.IsEnabled);
 
             // Assert: preserve the same screen and render both supported languages.
             foreach (string culture in new[] { "en-US", "es-MX" })
@@ -137,6 +154,7 @@ internal static class MatchScreenTests
                     item.ToString().Contains("Reply from the second player")));
                 SavePreview(page, culture);
             }
+            AssertSystemOpponentLocalization(window, firstLobby, first, firstChat);
             Console.WriteLine("Passed original GamePage rendering and two-way UI chat in en-US and es-MX.");
         }
         finally
@@ -146,6 +164,44 @@ internal static class MatchScreenTests
             sessions.CloseSession(beta.SessionToken).GetAwaiter().GetResult();
             sessions.CloseSession(alpha.SessionToken).GetAwaiter().GetResult();
             app.Shutdown();
+        }
+    }
+
+    private static void AssertSystemOpponentLocalization(Window window,
+        MatchLobbyClient lobby, GameplayClient gameplay, MatchChatClient chat)
+    {
+        FrameworkElement previousPage = (FrameworkElement)((Frame)window.Content).Content;
+        window.Content = null;
+        PumpUntil(() => !previousPage.IsLoaded);
+        TestAssert.AreEqual(MatchStatus.Success,
+            gameplay.ForfeitMatch(lobby.ReadCurrentLobby().MatchId).GetAwaiter().GetResult());
+        TestAssert.AreEqual(MatchStatus.Success, lobby.CreateMatch(40).GetAwaiter().GetResult());
+        long matchId = lobby.ReadCurrentLobby().MatchId;
+        TestAssert.AreEqual(MatchStatus.Success,
+            lobby.StartSystemMatch(matchId).GetAwaiter().GetResult());
+        GamePage page = new GamePage(gameplay, chat, matchId, null);
+        window.Content = new Frame { Content = page };
+        PumpUntil(() => Control<TextBlock>(page, "creatorNameTextBlock").Text == "ReviewAlpha");
+        MatchStateSnapshot state = gameplay.ReadMatchState(matchId);
+        AwaitUi(gameplay.PlacePiece(new MatchPlacement
+        {
+            MatchId = matchId,
+            ExpectedVersion = state.Version,
+            Row = 2,
+            Column = 3
+        }));
+        foreach (string culture in new[] { "en-US", "es-MX" })
+        {
+            LocalizationManager.Instance.CultureName = culture;
+            string systemName = culture == "en-US" ? "System" : "Sistema";
+            PumpUntil(() => Control<TextBlock>(page, "opponentNameTextBlock").Text == systemName);
+            TestAssert.AreEqual(string.Format(
+                LocalizationManager.Instance["Game_CurrentTurnFormat"], systemName),
+                Control<TextBlock>(page, "turnTextBlock").Text);
+            TestAssert.AreEqual(Visibility.Hidden,
+                Control<FrameworkElement>(page, "chatPanel").Visibility);
+            TestAssert.AreEqual(Visibility.Hidden,
+                Control<TextBlock>(page, "opponentConnectionTextBlock").Visibility);
         }
     }
 

@@ -1,6 +1,6 @@
 using System;
 
-namespace ReversiGameSystem.Services;
+namespace ReversiGameSystem.Matches;
 
 internal enum MatchStatus
 {
@@ -26,32 +26,7 @@ internal enum MatchStatus
     AccountUnavailable,
     FriendshipNotFound,
     InvalidAccountId,
-    EmptyMessage,
-    MessageTooLong,
-    MessageBlocked,
-    PlayerMuted,
-    RateLimitExceeded,
     ServiceUnavailable
-}
-
-internal sealed class MatchResult<T> where T : class
-{
-    internal MatchResult(MatchStatus status, T? value)
-    {
-        if (status == MatchStatus.Success && value == null)
-        {
-            throw new ArgumentNullException(nameof(value));
-        }
-        if (status != MatchStatus.Success && value != null)
-        {
-            throw new ArgumentException("A failed result cannot contain a value.", nameof(value));
-        }
-        Status = status;
-        Value = value;
-    }
-
-    internal MatchStatus Status { get; }
-    internal T? Value { get; }
 }
 
 internal sealed class LobbySnapshot
@@ -68,9 +43,9 @@ internal sealed class LobbySnapshot
     internal int TurnDurationSeconds { get; }
 }
 
-internal sealed class RemoteAvailableMatch
+internal sealed class AvailableMatch
 {
-    internal RemoteAvailableMatch(string matchCode, string creatorDisplayName, int turnDurationSeconds)
+    internal AvailableMatch(string matchCode, string creatorDisplayName, int turnDurationSeconds)
     {
         MatchCode = matchCode;
         CreatorDisplayName = creatorDisplayName;
@@ -82,9 +57,9 @@ internal sealed class RemoteAvailableMatch
     internal int TurnDurationSeconds { get; }
 }
 
-internal sealed class RemoteMatchInformation
+internal sealed class MatchInformation
 {
-    internal RemoteMatchInformation(
+    internal MatchInformation(
         long matchId,
         MatchParticipant[] participants,
         int? assignedSeatNumber,
@@ -182,42 +157,17 @@ internal sealed class RemoteMatchConclusion
     internal int? WinnerSeatNumber { get; }
 }
 
-internal sealed class MatchChatMessage
+internal sealed class MatchPlacement
 {
-    internal MatchChatMessage(long matchId, int number, int senderSeatNumber, string content)
-    {
-        MatchId = matchId;
-        Number = number;
-        SenderSeatNumber = senderSeatNumber;
-        Content = content;
-    }
-
-    internal long MatchId { get; }
-    internal int Number { get; }
-    internal int SenderSeatNumber { get; }
-    internal string Content { get; }
+    internal long MatchId { get; set; }
+    internal long ExpectedVersion { get; set; }
+    internal int Row { get; set; }
+    internal int Column { get; set; }
 }
 
-internal sealed class RemoteChatMute
+internal enum ParticipantConnectionState
 {
-    internal RemoteChatMute(long matchId, DateTime endsAtUtc)
-    {
-        MatchId = matchId;
-        EndsAtUtc = endsAtUtc;
-    }
-
-    internal long MatchId { get; }
-    internal DateTime EndsAtUtc { get; }
-}
-
-internal sealed class ChatSubmission
-{
-    internal ChatSubmission(MatchStatus status, DateTime? muteEndsAtUtc)
-    {
-        Status = status;
-        MuteEndsAtUtc = muteEndsAtUtc;
-    }
-
-    internal MatchStatus Status { get; }
-    internal DateTime? MuteEndsAtUtc { get; }
+    Unknown,
+    Connected,
+    Disconnected
 }

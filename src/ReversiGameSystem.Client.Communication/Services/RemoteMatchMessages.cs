@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using ReversiGameSystem.Chat;
+using ReversiGameSystem.Matches;
 
 namespace ReversiGameSystem.Services;
 
@@ -17,11 +19,6 @@ internal static class RemoteMatchMessages
             { MatchStatus.FriendshipNotFound, "InviteMatch_FriendshipNotFoundMessage" },
             { MatchStatus.InvalidAccountId, "InviteMatch_InvalidAccountIdMessage" },
             { MatchStatus.InactiveAccount, "InviteMatch_InactiveAccountMessage" },
-            { MatchStatus.EmptyMessage, "Chat_EmptyMessageMessage" },
-            { MatchStatus.MessageTooLong, "Chat_MessageTooLongMessage" },
-            { MatchStatus.MessageBlocked, "Chat_MessageBlockedMessage" },
-            { MatchStatus.PlayerMuted, "Chat_PlayerMutedMessage" },
-            { MatchStatus.RateLimitExceeded, "Chat_RateLimitExceeded" },
             { MatchStatus.InvalidPosition, "Game_InvalidPositionMessage" },
             { MatchStatus.ServiceUnavailable, "RemoteMatch_ConnectionFailed" }
         };
@@ -41,5 +38,22 @@ internal static class RemoteMatchMessages
             return s_messageKeys[status];
         }
         return "RemoteMatch_AccessRejected";
+    }
+    internal static string Key(ChatStatus status, bool guest = false)
+    {
+        string key = status switch
+        {
+            ChatStatus.Success => string.Empty,
+            ChatStatus.InvalidSession => guest
+                ? "RemoteMatch_GuestUnavailable" : "RemoteMatch_SessionExpired",
+            ChatStatus.EmptyMessage => "Chat_EmptyMessageMessage",
+            ChatStatus.MessageTooLong => "Chat_MessageTooLongMessage",
+            ChatStatus.MessageBlocked => "Chat_MessageBlockedMessage",
+            ChatStatus.PlayerMuted => "Chat_PlayerMutedMessage",
+            ChatStatus.RateLimitExceeded => "Chat_RateLimitExceeded",
+            ChatStatus.ServiceUnavailable => "RemoteMatch_ConnectionFailed",
+            _ => "RemoteMatch_AccessRejected"
+        };
+        return key;
     }
 }

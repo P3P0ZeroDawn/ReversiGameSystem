@@ -1,12 +1,10 @@
 using System.Globalization;
 using System.Resources;
+using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
 
 namespace ReversiGameSystem.Client.Tests;
 
-/// <summary>
-/// Verifies client-side behavior and localization for modifying lobby turn duration.
-/// </summary>
 internal sealed class LobbySettingsTests
 {
     private static readonly string[] s_requiredKeys =
@@ -24,29 +22,22 @@ internal sealed class LobbySettingsTests
         "WaitingForOpponent_TurnTimeFormat"
     };
 
-    /// <summary>
-    /// Verifies that ChangeTurnDuration returns ServiceUnavailable when the server is unreachable.
-    /// </summary>
     internal void ChangeTurnDuration_UnreachableServer_ReturnsServiceUnavailable()
     {
         // Arrange
         const long MatchId = 100L;
         const int TurnDurationSeconds = 60;
-        using RemoteMatchClient client = RemoteMatchClientTests.Create("test-token");
+        using MatchLobbyClient client = MatchClientsTests.CreateLobby("test-token");
 
         // Act
-        MatchResult<LobbySnapshot> result = client.ChangeTurnDuration(MatchId, TurnDurationSeconds)
+        MatchStatus status = client.ChangeTurnDuration(MatchId, TurnDurationSeconds)
             .GetAwaiter()
             .GetResult();
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.ServiceUnavailable, result.Status);
-        TestAssert.AreEqual(null, result.Value);
+        TestAssert.AreEqual(MatchStatus.ServiceUnavailable, status);
     }
 
-    /// <summary>
-    /// Verifies that InvalidTurnDuration resolves to the localized turn-duration error key.
-    /// </summary>
     internal void RemoteMatchMessages_InvalidTurnDuration_ResolvesExpectedResourceKey()
     {
         // Arrange
@@ -59,9 +50,6 @@ internal sealed class LobbySettingsTests
         TestAssert.AreEqual("MatchCreation_InvalidTurnTimeMessage", key);
     }
 
-    /// <summary>
-    /// Verifies that all match-settings localization keys exist in all supported cultures.
-    /// </summary>
     internal void LocalizationResources_MatchSettingsKeys_ExistInSupportedCultures()
     {
         // Arrange

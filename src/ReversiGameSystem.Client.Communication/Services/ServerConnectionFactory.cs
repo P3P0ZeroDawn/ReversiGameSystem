@@ -8,10 +8,6 @@ using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Services;
 
-/// <summary>
-/// Creates client WCF service proxies and endpoints using host configuration
-/// outside source control.
-/// </summary>
 internal static class ServerConnectionFactory
 {
     internal const string ServerHostVariable = "REVERSI_SERVER_HOST";
@@ -30,13 +26,6 @@ internal static class ServerConnectionFactory
             ["MatchChatEndpoint"] = (8097, "/ReversiGameSystem/MatchChat")
         };
 
-    /// <summary>
-    /// Resolves the configured server host or IP address.
-    /// </summary>
-    /// <returns>The validated host name or IP address.</returns>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown when the configured host is whitespace or an invalid host name or IP address.
-    /// </exception>
     internal static string GetServerHost()
     {
         string host = ClientEnvironmentSettings.ReadOptional(ServerHostVariable, DefaultHost);
@@ -58,14 +47,6 @@ internal static class ServerConnectionFactory
         return trimmedHost;
     }
 
-    /// <summary>
-    /// Creates a dynamic EndpointAddress replacing the host in the specified URI pattern.
-    /// </summary>
-    /// <param name="endpointConfigurationName">The client endpoint configuration name.</param>
-    /// <returns>The dynamic EndpointAddress pointing to the resolved host.</returns>
-    /// <exception cref="ArgumentException">
-    /// Thrown when the endpoint configuration name is null, whitespace, or unknown.
-    /// </exception>
     internal static EndpointAddress CreateEndpointAddress(string endpointConfigurationName)
     {
         if (string.IsNullOrWhiteSpace(endpointConfigurationName))
@@ -99,26 +80,6 @@ internal static class ServerConnectionFactory
             nameof(endpointConfigurationName));
     }
 
-    /// <summary>
-    /// Creates the override endpoints for remote gameplay services.
-    /// </summary>
-    /// <returns>
-    /// A MatchEndpoints instance with dynamic URIs for lobby, gameplay, and chat.
-    /// </returns>
-    internal static MatchEndpoints CreateMatchEndpoints()
-    {
-        return new MatchEndpoints
-        {
-            Lobby = CreateEndpointAddress("MatchLobbyEndpoint").Uri.AbsoluteUri,
-            Gameplay = CreateEndpointAddress("GameplayMatchEndpoint").Uri.AbsoluteUri,
-            Chat = CreateEndpointAddress("MatchChatEndpoint").Uri.AbsoluteUri
-        };
-    }
-
-    /// <summary>
-    /// Creates an account access service client with dynamic endpoint address.
-    /// </summary>
-    /// <returns>A new account access client proxy.</returns>
     internal static Proxy.AccountAccessServiceClient CreateAccountClient()
     {
         return new Proxy.AccountAccessServiceClient(
@@ -126,10 +87,6 @@ internal static class ServerConnectionFactory
             CreateEndpointAddress("AccountAccessEndpoint"));
     }
 
-    /// <summary>
-    /// Creates a session service client with dynamic endpoint address.
-    /// </summary>
-    /// <returns>A new session client proxy.</returns>
     internal static Proxy.SessionServiceClient CreateSessionClient()
     {
         return new Proxy.SessionServiceClient(
@@ -137,10 +94,6 @@ internal static class ServerConnectionFactory
             CreateEndpointAddress("SessionEndpoint"));
     }
 
-    /// <summary>
-    /// Creates a player profile service client with dynamic endpoint address.
-    /// </summary>
-    /// <returns>A new player profile client proxy.</returns>
     internal static Proxy.PlayerProfileServiceClient CreateProfileClient()
     {
         return new Proxy.PlayerProfileServiceClient(
@@ -148,10 +101,6 @@ internal static class ServerConnectionFactory
             CreateEndpointAddress("PlayerProfileEndpoint"));
     }
 
-    /// <summary>
-    /// Creates a leaderboard service client with dynamic endpoint address.
-    /// </summary>
-    /// <returns>A new leaderboard client proxy.</returns>
     internal static Proxy.LeaderboardServiceClient CreateLeaderboardClient()
     {
         return new Proxy.LeaderboardServiceClient(
@@ -159,12 +108,6 @@ internal static class ServerConnectionFactory
             CreateEndpointAddress("LeaderboardEndpoint"));
     }
 
-    /// <summary>
-    /// Creates a duplex friendship service client with dynamic endpoint address.
-    /// </summary>
-    /// <param name="callbackContext">The callback instance context.</param>
-    /// <returns>A new duplex friendship client proxy.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when callbackContext is null.</exception>
     internal static Proxy.FriendshipServiceClient CreateFriendshipClient(
         InstanceContext callbackContext)
     {
@@ -179,12 +122,6 @@ internal static class ServerConnectionFactory
             CreateEndpointAddress("FriendshipEndpoint"));
     }
 
-    /// <summary>
-    /// Creates a duplex match lobby service client with dynamic endpoint address.
-    /// </summary>
-    /// <param name="callbackContext">The callback instance context.</param>
-    /// <returns>A new duplex match lobby client proxy.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when callbackContext is null.</exception>
     internal static Proxy.MatchLobbyServiceClient CreateLobbyClient(
         InstanceContext callbackContext)
     {
@@ -199,12 +136,6 @@ internal static class ServerConnectionFactory
             CreateEndpointAddress("MatchLobbyEndpoint"));
     }
 
-    /// <summary>
-    /// Creates a duplex gameplay match service client with dynamic endpoint address.
-    /// </summary>
-    /// <param name="callbackContext">The callback instance context.</param>
-    /// <returns>A new duplex gameplay match client proxy.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when callbackContext is null.</exception>
     internal static Proxy.GameplayMatchServiceClient CreateGameplayClient(
         InstanceContext callbackContext)
     {
@@ -219,12 +150,6 @@ internal static class ServerConnectionFactory
             CreateEndpointAddress("GameplayMatchEndpoint"));
     }
 
-    /// <summary>
-    /// Creates a duplex match chat service client with dynamic endpoint address.
-    /// </summary>
-    /// <param name="callbackContext">The callback instance context.</param>
-    /// <returns>A new duplex match chat client proxy.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when callbackContext is null.</exception>
     internal static Proxy.MatchChatServiceClient CreateChatClient(
         InstanceContext callbackContext)
     {

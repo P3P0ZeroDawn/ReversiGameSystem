@@ -3,11 +3,11 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using ReversiGameSystem.Localization;
+using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
 
 namespace ReversiGameSystem.Views;
 
-/// <summary>Waits for a confirmed second participant on the remote lobby channel.</summary>
 public partial class WaitingForOpponentPage : Page
 {
     private const string ReconnectingKey = "Game_Reconnecting";
@@ -17,7 +17,8 @@ public partial class WaitingForOpponentPage : Page
     private static readonly TimeSpan ReconnectingRetryInterval = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan ReconnectionWindow = TimeSpan.FromSeconds(30);
 
-    private readonly RemoteMatchClient _client;
+    private readonly MatchLobbyClient _client;
+    private readonly GameplayClient _gameplayClient;
     private LobbySnapshot _lobby;
     private readonly string? _guestName;
     private readonly DialogService _dialogs =
@@ -30,10 +31,11 @@ public partial class WaitingForOpponentPage : Page
     private bool _refreshing;
     private DateTime? _reconnectingStartedUtc;
 
-    internal WaitingForOpponentPage(RemoteMatchClient client, LobbySnapshot lobby, string? guestName)
+    internal WaitingForOpponentPage(MatchLobbyClient client, LobbySnapshot lobby, string? guestName)
     {
         InitializeComponent();
         _client = client;
+        _gameplayClient = ClientRuntime.GetGameplayClient(guestName != null);
         _lobby = lobby;
         _guestName = guestName;
         matchCodeTextBlock.Text = lobby.MatchCode;
@@ -45,19 +47,22 @@ public partial class WaitingForOpponentPage : Page
 
     private void OnLoaded(object sender, RoutedEventArgs args)
     {
-        _client.StateChanged += OnState;
+        _client.MatchStarted += OnState;
+        _gameplayClient.StateChanged += OnState;
         _client.LobbyClosed += OnClosed;
         _keepalive.Start();
-        if (_client.HasMatchState(_lobby.MatchId))
+        OnKeepalive(sender, args);
+        if (_gameplayClient.HasMatchState(_lobby.MatchId))
         {
-            OnState(_client.ReadMatchState(_lobby.MatchId));
+            OnState(_gameplayClient.ReadMatchState(_lobby.MatchId));
         }
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs args)
     {
         _keepalive.Stop();
-        _client.StateChanged -= OnState;
+        _client.MatchStarted -= OnState;
+        _gameplayClient.StateChanged -= OnState;
         _client.LobbyClosed -= OnClosed;
     }
 
@@ -74,7 +79,8 @@ public partial class WaitingForOpponentPage : Page
                 return;
             }
             _navigated = true;
-            NavigationService?.Navigate(new GamePage(_client, _lobby.MatchId, _guestName));
+            NavigationService?.Navigate(new GamePage(_gameplayClient,
+                ClientRuntime.GetMatchChatClient(_guestName != null), _lobby.MatchId, _guestName));
         }));
     }
 
@@ -102,24 +108,23 @@ public partial class WaitingForOpponentPage : Page
         _refreshing = true;
         try
         {
-            MatchResult<MatchStateSnapshot> stateResult =
-                await _client.LoadMatchState(_lobby.MatchId);
-            if (stateResult.Status == MatchStatus.Success && stateResult.Value != null)
+            MatchStatus status = await _gameplayClient.LoadMatchState(_lobby.MatchId);
+            if (status == MatchStatus.Success)
             {
                 SetReconnecting(false);
-                OnState(stateResult.Value);
+                OnState(_gameplayClient.ReadMatchState(_lobby.MatchId));
             }
-            else if (stateResult.Status == MatchStatus.MatchNotInProgress)
+            else if (status == MatchStatus.MatchNotInProgress)
             {
                 SetReconnecting(false);
             }
-            else if (stateResult.Status == MatchStatus.MatchNotWaiting)
+            else if (status == MatchStatus.MatchNotWaiting)
             {
                 ReturnToMenu();
             }
             else
             {
-                HandleKeepaliveFailure(stateResult.Status);
+                HandleKeepaliveFailure(status);
             }
         }
         finally
@@ -199,7 +204,7 @@ public partial class WaitingForOpponentPage : Page
         }
 
         IsEnabled = false;
-        MatchResult<LobbySnapshot> result = await _client.ChangeTurnDuration(
+        MatchStatus status = await _client.ChangeTurnDuration(
             _lobby.MatchId,
             selectedTurnDuration);
         IsEnabled = true;
@@ -209,9 +214,9 @@ public partial class WaitingForOpponentPage : Page
             return;
         }
 
-        if (result.Status == MatchStatus.Success && result.Value != null)
+        if (status == MatchStatus.Success)
         {
-            _lobby = result.Value;
+            _lobby = _client.ReadCurrentLobby();
             UpdateTurnTimeText();
             return;
         }
@@ -219,8 +224,8 @@ public partial class WaitingForOpponentPage : Page
         _dialogs.ShowError(
             this,
             "MatchSettings_PersistenceErrorTitle",
-            RemoteMatchMessages.Key(result.Status, _guestName != null));
-        if (result.Status == MatchStatus.MatchNotWaiting)
+            RemoteMatchMessages.Key(status, _guestName != null));
+        if (status == MatchStatus.MatchNotWaiting)
         {
             ReturnToMenu();
         }

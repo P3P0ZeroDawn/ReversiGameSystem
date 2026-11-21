@@ -3,12 +3,14 @@ using System.Linq;
 using System.ServiceModel;
 using System.Threading;
 using Microsoft.Extensions.Logging.Abstractions;
+using ReversiGameSystem.Chat;
+using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
+using MatchInformation = ReversiGameSystem.Matches.MatchInformation;
 using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Client.Tests;
 
-/// <summary>Runs real proxy and adapters against the disposable review match host.</summary>
 internal static class MatchEndToEndTests
 {
     internal static void TwoPlayers_RealServer_StartsConfirmedBoardAndExchangesChat()
@@ -21,26 +23,30 @@ internal static class MatchEndToEndTests
         try
         {
             beta = Authenticate(sessions, "ReviewBeta", "000002");
-            using RemoteMatchClient first = RemoteMatchClientTests.Create(alpha.SessionToken);
-            using RemoteMatchClient second = RemoteMatchClientTests.Create(beta.SessionToken);
-            CancelledCode_RemoteBoundary_RejectsJoin(first, second);
+            using MatchLobbyClient firstLobby = MatchClientsTests.CreateLobby(alpha.SessionToken);
+            using GameplayClient first = MatchClientsTests.CreateGameplay(alpha.SessionToken);
+            using MatchChatClient firstChat = MatchClientsTests.CreateChat(alpha.SessionToken);
+            using MatchLobbyClient secondLobby = MatchClientsTests.CreateLobby(beta.SessionToken);
+            using GameplayClient second = MatchClientsTests.CreateGameplay(beta.SessionToken);
+            using MatchChatClient secondChat = MatchClientsTests.CreateChat(beta.SessionToken);
+            CancelledCode_RemoteBoundary_RejectsJoin(firstLobby, secondLobby, second);
             Console.WriteLine("PASS: canceled code and registered outsider authorization.");
-            LobbySnapshot waiting = Value(first.CreateMatch(40).GetAwaiter().GetResult());
-            TestAssert.AreEqual(false, Value(first.LoadAvailableMatches().GetAwaiter().GetResult())
+            int started = 0;
+            firstLobby.MatchStarted += _ => Interlocked.Increment(ref started);
+            LobbySnapshot waiting = CreateMatch(firstLobby);
+            TestAssert.AreEqual(false, LoadMatches(firstLobby)
                 .Any(match => match.MatchCode == waiting.MatchCode));
-            TestAssert.AreEqual(true, Value(second.LoadAvailableMatches().GetAwaiter().GetResult())
+            TestAssert.AreEqual(true, LoadMatches(secondLobby)
                 .Any(match => match.MatchCode == waiting.MatchCode && match.CreatorDisplayName == "ReviewAlpha"));
 
-            LobbySnapshot joined = Value(second.JoinMatch(waiting.MatchCode).GetAwaiter().GetResult());
+            LobbySnapshot joined = JoinMatch(secondLobby, waiting.MatchCode);
             TestAssert.AreEqual(waiting.MatchId, joined.MatchId);
-            TestAssert.AreEqual(true, SpinWait.SpinUntil(() => first.HasMatchState(waiting.MatchId),
+            TestAssert.AreEqual(true, SpinWait.SpinUntil(() => started == 1,
                 TimeSpan.FromSeconds(10)));
-            AssertBoard(first.ReadMatchState(waiting.MatchId));
-            AssertBoard(Value(second.LoadMatchState(waiting.MatchId).GetAwaiter().GetResult()));
-            RemoteMatchInformation firstInfo = Value(first.LoadRemoteMatchInformation(
-                waiting.MatchId).GetAwaiter().GetResult());
-            RemoteMatchInformation secondInfo = Value(second.LoadRemoteMatchInformation(
-                waiting.MatchId).GetAwaiter().GetResult());
+            AssertBoard(LoadState(first, waiting.MatchId));
+            AssertBoard(LoadState(second, waiting.MatchId));
+            MatchInformation firstInfo = LoadInformation(first, waiting.MatchId);
+            MatchInformation secondInfo = LoadInformation(second, waiting.MatchId);
             TestAssert.AreEqual(1, firstInfo.AssignedSeatNumber);
             TestAssert.AreEqual(2, secondInfo.AssignedSeatNumber);
             TestAssert.AreEqual("ReviewAlpha", firstInfo.Participants.Single(player => player.SeatNumber == 1).DisplayName);
@@ -53,7 +59,7 @@ internal static class MatchEndToEndTests
                     == ParticipantConnectionState.Connected,
                 TimeSpan.FromSeconds(10)));
             Console.WriteLine("PASS: two participants, lobby callback and initial board.");
-            Chat_RealDuplex_ReconcilesReturnCallbackAndHistory(first, second, waiting.MatchId);
+            Chat_RealDuplex_ReconcilesReturnCallbackAndHistory(firstChat, secondChat, waiting.MatchId);
             Console.WriteLine("PASS: two-way chat, history reconciliation and moderation.");
 
             sessions.CloseSession(beta.SessionToken).GetAwaiter().GetResult();
@@ -64,19 +70,21 @@ internal static class MatchEndToEndTests
                 TimeSpan.FromSeconds(10)));
             TestAssert.AreEqual(
                 ConfirmedMatchState.InProgress,
-                Value(first.LoadMatchState(waiting.MatchId).GetAwaiter().GetResult()).State);
+                LoadState(first, waiting.MatchId).State);
             Console.WriteLine("PASS: session closure publishes participant disconnection without ending the match.");
 
             guest = OpenGuest(
                 sessions,
                 "Outsider" + Guid.NewGuid().ToString("N").Substring(0, 6));
-            using RemoteMatchClient outsider = RemoteMatchClientTests.Create(guest.SessionToken);
-            MatchResult<RemoteMatchInformation> guestInformation = outsider
-                .LoadRemoteMatchInformation(waiting.MatchId).GetAwaiter().GetResult();
-            TestAssert.AreEqual(MatchStatus.InvalidSession, guestInformation.Status);
-            MatchStatus guestChat = outsider.OpenChatChannel(waiting.MatchId)
+            using MatchLobbyClient outsiderLobby = MatchClientsTests.CreateLobby(guest.SessionToken);
+            using GameplayClient outsider = MatchClientsTests.CreateGameplay(guest.SessionToken);
+            using MatchChatClient outsiderChat = MatchClientsTests.CreateChat(guest.SessionToken);
+            MatchStatus guestInformation = outsider
+                .LoadMatchInformation(waiting.MatchId).GetAwaiter().GetResult();
+            TestAssert.AreEqual(MatchStatus.InvalidSession, guestInformation);
+            ChatStatus guestChat = outsiderChat.OpenChatChannel(waiting.MatchId)
                 .GetAwaiter().GetResult();
-            TestAssert.AreEqual(MatchStatus.InvalidSession, guestChat);
+            TestAssert.AreEqual(ChatStatus.InvalidSession, guestChat);
         }
         finally
         {
@@ -120,47 +128,73 @@ internal static class MatchEndToEndTests
         TestAssert.AreEqual(60, state.Board.Count(cell => cell == ConfirmedBoardCell.Empty));
     }
 
-    private static void CancelledCode_RemoteBoundary_RejectsJoin(RemoteMatchClient first, RemoteMatchClient second)
+    private static void CancelledCode_RemoteBoundary_RejectsJoin(
+        MatchLobbyClient firstLobby, MatchLobbyClient secondLobby, GameplayClient second)
     {
-        LobbySnapshot cancelled = Value(first.CreateMatch(40).GetAwaiter().GetResult());
-        MatchResult<RemoteMatchInformation> unauthorized = second
-            .LoadRemoteMatchInformation(cancelled.MatchId).GetAwaiter().GetResult();
-        TestAssert.AreEqual(MatchStatus.Unauthorized, unauthorized.Status);
-        first.CancelMatch(cancelled.MatchId).GetAwaiter().GetResult();
-        MatchResult<LobbySnapshot> unavailable = second.JoinMatch(cancelled.MatchCode)
+        LobbySnapshot cancelled = CreateMatch(firstLobby);
+        MatchStatus unauthorized = second
+            .LoadMatchInformation(cancelled.MatchId).GetAwaiter().GetResult();
+        TestAssert.AreEqual(MatchStatus.Unauthorized, unauthorized);
+        firstLobby.CancelMatch(cancelled.MatchId).GetAwaiter().GetResult();
+        MatchStatus unavailable = secondLobby.JoinMatch(cancelled.MatchCode)
             .GetAwaiter().GetResult();
-        TestAssert.AreEqual(MatchStatus.MatchCodeUnavailable, unavailable.Status);
+        TestAssert.AreEqual(MatchStatus.MatchCodeUnavailable, unavailable);
     }
 
     private static void Chat_RealDuplex_ReconcilesReturnCallbackAndHistory(
-        RemoteMatchClient first, RemoteMatchClient second, long matchId)
+        MatchChatClient first, MatchChatClient second, long matchId)
     {
         first.OpenChatChannel(matchId).GetAwaiter().GetResult();
         second.OpenChatChannel(matchId).GetAwaiter().GetResult();
-        first.RefreshChat(matchId).GetAwaiter().GetResult();
+        first.LoadChatHistory(matchId).GetAwaiter().GetResult();
         TestAssert.AreEqual(0, first.ReadMessages(matchId).Length);
         first.SendChatMessage(matchId, "  Hello from alpha  ").GetAwaiter().GetResult();
         TestAssert.AreEqual(true, SpinWait.SpinUntil(() => second.ReadMessages(matchId).Length == 1,
             TimeSpan.FromSeconds(10)));
-        first.RefreshChat(matchId).GetAwaiter().GetResult();
-        second.RefreshChat(matchId).GetAwaiter().GetResult();
+        first.LoadChatHistory(matchId).GetAwaiter().GetResult();
+        second.LoadChatHistory(matchId).GetAwaiter().GetResult();
         TestAssert.AreEqual(1, first.ReadMessages(matchId).Length);
         TestAssert.AreEqual("Hello from alpha", second.ReadMessages(matchId)[0].Content);
         TestAssert.AreEqual(1, second.ReadMessages(matchId)[0].SenderSeatNumber);
         second.SendChatMessage(matchId, "Hello from beta").GetAwaiter().GetResult();
         TestAssert.AreEqual(true, SpinWait.SpinUntil(() => first.ReadMessages(matchId).Length == 2,
             TimeSpan.FromSeconds(10)));
-        ChatSubmission blocked = first.SendChatMessage(matchId, "blockedword")
+        ChatStatus blocked = first.SendChatMessage(matchId, "blockedword")
             .GetAwaiter().GetResult();
-        TestAssert.AreEqual(MatchStatus.MessageBlocked, blocked.Status);
-        first.RefreshChat(matchId).GetAwaiter().GetResult();
+        TestAssert.AreEqual(ChatStatus.MessageBlocked, blocked);
+        first.LoadChatHistory(matchId).GetAwaiter().GetResult();
         TestAssert.AreEqual(2, first.ReadMessages(matchId).Length);
         TestAssert.AreEqual(2, first.ReadMessages(matchId)[1].SenderSeatNumber);
     }
 
-    private static T Value<T>(MatchResult<T> result) where T : class
+    private static LobbySnapshot CreateMatch(MatchLobbyClient client)
     {
-        TestAssert.AreEqual(MatchStatus.Success, result.Status);
-        return TestAssert.IsNotNull(result.Value);
+        TestAssert.AreEqual(MatchStatus.Success, client.CreateMatch(40).GetAwaiter().GetResult());
+        return client.ReadCurrentLobby();
+    }
+
+    private static LobbySnapshot JoinMatch(MatchLobbyClient client, string code)
+    {
+        TestAssert.AreEqual(MatchStatus.Success, client.JoinMatch(code).GetAwaiter().GetResult());
+        return client.ReadCurrentLobby();
+    }
+
+    private static AvailableMatch[] LoadMatches(MatchLobbyClient client)
+    {
+        TestAssert.AreEqual(MatchStatus.Success, client.LoadAvailableMatches().GetAwaiter().GetResult());
+        return client.ReadAvailableMatches();
+    }
+
+    private static MatchStateSnapshot LoadState(GameplayClient client, long matchId)
+    {
+        TestAssert.AreEqual(MatchStatus.Success, client.LoadMatchState(matchId).GetAwaiter().GetResult());
+        return client.ReadMatchState(matchId);
+    }
+
+    private static MatchInformation LoadInformation(GameplayClient client, long matchId)
+    {
+        TestAssert.AreEqual(MatchStatus.Success,
+            client.LoadMatchInformation(matchId).GetAwaiter().GetResult());
+        return client.ReadMatchInformation(matchId);
     }
 }

@@ -23,11 +23,12 @@ internal sealed class InstructionsContent
     internal string Message { get; }
 }
 
-/// <summary>
-/// Loads complete Reversi instructions from the active language resources.
-/// </summary>
 internal sealed class InstructionsService
 {
+    private const string InstructionsTitleKey = "Instructions_Title";
+    private const string InstructionsRulesKey = "Instructions_RulesMessage";
+    private const string MatchContextKey = "Instructions_MatchContextFormat";
+    private const string ResourceUnavailableMessage = "The instruction resource is unavailable.";
     private readonly Func<string, string> _resourceLookup;
 
     internal InstructionsService(Func<string, string> resourceLookup)
@@ -38,8 +39,8 @@ internal sealed class InstructionsService
     internal InstructionsLoadResult TryLoadGeneral(out InstructionsContent? content)
     {
         content = null;
-        if (!TryGetResource("Instructions_Title", out string title)
-            || !TryGetResource("Instructions_RulesMessage", out string rules))
+        if (!TryGetResource(InstructionsTitleKey, out string title)
+            || !TryGetResource(InstructionsRulesKey, out string rules))
         {
             return InstructionsLoadResult.ResourcesError;
         }
@@ -48,33 +49,47 @@ internal sealed class InstructionsService
         return InstructionsLoadResult.Success;
     }
 
+    internal InstructionsContent LoadForMatch(string pieceColorName, int turnTimeSeconds)
+    {
+        string title = ReadResource(InstructionsTitleKey);
+        string rules = ReadResource(InstructionsRulesKey);
+        string contextFormat = ReadResource(MatchContextKey);
+        string message = string.Format(contextFormat, pieceColorName, turnTimeSeconds, rules);
+        return new InstructionsContent(title, message);
+    }
+
     internal InstructionsLoadResult TryLoadForMatch(
         string pieceColorName,
         int turnTimeSeconds,
         out InstructionsContent? content)
     {
-        content = null;
-        if (!TryGetResource("Instructions_Title", out string title)
-            || !TryGetResource("Instructions_RulesMessage", out string rules)
-            || !TryGetResource("Instructions_MatchContextFormat", out string contextFormat))
-        {
-            return InstructionsLoadResult.ResourcesError;
-        }
-
+        InstructionsLoadResult status;
         try
         {
-            string message = string.Format(
-                contextFormat,
-                pieceColorName,
-                turnTimeSeconds,
-                rules);
-            content = new InstructionsContent(title, message);
-            return InstructionsLoadResult.Success;
+            content = LoadForMatch(pieceColorName, turnTimeSeconds);
+            status = InstructionsLoadResult.Success;
         }
-        catch (FormatException)
+        catch (Exception exception) when (exception is FormatException
+            or InvalidOperationException
+            or MissingManifestResourceException
+            or MissingSatelliteAssemblyException
+            or IOException
+            or BadImageFormatException)
         {
-            return InstructionsLoadResult.ResourcesError;
+            content = null;
+            status = InstructionsLoadResult.ResourcesError;
         }
+        return status;
+    }
+
+    private string ReadResource(string key)
+    {
+        string value = _resourceLookup(key);
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new MissingManifestResourceException(ResourceUnavailableMessage);
+        }
+        return value;
     }
 
     private bool TryGetResource(string key, out string value)

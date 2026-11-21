@@ -5,29 +5,20 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using ReversiGameSystem.Game;
 using ReversiGameSystem.Localization;
+using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
 
 namespace ReversiGameSystem.Views;
 
-/// <summary>
-/// Collects the turn duration before creating a match.
-/// </summary>
 public partial class MatchCreationPage : Page
 {
     private readonly string? _guestName;
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
 
-    /// <summary>
-    /// Initializes match creation for an authenticated player.
-    /// </summary>
     public MatchCreationPage() : this(null)
     {
     }
 
-    /// <summary>
-    /// Initializes match creation for the current player identity.
-    /// </summary>
-    /// <param name="guestName">The temporary name when the player is a guest.</param>
     public MatchCreationPage(string? guestName)
     {
         InitializeComponent();
@@ -56,19 +47,17 @@ public partial class MatchCreationPage : Page
         }
 
         IsEnabled = false;
-        RemoteMatchClient client = ClientRuntime.GetMatchClient(_guestName != null);
-        MatchResult<LobbySnapshot> result = await client.CreateMatch(turnTimeSeconds);
-        if (result.Status == MatchStatus.Success)
+        MatchLobbyClient client = ClientRuntime.GetMatchLobbyClient(_guestName != null);
+        MatchStatus status = await client.CreateMatch(turnTimeSeconds);
+        if (status == MatchStatus.Success)
         {
-            LobbySnapshot lobby = result.Value
-                ?? throw new InvalidOperationException(
-                    "A successful match result must contain its value.");
+            LobbySnapshot lobby = client.ReadCurrentLobby();
             NavigationService?.Navigate(new WaitingForOpponentPage(client, lobby, _guestName));
         }
         else
         {
             _dialogService.ShowError(this, "MatchCreation_PersistenceErrorTitle",
-                RemoteMatchMessages.Key(result.Status, _guestName != null));
+                RemoteMatchMessages.Key(status, _guestName != null));
         }
         IsEnabled = true;
     }

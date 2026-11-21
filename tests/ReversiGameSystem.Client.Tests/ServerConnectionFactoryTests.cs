@@ -1,18 +1,13 @@
 using System;
 using System.ServiceModel;
+using Microsoft.Extensions.Logging.Abstractions;
+using Proxy = ReversiGameSystem.ServerProxy;
 using ReversiGameSystem.Services;
 
 namespace ReversiGameSystem.Client.Tests;
 
-/// <summary>
-/// Unit tests for dynamic server connection and host resolution.
-/// </summary>
 internal sealed class ServerConnectionFactoryTests
 {
-    /// <summary>
-    /// Creates the individual test delegates for server connection factory tests.
-    /// </summary>
-    /// <returns>An array of test actions.</returns>
     internal static Action[] CreateTests()
     {
         ServerConnectionFactoryTests suite = new ServerConnectionFactoryTests();
@@ -21,14 +16,11 @@ internal sealed class ServerConnectionFactoryTests
             suite.GetServerHost_VariableAbsent_ReturnsLocalhost,
             suite.GetServerHost_EnvironmentVariableProvided_ReturnsConfiguredHost,
             suite.CreateEndpointAddress_ValidHost_RewritesAddressPreservingPortAndPath,
-            suite.CreateMatchEndpoints_CustomHost_OverridesAllThreeEndpoints,
+            suite.CreateMatchClients_CustomHost_PreservesConfiguredPortsAndPaths,
             suite.GetServerHost_WhitespaceOrInvalidHost_ThrowsInvalidOperationException
         };
     }
 
-    /// <summary>
-    /// Verifies that GetServerHost falls back to localhost when the variable is absent.
-    /// </summary>
     internal void GetServerHost_VariableAbsent_ReturnsLocalhost()
     {
         // Arrange
@@ -54,9 +46,6 @@ internal sealed class ServerConnectionFactoryTests
         }
     }
 
-    /// <summary>
-    /// Verifies that GetServerHost returns the configured host when provided via environment.
-    /// </summary>
     internal void GetServerHost_EnvironmentVariableProvided_ReturnsConfiguredHost()
     {
         // Arrange
@@ -83,9 +72,6 @@ internal sealed class ServerConnectionFactoryTests
         }
     }
 
-    /// <summary>
-    /// Verifies that CreateEndpointAddress rewrites the host while preserving port and path.
-    /// </summary>
     internal void CreateEndpointAddress_ValidHost_RewritesAddressPreservingPortAndPath()
     {
         // Arrange
@@ -115,12 +101,8 @@ internal sealed class ServerConnectionFactoryTests
         }
     }
 
-    /// <summary>
-    /// Verifies that CreateMatchEndpoints returns overridden URIs for all three match endpoints.
-    /// </summary>
-    internal void CreateMatchEndpoints_CustomHost_OverridesAllThreeEndpoints()
+    internal void CreateMatchClients_CustomHost_PreservesConfiguredPortsAndPaths()
     {
-        // Arrange
         string? previousValue = Environment.GetEnvironmentVariable(
             ServerConnectionFactory.ServerHostVariable);
         string customHost = "10.0.0.5";
@@ -130,20 +112,27 @@ internal sealed class ServerConnectionFactoryTests
                 ServerConnectionFactory.ServerHostVariable,
                 customHost);
 
-            // Act
-            MatchEndpoints endpoints =
-                ServerConnectionFactory.CreateMatchEndpoints();
-
-            // Assert
+            using MatchLobbyClient lobbyCallback = new MatchLobbyClient(
+                "test-session", NullLogger<MatchLobbyClient>.Instance);
+            using GameplayClient gameplayCallback = new GameplayClient(
+                "test-session", NullLogger<GameplayClient>.Instance);
+            using MatchChatClient chatCallback = new MatchChatClient(
+                "test-session", NullLogger<MatchChatClient>.Instance);
+            using Proxy.MatchLobbyServiceClient lobby = ServerConnectionFactory.CreateLobbyClient(
+                new InstanceContext(lobbyCallback));
+            using Proxy.GameplayMatchServiceClient gameplay =
+                ServerConnectionFactory.CreateGameplayClient(new InstanceContext(gameplayCallback));
+            using Proxy.MatchChatServiceClient chat = ServerConnectionFactory.CreateChatClient(
+                new InstanceContext(chatCallback));
             TestAssert.AreEqual(
                 "net.tcp://10.0.0.5:8095/ReversiGameSystem/MatchLobby",
-                endpoints.Lobby);
+                lobby.Endpoint.Address.Uri.AbsoluteUri);
             TestAssert.AreEqual(
                 "net.tcp://10.0.0.5:8096/ReversiGameSystem/GameplayMatch",
-                endpoints.Gameplay);
+                gameplay.Endpoint.Address.Uri.AbsoluteUri);
             TestAssert.AreEqual(
                 "net.tcp://10.0.0.5:8097/ReversiGameSystem/MatchChat",
-                endpoints.Chat);
+                chat.Endpoint.Address.Uri.AbsoluteUri);
         }
         finally
         {
@@ -153,10 +142,6 @@ internal sealed class ServerConnectionFactoryTests
         }
     }
 
-    /// <summary>
-    /// Verifies that GetServerHost throws InvalidOperationException when
-    /// the configured host is invalid or whitespace.
-    /// </summary>
     internal void GetServerHost_WhitespaceOrInvalidHost_ThrowsInvalidOperationException()
     {
         // Arrange

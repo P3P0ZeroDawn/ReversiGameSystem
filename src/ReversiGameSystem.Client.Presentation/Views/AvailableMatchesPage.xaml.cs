@@ -6,13 +6,12 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using ReversiGameSystem.Game;
 using ReversiGameSystem.Localization;
+using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
+using AvailableMatch = ReversiGameSystem.Matches.AvailableMatch;
 
 namespace ReversiGameSystem.Views;
 
-/// <summary>
-/// Displays matches that can be joined.
-/// </summary>
 public partial class AvailableMatchesPage : Page
 {
     private readonly string? _guestName;
@@ -22,19 +21,12 @@ public partial class AvailableMatchesPage : Page
 
     internal string? SelectedMatchId { get; private set; }
 
-    /// <summary>
-    /// Initializes the available matches page.
-    /// </summary>
     public AvailableMatchesPage()
     {
         InitializeComponent();
         Loaded += async (_, _) => await LoadMatches();
     }
 
-    /// <summary>
-    /// Initializes the available matches page for a guest.
-    /// </summary>
-    /// <param name="guestName">The name shown while the guest is in the application.</param>
     public AvailableMatchesPage(string guestName) : this()
     {
         _guestName = guestName;
@@ -91,13 +83,13 @@ public partial class AvailableMatchesPage : Page
         IsEnabled = false;
         LocalizationManager localization = LocalizationManager.Instance;
         List<AvailableMatchItem> items = new List<AvailableMatchItem>();
-        MatchResult<RemoteAvailableMatch[]> result =
-            await ClientRuntime.GetMatchClient(_guestName != null).LoadAvailableMatches();
+        MatchLobbyClient client = ClientRuntime.GetMatchLobbyClient(_guestName != null);
+        MatchStatus status = await client.LoadAvailableMatches();
         _loading = false;
         IsEnabled = true;
-        if (result.Status != MatchStatus.Success)
+        if (status != MatchStatus.Success)
         {
-            string messageKey = RemoteMatchMessages.Key(result.Status, _guestName != null);
+            string messageKey = RemoteMatchMessages.Key(status, _guestName != null);
             availableMatchesItemsControl.ItemsSource = null;
             emptyMatchesTextBlock.SetBinding(TextBlock.TextProperty, new Binding("[" + messageKey + "]")
             { Source = localization });
@@ -105,13 +97,11 @@ public partial class AvailableMatchesPage : Page
                 messageKey);
             return;
         }
-        RemoteAvailableMatch[] matches = result.Value
-            ?? throw new InvalidOperationException(
-                "A successful match result must contain its value.");
+        AvailableMatch[] matches = client.ReadAvailableMatches();
 
         emptyMatchesTextBlock.SetBinding(TextBlock.TextProperty, new Binding("[AvailableMatches_EmptyMessage]")
         { Source = localization });
-        foreach (RemoteAvailableMatch match in matches)
+        foreach (AvailableMatch match in matches)
         {
             items.Add(new AvailableMatchItem
             {
@@ -162,19 +152,19 @@ public partial class AvailableMatchesPage : Page
     private async Task JoinRemoteMatch(string code)
     {
         IsEnabled = false;
-        RemoteMatchClient client = ClientRuntime.GetMatchClient(_guestName != null);
-        MatchResult<LobbySnapshot> result = await client.JoinMatch(code);
-        if (result.Status == MatchStatus.Success)
+        MatchLobbyClient client = ClientRuntime.GetMatchLobbyClient(_guestName != null);
+        MatchStatus status = await client.JoinMatch(code);
+        if (status == MatchStatus.Success)
         {
-            LobbySnapshot lobby = result.Value
-                ?? throw new InvalidOperationException(
-                    "A successful match result must contain its value.");
-            NavigationService?.Navigate(new GamePage(client, lobby.MatchId, _guestName));
+            LobbySnapshot lobby = client.ReadCurrentLobby();
+            NavigationService?.Navigate(new GamePage(
+                ClientRuntime.GetGameplayClient(_guestName != null),
+                ClientRuntime.GetMatchChatClient(_guestName != null), lobby.MatchId, _guestName));
         }
         else
         {
             _dialogService.ShowError(this, "JoinMatch_PersistenceErrorTitle",
-                RemoteMatchMessages.Key(result.Status, _guestName != null));
+                RemoteMatchMessages.Key(status, _guestName != null));
             await LoadMatches();
         }
         IsEnabled = true;

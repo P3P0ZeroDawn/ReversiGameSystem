@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.IO;
 using System.ServiceModel;
@@ -15,7 +16,6 @@ using ReversiGameSystem.Server.ServiceApi;
 
 namespace ReversiGameSystem.Server.Tests;
 
-/// <summary>Runs real match boundaries exclusively against a disposable review database.</summary>
 internal static class ReviewMatchHost
 {
     internal static void Run() => ReviewAccountDatabaseTests.RunWithReviewAccounts(Host);
@@ -40,10 +40,36 @@ internal static class ReviewMatchHost
             new MatchCallbackSubscriptions<IMatchLobbyServiceCallback>(
                 (_, _) => true,
                 NullLogger.Instance);
+        GameplayMatchPresence gameplayPresence = new GameplayMatchPresence();
+        MatchCallbackSubscriptions<IGameplayMatchServiceCallback>? presenceSubscriptions = null;
+        void RemoveParticipantConnection(string token, long matchId)
+        {
+            if (presenceSubscriptions == null)
+            {
+                return;
+            }
+            KeyValuePair<int, bool>[]? snapshot = gameplayPresence.RemoveConnection(
+                token, matchId, presenceSubscriptions.HasSubscription);
+            if (snapshot == null)
+            {
+                return;
+            }
+            void PublishConnection(string subscriber, IGameplayMatchServiceCallback callback)
+            {
+                foreach (KeyValuePair<int, bool> participant in snapshot)
+                {
+                    callback.OnParticipantConnectionChanged(
+                        matchId, participant.Key, participant.Value);
+                }
+            }
+            presenceSubscriptions.Publish(matchId, PublishConnection);
+        }
         using MatchCallbackSubscriptions<IGameplayMatchServiceCallback> gameplaySubscriptions =
             new MatchCallbackSubscriptions<IGameplayMatchServiceCallback>(
                 (_, _) => true,
+                RemoveParticipantConnection,
                 NullLogger.Instance);
+        presenceSubscriptions = gameplaySubscriptions;
         using MatchCallbackSubscriptions<IMatchChatServiceCallback> chatSubscriptions =
             new MatchCallbackSubscriptions<IMatchChatServiceCallback>(
                 (_, _) => true,
@@ -52,7 +78,7 @@ internal static class ReviewMatchHost
         GameplayMatchService gameplay = new GameplayMatchService(
             gameplayMatches,
             store,
-            new GameplayMatchPresence(),
+            gameplayPresence,
             gameplaySubscriptions);
         MatchChatService chat = new MatchChatService(messages, chatSubscriptions);
         session.SessionClosed += lobbySubscriptions.RemoveSession;

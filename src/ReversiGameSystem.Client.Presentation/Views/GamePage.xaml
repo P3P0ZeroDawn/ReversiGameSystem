@@ -7,9 +7,9 @@
       xmlns:views="clr-namespace:ReversiGameSystem.Views"
       mc:Ignorable="d"
       d:DesignHeight="800" d:DesignWidth="1280"
-      Title="{Binding [Game_Title]}"
+      Title="{Binding Source={x:Static localization:LocalizationManager.Instance}, Path=[Game_Title]}"
       Style="{StaticResource AuthenticationPageStyle}"
-      DataContext="{x:Static localization:LocalizationManager.Instance}">
+>
     <Page.Resources>
         <Style x:Key="GamePlayerCardStyle" TargetType="Border"
                BasedOn="{StaticResource MainMenuCardStyle}">
@@ -42,19 +42,19 @@
                     FontWeight="Bold" Padding="0"
                     Style="{StaticResource AuthenticationSecondaryButtonStyle}"
                     Margin="0" Click="OnInformationClick"
-                    ToolTip="{Binding [Game_InformationButtonToolTip]}" />
-            <TextBlock Grid.Column="1" Text="{Binding [Application_Name]}"
+                    ToolTip="{Binding Source={x:Static localization:LocalizationManager.Instance}, Path=[Game_InformationButtonToolTip]}" />
+            <TextBlock Grid.Column="1" Text="{Binding Source={x:Static localization:LocalizationManager.Instance}, Path=[Application_Name]}"
                        Style="{StaticResource AuthenticationBrandStyle}" />
             <StackPanel Grid.Column="2" Style="{StaticResource LanguagePanelStyle}">
-                <Label Content="{Binding [Common_LanguageLabel]}"
+                <Label Content="{Binding Source={x:Static localization:LocalizationManager.Instance}, Path=[Common_LanguageLabel]}"
                        Style="{StaticResource LanguageLabelStyle}" />
                 <ComboBox x:Name="languageComboBox"
                           Style="{StaticResource LanguageComboBoxStyle}"
                           SelectedValuePath="Tag"
                           SelectionChanged="OnLanguageSelectionChanged"
-                          SelectedValue="{Binding CultureName, Mode=TwoWay, UpdateSourceTrigger=Explicit}">
-                    <ComboBoxItem Tag="en-US" Content="{Binding [Language_English]}" />
-                    <ComboBoxItem Tag="es-MX" Content="{Binding [Language_Spanish]}" />
+                          SelectedValue="{Binding Source={x:Static localization:LocalizationManager.Instance}, Path=CultureName, Mode=TwoWay, UpdateSourceTrigger=Explicit}">
+                    <ComboBoxItem Tag="en-US" Content="{Binding Source={x:Static localization:LocalizationManager.Instance}, Path=[Language_English]}" />
+                    <ComboBoxItem Tag="es-MX" Content="{Binding Source={x:Static localization:LocalizationManager.Instance}, Path=[Language_Spanish]}" />
                 </ComboBox>
             </StackPanel>
         </Grid>
@@ -123,9 +123,11 @@
                                FontWeight="SemiBold" Foreground="#20342A"
                                TextAlignment="Center" Margin="0,0,0,2" />
                     <TextBlock x:Name="turnTimeTextBlock" FontSize="14"
+                               Text="{Binding Countdown.RemainingTime}"
                                Foreground="#52685B" TextAlignment="Center"
                                Margin="0,0,0,2" />
                     <TextBlock x:Name="turnStatusTextBlock" FontSize="13"
+                               Text="{Binding StatusText}"
                                Foreground="#6B5940" TextAlignment="Center"
                                TextWrapping="Wrap" MinHeight="18" />
                 </StackPanel>
@@ -136,8 +138,8 @@
                 </Viewbox>
 
                 <StackPanel Grid.Row="2" HorizontalAlignment="Center">
-                    <Button x:Name="leaveMatchButton"
-                            Content="{Binding [Game_LeaveMatchButton]}"
+                    <Button x:Name="leaveMatchButton" IsEnabled="{Binding CanLeave}"
+                            Content="{Binding Source={x:Static localization:LocalizationManager.Instance}, Path=[Game_LeaveMatchButton]}"
                             Style="{StaticResource MainMenuLogoutButtonStyle}"
                             Click="OnLeaveMatchClick"
                             MinWidth="180" HorizontalAlignment="Center"
@@ -155,7 +157,7 @@
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <TextBlock Text="{Binding [Game_ChatTitle]}"
+                    <TextBlock Text="{Binding Source={x:Static localization:LocalizationManager.Instance}, Path=[Game_ChatTitle]}"
                                Style="{StaticResource MainMenuSectionTitleStyle}"
                                Margin="0,0,0,8" />
                     <ListBox x:Name="chatMessagesListBox" Grid.Row="1"
@@ -183,17 +185,20 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <TextBox x:Name="chatMessageTextBox" Height="36"
-                                 MaxLength="200" Padding="10,6"
+                                 Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}"
+                                 IsEnabled="{Binding CanWriteMessage}"
+                                 IsReadOnly="{Binding IsMessageReadOnly}" Padding="10,6"
                                  Style="{StaticResource AuthenticationTextBoxStyle}"
                                  Margin="0"
                                  VerticalContentAlignment="Center"
                                  KeyDown="OnChatMessageKeyDown" />
                         <Button x:Name="sendMessageButton" Grid.Column="1"
-                                Content="➜" Width="40" Height="36"
+                                IsEnabled="{Binding CanSendMessage}"
+                                Content="&#x279C;" Width="40" Height="36"
                                 Margin="8,0,0,0" Padding="0"
                                 Style="{StaticResource AuthenticationPrimaryButtonStyle}"
                                 Click="OnSendMessageClick"
-                                ToolTip="{Binding [Game_SendMessageButtonToolTip]}" />
+                                ToolTip="{Binding Source={x:Static localization:LocalizationManager.Instance}, Path=[Game_SendMessageButtonToolTip]}" />
                     </Grid>
                 </Grid>
             </Border>

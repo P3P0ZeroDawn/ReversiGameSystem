@@ -2,23 +2,25 @@ using System;
 using System.Globalization;
 using System.Resources;
 using Microsoft.Extensions.Logging.Abstractions;
+using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
 using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal static class RemoteMatchClientTests
+internal static class MatchClientsTests
 {
     internal static void Callbacks_StaleVersionsAndDuplicateMessages_PreserveConfirmedState()
     {
-        using RemoteMatchClient client = Create("unused");
+        using GameplayClient client = CreateGameplay("unused");
+        using MatchChatClient chat = CreateChat("unused");
         int stateChanges = 0;
         int messageChanges = 0;
         int presenceChanges = 0;
         client.StateChanged += _ => stateChanges++;
-        client.MessagesChanged += _ => messageChanges++;
+        chat.MessagesChanged += _ => messageChanges++;
         client.ParticipantConnectionChanged += _ => presenceChanges++;
-        client.OnMatchStarted(new Proxy.MatchStateSnapshot
+        client.OnMatchStateChanged(new Proxy.MatchStateSnapshot
         {
             MatchId = 7,
             MatchStateVersion = 3,
@@ -36,10 +38,10 @@ internal static class RemoteMatchClientTests
             MatchStateVersion = 3,
             Board = Array.Empty<Proxy.BoardCellState>()
         });
-        client.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 7, MessageNumber = 2, Content = "second" });
-        client.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 7, MessageNumber = 1, Content = "first" });
-        client.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 7, MessageNumber = 2, Content = "second" });
-        client.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 8, MessageNumber = 1, Content = "other" });
+        chat.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 7, MessageNumber = 2, Content = "second" });
+        chat.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 7, MessageNumber = 1, Content = "first" });
+        chat.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 7, MessageNumber = 2, Content = "second" });
+        chat.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 8, MessageNumber = 1, Content = "other" });
         client.OnParticipantConnectionChanged(7, 1, true);
         client.OnParticipantConnectionChanged(7, 2, false);
         TestAssert.AreEqual(1, stateChanges);
@@ -48,9 +50,9 @@ internal static class RemoteMatchClientTests
         TestAssert.AreEqual(true, client.HasMatchState(7));
         MatchStateSnapshot state = client.ReadMatchState(7);
         TestAssert.AreEqual(3L, state.Version);
-        TestAssert.AreEqual(2, client.ReadMessages(7).Length);
-        TestAssert.AreEqual("first", client.ReadMessages(7)[0].Content);
-        TestAssert.AreEqual(1, client.ReadMessages(8).Length);
+        TestAssert.AreEqual(2, chat.ReadMessages(7).Length);
+        TestAssert.AreEqual("first", chat.ReadMessages(7)[0].Content);
+        TestAssert.AreEqual(1, chat.ReadMessages(8).Length);
         TestAssert.AreEqual(
             ParticipantConnectionState.Connected,
             client.ReadParticipantConnection(7, 1));
@@ -111,7 +113,7 @@ internal static class RemoteMatchClientTests
 
     internal static void Callbacks_ConclusionSnapshot_PreservesWinnerAndAbandonmentReason()
     {
-        using RemoteMatchClient client = Create("unused");
+        using GameplayClient client = CreateGameplay("unused");
         client.OnMatchStateChanged(new Proxy.MatchStateSnapshot
         {
             MatchId = 15,
@@ -142,10 +144,24 @@ internal static class RemoteMatchClientTests
         TestAssert.AreEqual(2, conclusion.WinnerSeatNumber);
     }
 
-    internal static RemoteMatchClient Create(string token) => new(token, new MatchEndpoints
+    internal static GameplayClient CreateGameplay(string token)
     {
-        Lobby = "net.tcp://localhost:18095/ReversiReview/MatchLobby",
-        Gameplay = "net.tcp://localhost:18096/ReversiReview/GameplayMatch",
-        Chat = "net.tcp://localhost:18097/ReversiReview/MatchChat"
-    }, NullLogger<RemoteMatchClient>.Instance);
+        return new GameplayClient(token,
+            "net.tcp://localhost:18096/ReversiReview/GameplayMatch",
+            NullLogger<GameplayClient>.Instance);
+    }
+
+    internal static MatchLobbyClient CreateLobby(string token)
+    {
+        return new MatchLobbyClient(token,
+            "net.tcp://localhost:18095/ReversiReview/MatchLobby",
+            NullLogger<MatchLobbyClient>.Instance);
+    }
+
+    internal static MatchChatClient CreateChat(string token)
+    {
+        return new MatchChatClient(token,
+            "net.tcp://localhost:18097/ReversiReview/MatchChat",
+            NullLogger<MatchChatClient>.Instance);
+    }
 }

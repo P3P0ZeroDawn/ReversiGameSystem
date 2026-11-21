@@ -5,13 +5,11 @@ using System.Windows;
 using System.Windows.Controls;
 using ReversiGameSystem.Game;
 using ReversiGameSystem.Localization;
+using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
 
 namespace ReversiGameSystem.Views;
 
-/// <summary>
-/// Displays main navigation and server-provided player lists.
-/// </summary>
 public partial class MainMenuPage : Page
 {
     private const int LeaderboardEntryLimit = 10;
@@ -25,18 +23,11 @@ public partial class MainMenuPage : Page
     private bool _friendsSubscribed;
     private bool _leaderboardLoaded;
 
-    /// <summary>
-    /// Initializes the main menu page.
-    /// </summary>
     public MainMenuPage()
     {
         InitializeComponent();
     }
 
-    /// <summary>
-    /// Initializes the menu for a guest with a temporary display name.
-    /// </summary>
-    /// <param name="guestName">The name shown while the guest is in the application.</param>
     public MainMenuPage(string guestName) : this()
     {
         _guestName = guestName;
@@ -256,20 +247,18 @@ public partial class MainMenuPage : Page
         }
 
         IsEnabled = false;
-        RemoteMatchClient client = ClientRuntime.GetMatchClient(guest: false);
-        MatchResult<LobbySnapshot> result =
+        MatchLobbyClient client = ClientRuntime.GetMatchLobbyClient(guest: false);
+        MatchStatus status =
             await client.InviteToMatch(friendAccountId, turnDurationSeconds);
-        if (result.Status == MatchStatus.Success)
+        if (status == MatchStatus.Success)
         {
-            LobbySnapshot lobby = result.Value
-                ?? throw new InvalidOperationException(
-                    "A successful match result must contain its value.");
+            LobbySnapshot lobby = client.ReadCurrentLobby();
             NavigationService?.Navigate(new WaitingForOpponentPage(client, lobby, guestName: null));
         }
         else
         {
             _dialogService.ShowError(this, "InviteMatch_ErrorTitle",
-                RemoteMatchMessages.Key(result.Status, guest: false));
+                RemoteMatchMessages.Key(status, guest: false));
         }
         IsEnabled = true;
     }

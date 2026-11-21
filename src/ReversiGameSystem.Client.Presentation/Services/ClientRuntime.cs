@@ -7,28 +7,60 @@ internal static class ClientRuntime
 {
     internal static ClientSession CurrentSession { get; } = new ClientSession();
 
-    private static RemoteMatchClient? _match;
+    private static MatchLobbyClient? _lobby;
+    private static GameplayClient? _gameplay;
+    private static MatchChatClient? _chat;
     private static string? _matchToken;
 
-    internal static RemoteMatchClient GetMatchClient(bool guest)
+    internal static MatchLobbyClient GetMatchLobbyClient(bool guest)
+    {
+        string token = ValidateMatchSession(guest);
+        if (_lobby == null)
+        {
+            _lobby = new MatchLobbyClient(token, Logging.Value.CreateLogger<MatchLobbyClient>());
+        }
+        return _lobby;
+    }
+
+    internal static GameplayClient GetGameplayClient(bool guest)
+    {
+        string token = ValidateMatchSession(guest);
+        if (_gameplay == null)
+        {
+            _gameplay = new GameplayClient(token, Logging.Value.CreateLogger<GameplayClient>());
+        }
+        return _gameplay;
+    }
+
+    internal static MatchChatClient GetMatchChatClient(bool guest)
+    {
+        string token = ValidateMatchSession(guest);
+        if (_chat == null)
+        {
+            _chat = new MatchChatClient(token, Logging.Value.CreateLogger<MatchChatClient>());
+        }
+        return _chat;
+    }
+
+    private static string ValidateMatchSession(bool guest)
     {
         string token = CurrentSession.SessionToken
             ?? throw new InvalidOperationException("A player session is required.");
-        if (string.IsNullOrWhiteSpace(token))
+        if (string.IsNullOrWhiteSpace(token) || CurrentSession.IsGuest != guest)
         {
-            throw new InvalidOperationException("A valid player session is required.");
+            throw new InvalidOperationException("The requested player session is invalid.");
         }
-        if (CurrentSession.IsGuest != guest)
+        if (_matchToken != token)
         {
-            throw new InvalidOperationException("The requested player type does not match the session.");
-        }
-        if (_match == null || _matchToken != token)
-        {
-            _match?.Dispose();
-            _match = new RemoteMatchClient(token, Logging.Value.CreateLogger<RemoteMatchClient>());
+            _lobby?.Dispose();
+            _gameplay?.Dispose();
+            _chat?.Dispose();
+            _lobby = null;
+            _gameplay = null;
+            _chat = null;
             _matchToken = token;
         }
-        return _match;
+        return token;
     }
 
     private static readonly Lazy<ILoggerFactory> Logging =
@@ -71,7 +103,9 @@ internal static class ClientRuntime
 
     internal static void Dispose()
     {
-        _match?.Dispose();
+        _lobby?.Dispose();
+        _gameplay?.Dispose();
+        _chat?.Dispose();
         if (Friendship.IsValueCreated)
         {
             Friendship.Value.Dispose();

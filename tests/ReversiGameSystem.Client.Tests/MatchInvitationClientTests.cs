@@ -3,14 +3,12 @@ using System.Globalization;
 using System.Resources;
 using System.ServiceModel;
 using ReversiGameSystem.Game;
+using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
 using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Client.Tests;
 
-/// <summary>
-/// Unit and client integration test suite for private match invitations over WCF proxies and localization.
-/// </summary>
 internal sealed class MatchInvitationClientTests
 {
     private static readonly string[] RequiredResourceKeys = new[]
@@ -29,9 +27,6 @@ internal sealed class MatchInvitationClientTests
         "InviteMatch_DeliveryFailedMessage"
     };
 
-    /// <summary>
-    /// Executes all tests in the client invitation test suite.
-    /// </summary>
     internal static void RunAll()
     {
         MatchInvitationClientTests suite = new MatchInvitationClientTests();
@@ -46,12 +41,9 @@ internal sealed class MatchInvitationClientTests
         suite.LocalizationResources_InvitationKeys_ArePresentInAllSupportedCultures();
         suite.TurnTimePolicy_ValidRange_ParsesConfiguredSeconds();
         suite.TurnTimePolicy_OutOfRangeOrNonNumeric_RejectsInput();
-        suite.RemoteMatchClient_InviteAsync_CommunicationException_AbortsWithoutAutoRetry();
+        suite.MatchLobbyClient_InviteToMatch_CommunicationException_AbortsWithoutAutoRetry();
     }
 
-    /// <summary>
-    /// Verifies that FriendshipFault AccountUnavailable maps to InviteMatch_AccountUnavailableMessage.
-    /// </summary>
     internal void RemoteMatchMessages_FriendshipFaultAccountUnavailable_ResolvesExpectedResourceKey()
     {
         // Arrange
@@ -65,9 +57,6 @@ internal sealed class MatchInvitationClientTests
         TestAssert.AreEqual("InviteMatch_AccountUnavailableMessage", key);
     }
 
-    /// <summary>
-    /// Verifies that FriendshipFault FriendshipNotFound maps to InviteMatch_FriendshipNotFoundMessage.
-    /// </summary>
     internal void RemoteMatchMessages_FriendshipFaultFriendshipNotFound_ResolvesExpectedResourceKey()
     {
         // Arrange
@@ -81,9 +70,6 @@ internal sealed class MatchInvitationClientTests
         TestAssert.AreEqual("InviteMatch_FriendshipNotFoundMessage", key);
     }
 
-    /// <summary>
-    /// Verifies that FriendshipFault InvalidAccountId maps to InviteMatch_InvalidAccountIdMessage.
-    /// </summary>
     internal void RemoteMatchMessages_FriendshipFaultInvalidAccountId_ResolvesExpectedResourceKey()
     {
         // Arrange
@@ -97,9 +83,6 @@ internal sealed class MatchInvitationClientTests
         TestAssert.AreEqual("InviteMatch_InvalidAccountIdMessage", key);
     }
 
-    /// <summary>
-    /// Verifies that FriendshipFault InactiveAccount maps to InviteMatch_InactiveAccountMessage.
-    /// </summary>
     internal void RemoteMatchMessages_FriendshipFaultInactiveAccount_ResolvesExpectedResourceKey()
     {
         // Arrange
@@ -113,9 +96,6 @@ internal sealed class MatchInvitationClientTests
         TestAssert.AreEqual("InviteMatch_InactiveAccountMessage", key);
     }
 
-    /// <summary>
-    /// Verifies that MatchFault Unauthorized maps to InviteMatch_UnauthorizedMessage.
-    /// </summary>
     internal void RemoteMatchMessages_MatchFaultUnauthorized_ResolvesExpectedResourceKey()
     {
         // Arrange
@@ -129,9 +109,6 @@ internal sealed class MatchInvitationClientTests
         TestAssert.AreEqual("InviteMatch_UnauthorizedMessage", key);
     }
 
-    /// <summary>
-    /// Verifies that MatchFault InactiveAccount maps to InviteMatch_InactiveAccountMessage.
-    /// </summary>
     internal void RemoteMatchMessages_MatchFaultInactiveAccount_ResolvesExpectedResourceKey()
     {
         // Arrange
@@ -145,9 +122,6 @@ internal sealed class MatchInvitationClientTests
         TestAssert.AreEqual("InviteMatch_InactiveAccountMessage", key);
     }
 
-    /// <summary>
-    /// Verifies that MatchFault MatchNotWaiting maps to InviteMatch_MatchNotWaitingMessage.
-    /// </summary>
     internal void RemoteMatchMessages_MatchFaultMatchNotWaiting_ResolvesExpectedResourceKey()
     {
         // Arrange
@@ -161,9 +135,6 @@ internal sealed class MatchInvitationClientTests
         TestAssert.AreEqual("InviteMatch_MatchNotWaitingMessage", key);
     }
 
-    /// <summary>
-    /// Verifies that timeouts and communication failures resolve to the connection failure message key.
-    /// </summary>
     internal void RemoteMatchMessages_DeliveryFailureOrTimeout_ResolvesConnectionFailedKey()
     {
         // Arrange
@@ -179,9 +150,6 @@ internal sealed class MatchInvitationClientTests
         TestAssert.AreEqual("RemoteMatch_ConnectionFailed", communicationKey);
     }
 
-    /// <summary>
-    /// Verifies that all 12 invitation localization keys exist and have non-empty text in both en-US and es-MX cultures.
-    /// </summary>
     internal void LocalizationResources_InvitationKeys_ArePresentInAllSupportedCultures()
     {
         // Arrange
@@ -201,9 +169,6 @@ internal sealed class MatchInvitationClientTests
         }
     }
 
-    /// <summary>
-    /// Verifies that TurnTimePolicy parses configured valid seconds within the 10..120 range.
-    /// </summary>
     internal void TurnTimePolicy_ValidRange_ParsesConfiguredSeconds()
     {
         // Arrange & Act & Assert
@@ -220,9 +185,6 @@ internal sealed class MatchInvitationClientTests
         TestAssert.AreEqual(120, maxSeconds);
     }
 
-    /// <summary>
-    /// Verifies that TurnTimePolicy rejects seconds outside 10..120 or non-numeric inputs.
-    /// </summary>
     internal void TurnTimePolicy_OutOfRangeOrNonNumeric_RejectsInput()
     {
         // Arrange & Act & Assert
@@ -245,19 +207,16 @@ internal sealed class MatchInvitationClientTests
         TestAssert.AreEqual(false, parsedEmpty);
     }
 
-    /// <summary>
-    /// Verifies that RemoteMatchClient.InviteAsync aborts the channel and propagates CommunicationException without retrying.
-    /// </summary>
-    internal void RemoteMatchClient_InviteAsync_CommunicationException_AbortsWithoutAutoRetry()
+    internal void MatchLobbyClient_InviteToMatch_CommunicationException_AbortsWithoutAutoRetry()
     {
         // Arrange
-        RemoteMatchClient client = RemoteMatchClientTests.Create("test-token");
+        MatchLobbyClient client = MatchClientsTests.CreateLobby("test-token");
         // Act
         try
         {
-            MatchResult<LobbySnapshot> result = client.InviteToMatch(100, 40)
+            MatchStatus status = client.InviteToMatch(100, 40)
                 .GetAwaiter().GetResult();
-            TestAssert.AreEqual(MatchStatus.ServiceUnavailable, result.Status);
+            TestAssert.AreEqual(MatchStatus.ServiceUnavailable, status);
         }
         finally
         {
