@@ -7,7 +7,11 @@ using Microsoft.Extensions.Logging;
 
 namespace ReversiGameSystem.Server.ServiceApi;
 
-internal class MatchCallbackSubscriptions<TCallback> : IDisposable
+/// <summary>
+/// Manages WCF duplex callback subscriptions and asynchronous dispatch for match services.
+/// </summary>
+/// <typeparam name="TCallback">The WCF callback contract interface.</typeparam>
+public sealed class MatchCallbackSubscriptions<TCallback> : IDisposable
     where TCallback : class
 {
     private const long AllMatchesSubscription = 0;
@@ -21,14 +25,35 @@ internal class MatchCallbackSubscriptions<TCallback> : IDisposable
     private bool _disposed;
     private bool _dispatching;
 
-    internal MatchCallbackSubscriptions(
+    /// <summary>
+    /// Initializes a new instance of the
+    /// <see cref="MatchCallbackSubscriptions{TCallback}"/> class.
+    /// </summary>
+    /// <param name="canKeepSubscription">
+    /// Predicate validating whether a subscription remains authorized.
+    /// </param>
+    /// <param name="logger">The diagnostic logger.</param>
+    /// <exception cref="ArgumentNullException">A required argument is null.</exception>
+    public MatchCallbackSubscriptions(
         Func<string, long, bool> canKeepSubscription,
         ILogger logger)
         : this(canKeepSubscription, null, logger)
     {
     }
 
-    internal MatchCallbackSubscriptions(
+    /// <summary>
+    /// Initializes a new instance of the
+    /// <see cref="MatchCallbackSubscriptions{TCallback}"/> class.
+    /// </summary>
+    /// <param name="canKeepSubscription">
+    /// Predicate validating whether a subscription remains authorized.
+    /// </param>
+    /// <param name="subscriptionRemoved">
+    /// Optional callback invoked after a subscription is removed.
+    /// </param>
+    /// <param name="logger">The diagnostic logger.</param>
+    /// <exception cref="ArgumentNullException">A required dependency is null.</exception>
+    public MatchCallbackSubscriptions(
         Func<string, long, bool> canKeepSubscription,
         Action<string, long>? subscriptionRemoved,
         ILogger logger)
@@ -48,19 +73,21 @@ internal class MatchCallbackSubscriptions<TCallback> : IDisposable
         {
             if (_disposed)
             {
-                throw new ObjectDisposedException(nameof(MatchCallbackSubscriptions<TCallback>));
+                throw new ObjectDisposedException(
+                    nameof(MatchCallbackSubscriptions<TCallback>));
             }
+
             foreach (Subscription old in _subscriptions.Where(item => item.Token == token
                 && item.MatchId == matchId).ToArray())
             {
                 _subscriptions.Remove(old);
                 old.Detach();
             }
+
             _subscriptions.Add(channel);
             channel.Communication.Closed += channel.Terminated;
             channel.Communication.Faulted += channel.Terminated;
         }
-
     }
 
     internal void RegisterForAllMatches(string token)
@@ -68,7 +95,13 @@ internal class MatchCallbackSubscriptions<TCallback> : IDisposable
         Register(token, AllMatchesSubscription);
     }
 
-    internal bool HasSubscription(string token, long matchId)
+    /// <summary>
+    /// Checks whether an active subscription exists for a session token and match.
+    /// </summary>
+    /// <param name="token">The authenticated session token.</param>
+    /// <param name="matchId">The match identifier.</param>
+    /// <returns><c>true</c> if a subscription exists; otherwise, <c>false</c>.</returns>
+    public bool HasSubscription(string token, long matchId)
     {
         lock (_subscriptionsSync)
         {
@@ -77,7 +110,11 @@ internal class MatchCallbackSubscriptions<TCallback> : IDisposable
         }
     }
 
-    internal void RemoveSession(string token)
+    /// <summary>
+    /// Removes all active subscriptions associated with a session token.
+    /// </summary>
+    /// <param name="token">The closed or revoked session token.</param>
+    public void RemoveSession(string token)
     {
         foreach (Subscription channel in Snapshot().Where(item => item.Token == token))
         {
@@ -85,14 +122,45 @@ internal class MatchCallbackSubscriptions<TCallback> : IDisposable
         }
     }
 
-    internal void Publish(long matchId, Action<string, TCallback> send)
+    /// <summary>
+    /// Queues a callback notification for all active subscriptions of a match.
+    /// </summary>
+    /// <param name="matchId">The target match identifier.</param>
+    /// <param name="send">The callback action receiving session token and channel.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="send"/> is null.</exception>
+    public void Publish(long matchId, Action<string, TCallback> send)
     {
+        if (send == null)
+        {
+            throw new ArgumentNullException(nameof(send));
+        }
+
         PublishWhere(matchId, (token, _, callback) => send(token, callback));
     }
 
     internal void PublishAll(Action<string, long, TCallback> send)
     {
         PublishWhere(null, send);
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        lock (_subscriptionsSync)
+        {
+            _disposed = true;
+            foreach (Subscription channel in _subscriptions)
+            {
+                channel.Detach();
+            }
+
+            _subscriptions.Clear();
+        }
+
+        lock (_dispatchSync)
+        {
+            _dispatchQueue.Clear();
+        }
     }
 
     private void PublishWhere(
@@ -118,43 +186,24 @@ internal class MatchCallbackSubscriptions<TCallback> : IDisposable
                     Remove(channel, true);
                     continue;
                 }
+
                 send(channel.Token, channel.MatchId, channel.Callback);
             }
             catch (ReversiGameSystem.Server.Application.Accounts.SessionRejectedException)
             {
                 Remove(channel, true);
             }
-            catch (CommunicationException exception)
+            catch (Exception exception) when (exception is CommunicationException
+                or TimeoutException
+                or ObjectDisposedException)
             {
-                Log("MatchCallback", exception);
-                Remove(channel, true);
-            }
-            catch (TimeoutException exception)
-            {
-                Log("MatchCallback", exception);
+                Log(LogLevel.Warning, "MatchCallback", exception);
                 Remove(channel, true);
             }
             catch (Exception exception)
             {
-                Log("MatchCallback", exception);
+                Log(LogLevel.Error, "MatchCallback", exception);
             }
-        }
-    }
-
-    public void Dispose()
-    {
-        lock (_subscriptionsSync)
-        {
-            _disposed = true;
-            foreach (Subscription channel in _subscriptions)
-            {
-                channel.Detach();
-            }
-            _subscriptions.Clear();
-        }
-        lock (_dispatchSync)
-        {
-            _dispatchQueue.Clear();
         }
     }
 
@@ -180,8 +229,10 @@ internal class MatchCallbackSubscriptions<TCallback> : IDisposable
             {
                 return;
             }
+
             channel.Detach();
         }
+
         if (notify && _subscriptionRemoved is not null)
         {
             try
@@ -190,18 +241,33 @@ internal class MatchCallbackSubscriptions<TCallback> : IDisposable
             }
             catch (Exception exception)
             {
-                Log("MatchChannelCleanup", exception);
+                Log(LogLevel.Error, "MatchChannelCleanup", exception);
             }
         }
     }
 
-    private void Log(string operation, Exception exception)
+    private void Log(LogLevel level, string operation, Exception exception)
     {
-        _logger.LogError(
-            exception,
-            "The {Operation} background operation failed. CorrelationId: {CorrelationId}",
-            operation,
-            CorrelationContext.GetOrCreate());
+        string correlationId = CorrelationContext.GetOrCreate();
+        try
+        {
+            _logger.Log(
+                level,
+                exception,
+                "The {Operation} background operation failed. CorrelationId: {CorrelationId}",
+                operation,
+                correlationId);
+        }
+        catch (Exception loggingFailure)
+        {
+            string context =
+                "The match callback diagnostic logger failed. Operation: "
+                + operation
+                + ". CorrelationId: "
+                + correlationId
+                + ".";
+            FailureDiagnostics.WriteLoggerFallback(context, exception, loggingFailure);
+        }
     }
 
     private void QueueDispatch(Action action)
@@ -209,6 +275,11 @@ internal class MatchCallbackSubscriptions<TCallback> : IDisposable
         bool startDispatcher = false;
         lock (_dispatchSync)
         {
+            if (_disposed)
+            {
+                return;
+            }
+
             _dispatchQueue.Enqueue(action);
             if (!_dispatching)
             {
@@ -245,7 +316,7 @@ internal class MatchCallbackSubscriptions<TCallback> : IDisposable
             }
             catch (Exception exception)
             {
-                Log("MatchCallbackDispatch", exception);
+                Log(LogLevel.Error, "MatchCallbackDispatch", exception);
             }
         }
     }
@@ -259,11 +330,17 @@ internal class MatchCallbackSubscriptions<TCallback> : IDisposable
             Callback = callback;
             Communication = (ICommunicationObject)callback;
         }
+
         internal string Token { get; }
+
         internal long MatchId { get; }
+
         internal TCallback Callback { get; }
+
         internal ICommunicationObject Communication { get; }
+
         internal EventHandler? Terminated { get; set; }
+
         internal void Detach()
         {
             Communication.Closed -= Terminated;

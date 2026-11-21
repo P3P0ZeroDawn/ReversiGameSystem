@@ -1,16 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.ServiceModel;
 using ReversiGameSystem.Server.Application.Matches;
-using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.Contracts.Matches;
 using ReversiGameSystem.Server.Domain.Matches;
 
 namespace ReversiGameSystem.Server.ServiceApi;
 
 /// <summary>Translates internal match domain representations into WCF contract snapshots.</summary>
-internal static class MatchContractMapper
+public static class MatchContractMapper
 {
     private const string StateFinished = "Finished";
     private const string StateCancelled = "Cancelled";
@@ -19,7 +17,6 @@ internal static class MatchContractMapper
     private const string OriginSystem = "System";
     private const string EndReasonInactivity = "INACTIVITY";
     private const string EndReasonAbandonment = "ABANDONMENT";
-    private const string MatchRequestRejectedMessage = "The match request was rejected.";
     private const int DefaultSeatNumber = 1;
 
     internal static MatchParticipantSummary[] MapParticipants(Match match)
@@ -52,7 +49,10 @@ internal static class MatchContractMapper
         return lobby;
     }
 
-    internal static MatchStateSnapshot MapState(Match match)
+    /// <summary>Maps an internal match state into a WCF state snapshot.</summary>
+    /// <param name="match">The domain match.</param>
+    /// <returns>The mapped WCF match state snapshot.</returns>
+    public static MatchStateSnapshot MapState(Match match)
     {
         MatchConclusion? conclusion = null;
         if (IsConcluded(match))
@@ -61,10 +61,6 @@ internal static class MatchContractMapper
         }
 
         int[] board = match.Board ?? ReversiEngine.CreateInitialBoard();
-        if (match.Board == null)
-        {
-            match.Board = board;
-        }
 
         MoveRecord? lastMove = null;
         if (match.LastMove != null)
@@ -256,20 +252,10 @@ internal static class MatchContractMapper
     /// <summary>Ensures that the match is in the active InProgress state.</summary>
     internal static void RequireStarted(Match match)
     {
-        if (string.Equals(match.State, StateCancelled, StringComparison.Ordinal))
-        {
-            throw new FaultException<MatchFault>(new MatchFault
-            {
-                Reason = MatchFailure.MatchNotWaiting
-            }, MatchRequestRejectedMessage);
-        }
-
         if (!string.Equals(match.State, StateInProgress, StringComparison.Ordinal))
         {
-            throw new FaultException<MatchFault>(new MatchFault
-            {
-                Reason = MatchFailure.MatchNotInProgress
-            }, MatchRequestRejectedMessage);
+            throw new InvalidOperationException(
+                "An initial match snapshot requires an InProgress match.");
         }
     }
 

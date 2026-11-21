@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
+using ReversiGameSystem.Server.Contracts.Callbacks;
 using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.Contracts.Matches;
 using ReversiGameSystem.Server.ServiceApi;
@@ -19,7 +20,7 @@ public sealed class MatchBoundaryTests
     public void Gameplay_UnauthorizedParticipant_PreservesDeclaredRejection()
     {
         BoundaryStore store = new BoundaryStore();
-        using GameplayMatchService service = CreateGameplay(store);
+        GameplayMatchService service = CreateGameplay(store);
         FaultException<MatchFault> failure = TestAssert.Throws<FaultException<MatchFault>>(
             () => service.GetMatchInformation("valid", 7));
         TestAssert.AreEqual(MatchFailure.Unauthorized, failure.Detail.Reason);
@@ -29,7 +30,7 @@ public sealed class MatchBoundaryTests
     public void Gameplay_InitialState_UsesApplicationSnapshot()
     {
         BoundaryStore store = new BoundaryStore { AllowRead = true };
-        using GameplayMatchService service = CreateGameplay(store);
+        GameplayMatchService service = CreateGameplay(store);
         MatchStateSnapshot state = service.GetMatchState("valid", 7);
         TestAssert.AreEqual(7L, state.MatchId);
         TestAssert.AreEqual(0L, state.MatchStateVersion);
@@ -45,7 +46,7 @@ public sealed class MatchBoundaryTests
     public void Gameplay_StoreFailure_PropagatesToGlobalHandler()
     {
         BoundaryStore store = new BoundaryStore { FailStorage = true };
-        using GameplayMatchService service = CreateGameplay(store);
+        GameplayMatchService service = CreateGameplay(store);
         InvalidOperationException failure = TestAssert.Throws<InvalidOperationException>(
             () => service.PlacePiece("valid", new PiecePlacement { MatchId = 7 }));
         TestAssert.IsTrue(
@@ -59,7 +60,7 @@ public sealed class MatchBoundaryTests
         // Arrange
         BoundaryStore store = new BoundaryStore();
         MatchApplicationService handler = new MatchApplicationService(new BoundarySessions(), store, new BoundaryClock());
-        using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
+        MatchLobbyService service = CreateLobby(handler);
 
         // Act & Assert
         InvalidOperationException failure = TestAssert.Throws<InvalidOperationException>(
@@ -78,7 +79,7 @@ public sealed class MatchBoundaryTests
         SessionRepository sessions = new SessionRepository(clock);
         GuestSession guest = sessions.CreateGuest("Guest-GuestBoundary").GetValue();
         MatchApplicationService handler = new MatchApplicationService(sessions, store, clock, new BoundaryMailer());
-        using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
+        MatchLobbyService service = CreateLobby(handler);
 
         // Act & Assert
         FaultException<MatchFault> failure = TestAssert.Throws<FaultException<MatchFault>>(
@@ -93,7 +94,7 @@ public sealed class MatchBoundaryTests
         BoundaryStore store = new BoundaryStore();
         BoundarySessions sessions = new BoundarySessions();
         MatchApplicationService handler = new MatchApplicationService(sessions, store, new BoundaryClock(), new BoundaryMailer());
-        using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
+        MatchLobbyService service = CreateLobby(handler);
 
         // Act & Assert
         FaultException<MatchFault> failure = TestAssert.Throws<FaultException<MatchFault>>(
@@ -108,7 +109,7 @@ public sealed class MatchBoundaryTests
         BoundaryStore store = new BoundaryStore();
         BoundarySessions sessions = new BoundarySessions();
         MatchApplicationService handler = new MatchApplicationService(sessions, store, new BoundaryClock(), new BoundaryMailer());
-        using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
+        MatchLobbyService service = CreateLobby(handler);
 
         // Act & Assert
         FaultException<FriendshipFault> failure = TestAssert.Throws<FaultException<FriendshipFault>>(
@@ -123,7 +124,7 @@ public sealed class MatchBoundaryTests
         BoundaryStore store = new BoundaryStore();
         BoundarySessions sessions = new BoundarySessions();
         MatchApplicationService handler = new MatchApplicationService(sessions, store, new BoundaryClock(), new BoundaryMailer());
-        using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
+        MatchLobbyService service = CreateLobby(handler);
 
         // Act & Assert
         FaultException<FriendshipFault> failure = TestAssert.Throws<FaultException<FriendshipFault>>(
@@ -138,7 +139,7 @@ public sealed class MatchBoundaryTests
         BoundaryStore store = new BoundaryStore();
         BoundarySessions sessions = new BoundarySessions();
         MatchApplicationService handler = new MatchApplicationService(sessions, store, new BoundaryClock(), new BoundaryMailer());
-        using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
+        MatchLobbyService service = CreateLobby(handler);
 
         // Act & Assert
         FaultException<FriendshipFault> failure = TestAssert.Throws<FaultException<FriendshipFault>>(
@@ -153,7 +154,7 @@ public sealed class MatchBoundaryTests
         BoundaryStore store = new BoundaryStore();
         BoundarySessions sessions = new BoundarySessions();
         MatchApplicationService handler = new MatchApplicationService(sessions, store, new BoundaryClock(), new BoundaryMailer());
-        using MatchLobbyService service = new MatchLobbyService(handler, NullLogger<MatchLobbyService>.Instance);
+        MatchLobbyService service = CreateLobby(handler);
 
         // Act & Assert
         InvalidOperationException failure = TestAssert.Throws<InvalidOperationException>(
@@ -168,7 +169,24 @@ public sealed class MatchBoundaryTests
         BoundarySessions sessions = new BoundarySessions();
         GameplayMatchApplicationService applicationService =
             new GameplayMatchApplicationService(sessions, store, new BoundaryClock());
-        return new GameplayMatchService(applicationService, sessions, NullLogger<GameplayMatchService>.Instance);
+        MatchCallbackSubscriptions<IGameplayMatchServiceCallback> subscriptions =
+            new MatchCallbackSubscriptions<IGameplayMatchServiceCallback>(
+                (_, _) => true,
+                NullLogger.Instance);
+        return new GameplayMatchService(
+            applicationService,
+            sessions,
+            new GameplayMatchPresence(),
+            subscriptions);
+    }
+
+    private static MatchLobbyService CreateLobby(MatchApplicationService handler)
+    {
+        MatchCallbackSubscriptions<IMatchLobbyServiceCallback> subscriptions =
+            new MatchCallbackSubscriptions<IMatchLobbyServiceCallback>(
+                (_, _) => true,
+                NullLogger.Instance);
+        return new MatchLobbyService(handler, subscriptions);
     }
 
     private sealed class BoundaryMailer : IMatchInvitationEmailSender

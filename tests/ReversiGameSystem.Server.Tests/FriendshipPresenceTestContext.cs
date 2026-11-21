@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.ServiceModel;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Server.Application.Accounts;
@@ -23,6 +24,7 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, ISessionRepos
         new ConcurrentDictionary<string, bool>();
     private readonly List<FriendshipPresenceTestClient> _clients = new List<FriendshipPresenceTestClient>();
     private readonly ServiceHost _host;
+    private readonly Timer _sweepTimer;
     private readonly Uri _address = new Uri("net.pipe://localhost/ReversiFriendshipTests/"
         + Guid.NewGuid().ToString("N") + "/Friendship");
     internal bool Inactive;
@@ -39,18 +41,50 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, ISessionRepos
     internal readonly FriendshipSubscriptions Subscriptions;
     internal readonly FriendshipApplicationService ApplicationService;
 
-    internal FriendshipPresenceTestContext() : this(NullLogger<FriendshipService>.Instance)
+    internal FriendshipPresenceTestContext()
+        : this(NullLogger<FriendshipSubscriptions>.Instance)
     {
     }
 
     internal FriendshipPresenceTestContext(
-        ILogger<FriendshipService> logger,
+        ILogger<FriendshipSubscriptions> logger,
         ILogger<ServiceErrorBehavior>? behaviorLogger = null)
     {
         PresenceRegistry = new AccountPresenceRegistry();
-        Subscriptions = new FriendshipSubscriptions();
+        Subscriptions = new FriendshipSubscriptions(logger);
         ApplicationService = new FriendshipApplicationService(this, this);
-        Service = new FriendshipService(ApplicationService, PresenceRegistry, Subscriptions, logger);
+        PresenceRegistry.PresenceChanged += (accountId, isOnline) =>
+        {
+            try
+            {
+                long[] friendIds = ApplicationService.ReadConfirmedFriendIds(accountId);
+                if (friendIds.Length == 0)
+                {
+                    return;
+                }
+
+                HashSet<long> targets = new HashSet<long>(friendIds);
+                FriendChange change = isOnline
+                    ? FriendChange.Connected
+                    : FriendChange.Disconnected;
+                Subscriptions.PublishToAccounts(
+                    targets,
+                    callback => callback.OnFriendChanged(accountId, change));
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, "Failed to publish presence change in test context.");
+            }
+        };
+        _sweepTimer = new Timer(
+            _ => Subscriptions.SweepChannels(
+                64,
+                token => ApplicationService.EvaluateChannelAccess(token).Status
+                    == FriendshipStatus.Success),
+            null,
+            TimeSpan.FromSeconds(1),
+            TimeSpan.FromSeconds(1));
+        Service = new FriendshipService(ApplicationService, PresenceRegistry, Subscriptions);
         _host = new ServiceHost(Service, _address);
         _host.Description.Behaviors.Add(new ServiceErrorBehavior(
             behaviorLogger ?? NullLogger<ServiceErrorBehavior>.Instance));
@@ -200,13 +234,14 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, ISessionRepos
 
     public void Dispose()
     {
+        _sweepTimer.Dispose();
         foreach (FriendshipPresenceTestClient client in _clients)
         {
             client.Dispose();
         }
 
         _host.Abort();
-        Service.Dispose();
+        Subscriptions.Dispose();
     }
 
     internal static NetNamedPipeBinding Binding()

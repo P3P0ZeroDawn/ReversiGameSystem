@@ -1,8 +1,6 @@
 using System;
 using System.Linq;
 using System.ServiceModel;
-using System.Threading;
-using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Contracts.Callbacks;
 using ReversiGameSystem.Server.Contracts.Faults;
@@ -12,29 +10,28 @@ using ReversiGameSystem.Server.Contracts.Services;
 namespace ReversiGameSystem.Server.ServiceApi;
 
 /// <summary>Publishes durable human lobby transitions over authenticated duplex channels.</summary>
-[ServiceBehavior(InstanceContextMode = InstanceContextMode.Single,
-    ConcurrencyMode = ConcurrencyMode.Multiple, UseSynchronizationContext = false)]
-public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
+[ServiceBehavior(
+    InstanceContextMode = InstanceContextMode.Single,
+    ConcurrencyMode = ConcurrencyMode.Multiple,
+    UseSynchronizationContext = false)]
+public sealed class MatchLobbyService : IMatchLobbyService
 {
-    private static readonly TimeSpan SweepInterval = TimeSpan.FromSeconds(5);
     private readonly MatchApplicationService _applicationService;
-    private readonly ILogger<MatchLobbyService> _logger;
     private readonly MatchCallbackSubscriptions<IMatchLobbyServiceCallback>
         _callbackSubscriptions;
-    private readonly Timer _expiryTimer;
-    private int _sweeping;
 
     /// <summary>Creates the lobby boundary using the authoritative application handler.</summary>
+    /// <param name="applicationService">The lobby application service.</param>
+    /// <param name="callbackSubscriptions">The lobby duplex callback subscriptions.</param>
+    /// <exception cref="ArgumentNullException">A required dependency is null.</exception>
     public MatchLobbyService(
         MatchApplicationService applicationService,
-        ILogger<MatchLobbyService> logger)
+        MatchCallbackSubscriptions<IMatchLobbyServiceCallback> callbackSubscriptions)
     {
         _applicationService = applicationService
             ?? throw new ArgumentNullException(nameof(applicationService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _callbackSubscriptions = new MatchCallbackSubscriptions<IMatchLobbyServiceCallback>(
-            AuthorizeChannel, (token, matchId) => CancelWaitingLobbiesForSession(token), _logger);
-        _expiryTimer = new Timer(_ => SweepExpiredLobbies(), null, SweepInterval, SweepInterval);
+        _callbackSubscriptions = callbackSubscriptions
+            ?? throw new ArgumentNullException(nameof(callbackSubscriptions));
     }
 
     /// <inheritdoc />
@@ -48,7 +45,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
     public LobbySnapshot CreateMatch(string sessionToken, MatchConfiguration configuration)
     {
         MatchSettings? settings = configuration == null ? null : MapSettings(configuration);
-        Match match = RequireMatchValue(_applicationService.CreateMatch(sessionToken, settings));
+        Match match = RequireValue(_applicationService.CreateMatch(sessionToken, settings));
         return MatchContractMapper.MapLobby(match);
     }
 
@@ -59,7 +56,7 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
         MatchConfiguration configuration)
     {
         MatchSettings? settings = configuration == null ? null : MapSettings(configuration);
-        Match match = RequireMatchValue(_applicationService.InviteToMatch(
+        Match match = RequireValue(_applicationService.InviteToMatch(
             sessionToken,
             friendAccountId,
             settings));
@@ -69,18 +66,14 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
     /// <inheritdoc />
     public AvailableMatch[] GetAvailableMatches(string sessionToken)
     {
-        MatchResult<Match[]> result = _applicationService.GetAvailableMatches(sessionToken);
-        ThrowFaultIfFailed(result.Status);
-        Match[] matches = result.Value
-            ?? throw new InvalidOperationException(
-                "A successful match result must contain its value.");
+        Match[] matches = RequireValue(_applicationService.GetAvailableMatches(sessionToken));
         return matches.Select(MapAvailableMatch).ToArray();
     }
 
     /// <inheritdoc />
     public LobbySnapshot JoinMatch(string sessionToken, string matchCode)
     {
-        Match match = RequireMatchValue(_applicationService.JoinMatch(sessionToken, matchCode));
+        Match match = RequireValue(_applicationService.JoinMatch(sessionToken, matchCode));
         _callbackSubscriptions.Publish(match.Id, (recipientToken, callback) =>
             PublishMatchStarted(recipientToken, callback, match.Id));
         return MatchContractMapper.MapLobby(match);
@@ -96,13 +89,13 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
             sessionToken,
             matchId,
             turnDurationSeconds);
-        return MatchContractMapper.MapLobby(RequireMatchValue(result));
+        return MatchContractMapper.MapLobby(RequireValue(result));
     }
 
     /// <inheritdoc />
     public MatchStateSnapshot StartSystemMatch(string sessionToken, long matchId)
     {
-        Match match = RequireMatchValue(
+        Match match = RequireValue(
             _applicationService.StartSystemMatch(sessionToken, matchId));
         return MatchContractMapper.MapState(match);
     }
@@ -111,22 +104,20 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
     public void CancelMatch(string sessionToken, long matchId)
     {
         ThrowFaultIfFailed(_applicationService.CancelMatch(sessionToken, matchId));
-        PublishLobbyClosed(matchId);
+        _callbackSubscriptions.Publish(
+            matchId,
+            (token, callback) => PublishClosedToParticipant(token, callback, matchId));
     }
 
-    private bool AuthorizeChannel(string token, long matchId)
-    {
-        return _applicationService.EvaluateLobbyAccess(token) == MatchStatus.Success;
-    }
-
-    private void PublishMatchStarted(string token, IMatchLobbyServiceCallback callback, long matchId)
+    private void PublishMatchStarted(
+        string token,
+        IMatchLobbyServiceCallback callback,
+        long matchId)
     {
         MatchResult<Match> result = _applicationService.GetParticipantMatch(token, matchId);
         if (result.Status == MatchStatus.Success)
         {
-            Match match = result.Value
-                ?? throw new InvalidOperationException(
-                    "A successful match result must contain its value.");
+            Match match = RequireValue(result);
             callback.OnMatchStarted(MatchContractMapper.MapInitialState(match));
         }
     }
@@ -147,67 +138,12 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
         AvailableMatch available = new AvailableMatch
         {
             MatchCode = match.Code
-                ?? throw new InvalidOperationException("An available match must have a join code."),
+                ?? throw new InvalidOperationException(
+                    "An available match must have a join code."),
             CreatorDisplayName = match.Participants[0].DisplayName,
             TurnDurationSeconds = match.TurnDurationSeconds
         };
         return available;
-    }
-
-    /// <summary>Removes a revoked session and cancels its waiting lobbies.</summary>
-    public void RemoveSession(string sessionToken)
-    {
-        _callbackSubscriptions.RemoveSession(sessionToken);
-        CancelWaitingLobbiesForSession(sessionToken);
-    }
-
-    /// <inheritdoc />
-    public void Dispose()
-    {
-        _expiryTimer.Dispose();
-        _callbackSubscriptions.Dispose();
-    }
-
-    private void SweepExpiredLobbies()
-    {
-        if (Interlocked.Exchange(ref _sweeping, 1) != 0)
-        {
-            return;
-        }
-        try
-        {
-            foreach (long id in _applicationService.CancelExpiredWaitingSessions())
-            {
-                PublishLobbyClosed(id);
-            }
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(
-                exception,
-                "The {Operation} background operation failed. CorrelationId: {CorrelationId}",
-                nameof(SweepExpiredLobbies),
-                CorrelationContext.GetOrCreate());
-        }
-        finally
-        {
-            Volatile.Write(ref _sweeping, 0);
-        }
-    }
-
-    private void CancelWaitingLobbiesForSession(string token)
-    {
-        foreach (long id in _applicationService.CancelWaitingForSession(token))
-        {
-            PublishLobbyClosed(id);
-        }
-    }
-
-    private void PublishLobbyClosed(long id)
-    {
-        _callbackSubscriptions.Publish(
-            id,
-            (token, callback) => PublishClosedToParticipant(token, callback, id));
     }
 
     private void PublishClosedToParticipant(
@@ -222,7 +158,8 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
         }
     }
 
-    private static Match RequireMatchValue(MatchResult<Match> result)
+    private static T RequireValue<T>(MatchResult<T> result)
+        where T : class
     {
         ThrowFaultIfFailed(result.Status);
         return result.Value
@@ -238,44 +175,26 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
         }
         if (status == MatchStatus.MissingSessionToken)
         {
-            throw SessionFaultFactory.Create(SessionFailure.MissingSessionToken);
+            throw ServiceFaultFactory.CreateSessionFault(SessionFailure.MissingSessionToken);
         }
         if (status == MatchStatus.InvalidSession)
         {
-            throw SessionFaultFactory.Create(SessionFailure.InvalidSession);
+            throw ServiceFaultFactory.CreateSessionFault(SessionFailure.InvalidSession);
         }
         if (status == MatchStatus.InvalidFriendAccountId)
         {
-            throw CreateFriendshipFault(FriendshipFailure.InvalidAccountId);
+            throw ServiceFaultFactory.CreateFriendshipFault(FriendshipFailure.InvalidAccountId);
         }
         if (status == MatchStatus.FriendAccountUnavailable)
         {
-            throw CreateFriendshipFault(FriendshipFailure.AccountUnavailable);
+            throw ServiceFaultFactory.CreateFriendshipFault(FriendshipFailure.AccountUnavailable);
         }
         if (status == MatchStatus.FriendshipNotFound)
         {
-            throw CreateFriendshipFault(FriendshipFailure.FriendshipNotFound);
+            throw ServiceFaultFactory.CreateFriendshipFault(FriendshipFailure.FriendshipNotFound);
         }
 
-        MatchFailure failure = MapMatchFailure(status);
-        MatchFault detail = new MatchFault
-        {
-            Reason = failure
-        };
-        throw new FaultException<MatchFault>(detail, "The match request was rejected.");
-    }
-
-    private static FaultException<FriendshipFault> CreateFriendshipFault(
-        FriendshipFailure failure)
-    {
-        FriendshipFault detail = new FriendshipFault
-        {
-            Reason = failure
-        };
-        FaultException<FriendshipFault> fault = new FaultException<FriendshipFault>(
-            detail,
-            "The friendship request was rejected.");
-        return fault;
+        throw ServiceFaultFactory.CreateMatchFault(MapMatchFailure(status));
     }
 
     private static MatchFailure MapMatchFailure(MatchStatus status)
@@ -302,8 +221,13 @@ public sealed class MatchLobbyService : IMatchLobbyService, IDisposable
                 return MatchFailure.MatchNotWaiting;
             case MatchStatus.MatchNotInProgress:
                 return MatchFailure.MatchNotInProgress;
-            default:
+            case MatchStatus.Unauthorized:
                 return MatchFailure.Unauthorized;
+            default:
+                throw new ArgumentOutOfRangeException(
+                    nameof(status),
+                    status,
+                    "Unsupported match status.");
         }
     }
 }

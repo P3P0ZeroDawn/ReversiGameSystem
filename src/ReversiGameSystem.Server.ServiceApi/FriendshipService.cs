@@ -1,8 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.ServiceModel;
-using System.Threading;
-using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Friendships;
 using ReversiGameSystem.Server.Contracts.Callbacks;
@@ -20,17 +17,11 @@ namespace ReversiGameSystem.Server.ServiceApi;
     InstanceContextMode = InstanceContextMode.Single,
     ConcurrencyMode = ConcurrencyMode.Multiple,
     UseSynchronizationContext = false)]
-public sealed class FriendshipService : IFriendshipService, IDisposable
+public sealed class FriendshipService : IFriendshipService
 {
-    private static readonly TimeSpan SweepInterval = TimeSpan.FromSeconds(5);
-    private const int MaximumSweepChannels = 64;
     private readonly FriendshipApplicationService _applicationService;
     private readonly AccountPresenceRegistry _presenceRegistry;
     private readonly FriendshipSubscriptions _subscriptions;
-    private readonly ILogger<FriendshipService> _logger;
-    private readonly Timer _sweepTimer;
-    private int _sweeping;
-    private int _sweepOffset;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FriendshipService"/> class.
@@ -38,13 +29,11 @@ public sealed class FriendshipService : IFriendshipService, IDisposable
     /// <param name="applicationService">The friendship application service.</param>
     /// <param name="presenceRegistry">The connected presence registry.</param>
     /// <param name="subscriptions">The active friendship callback subscriptions manager.</param>
-    /// <param name="logger">The diagnostic logger.</param>
     /// <exception cref="ArgumentNullException">A required dependency is null.</exception>
     public FriendshipService(
         FriendshipApplicationService applicationService,
         AccountPresenceRegistry presenceRegistry,
-        FriendshipSubscriptions subscriptions,
-        ILogger<FriendshipService> logger)
+        FriendshipSubscriptions subscriptions)
     {
         _applicationService = applicationService
             ?? throw new ArgumentNullException(nameof(applicationService));
@@ -52,10 +41,6 @@ public sealed class FriendshipService : IFriendshipService, IDisposable
             ?? throw new ArgumentNullException(nameof(presenceRegistry));
         _subscriptions = subscriptions
             ?? throw new ArgumentNullException(nameof(subscriptions));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
-        _presenceRegistry.PresenceChanged += OnPresenceChanged;
-        _sweepTimer = new Timer(_ => Sweep(MaximumSweepChannels), null, SweepInterval, SweepInterval);
     }
 
     /// <inheritdoc />
@@ -112,144 +97,34 @@ public sealed class FriendshipService : IFriendshipService, IDisposable
         return summaries;
     }
 
-    /// <summary>
-    /// Removes an active subscription when a session is closed.
-    /// </summary>
-    /// <param name="sessionToken">The closed session token.</param>
-    public void RemoveSession(string sessionToken)
-    {
-        _subscriptions.Remove(sessionToken);
-    }
-
     /// <inheritdoc />
     public PlayerSummary[] FindPlayers(string sessionToken, string searchText)
     {
-        throw CreateUnsupportedFault(nameof(FindPlayers));
+        throw ServiceFaultFactory.CreateUnexpectedFault(CorrelationContext.GetOrCreate());
     }
 
     /// <inheritdoc />
     public FriendRequest SendFriendRequest(string sessionToken, long recipientAccountId)
     {
-        throw CreateUnsupportedFault(nameof(SendFriendRequest));
+        throw ServiceFaultFactory.CreateUnexpectedFault(CorrelationContext.GetOrCreate());
     }
 
     /// <inheritdoc />
     public FriendRequest[] GetPendingFriendRequests(string sessionToken)
     {
-        throw CreateUnsupportedFault(nameof(GetPendingFriendRequests));
+        throw ServiceFaultFactory.CreateUnexpectedFault(CorrelationContext.GetOrCreate());
     }
 
     /// <inheritdoc />
     public void RespondToFriendRequest(string sessionToken, string requestId, bool accept)
     {
-        throw CreateUnsupportedFault(nameof(RespondToFriendRequest));
+        throw ServiceFaultFactory.CreateUnexpectedFault(CorrelationContext.GetOrCreate());
     }
 
     /// <inheritdoc />
     public void RemoveFriend(string sessionToken, long friendAccountId)
     {
-        throw CreateUnsupportedFault(nameof(RemoveFriend));
-    }
-
-    /// <inheritdoc />
-    public void Dispose()
-    {
-        _sweepTimer.Dispose();
-        _presenceRegistry.PresenceChanged -= OnPresenceChanged;
-        _subscriptions.Dispose();
-    }
-
-    private void OnPresenceChanged(long accountId, bool isOnline)
-    {
-        try
-        {
-            long[] friendIds = _applicationService.ReadConfirmedFriendIds(accountId);
-            if (friendIds.Length == 0)
-            {
-                return;
-            }
-
-            HashSet<long> friendIdSet = new HashSet<long>(friendIds);
-            FriendshipChannel[] activeChannels = _subscriptions.Snapshot();
-
-            for (int index = 0; index < activeChannels.Length; index++)
-            {
-                FriendshipChannel subscriber = activeChannels[index];
-                if (!friendIdSet.Contains(subscriber.AccountId))
-                {
-                    continue;
-                }
-
-                try
-                {
-                    subscriber.Callback?.OnFriendChanged(
-                        accountId,
-                        isOnline ? FriendChange.Connected : FriendChange.Disconnected);
-                }
-                catch (CommunicationException exception)
-                {
-                    _subscriptions.Remove(subscriber.Token);
-                    LogFailure(nameof(OnPresenceChanged), exception);
-                }
-                catch (Exception exception)
-                {
-                    LogFailure(nameof(OnPresenceChanged), exception);
-                }
-            }
-        }
-        catch (Exception exception)
-        {
-            LogFailure(nameof(OnPresenceChanged), exception);
-        }
-    }
-
-    private void SweepChannels(int maximumChannels)
-    {
-        FriendshipChannel[] channels = _subscriptions.Snapshot();
-        if (channels.Length == 0)
-        {
-            _sweepOffset = 0;
-            return;
-        }
-
-        int count = Math.Min(maximumChannels, channels.Length);
-        for (int index = 0; index < count; index++)
-        {
-            FriendshipChannel channel = channels[(_sweepOffset + index) % channels.Length];
-            if (!IsValid(channel))
-            {
-                _subscriptions.Remove(channel.Token);
-            }
-        }
-
-        _sweepOffset = (_sweepOffset + count) % channels.Length;
-    }
-
-    private void Sweep(int maximumChannels = int.MaxValue)
-    {
-        if (Interlocked.Exchange(ref _sweeping, 1) != 0)
-        {
-            return;
-        }
-
-        try
-        {
-            SweepChannels(maximumChannels);
-        }
-        catch (Exception exception)
-        {
-            LogFailure(nameof(Sweep), exception);
-        }
-        finally
-        {
-            Volatile.Write(ref _sweeping, 0);
-        }
-    }
-
-    private bool IsValid(FriendshipChannel channel)
-    {
-        return channel.Communication.State == CommunicationState.Opened
-            && _applicationService.EvaluateChannelAccess(channel.Token).Status == FriendshipStatus.Success;
+        throw ServiceFaultFactory.CreateUnexpectedFault(CorrelationContext.GetOrCreate());
     }
 
     private static void ThrowFailure(FriendshipStatus status)
@@ -260,66 +135,28 @@ public sealed class FriendshipService : IFriendshipService, IDisposable
                 return;
 
             case FriendshipStatus.MissingSessionToken:
-                throw SessionFaultFactory.Create(SessionFailure.MissingSessionToken);
+                throw ServiceFaultFactory.CreateSessionFault(SessionFailure.MissingSessionToken);
 
             case FriendshipStatus.InvalidSession:
-                throw SessionFaultFactory.Create(SessionFailure.InvalidSession);
+                throw ServiceFaultFactory.CreateSessionFault(SessionFailure.InvalidSession);
 
             case FriendshipStatus.InactiveAccount:
-                throw SessionFaultFactory.Create(SessionFailure.InactiveAccount);
+                throw ServiceFaultFactory.CreateSessionFault(SessionFailure.InactiveAccount);
 
             case FriendshipStatus.InvalidAccountId:
-                throw CreateFriendshipFault(FriendshipFailure.InvalidAccountId);
+                throw ServiceFaultFactory.CreateFriendshipFault(FriendshipFailure.InvalidAccountId);
 
             case FriendshipStatus.AccountNotFound:
-                throw CreateFriendshipFault(FriendshipFailure.AccountUnavailable);
+                throw ServiceFaultFactory.CreateFriendshipFault(FriendshipFailure.AccountUnavailable);
 
             case FriendshipStatus.FriendshipNotFound:
-                throw CreateFriendshipFault(FriendshipFailure.FriendshipNotFound);
+                throw ServiceFaultFactory.CreateFriendshipFault(FriendshipFailure.FriendshipNotFound);
 
             default:
-                throw CreateFriendshipFault(FriendshipFailure.AccountUnavailable);
-        }
-    }
-
-    private static FaultException<FriendshipFault> CreateFriendshipFault(FriendshipFailure failure)
-    {
-        return new FaultException<FriendshipFault>(new FriendshipFault
-        {
-            Reason = failure
-        }, "The friendship request was rejected.");
-    }
-
-    private static FaultException<ServiceFault> CreateServiceFault(string operation)
-    {
-        return ServiceFaultFactory.Create(operation, CorrelationContext.GetOrCreate());
-    }
-
-    private static FaultException<ServiceFault> CreateUnsupportedFault(string operation)
-    {
-        return CreateServiceFault(operation);
-    }
-
-    private void LogFailure(string operation, Exception exception)
-    {
-        string correlationId = CorrelationContext.GetOrCreate();
-        try
-        {
-            _logger.LogError(
-                exception,
-                "The {Operation} friendship operation failed. CorrelationId: {CorrelationId}",
-                operation,
-                correlationId);
-        }
-        catch (Exception loggingFailure)
-        {
-            Console.Error.WriteLine(
-                "The friendship diagnostic logger failed. Operation: {0}. CorrelationId: {1}.{2}{3}{2}{4}",
-                operation,
-                correlationId,
-                Environment.NewLine,
-                FailureDiagnostics.Describe(exception),
-                FailureDiagnostics.Describe(loggingFailure));
+                throw new ArgumentOutOfRangeException(
+                    nameof(status),
+                    status,
+                    "Unsupported friendship status.");
         }
     }
 }

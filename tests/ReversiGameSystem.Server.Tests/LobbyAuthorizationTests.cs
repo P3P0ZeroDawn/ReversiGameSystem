@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
+using ReversiGameSystem.Server.Contracts.Callbacks;
 using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.ServiceApi;
 
@@ -69,8 +70,11 @@ public sealed class LobbyAuthorizationTests
         // Arrange
         AuthorizationContext context = new AuthorizationContext();
         context.Store.Active = false;
-        using MatchLobbyService service = new MatchLobbyService(
-            context.Handler, NullLogger<MatchLobbyService>.Instance);
+        using MatchCallbackSubscriptions<IMatchLobbyServiceCallback> subscriptions =
+            new MatchCallbackSubscriptions<IMatchLobbyServiceCallback>(
+                (_, _) => true,
+                NullLogger.Instance);
+        MatchLobbyService service = new MatchLobbyService(context.Handler, subscriptions);
 
         // Act
         FaultException<MatchFault> failure = TestAssert.Throws<FaultException<MatchFault>>(
@@ -87,8 +91,11 @@ public sealed class LobbyAuthorizationTests
     {
         // Arrange
         AuthorizationContext context = new AuthorizationContext();
-        using MatchLobbyService service = new MatchLobbyService(
-            context.Handler, NullLogger<MatchLobbyService>.Instance);
+        using MatchCallbackSubscriptions<IMatchLobbyServiceCallback> subscriptions =
+            new MatchCallbackSubscriptions<IMatchLobbyServiceCallback>(
+                (_, _) => true,
+                NullLogger.Instance);
+        MatchLobbyService service = new MatchLobbyService(context.Handler, subscriptions);
 
         // Act
         FaultException<SessionFault> failure = TestAssert.Throws<FaultException<SessionFault>>(

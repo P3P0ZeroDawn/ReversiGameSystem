@@ -1,6 +1,5 @@
 using System;
 using System.ServiceModel;
-using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Application.Chat;
 using ReversiGameSystem.Server.Contracts.Callbacks;
 using ReversiGameSystem.Server.Contracts.Chat;
@@ -10,9 +9,11 @@ using ReversiGameSystem.Server.Contracts.Services;
 namespace ReversiGameSystem.Server.ServiceApi;
 
 /// <summary>Publishes committed participant messages and moderation outcomes.</summary>
-[ServiceBehavior(InstanceContextMode = InstanceContextMode.Single,
-    ConcurrencyMode = ConcurrencyMode.Multiple, UseSynchronizationContext = false)]
-public class MatchChatService : IMatchChatService, IDisposable
+[ServiceBehavior(
+    InstanceContextMode = InstanceContextMode.Single,
+    ConcurrencyMode = ConcurrencyMode.Multiple,
+    UseSynchronizationContext = false)]
+public class MatchChatService : IMatchChatService
 {
     private readonly ChatApplicationService _applicationService;
     private readonly MatchCallbackSubscriptions<IMatchChatServiceCallback>
@@ -20,20 +21,16 @@ public class MatchChatService : IMatchChatService, IDisposable
 
     /// <summary>Creates the durable chat service boundary.</summary>
     /// <param name="applicationService">The internal chat application service.</param>
-    /// <param name="logger">The logger used by callback infrastructure.</param>
+    /// <param name="callbackSubscriptions">The chat duplex callback subscriptions.</param>
+    /// <exception cref="ArgumentNullException">A required dependency is null.</exception>
     public MatchChatService(
         ChatApplicationService applicationService,
-        ILogger<MatchChatService> logger)
+        MatchCallbackSubscriptions<IMatchChatServiceCallback> callbackSubscriptions)
     {
         _applicationService = applicationService
             ?? throw new ArgumentNullException(nameof(applicationService));
-        _callbackSubscriptions =
-            new MatchCallbackSubscriptions<IMatchChatServiceCallback>(
-            (sessionToken, matchId) =>
-                _applicationService.EvaluateParticipantAccess(
-                    sessionToken,
-                    matchId) == ChatStatus.Success,
-            logger);
+        _callbackSubscriptions = callbackSubscriptions
+            ?? throw new ArgumentNullException(nameof(callbackSubscriptions));
     }
 
     /// <inheritdoc />
@@ -96,18 +93,6 @@ public class MatchChatService : IMatchChatService, IDisposable
         return entries;
     }
 
-    /// <summary>Removes chat subscriptions for a revoked session.</summary>
-    public void RemoveSession(string sessionToken)
-    {
-        _callbackSubscriptions.RemoveSession(sessionToken);
-    }
-
-    /// <inheritdoc />
-    public void Dispose()
-    {
-        _callbackSubscriptions.Dispose();
-    }
-
     private void PublishMuteNotification(string sessionToken, ChatMute mute)
     {
         _callbackSubscriptions.PublishAll(
@@ -152,19 +137,19 @@ public class MatchChatService : IMatchChatService, IDisposable
             case ChatStatus.Success:
                 return;
             case ChatStatus.MissingSessionToken:
-                throw SessionFaultFactory.Create(SessionFailure.MissingSessionToken);
+                throw ServiceFaultFactory.CreateSessionFault(SessionFailure.MissingSessionToken);
             case ChatStatus.InvalidSession:
-                throw SessionFaultFactory.Create(SessionFailure.InvalidSession);
+                throw ServiceFaultFactory.CreateSessionFault(SessionFailure.InvalidSession);
             case ChatStatus.InactiveAccount:
-                throw CreateMatchFault(MatchFailure.InactiveAccount);
+                throw ServiceFaultFactory.CreateMatchFault(MatchFailure.InactiveAccount);
             case ChatStatus.InvalidMatchId:
-                throw CreateMatchFault(MatchFailure.InvalidMatchId);
+                throw ServiceFaultFactory.CreateMatchFault(MatchFailure.InvalidMatchId);
             case ChatStatus.MatchNotFound:
-                throw CreateMatchFault(MatchFailure.MatchNotFound);
+                throw ServiceFaultFactory.CreateMatchFault(MatchFailure.MatchNotFound);
             case ChatStatus.Unauthorized:
-                throw CreateMatchFault(MatchFailure.Unauthorized);
+                throw ServiceFaultFactory.CreateMatchFault(MatchFailure.Unauthorized);
             case ChatStatus.MatchNotInProgress:
-                throw CreateMatchFault(MatchFailure.MatchNotInProgress);
+                throw ServiceFaultFactory.CreateMatchFault(MatchFailure.MatchNotInProgress);
             case ChatStatus.EmptyMessage:
                 throw CreateChatFault(ChatFailure.EmptyMessage, mute);
             case ChatStatus.MessageTooLong:
@@ -180,25 +165,6 @@ public class MatchChatService : IMatchChatService, IDisposable
         }
     }
 
-    private static FaultException<MatchFault> CreateMatchFault(MatchFailure failure)
-    {
-        return new FaultException<MatchFault>(new MatchFault
-        {
-            Reason = failure
-        }, "The match request was rejected.");
-    }
-
-    private static FaultException<ChatFault> CreateChatFault(
-        ChatFailure failure,
-        ChatMute? mute)
-    {
-        return new FaultException<ChatFault>(new ChatFault
-        {
-            Reason = failure,
-            MuteEndsAtUtc = mute?.EndsAtUtc
-        }, "The chat message was rejected.");
-    }
-
     private static MatchChatEntry MapChatEntry(ChatMessage message)
     {
         return new MatchChatEntry
@@ -209,5 +175,16 @@ public class MatchChatService : IMatchChatService, IDisposable
             Content = message.Content,
             SentAtUtc = message.SentAtUtc
         };
+    }
+
+    internal static FaultException<ChatFault> CreateChatFault(
+        ChatFailure failure,
+        ChatMute? mute)
+    {
+        return new FaultException<ChatFault>(new ChatFault
+        {
+            Reason = failure,
+            MuteEndsAtUtc = mute?.EndsAtUtc
+        }, "The chat message was rejected.");
     }
 }

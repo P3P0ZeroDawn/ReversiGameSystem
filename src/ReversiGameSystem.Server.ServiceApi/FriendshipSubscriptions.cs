@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.ServiceModel;
+using System.Threading;
+using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Contracts.Callbacks;
 
 namespace ReversiGameSystem.Server.ServiceApi;
@@ -11,9 +14,24 @@ namespace ReversiGameSystem.Server.ServiceApi;
 public sealed class FriendshipSubscriptions : IDisposable
 {
     private readonly object _gate = new object();
-    private readonly Dictionary<string, FriendshipChannel> _channels =
-        new Dictionary<string, FriendshipChannel>(StringComparer.Ordinal);
+    private readonly object _dispatchSync = new object();
+    private readonly Dictionary<string, Channel> _channels =
+        new Dictionary<string, Channel>(StringComparer.Ordinal);
+    private readonly Queue<Action> _dispatchQueue = new Queue<Action>();
+    private readonly ILogger<FriendshipSubscriptions> _logger;
+    private int _sweepOffset;
     private bool _disposed;
+    private bool _dispatching;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FriendshipSubscriptions"/> class.
+    /// </summary>
+    /// <param name="logger">The diagnostic logger for callback and sweep operations.</param>
+    /// <exception cref="ArgumentNullException">The logger is null.</exception>
+    public FriendshipSubscriptions(ILogger<FriendshipSubscriptions> logger)
+    {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
 
     /// <summary>
     /// Registers a new active friendship channel.
@@ -21,16 +39,15 @@ public sealed class FriendshipSubscriptions : IDisposable
     /// <param name="token">The authenticated session token.</param>
     /// <param name="accountId">The account identifier.</param>
     /// <param name="callback">The duplex callback channel.</param>
-    /// <param name="presenceRegistration">The presence registration to bind to the channel.</param>
-    /// <returns>The registered channel.</returns>
-    internal FriendshipChannel Register(
+    /// <param name="presenceRegistration">The presence registration bound to the channel.</param>
+    internal void Register(
         string token,
         long accountId,
         IFriendshipServiceCallback callback,
         IDisposable presenceRegistration)
     {
-        FriendshipChannel? existingChannel = null;
-        FriendshipChannel newChannel;
+        Channel? existingChannel = null;
+        Channel newChannel;
 
         lock (_gate)
         {
@@ -44,7 +61,7 @@ public sealed class FriendshipSubscriptions : IDisposable
                 _channels.Remove(token);
             }
 
-            newChannel = new FriendshipChannel(
+            newChannel = new Channel(
                 token,
                 accountId,
                 callback,
@@ -55,7 +72,6 @@ public sealed class FriendshipSubscriptions : IDisposable
         }
 
         existingChannel?.Close();
-        return newChannel;
     }
 
     /// <summary>
@@ -69,7 +85,7 @@ public sealed class FriendshipSubscriptions : IDisposable
             return;
         }
 
-        FriendshipChannel? channel = null;
+        Channel? channel = null;
         lock (_gate)
         {
             if (_channels.TryGetValue(token, out channel))
@@ -82,36 +98,85 @@ public sealed class FriendshipSubscriptions : IDisposable
     }
 
     /// <summary>
-    /// Returns a thread-safe snapshot of all currently active channels.
+    /// Queues a callback notification to all active channels belonging to the target accounts.
     /// </summary>
-    /// <returns>The array of active channels.</returns>
-    internal FriendshipChannel[] Snapshot()
+    /// <param name="accountIds">The target account identifiers.</param>
+    /// <param name="send">The callback action to invoke for each matching channel.</param>
+    /// <exception cref="ArgumentNullException">A required argument is null.</exception>
+    public void PublishToAccounts(
+        HashSet<long> accountIds,
+        Action<IFriendshipServiceCallback> send)
     {
-        lock (_gate)
+        if (accountIds == null)
         {
-            return _channels.Values.ToArray();
+            throw new ArgumentNullException(nameof(accountIds));
         }
+
+        if (send == null)
+        {
+            throw new ArgumentNullException(nameof(send));
+        }
+
+        if (accountIds.Count == 0)
+        {
+            return;
+        }
+
+        HashSet<long> targets = new HashSet<long>(accountIds);
+        QueueDispatch(() => PublishNow(targets, send));
     }
 
     /// <summary>
-    /// Finds the active channels for a given account identifier.
+    /// Checks up to <paramref name="maximumChannels"/> active channels and removes invalid ones.
     /// </summary>
-    /// <param name="accountId">The account identifier.</param>
-    /// <returns>The array of matching active channels.</returns>
-    internal FriendshipChannel[] FindChannelsForAccount(long accountId)
+    /// <param name="maximumChannels">The maximum number of channels to inspect per sweep.</param>
+    /// <param name="isSessionValid">Predicate validating whether a session token is active.</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="maximumChannels"/> is not positive.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="isSessionValid"/> is null.
+    /// </exception>
+    public void SweepChannels(int maximumChannels, Func<string, bool> isSessionValid)
     {
-        lock (_gate)
+        if (maximumChannels <= 0)
         {
-            return _channels.Values
-                .Where(channel => channel.AccountId == accountId)
-                .ToArray();
+            throw new ArgumentOutOfRangeException(
+                nameof(maximumChannels),
+                maximumChannels,
+                "Maximum channels must be positive.");
         }
+
+        if (isSessionValid == null)
+        {
+            throw new ArgumentNullException(nameof(isSessionValid));
+        }
+
+        Channel[] channels = Snapshot();
+        if (channels.Length == 0)
+        {
+            _sweepOffset = 0;
+            return;
+        }
+
+        int count = Math.Min(maximumChannels, channels.Length);
+        for (int index = 0; index < count; index++)
+        {
+            Channel channel = channels[(_sweepOffset + index) % channels.Length];
+            bool isOpen = channel.Communication.State == CommunicationState.Opened;
+            if (!isOpen || !isSessionValid(channel.Token))
+            {
+                Remove(channel.Token);
+            }
+        }
+
+        _sweepOffset = (_sweepOffset + count) % channels.Length;
     }
 
     /// <inheritdoc />
     public void Dispose()
     {
-        FriendshipChannel[] channelsToClose;
+        Channel[] channelsToClose;
         lock (_gate)
         {
             if (_disposed)
@@ -124,21 +189,195 @@ public sealed class FriendshipSubscriptions : IDisposable
             _channels.Clear();
         }
 
-        foreach (FriendshipChannel channel in channelsToClose)
+        lock (_dispatchSync)
+        {
+            _dispatchQueue.Clear();
+        }
+
+        foreach (Channel channel in channelsToClose)
         {
             channel.Close();
         }
     }
 
-    private void OnChannelClosed(FriendshipChannel channel)
+    private Channel[] Snapshot()
     {
         lock (_gate)
         {
-            if (_channels.TryGetValue(channel.Token, out FriendshipChannel? current)
+            return _channels.Values.ToArray();
+        }
+    }
+
+    private void OnChannelClosed(Channel channel)
+    {
+        lock (_gate)
+        {
+            if (_channels.TryGetValue(channel.Token, out Channel? current)
                 && ReferenceEquals(current, channel))
             {
                 _channels.Remove(channel.Token);
             }
+        }
+    }
+
+    private void PublishNow(
+        HashSet<long> accountIds,
+        Action<IFriendshipServiceCallback> send)
+    {
+        Channel[] activeChannels = Snapshot();
+        for (int index = 0; index < activeChannels.Length; index++)
+        {
+            Channel subscriber = activeChannels[index];
+            if (!accountIds.Contains(subscriber.AccountId) || subscriber.Callback == null)
+            {
+                continue;
+            }
+
+            try
+            {
+                send(subscriber.Callback);
+            }
+            catch (Exception exception) when (exception is CommunicationException
+                or TimeoutException
+                or ObjectDisposedException)
+            {
+                Remove(subscriber.Token);
+                _logger.LogWarning(
+                    exception,
+                    "Disconnected friendship callback channel for account {AccountId} removed.",
+                    subscriber.AccountId);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Unexpected failure publishing friendship callback for account {AccountId}.",
+                    subscriber.AccountId);
+            }
+        }
+    }
+
+    private void QueueDispatch(Action action)
+    {
+        bool startDispatcher = false;
+        lock (_dispatchSync)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _dispatchQueue.Enqueue(action);
+            if (!_dispatching)
+            {
+                _dispatching = true;
+                startDispatcher = true;
+            }
+        }
+
+        if (startDispatcher)
+        {
+            ThreadPool.QueueUserWorkItem(_ => ProcessDispatchQueue());
+        }
+    }
+
+    private void ProcessDispatchQueue()
+    {
+        while (true)
+        {
+            Action? action = null;
+            lock (_dispatchSync)
+            {
+                if (_dispatchQueue.Count == 0)
+                {
+                    _dispatching = false;
+                    return;
+                }
+
+                action = _dispatchQueue.Dequeue();
+            }
+
+            try
+            {
+                action();
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "The friendship callback dispatch operation failed.");
+            }
+        }
+    }
+
+    private sealed class Channel
+    {
+        private readonly Action<Channel>? _onClosed;
+        private int _closed;
+
+        internal Channel(
+            string token,
+            long accountId,
+            IFriendshipServiceCallback callback,
+            IDisposable presenceRegistration,
+            Action<Channel>? onClosed)
+        {
+            Token = token ?? throw new ArgumentNullException(nameof(token));
+            AccountId = accountId;
+            Callback = callback ?? throw new ArgumentNullException(nameof(callback));
+            Communication = (ICommunicationObject)callback;
+            PresenceRegistration = presenceRegistration
+                ?? throw new ArgumentNullException(nameof(presenceRegistration));
+            _onClosed = onClosed;
+
+            Terminated = (_, _) => Close();
+            Communication.Closed += Terminated;
+            Communication.Faulted += Terminated;
+        }
+
+        internal string Token { get; }
+
+        internal long AccountId { get; }
+
+        internal IFriendshipServiceCallback? Callback { get; private set; }
+
+        internal ICommunicationObject Communication { get; }
+
+        private IDisposable? PresenceRegistration { get; set; }
+
+        private EventHandler? Terminated { get; set; }
+
+        internal void Close()
+        {
+            if (Interlocked.Exchange(ref _closed, 1) != 0)
+            {
+                return;
+            }
+
+            if (Terminated != null)
+            {
+                Communication.Closed -= Terminated;
+                Communication.Faulted -= Terminated;
+                Terminated = null;
+            }
+
+            PresenceRegistration?.Dispose();
+            PresenceRegistration = null;
+
+            Callback = null;
+
+            try
+            {
+                Communication.Abort();
+            }
+            catch (Exception exception) when (exception is CommunicationException
+                or TimeoutException
+                or ObjectDisposedException)
+            {
+                // Channel is already faulted, timed out, or disposed during teardown.
+            }
+
+            _onClosed?.Invoke(this);
         }
     }
 }

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Chat;
 using ReversiGameSystem.Server.Application.Matches;
+using ReversiGameSystem.Server.Contracts.Callbacks;
 using ReversiGameSystem.Server.Contracts.Services;
 using ReversiGameSystem.Server.Persistence.Accounts;
 using ReversiGameSystem.Server.Persistence.Chat;
@@ -35,15 +36,28 @@ internal static class ReviewMatchHost
         SessionService session = new SessionService(
             applicationService,
             NullLogger<SessionService>.Instance);
-        using MatchLobbyService lobby = new MatchLobbyService(matches,
-            NullLogger<MatchLobbyService>.Instance);
-        using GameplayMatchService gameplay = new GameplayMatchService(gameplayMatches, store,
-            NullLogger<GameplayMatchService>.Instance);
-        using MatchChatService chat = new MatchChatService(messages,
-            NullLogger<MatchChatService>.Instance);
-        session.SessionClosed += lobby.RemoveSession;
-        session.SessionClosed += gameplay.RemoveSession;
-        session.SessionClosed += chat.RemoveSession;
+        using MatchCallbackSubscriptions<IMatchLobbyServiceCallback> lobbySubscriptions =
+            new MatchCallbackSubscriptions<IMatchLobbyServiceCallback>(
+                (_, _) => true,
+                NullLogger.Instance);
+        using MatchCallbackSubscriptions<IGameplayMatchServiceCallback> gameplaySubscriptions =
+            new MatchCallbackSubscriptions<IGameplayMatchServiceCallback>(
+                (_, _) => true,
+                NullLogger.Instance);
+        using MatchCallbackSubscriptions<IMatchChatServiceCallback> chatSubscriptions =
+            new MatchCallbackSubscriptions<IMatchChatServiceCallback>(
+                (_, _) => true,
+                NullLogger.Instance);
+        MatchLobbyService lobby = new MatchLobbyService(matches, lobbySubscriptions);
+        GameplayMatchService gameplay = new GameplayMatchService(
+            gameplayMatches,
+            store,
+            new GameplayMatchPresence(),
+            gameplaySubscriptions);
+        MatchChatService chat = new MatchChatService(messages, chatSubscriptions);
+        session.SessionClosed += lobbySubscriptions.RemoveSession;
+        session.SessionClosed += gameplaySubscriptions.RemoveSession;
+        session.SessionClosed += chatSubscriptions.RemoveSession;
         ServiceHost[] hosts =
         {
             CreateHost<ISessionService>(session, "18091/ReversiReview/Session"),
@@ -66,9 +80,9 @@ internal static class ReviewMatchHost
         }
         finally
         {
-            session.SessionClosed -= lobby.RemoveSession;
-            session.SessionClosed -= gameplay.RemoveSession;
-            session.SessionClosed -= chat.RemoveSession;
+            session.SessionClosed -= lobbySubscriptions.RemoveSession;
+            session.SessionClosed -= gameplaySubscriptions.RemoveSession;
+            session.SessionClosed -= chatSubscriptions.RemoveSession;
             foreach (ServiceHost host in hosts)
             {
                 host.Abort();

@@ -51,15 +51,15 @@ public sealed class FriendshipPresenceTests
 
         // Act
         context.Revoke("two");
-        context.Service.RemoveSession("two");
+        context.Subscriptions.Remove("two");
         context.Revoke("two-b");
-        context.Service.RemoveSession("two-b");
+        context.Subscriptions.Remove("two-b");
 
         // Assert
         TestAssert.IsTrue(observer.Channel.GetFriends("one")[0].IsOnline, "Third session must keep account online.");
         TestAssert.AreEqual(0, observer.Count(2, FriendChange.Disconnected));
         context.Revoke("two-c");
-        context.Service.RemoveSession("two-c");
+        context.Subscriptions.Remove("two-c");
         Wait(() => observer.Count(2, FriendChange.Disconnected) == 1);
         TestAssert.IsTrue(!observer.Channel.GetFriends("one")[0].IsOnline, "Last revocation must disconnect.");
     }
@@ -143,7 +143,7 @@ public sealed class FriendshipPresenceTests
         using FriendshipPresenceTestContext context = new FriendshipPresenceTestContext();
         FriendshipPresenceTestClient revoked = context.Connect("one");
         context.Revoke("one");
-        context.Service.RemoveSession("one");
+        context.Subscriptions.Remove("one");
         context.AddSession("one-live", 1);
         FriendshipPresenceTestClient live = context.Connect("one-live");
 
@@ -211,7 +211,7 @@ public sealed class FriendshipPresenceTests
         TestAssert.IsTrue(friend.Channel.GetFriends("two")[0].IsOnline,
             "A repository failure must not remove the observer's presence.");
         context.Revoke("two");
-        context.Service.RemoveSession("two");
+        context.Subscriptions.Remove("two");
         Wait(() => observer.Count(2, FriendChange.Disconnected) == 1);
     }
 
@@ -268,7 +268,9 @@ public sealed class FriendshipPresenceTests
             "The independent diagnostic sink must exclude both provider messages.");
     }
 
-    private sealed class FailureLogger : ILogger<FriendshipService>, ILogger<ServiceErrorBehavior>
+    private sealed class FailureLogger :
+        ILogger<FriendshipSubscriptions>,
+        ILogger<ServiceErrorBehavior>
     {
         internal bool ThrowOnLog { get; set; }
         internal Exception? Failure { get; private set; }

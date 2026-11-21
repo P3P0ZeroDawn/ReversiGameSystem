@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.ServiceModel;
 using Microsoft.Extensions.Logging;
@@ -10,6 +12,9 @@ using ReversiGameSystem.Server.Application.Leaderboards;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Application.Players;
 using ReversiGameSystem.Server.Application.Verification;
+using ReversiGameSystem.Server.Contracts.Callbacks;
+using ReversiGameSystem.Server.Contracts.Friendships;
+using ReversiGameSystem.Server.Contracts.Matches;
 using ReversiGameSystem.Server.Persistence.Accounts;
 using ReversiGameSystem.Server.Persistence.Chat;
 using ReversiGameSystem.Server.Persistence.Configuration;
@@ -22,6 +27,8 @@ using ReversiGameSystem.Server.Persistence.Sessions;
 using ReversiGameSystem.Server.Persistence.Verification;
 using ReversiGameSystem.Server.ServiceApi;
 using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 
 namespace ReversiGameSystem.Server.Host;
 
@@ -29,16 +36,18 @@ internal static class Program
 {
     private const long MaximumLogFileSizeBytes = 10_485_760;
     private const int RetainedLogFileCount = 7;
+    private const int MaximumFriendshipSweepChannels = 64;
     private const string PersistentLogOutputTemplate =
-        "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] "
-        + "{SourceContext} {Message:lj}{NewLine}";
+        "{UtcTimestamp} [{Level:u3}] "
+        + "{SourceContext} {Message:lj}{NewLine}{Exception}";
 
     private static int Main()
     {
         string logDirectory = GetLogDirectory();
         Directory.CreateDirectory(logDirectory);
-        Serilog.Core.Logger fileLogger = new LoggerConfiguration()
+        Logger fileLogger = new LoggerConfiguration()
             .MinimumLevel.Information()
+            .Enrich.With(new UtcTimestampEnricher())
             .WriteTo.File(
                 Path.Combine(logDirectory, "server-.log"),
                 rollingInterval: RollingInterval.Day,
@@ -69,16 +78,23 @@ internal static class Program
                     SystemUtcClock clock = new SystemUtcClock();
                     SessionRepository sessions = new SessionRepository(clock);
                     AccountPresenceRegistry presenceRegistry = new AccountPresenceRegistry();
-                    FriendshipSubscriptions friendshipSubscriptions =
-                        new FriendshipSubscriptions();
-                    FriendshipApplicationService friendshipApplicationService =
-                        new FriendshipApplicationService(sessions, new FriendRepository());
-                    using (FriendshipService friendship = new FriendshipService(
-                        friendshipApplicationService,
-                        presenceRegistry,
-                        friendshipSubscriptions,
-                        loggerFactory.CreateLogger<FriendshipService>()))
+                    using (FriendshipSubscriptions friendshipSubscriptions =
+                        new FriendshipSubscriptions(
+                            loggerFactory.CreateLogger<FriendshipSubscriptions>()))
                     {
+                        FriendshipApplicationService friendshipApplicationService =
+                            new FriendshipApplicationService(sessions, new FriendRepository());
+                        presenceRegistry.PresenceChanged += (accountId, isOnline) =>
+                            PublishPresenceChange(
+                                accountId,
+                                isOnline,
+                                friendshipApplicationService,
+                                friendshipSubscriptions,
+                                hostLogger);
+                        FriendshipService friendship = new FriendshipService(
+                            friendshipApplicationService,
+                            presenceRegistry,
+                            friendshipSubscriptions);
                         MatchInvitationEmailSender matchInvitationEmailSender =
                             new MatchInvitationEmailSender(MailSettings.Load());
                         MatchRepository matchRepository = new MatchRepository();
@@ -96,44 +112,143 @@ internal static class Program
                                 clock);
                         matchApplicationService.MatchStarted +=
                             gameplayMatchApplicationService.TrackStartedMatch;
-                        using MatchLobbyService matchLobbyService = new MatchLobbyService(
-                            matchApplicationService,
-                            loggerFactory.CreateLogger<MatchLobbyService>());
-                        using GameplayMatchService gameplayMatchService =
-                            new GameplayMatchService(
-                                gameplayMatchApplicationService,
-                                sessions,
-                                loggerFactory.CreateLogger<GameplayMatchService>());
-                        ChatRepository chatRepository = new ChatRepository(clock);
-                        ChatApplicationService chatApplicationService =
-                            new ChatApplicationService(sessions, chatRepository, clock);
-                        using MatchChatService matchChatService = new MatchChatService(
-                            chatApplicationService,
-                            loggerFactory.CreateLogger<MatchChatService>());
-                        SessionService sessionService = CreateSessionService(
-                            loggerFactory.CreateLogger<SessionService>(), sessions, clock);
-                        sessionService.SessionClosed += friendship.RemoveSession;
-                        sessionService.SessionClosed += matchLobbyService.RemoveSession;
-                        sessionService.SessionClosed += gameplayMatchService.RemoveSession;
-                        sessionService.SessionClosed += matchChatService.RemoveSession;
-                        ServiceHost[] hosts =
+                        MatchCallbackSubscriptions<IMatchLobbyServiceCallback>? lobbySubscriptions =
+                            null;
+                        lobbySubscriptions =
+                            new MatchCallbackSubscriptions<IMatchLobbyServiceCallback>(
+                                (token, _) => matchApplicationService.EvaluateLobbyAccess(token)
+                                    == MatchStatus.Success,
+                                (token, _) =>
+                                {
+                                    if (lobbySubscriptions != null)
+                                    {
+                                        CancelWaitingLobbiesForSession(
+                                            token,
+                                            matchApplicationService,
+                                            lobbySubscriptions);
+                                    }
+                                },
+                                loggerFactory.CreateLogger<
+                                    MatchCallbackSubscriptions<IMatchLobbyServiceCallback>>());
+                        using (lobbySubscriptions)
                         {
-                            CreateServiceHost(
-                                CreateAccountAccessService(),
-                                loggerFactory),
-                            CreateServiceHost(sessionService, loggerFactory),
-                            CreateServiceHost(
-                                CreatePlayerProfileService(sessions),
-                                loggerFactory),
-                            CreateServiceHost(
-                                CreateLeaderboardService(),
-                                loggerFactory),
-                            CreateServiceHost(friendship, loggerFactory),
-                            CreateServiceHost(matchLobbyService, loggerFactory),
-                            CreateServiceHost(gameplayMatchService, loggerFactory),
-                            CreateServiceHost(matchChatService, loggerFactory)
-                        };
-                        return Run(hosts, hostLogger);
+                            MatchLobbyService matchLobbyService = new MatchLobbyService(
+                                matchApplicationService,
+                                lobbySubscriptions);
+                            GameplayMatchPresence gameplayPresence = new GameplayMatchPresence();
+                            MatchCallbackSubscriptions<IGameplayMatchServiceCallback>?
+                                gameplaySubscriptions = null;
+                            gameplaySubscriptions =
+                                new MatchCallbackSubscriptions<IGameplayMatchServiceCallback>(
+                                    (token, matchId) => IsGameplayChannelAuthorized(
+                                        token,
+                                        matchId,
+                                        gameplayMatchApplicationService),
+                                    (sessionToken, matchId) =>
+                                    {
+                                        if (gameplaySubscriptions != null)
+                                        {
+                                            HandleGameplaySubscriptionRemoved(
+                                                sessionToken,
+                                                matchId,
+                                                gameplayPresence,
+                                                gameplaySubscriptions);
+                                        }
+                                    },
+                                    loggerFactory.CreateLogger<
+                                        MatchCallbackSubscriptions<
+                                            IGameplayMatchServiceCallback>>());
+                            using (gameplaySubscriptions)
+                            {
+                                GameplayMatchService gameplayMatchService =
+                                    new GameplayMatchService(
+                                        gameplayMatchApplicationService,
+                                        sessions,
+                                        gameplayPresence,
+                                        gameplaySubscriptions);
+                                ChatRepository chatRepository = new ChatRepository(clock);
+                                ChatApplicationService chatApplicationService =
+                                    new ChatApplicationService(sessions, chatRepository, clock);
+                                using MatchCallbackSubscriptions<IMatchChatServiceCallback>
+                                    chatSubscriptions =
+                                    new MatchCallbackSubscriptions<IMatchChatServiceCallback>(
+                                        (sessionToken, matchId) =>
+                                            chatApplicationService.EvaluateParticipantAccess(
+                                                sessionToken,
+                                                matchId) == ChatStatus.Success,
+                                        loggerFactory.CreateLogger<
+                                            MatchCallbackSubscriptions<
+                                                IMatchChatServiceCallback>>());
+                                MatchChatService matchChatService = new MatchChatService(
+                                    chatApplicationService,
+                                    chatSubscriptions);
+                                SessionService sessionService = CreateSessionService(
+                                    loggerFactory.CreateLogger<SessionService>(), sessions, clock);
+                                sessionService.SessionClosed += friendshipSubscriptions.Remove;
+                                sessionService.SessionClosed += sessionToken =>
+                                {
+                                    lobbySubscriptions.RemoveSession(sessionToken);
+                                    CancelWaitingLobbiesForSession(
+                                        sessionToken,
+                                        matchApplicationService,
+                                        lobbySubscriptions);
+                                };
+                                sessionService.SessionClosed += gameplaySubscriptions.RemoveSession;
+                                sessionService.SessionClosed += chatSubscriptions.RemoveSession;
+                                ServiceHost[] hosts =
+                                {
+                                    CreateServiceHost(
+                                        CreateAccountAccessService(),
+                                        loggerFactory),
+                                    CreateServiceHost(sessionService, loggerFactory),
+                                    CreateServiceHost(
+                                        CreatePlayerProfileService(sessions),
+                                        loggerFactory),
+                                    CreateServiceHost(
+                                        CreateLeaderboardService(),
+                                        loggerFactory),
+                                    CreateServiceHost(friendship, loggerFactory),
+                                    CreateServiceHost(matchLobbyService, loggerFactory),
+                                    CreateServiceHost(gameplayMatchService, loggerFactory),
+                                    CreateServiceHost(matchChatService, loggerFactory)
+                                };
+                                PeriodicTaskRunner[] runners =
+                                {
+                                    new PeriodicTaskRunner(
+                                        nameof(GameplayMatchApplicationService
+                                            .SynchronizePendingMatches),
+                                        TimeSpan.FromSeconds(1),
+                                        gameplayMatchApplicationService.SynchronizePendingMatches,
+                                        loggerFactory.CreateLogger<PeriodicTaskRunner>()),
+                                    new PeriodicTaskRunner(
+                                        nameof(GameplayMatchApplicationService.ProcessTurnTimeouts),
+                                        TimeSpan.FromSeconds(1),
+                                        () => ProcessGameplayTimeouts(
+                                            gameplayMatchApplicationService,
+                                            gameplayPresence,
+                                            gameplaySubscriptions),
+                                        loggerFactory.CreateLogger<PeriodicTaskRunner>()),
+                                    new PeriodicTaskRunner(
+                                        nameof(FriendshipSubscriptions.SweepChannels),
+                                        TimeSpan.FromSeconds(5),
+                                        () => friendshipSubscriptions.SweepChannels(
+                                            MaximumFriendshipSweepChannels,
+                                            token => friendshipApplicationService
+                                                .EvaluateChannelAccess(token).Status
+                                                == FriendshipStatus.Success),
+                                        loggerFactory.CreateLogger<PeriodicTaskRunner>()),
+                                    new PeriodicTaskRunner(
+                                        nameof(MatchApplicationService
+                                            .CancelExpiredWaitingSessions),
+                                        TimeSpan.FromSeconds(5),
+                                        () => SweepExpiredLobbies(
+                                            matchApplicationService,
+                                            lobbySubscriptions),
+                                        loggerFactory.CreateLogger<PeriodicTaskRunner>())
+                                };
+                                return Run(hosts, runners, hostLogger);
+                            }
+                        }
                     }
                 }
                 catch (Exception exception)
@@ -232,8 +347,147 @@ internal static class Program
         return host;
     }
 
+    private static void PublishPresenceChange(
+        long accountId,
+        bool isOnline,
+        FriendshipApplicationService applicationService,
+        FriendshipSubscriptions subscriptions,
+        Microsoft.Extensions.Logging.ILogger logger)
+    {
+        try
+        {
+            long[] friendIds = applicationService.ReadConfirmedFriendIds(accountId);
+            if (friendIds.Length == 0)
+            {
+                return;
+            }
+
+            HashSet<long> targets = new HashSet<long>(friendIds);
+            FriendChange change = isOnline ? FriendChange.Connected : FriendChange.Disconnected;
+            subscriptions.PublishToAccounts(
+                targets,
+                callback => callback.OnFriendChanged(accountId, change));
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "Failed to publish presence change for account {AccountId}.",
+                accountId);
+        }
+    }
+
+    private static void SweepExpiredLobbies(
+        MatchApplicationService applicationService,
+        MatchCallbackSubscriptions<IMatchLobbyServiceCallback> subscriptions)
+    {
+        foreach (long matchId in applicationService.CancelExpiredWaitingSessions())
+        {
+            PublishLobbyClosed(matchId, applicationService, subscriptions);
+        }
+    }
+
+    private static void CancelWaitingLobbiesForSession(
+        string sessionToken,
+        MatchApplicationService applicationService,
+        MatchCallbackSubscriptions<IMatchLobbyServiceCallback> subscriptions)
+    {
+        foreach (long matchId in applicationService.CancelWaitingForSession(sessionToken))
+        {
+            PublishLobbyClosed(matchId, applicationService, subscriptions);
+        }
+    }
+
+    private static void PublishLobbyClosed(
+        long matchId,
+        MatchApplicationService applicationService,
+        MatchCallbackSubscriptions<IMatchLobbyServiceCallback> subscriptions)
+    {
+        subscriptions.Publish(matchId, (token, callback) =>
+        {
+            MatchResult<Match> result = applicationService.GetParticipantMatch(token, matchId);
+            if (result.Status == MatchStatus.Success)
+            {
+                callback.OnLobbyClosed(matchId);
+            }
+        });
+    }
+
+    private static bool IsGameplayChannelAuthorized(
+        string token,
+        long matchId,
+        GameplayMatchApplicationService applicationService)
+    {
+        MatchResult<Match> result = applicationService.GetMatchState(token, matchId);
+        if (result.Status != MatchStatus.Success || result.Value == null)
+        {
+            return false;
+        }
+
+        return string.Equals(result.Value.State, "InProgress", StringComparison.Ordinal)
+            || string.Equals(result.Value.State, "Finished", StringComparison.Ordinal);
+    }
+
+    private static void HandleGameplaySubscriptionRemoved(
+        string sessionToken,
+        long matchId,
+        GameplayMatchPresence presence,
+        MatchCallbackSubscriptions<IGameplayMatchServiceCallback> subscriptions)
+    {
+        KeyValuePair<int, bool>[]? snapshot = presence.RemoveConnection(
+            sessionToken,
+            matchId,
+            subscriptions.HasSubscription);
+        if (snapshot == null)
+        {
+            return;
+        }
+
+        subscriptions.Publish(matchId, (token, callback) =>
+        {
+            for (int index = 0; index < snapshot.Length; index++)
+            {
+                callback.OnParticipantConnectionChanged(
+                    matchId,
+                    snapshot[index].Key,
+                    snapshot[index].Value);
+            }
+        });
+    }
+
+    private static void ProcessGameplayTimeouts(
+        GameplayMatchApplicationService applicationService,
+        GameplayMatchPresence presence,
+        MatchCallbackSubscriptions<IGameplayMatchServiceCallback> subscriptions)
+    {
+        foreach ((long MatchId, int SeatNumber) key in presence.CollectExpiredReconnections())
+        {
+            MatchResult<Match> result = applicationService.ForfeitDisconnectedParticipant(
+                key.MatchId,
+                key.SeatNumber);
+            if (result.Status == MatchStatus.Success && result.Value != null)
+            {
+                MatchStateSnapshot snapshot = MatchContractMapper.MapState(result.Value);
+                subscriptions.Publish(
+                    result.Value.Id,
+                    (token, callback) => callback.OnMatchStateChanged(snapshot));
+            }
+        }
+
+        Match[] transitionedMatches = applicationService.ProcessTurnTimeouts();
+        for (int index = 0; index < transitionedMatches.Length; index++)
+        {
+            Match match = transitionedMatches[index];
+            MatchStateSnapshot snapshot = MatchContractMapper.MapState(match);
+            subscriptions.Publish(
+                match.Id,
+                (token, callback) => callback.OnMatchStateChanged(snapshot));
+        }
+    }
+
     private static int Run(
         ServiceHost[] hosts,
+        PeriodicTaskRunner[] runners,
         Microsoft.Extensions.Logging.ILogger logger)
     {
         try
@@ -242,13 +496,26 @@ internal static class Program
             {
                 host.Open();
             }
+
+            foreach (PeriodicTaskRunner runner in runners)
+            {
+                runner.Start();
+            }
+
             logger.LogInformation(
                 "The Reversi server is listening. Press Enter to stop it.");
             Console.ReadLine();
+
+            foreach (PeriodicTaskRunner runner in runners)
+            {
+                runner.Dispose();
+            }
+
             for (int index = hosts.Length - 1; index >= 0; index--)
             {
                 hosts[index].Close();
             }
+
             return 0;
         }
         catch (Exception exception)
@@ -258,10 +525,27 @@ internal static class Program
         }
         finally
         {
+            foreach (PeriodicTaskRunner runner in runners)
+            {
+                runner.Dispose();
+            }
+
             foreach (ServiceHost host in hosts)
             {
                 host.Abort();
             }
+        }
+    }
+
+    private sealed class UtcTimestampEnricher : ILogEventEnricher
+    {
+        public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
+        {
+            string utcTimestamp = logEvent.Timestamp.UtcDateTime.ToString(
+                "yyyy-MM-dd HH:mm:ss.fff 'Z'",
+                CultureInfo.InvariantCulture);
+            logEvent.AddPropertyIfAbsent(
+                propertyFactory.CreateProperty("UtcTimestamp", utcTimestamp));
         }
     }
 }

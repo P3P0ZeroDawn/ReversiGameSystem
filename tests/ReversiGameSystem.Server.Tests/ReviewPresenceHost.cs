@@ -22,15 +22,15 @@ internal static class ReviewPresenceHost
             applicationService,
             NullLogger<SessionService>.Instance);
         AccountPresenceRegistry presenceRegistry = new AccountPresenceRegistry();
-        FriendshipSubscriptions friendshipSubscriptions = new FriendshipSubscriptions();
+        using FriendshipSubscriptions friendshipSubscriptions =
+            new FriendshipSubscriptions(NullLogger<FriendshipSubscriptions>.Instance);
         FriendshipApplicationService friendshipApplicationService =
             new FriendshipApplicationService(sessions, new FriendRepository());
-        using FriendshipService friendship = new FriendshipService(
+        FriendshipService friendship = new FriendshipService(
             friendshipApplicationService,
             presenceRegistry,
-            friendshipSubscriptions,
-            NullLogger<FriendshipService>.Instance);
-        session.SessionClosed += friendship.RemoveSession;
+            friendshipSubscriptions);
+        session.SessionClosed += friendshipSubscriptions.Remove;
         ServiceHost sessionHost = new ServiceHost(session);
         ServiceHost friendshipHost = new ServiceHost(friendship);
         try
@@ -48,7 +48,7 @@ internal static class ReviewPresenceHost
         }
         finally
         {
-            session.SessionClosed -= friendship.RemoveSession;
+            session.SessionClosed -= friendshipSubscriptions.Remove;
             friendshipHost.Abort();
             sessionHost.Abort();
         }
