@@ -106,6 +106,7 @@ internal sealed class MatchChatClient : IDisposable, Proxy.IMatchChatServiceCall
             status = ChatStatus.Success;
         }
         catch (FaultException<Proxy.ChatFault> fault)
+            when (Enum.IsDefined(typeof(Proxy.ChatFailure), fault.Detail.Reason))
         {
             status = MapChatFailure(fault.Detail.Reason);
             if (fault.Detail.MuteEndsAtUtc.HasValue)
@@ -113,15 +114,33 @@ internal sealed class MatchChatClient : IDisposable, Proxy.IMatchChatServiceCall
                 UpdateMute(fault.Detail.MuteEndsAtUtc.Value);
             }
         }
-        catch (CommunicationException exception)
+        catch (CommunicationException exception) when (CanMapAccessFailure(exception))
         {
             status = MapAccessFailure(exception);
+        }
+        catch (CommunicationException exception) when (exception is not FaultException)
+        {
+            status = ChatStatus.ServiceUnavailable;
         }
         catch (TimeoutException)
         {
             status = ChatStatus.ServiceUnavailable;
         }
         return status;
+    }
+
+    private static bool CanMapAccessFailure(CommunicationException exception)
+    {
+        bool recognized = exception is FaultException<Proxy.SessionFault> session
+            && Enum.IsDefined(typeof(Proxy.SessionFailure), session.Detail.Reason);
+        if (exception is FaultException<Proxy.MatchFault> fault)
+        {
+            recognized = fault.Detail.Reason is Proxy.MatchFailure.InactiveAccount
+                or Proxy.MatchFailure.Unauthorized
+                or Proxy.MatchFailure.MatchNotFound
+                or Proxy.MatchFailure.MatchNotInProgress;
+        }
+        return recognized;
     }
 
     private static ChatStatus MapAccessFailure(CommunicationException exception)

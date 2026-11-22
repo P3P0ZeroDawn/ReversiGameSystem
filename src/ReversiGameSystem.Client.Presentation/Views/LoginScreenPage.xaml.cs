@@ -9,17 +9,12 @@ using ReversiGameSystem.Validation;
 
 namespace ReversiGameSystem.Views;
 
-/// <summary>
-/// Displays the sign-in form.
-/// </summary>
 public partial class LoginScreenPage : Page
 {
+    private const string SavedLanguageUnavailableMessage = "The saved language could not be applied.";
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
     private readonly LoginViewModel _viewModel;
 
-    /// <summary>
-    /// Initializes the sign-in page.
-    /// </summary>
     public LoginScreenPage() : this(new LoginViewModel(ClientRuntime.SessionService))
     {
     }
@@ -91,6 +86,12 @@ public partial class LoginScreenPage : Page
                 AuthenticatedAccountSession session = result.Value
                     ?? throw new InvalidOperationException(
                         "A successful session result must contain its value.");
+                LanguageChangeResult languageStatus = LocalizationManager.Instance.TrySetCulture(
+                    session.PreferredLocaleCode);
+                if (languageStatus != LanguageChangeResult.Success)
+                {
+                    throw new InvalidOperationException(SavedLanguageUnavailableMessage);
+                }
                 ClientRuntime.CurrentSession.StartAuthenticated(session);
                 NavigationService?.Navigate(new MainMenuPage());
                 return;
@@ -246,8 +247,8 @@ public partial class LoginScreenPage : Page
         return _dialogService.TryGetText(this, options, out _);
     }
 
-    private void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        LanguageChangeService.ConfirmSelection((ComboBox)sender);
+        await LanguageChangeService.ConfirmSelection((ComboBox)sender);
     }
 }

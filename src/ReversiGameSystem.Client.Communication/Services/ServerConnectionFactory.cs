@@ -13,6 +13,12 @@ internal static class ServerConnectionFactory
     internal const string ServerHostVariable = "REVERSI_SERVER_HOST";
     internal const string DefaultHost = "localhost";
 
+    private const int PreferencesPort = 8098;
+    private const int PreferencesRequestTimeoutSeconds = 5;
+    private const long MaximumPreferencesMessageBytes = 6291456;
+    private const string PreferencesEndpoint = "PlayerPreferencesEndpoint";
+    private const string PreferencesPath = "/ReversiGameSystem/PlayerPreferences";
+
     private static readonly IReadOnlyDictionary<string, (int Port, string Path)> KnownEndpoints =
         new Dictionary<string, (int Port, string Path)>(StringComparer.OrdinalIgnoreCase)
         {
@@ -23,7 +29,8 @@ internal static class ServerConnectionFactory
             ["FriendshipEndpoint"] = (8094, "/ReversiGameSystem/Friendship"),
             ["MatchLobbyEndpoint"] = (8095, "/ReversiGameSystem/MatchLobby"),
             ["GameplayMatchEndpoint"] = (8096, "/ReversiGameSystem/GameplayMatch"),
-            ["MatchChatEndpoint"] = (8097, "/ReversiGameSystem/MatchChat")
+            ["MatchChatEndpoint"] = (8097, "/ReversiGameSystem/MatchChat"),
+            [PreferencesEndpoint] = (PreferencesPort, PreferencesPath)
         };
 
     internal static string GetServerHost()
@@ -57,14 +64,22 @@ internal static class ServerConnectionFactory
         }
 
         string host = GetServerHost();
-        Uri? baseUri = ResolveConfiguredUri(endpointConfigurationName);
-        if (baseUri != null)
+        ClientSection? clientSection =
+            ConfigurationManager.GetSection("system.serviceModel/client") as ClientSection;
+        if (clientSection != null)
         {
-            UriBuilder builder = new UriBuilder(baseUri)
+            foreach (ChannelEndpointElement endpoint in clientSection.Endpoints)
             {
-                Host = host
-            };
-            return new EndpointAddress(builder.Uri);
+                if (string.Equals(endpoint.Name, endpointConfigurationName,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    UriBuilder builder = new UriBuilder(endpoint.Address)
+                    {
+                        Host = host
+                    };
+                    return new EndpointAddress(builder.Uri);
+                }
+            }
         }
 
         if (KnownEndpoints.TryGetValue(
@@ -99,6 +114,18 @@ internal static class ServerConnectionFactory
         return new Proxy.PlayerProfileServiceClient(
             "PlayerProfileEndpoint",
             CreateEndpointAddress("PlayerProfileEndpoint"));
+    }
+
+    internal static Proxy.PlayerPreferencesServiceClient CreatePreferencesClient()
+    {
+        NetTcpBinding binding = new NetTcpBinding(SecurityMode.None)
+        {
+            OpenTimeout = TimeSpan.FromSeconds(PreferencesRequestTimeoutSeconds),
+            SendTimeout = TimeSpan.FromSeconds(PreferencesRequestTimeoutSeconds),
+            MaxReceivedMessageSize = MaximumPreferencesMessageBytes
+        };
+        return new Proxy.PlayerPreferencesServiceClient(binding,
+            CreateEndpointAddress(PreferencesEndpoint));
     }
 
     internal static Proxy.LeaderboardServiceClient CreateLeaderboardClient()
@@ -164,31 +191,4 @@ internal static class ServerConnectionFactory
             CreateEndpointAddress("MatchChatEndpoint"));
     }
 
-    private static Uri? ResolveConfiguredUri(string endpointConfigurationName)
-    {
-        try
-        {
-            ClientSection? clientSection =
-                ConfigurationManager.GetSection("system.serviceModel/client") as ClientSection;
-            if (clientSection != null)
-            {
-                foreach (ChannelEndpointElement endpoint in clientSection.Endpoints)
-                {
-                    if (string.Equals(
-                        endpoint.Name,
-                        endpointConfigurationName,
-                        StringComparison.OrdinalIgnoreCase))
-                    {
-                        return endpoint.Address;
-                    }
-                }
-            }
-        }
-        catch (ConfigurationException)
-        {
-            // Fall back to known endpoints mapping if configuration section cannot be loaded.
-        }
-
-        return null;
-    }
 }

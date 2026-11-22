@@ -7,9 +7,6 @@ using ReversiGameSystem.Services;
 
 namespace ReversiGameSystem.Views;
 
-/// <summary>
-/// Lists pending friendship requests received by the authenticated player.
-/// </summary>
 public partial class FriendRequestsPage : Page
 {
     private readonly DialogService _dialogService =
@@ -19,9 +16,6 @@ public partial class FriendRequestsPage : Page
     private IReadOnlyList<FriendshipRequest> _requests =
         System.Array.Empty<FriendshipRequest>();
 
-    /// <summary>
-    /// Initializes the pending friend-requests page.
-    /// </summary>
     public FriendRequestsPage()
     {
         InitializeComponent();
@@ -163,10 +157,10 @@ public partial class FriendRequestsPage : Page
         NavigationService?.Navigate(new MainMenuPage());
     }
 
-    private void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         string previousCulture = LocalizationManager.Instance.CultureName;
-        LanguageChangeService.ConfirmSelection((ComboBox)sender);
+        await LanguageChangeService.ConfirmSelection((ComboBox)sender);
         if (LocalizationManager.Instance.CultureName != previousCulture)
         {
             LoadRequests();

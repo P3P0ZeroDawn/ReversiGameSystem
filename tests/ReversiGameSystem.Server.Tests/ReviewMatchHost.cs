@@ -7,18 +7,27 @@ using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Chat;
 using ReversiGameSystem.Server.Application.Matches;
+using ReversiGameSystem.Server.Application.Preferences;
 using ReversiGameSystem.Server.Contracts.Callbacks;
 using ReversiGameSystem.Server.Contracts.Services;
 using ReversiGameSystem.Server.Persistence.Accounts;
 using ReversiGameSystem.Server.Persistence.Chat;
 using ReversiGameSystem.Server.Persistence.Matches;
+using ReversiGameSystem.Server.Persistence.Players;
+using ReversiGameSystem.Server.Persistence.Preferences;
 using ReversiGameSystem.Server.ServiceApi;
 
 namespace ReversiGameSystem.Server.Tests;
 
 internal static class ReviewMatchHost
 {
-    internal static void Run() => ReviewAccountDatabaseTests.RunWithReviewAccounts(Host);
+    private const string PreferencesMigration = "20261121_CustomBoardBackgroundPreference.sql";
+    private const string PreferencesAddress = "18098/ReversiReview/PlayerPreferences";
+
+    internal static void Run()
+    {
+        ReviewAccountDatabaseTests.RunWithReviewAccounts(Host);
+    }
 
     private static void Host(
         SessionApplicationService applicationService,
@@ -84,12 +93,24 @@ internal static class ReviewMatchHost
         session.SessionClosed += lobbySubscriptions.RemoveSession;
         session.SessionClosed += gameplaySubscriptions.RemoveSession;
         session.SessionClosed += chatSubscriptions.RemoveSession;
+        string backgroundDirectory = Path.Combine(Path.GetTempPath(),
+            "ReversiReviewPreferences-" + Guid.NewGuid().ToString("N"));
+        ProfileImageRepository backgrounds = new ProfileImageRepository(
+            backgroundDirectory, "board-backgrounds/");
+        PreferencesApplicationService preferencesApplication = new PreferencesApplicationService(
+            store, new PreferencesRepository(), backgrounds);
+        PlayerPreferencesService preferences = new PlayerPreferencesService(preferencesApplication);
+        ServiceHost preferencesHost = CreateHost<IPlayerPreferencesService>(
+            preferences, PreferencesAddress);
+        preferencesHost.Description.Behaviors.Add(
+            new ServiceErrorBehavior(NullLogger<ServiceErrorBehavior>.Instance));
         ServiceHost[] hosts =
         {
             CreateHost<ISessionService>(session, "18091/ReversiReview/Session"),
             CreateHost<IMatchLobbyService>(lobby, "18095/ReversiReview/MatchLobby"),
             CreateHost<IGameplayMatchService>(gameplay, "18096/ReversiReview/GameplayMatch"),
-            CreateHost<IMatchChatService>(chat, "18097/ReversiReview/MatchChat")
+            CreateHost<IMatchChatService>(chat, "18097/ReversiReview/MatchChat"),
+            preferencesHost
         };
         try
         {
@@ -112,6 +133,10 @@ internal static class ReviewMatchHost
             foreach (ServiceHost host in hosts)
             {
                 host.Abort();
+            }
+            if (Directory.Exists(backgroundDirectory))
+            {
+                Directory.Delete(backgroundDirectory, recursive: true);
             }
         }
     }
@@ -145,6 +170,9 @@ internal static class ReviewMatchHost
         using SqlCommand command = connection.CreateCommand();
         command.CommandText = File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
             "Fixtures", "ReviewMatchSchema.sql"));
+        command.ExecuteNonQuery();
+        command.CommandText = File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
+            "migrations", PreferencesMigration));
         command.ExecuteNonQuery();
     }
 }

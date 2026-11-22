@@ -3,6 +3,13 @@
 Este inventario muestra únicamente el estado vigente y el siguiente trabajo. El historial
 de cambios permanece en Git y no se repite aquí.
 
+## Prioridad inmediata del cliente
+
+1. Dejar operativo el guardado del idioma preferido en la base de datos y su recuperación al iniciar sesión.
+2. Revisar inmediatamente el manejo de excepciones del cliente recién implementado.
+
+El resto de preferencias es secundario. La revisión general de pruebas sigue al final.
+
 ## Criterio de finalización
 
 Un servicio queda migrado cuando su flujo es legible, sigue la estructura descrita en

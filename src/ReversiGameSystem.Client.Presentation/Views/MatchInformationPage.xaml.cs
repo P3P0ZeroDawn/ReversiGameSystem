@@ -21,9 +21,6 @@ internal enum MatchInformationReturnTarget
     History
 }
 
-/// <summary>
-/// Displays the current or historical state of a selected match.
-/// </summary>
 public partial class MatchInformationPage : Page
 {
     private readonly MatchInformation _match;
@@ -249,10 +246,10 @@ public partial class MatchInformationPage : Page
         dialog.ShowDialog();
     }
 
-    private void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         string previousCulture = LocalizationManager.Instance.CultureName;
-        LanguageChangeService.ConfirmSelection((ComboBox)sender);
+        await LanguageChangeService.ConfirmSelection((ComboBox)sender);
         if (LocalizationManager.Instance.CultureName != previousCulture)
         {
             ShowLocalizedInformation();

@@ -907,7 +907,7 @@
     <value>Language preference not saved</value>
   </data>
   <data name="LanguageSettings_PersistenceErrorMessage" xml:space="preserve">
-    <value>We couldn't save your language preference. The previous language remains active.</value>
+    <value>We couldn't confirm that your language preference was saved. The previous language remains active.</value>
   </data>
   <data name="LanguageSettings_ResourcesErrorTitle" xml:space="preserve">
     <value>Language resources unavailable</value>
@@ -1329,4 +1329,16 @@
   <data name="InviteMatch_MatchNotWaitingMessage" xml:space="preserve"><value>The match could not be confirmed because it is no longer waiting.</value></data>
   <data name="InviteMatch_DeliveryFailedTitle" xml:space="preserve"><value>Invitation not sent</value></data>
   <data name="InviteMatch_DeliveryFailedMessage" xml:space="preserve"><value>The invitation email could not be delivered. No waiting match was created.</value></data>
+  <data name="Client_OperationFailedTitle" xml:space="preserve">
+    <value>Operation could not be completed</value>
+  </data>
+  <data name="Client_OperationFailedMessage" xml:space="preserve">
+    <value>The operation could not be completed. Reference: {0}.</value>
+  </data>
+  <data name="Client_FatalErrorTitle" xml:space="preserve">
+    <value>Unexpected application error</value>
+  </data>
+  <data name="Client_FatalErrorMessage" xml:space="preserve">
+    <value>An unexpected error occurred. The application will close. Reference: {0}.</value>
+  </data>
 </root>

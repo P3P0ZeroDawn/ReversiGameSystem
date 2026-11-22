@@ -368,7 +368,8 @@ internal sealed class GameViewModel : INotifyPropertyChanged
                 {
                     status = await _gameplay.RestoreMatchConnection(_matchId, attempt.Token);
                 }
-                catch (OperationCanceledException) when (!recovery.IsCancellationRequested)
+                catch (OperationCanceledException) when (attempt.IsCancellationRequested
+                    && !recovery.IsCancellationRequested)
                 {
                     status = MatchStatus.ServiceUnavailable;
                 }

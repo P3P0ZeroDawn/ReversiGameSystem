@@ -6,18 +6,12 @@ using ReversiGameSystem.Services;
 
 namespace ReversiGameSystem.Views;
 
-/// <summary>
-/// Displays the signed-in player's appearance preferences.
-/// </summary>
 public partial class SettingsPage : Page
 {
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
     private readonly BoardBackgroundSelectionService _selectionService;
     private readonly IBoardBackgroundService _backgroundService = new BoardBackgroundService();
 
-    /// <summary>
-    /// Initializes the settings page.
-    /// </summary>
     public SettingsPage()
     {
         InitializeComponent();
@@ -96,8 +90,8 @@ public partial class SettingsPage : Page
         NavigationService?.Navigate(new MainMenuPage());
     }
 
-    private void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        LanguageChangeService.ConfirmSelection((ComboBox)sender);
+        await LanguageChangeService.ConfirmSelection((ComboBox)sender);
     }
 }

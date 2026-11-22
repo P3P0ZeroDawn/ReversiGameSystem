@@ -79,6 +79,7 @@ internal sealed class DuplexChannel<TClient, TContract> : IDisposable
                         _client.Abort();
                     }
                     _client = _createClient();
+                    _client.Endpoint.EndpointBehaviors.Add(new CallbackErrorBehavior());
                     _client.InnerChannel.Faulted += OnChannelFaulted;
                     ChannelCreated?.Invoke();
                 }
@@ -129,7 +130,7 @@ internal sealed class DuplexChannel<TClient, TContract> : IDisposable
 
     private void LogConnectionFailure(Exception failure, string correlationId)
     {
-        _logger.LogWarning(FailureDiagnostics.ForLogging(failure),
+        _logger.LogWarning(failure,
             "The service channel failed. CorrelationId: {CorrelationId}", correlationId);
         ConnectionLost?.Invoke();
     }

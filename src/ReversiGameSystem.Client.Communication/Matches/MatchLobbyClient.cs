@@ -220,8 +220,13 @@ internal sealed class MatchLobbyClient : IDisposable, Proxy.IMatchLobbyServiceCa
             status = MatchStatus.Success;
         }
         catch (CommunicationException exception)
+            when (MatchContractMapper.CanMapFailure(exception))
         {
             status = MatchContractMapper.MapFailure(exception);
+        }
+        catch (CommunicationException exception) when (exception is not FaultException)
+        {
+            status = MatchStatus.ServiceUnavailable;
         }
         catch (TimeoutException)
         {

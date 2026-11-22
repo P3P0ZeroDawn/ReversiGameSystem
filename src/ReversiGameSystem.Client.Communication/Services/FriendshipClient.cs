@@ -70,6 +70,11 @@ internal sealed class FriendshipClient : IDisposable
         }
         catch (FaultException<Proxy.SessionFault>)
         {
+            lock (_sync)
+            {
+                ReleaseChannel();
+                _snapshot.Clear();
+            }
             return new FriendshipResult(
                 FriendshipStatus.InvalidSession, Array.Empty<FriendSummary>());
         }
@@ -116,7 +121,7 @@ internal sealed class FriendshipClient : IDisposable
         catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
         {
             _snapshot.CancelRefresh();
-            _logger.LogWarning(FailureDiagnostics.ForLogging(exception),
+            _logger.LogWarning(exception,
                 "The friendship presence request failed. CorrelationId: {CorrelationId}", correlationId);
             lock (_sync)
             {
@@ -186,6 +191,7 @@ internal sealed class FriendshipClient : IDisposable
                 FriendshipCallback callback = new FriendshipCallback(
                     (id, change) => OnChanged(generation, id, change));
                 _client = _createClient(new InstanceContext(callback));
+                _client.Endpoint.EndpointBehaviors.Add(new CallbackErrorBehavior());
                 _client.InnerChannel.Faulted += OnChannelLost;
                 _client.InnerChannel.Closed += OnChannelLost;
                 _token = token;

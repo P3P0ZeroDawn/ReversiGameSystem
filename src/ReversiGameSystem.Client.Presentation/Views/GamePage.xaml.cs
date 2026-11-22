@@ -318,14 +318,13 @@ public partial class GamePage : Page
         catch (Exception exception) when (exception is MissingManifestResourceException
             or MissingSatelliteAssemblyException or FormatException)
         {
-            _dialogs.ShowError(this, InstructionsLoadingErrorTitleKey,
-                InstructionsLoadingErrorMessageKey);
+            ClientRuntime.Errors.ReportOperationFailure(exception, nameof(InstructionsService));
         }
     }
 
-    private void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs arguments)
+    private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs arguments)
     {
-        LanguageChangeService.ConfirmSelection((ComboBox)sender);
+        await LanguageChangeService.ConfirmSelection((ComboBox)sender);
     }
 
     private void ShowConclusion()

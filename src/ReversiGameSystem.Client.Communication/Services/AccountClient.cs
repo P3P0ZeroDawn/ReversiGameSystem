@@ -47,10 +47,6 @@ internal sealed class AccountClient : IAccountClient
                 client => client.RegisterAccountAsync(credentials));
             status = MapStatus(outcome.Status);
         }
-        catch (FaultException<Proxy.ServiceFault>)
-        {
-            status = AccountCreationStatus.PersistenceUnavailable;
-        }
         catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
         {
             status = AccountCreationStatus.ServiceUnavailable;

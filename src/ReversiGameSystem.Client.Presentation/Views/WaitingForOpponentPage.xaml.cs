@@ -256,9 +256,9 @@ public partial class WaitingForOpponentPage : Page
         _navigated = true;
         NavigationService?.Navigate(_guestName == null ? new MainMenuPage() : new MainMenuPage(_guestName));
     }
-    private void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs args)
+    private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs args)
     {
-        LanguageChangeService.ConfirmSelection((ComboBox)sender);
+        await LanguageChangeService.ConfirmSelection((ComboBox)sender);
         if (_lobby != null)
         {
             UpdateTurnTimeText();

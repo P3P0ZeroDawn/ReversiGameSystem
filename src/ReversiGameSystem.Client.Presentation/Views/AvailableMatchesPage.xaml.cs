@@ -191,10 +191,10 @@ public partial class AvailableMatchesPage : Page
         _dialogService.ShowWarning(this, "AvailableMatches_RetrievalErrorTitle", "RemoteMatch_NotAvailable");
     }
 
-    private void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         string previousCulture = LocalizationManager.Instance.CultureName;
-        LanguageChangeService.ConfirmSelection((ComboBox)sender);
+        await LanguageChangeService.ConfirmSelection((ComboBox)sender);
         if (LocalizationManager.Instance.CultureName != previousCulture)
         {
             UpdateGuestIdentity();

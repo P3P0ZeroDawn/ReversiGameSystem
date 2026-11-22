@@ -8,16 +8,18 @@ using ReversiGameSystem.Server.Domain.Accounts;
 
 namespace ReversiGameSystem.Server.Persistence.Players;
 
-/// <summary>Reads and recodes images within the server-owned profile image directory.</summary>
 public sealed class ProfileImageRepository : IPlayerImageRepository
 {
-    private const string ReferencePrefix = "profile-images/";
+    private const string DefaultReferencePrefix = "profile-images/";
+    private readonly string _referencePrefix;
     private readonly string _directory;
 
-    /// <summary>Initializes storage using the directory shared with account registration.</summary>
-    /// <param name="storageDirectory">The server-owned profile image directory.</param>
-    /// <exception cref="ArgumentException">The directory is absent or invalid.</exception>
     public ProfileImageRepository(string storageDirectory)
+        : this(storageDirectory, DefaultReferencePrefix)
+    {
+    }
+
+    public ProfileImageRepository(string storageDirectory, string referencePrefix)
     {
         if (string.IsNullOrWhiteSpace(storageDirectory))
         {
@@ -25,10 +27,17 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
                 "An image directory is required.", nameof(storageDirectory));
         }
 
+        if (string.IsNullOrWhiteSpace(referencePrefix)
+            || !referencePrefix.EndsWith("/", StringComparison.Ordinal))
+        {
+            throw new ArgumentException(
+                "An image reference prefix is required.", nameof(referencePrefix));
+        }
+
         _directory = Path.GetFullPath(storageDirectory);
+        _referencePrefix = referencePrefix;
     }
 
-    /// <inheritdoc />
     public ProfileImageData ReadImage(string imageReference)
     {
         string path = ResolveImageFilePath(imageReference);
@@ -50,7 +59,6 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
         return data;
     }
 
-    /// <inheritdoc />
     public ProfileResult<string> SaveImage(ProfileImageData image)
     {
         byte[]? recoded = RecodeImage(image);
@@ -59,7 +67,7 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
             return new ProfileResult<string>(ProfileOperationStatus.InvalidImage);
         }
 
-        string reference = ReferencePrefix + Guid.NewGuid().ToString("N")
+        string reference = _referencePrefix + Guid.NewGuid().ToString("N")
             + (image.MediaType.Equals("image/png", StringComparison.OrdinalIgnoreCase)
                 ? ".png" : ".jpg");
         string path = ResolveImageFilePath(reference);
@@ -81,7 +89,6 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
         return new ProfileResult<string>(reference);
     }
 
-    /// <inheritdoc />
     public void DeleteImage(string imageReference)
     {
         File.Delete(ResolveImageFilePath(imageReference));
@@ -89,12 +96,12 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
 
     private string ResolveImageFilePath(string reference)
     {
-        if (reference == null || !reference.StartsWith(ReferencePrefix, StringComparison.Ordinal))
+        if (reference == null || !reference.StartsWith(_referencePrefix, StringComparison.Ordinal))
         {
             throw new IOException("The stored profile image reference is invalid.");
         }
 
-        string fileName = reference.Substring(ReferencePrefix.Length);
+        string fileName = reference.Substring(_referencePrefix.Length);
         string extension = Path.GetExtension(fileName);
         if ((extension != ".png" && extension != ".jpg")
             || !Guid.TryParseExact(Path.GetFileNameWithoutExtension(fileName), "N", out _)

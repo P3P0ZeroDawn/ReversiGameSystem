@@ -1,59 +1,78 @@
+using System.Threading.Tasks;
 using System.Windows.Controls;
 using ReversiGameSystem.Localization;
 
 namespace ReversiGameSystem.Services;
 
-/// <summary>
-/// Confirms language selection before updating the shared UI culture.
-/// </summary>
 internal static class LanguageChangeService
 {
-    internal static void ConfirmSelection(ComboBox languageComboBox)
+    private const string ConfirmationTitleKey = "Common_ChangeLanguageTitle";
+    private const string ConfirmationMessageKey = "Common_ChangeLanguageMessage";
+    private const string PersistenceErrorTitleKey = "LanguageSettings_PersistenceErrorTitle";
+    private const string PersistenceErrorMessageKey = "LanguageSettings_PersistenceErrorMessage";
+    private const string NotAvailablePrefix = "LanguageSettings_NotAvailable";
+    private const string ResourcesErrorPrefix = "LanguageSettings_ResourcesError";
+    private const string TitleSuffix = "Title";
+    private const string MessageSuffix = "Message";
+
+    internal static async Task ConfirmSelection(ComboBox languageComboBox)
     {
-        if (LocalizationManager.Instance.IsChangingCulture)
+        LocalizationManager localization = LocalizationManager.Instance;
+        if (localization.IsChangingCulture)
         {
             return;
         }
-
         string? selectedCulture = languageComboBox.SelectedValue as string;
-        string currentCulture = LocalizationManager.Instance.CultureName;
+        string currentCulture = localization.CultureName;
         if (selectedCulture == null || selectedCulture == currentCulture)
         {
             return;
         }
-
-        DialogService dialogs = new DialogService(LocalizationManager.Instance);
-        if (!dialogs.Confirm(
-            languageComboBox,
-            "Common_ChangeLanguageTitle",
-            "Common_ChangeLanguageMessage"))
+        DialogService dialogs = new DialogService(localization);
+        if (!dialogs.Confirm(languageComboBox, ConfirmationTitleKey, ConfirmationMessageKey))
         {
             languageComboBox.SelectedValue = currentCulture;
             return;
         }
 
-        LanguageChangeResult result = LocalizationManager.Instance.TrySetCulture(selectedCulture);
-        if (result == LanguageChangeResult.Success)
+        bool applied = false;
+        languageComboBox.IsEnabled = false;
+        try
         {
-            return;
-        }
+            ClientSession session = ClientRuntime.CurrentSession;
+            string? token = session.SessionToken;
+            if (!session.IsGuest && token != null && !string.IsNullOrWhiteSpace(token))
+            {
+                PreferencesStatus status = await ClientRuntime.PreferencesService.ChangeLanguage(
+                    token, selectedCulture);
+                if (token != ClientRuntime.CurrentSession.SessionToken)
+                {
+                    return;
+                }
+                if (status != PreferencesStatus.Success)
+                {
+                    dialogs.ShowError(languageComboBox,
+                        PersistenceErrorTitleKey, PersistenceErrorMessageKey);
+                    return;
+                }
+            }
 
-        languageComboBox.SelectedValue = currentCulture;
-        string resourcePrefix = result == LanguageChangeResult.NotAvailable
-            ? "LanguageSettings_NotAvailable"
-            : "LanguageSettings_ResourcesError";
-        if (result == LanguageChangeResult.NotAvailable)
+            LanguageChangeResult languageStatus = localization.TrySetCulture(selectedCulture);
+            applied = languageStatus == LanguageChangeResult.Success;
+            if (!applied)
+            {
+                string prefix = languageStatus == LanguageChangeResult.NotAvailable
+                    ? NotAvailablePrefix : ResourcesErrorPrefix;
+                dialogs.ShowError(languageComboBox, prefix + TitleSuffix, prefix + MessageSuffix);
+            }
+        }
+        finally
         {
-            dialogs.ShowWarning(
-                languageComboBox,
-                resourcePrefix + "Title",
-                resourcePrefix + "Message");
-            return;
+            languageComboBox.IsEnabled = true;
+            if (!applied)
+            {
+                languageComboBox.SelectedValue = localization.CultureName;
+            }
         }
-
-        dialogs.ShowError(
-            languageComboBox,
-            resourcePrefix + "Title",
-            resourcePrefix + "Message");
     }
 }

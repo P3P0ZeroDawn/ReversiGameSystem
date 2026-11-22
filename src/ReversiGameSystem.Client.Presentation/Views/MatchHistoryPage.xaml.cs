@@ -9,18 +9,12 @@ using ReversiGameSystem.Services;
 
 namespace ReversiGameSystem.Views;
 
-/// <summary>
-/// Lists the matches associated with the authenticated player.
-/// </summary>
 public partial class MatchHistoryPage : Page
 {
     private readonly string _playerName;
     private readonly MatchInformationService _matchService;
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
 
-    /// <summary>
-    /// Initializes the match-history page.
-    /// </summary>
     public MatchHistoryPage()
     {
         InitializeComponent();
@@ -207,10 +201,10 @@ public partial class MatchHistoryPage : Page
         NavigationService?.Navigate(new MainMenuPage());
     }
 
-    private void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         string previousCulture = LocalizationManager.Instance.CultureName;
-        LanguageChangeService.ConfirmSelection((ComboBox)sender);
+        await LanguageChangeService.ConfirmSelection((ComboBox)sender);
         if (LocalizationManager.Instance.CultureName != previousCulture)
         {
             LoadHistory();
