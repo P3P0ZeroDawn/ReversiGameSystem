@@ -8,10 +8,13 @@ namespace ReversiGameSystem.Server.Application.Accounts;
 /// <summary>Coordinates verified login, guest access, and session revocation.</summary>
 public sealed class SessionApplicationService
 {
-    private readonly IAccountLoginRepository _accounts;
+    private readonly IAccountRepository _accounts;
     private readonly IPasswordHasher _passwordHasher;
     private readonly VerificationCodeService _verificationCodes;
     private readonly ISessionRepository _sessions;
+
+    /// <summary>Notifies observers after an active session has been revoked or expired.</summary>
+    public event Action<string>? SessionRevoked;
 
     /// <summary>Creates the server session application service.</summary>
     /// <param name="accounts">The authoritative account repository.</param>
@@ -20,7 +23,7 @@ public sealed class SessionApplicationService
     /// <param name="sessions">The shared active-session repository.</param>
     /// <exception cref="ArgumentNullException">A required dependency is absent.</exception>
     public SessionApplicationService(
-        IAccountLoginRepository accounts,
+        IAccountRepository accounts,
         IPasswordHasher passwordHasher,
         VerificationCodeService verificationCodes,
         ISessionRepository sessions)
@@ -114,6 +117,7 @@ public sealed class SessionApplicationService
         }
 
         _sessions.Revoke(sessionToken);
+        SessionRevoked?.Invoke(sessionToken);
         return SessionOperationStatus.Success;
     }
 
@@ -158,14 +162,13 @@ public sealed class SessionApplicationService
             return SessionOperationResult<LoginAccount>.CreateFailure(missingAccountStatus);
         }
 
-        AccountLoginLookupResult lookup = _accounts.FindByLoginAsync(identifier)
-            .GetAwaiter().GetResult();
-        if (!lookup.IsFound)
+        AccountResult<LoginAccount> lookup = _accounts.FindByLogin(identifier);
+        if (lookup.Status != AccountStatus.Success || lookup.Value == null)
         {
             return SessionOperationResult<LoginAccount>.CreateFailure(missingAccountStatus);
         }
 
-        return SessionOperationResult<LoginAccount>.CreateSuccess(lookup.GetFoundAccount());
+        return SessionOperationResult<LoginAccount>.CreateSuccess(lookup.Value);
     }
 
     private SessionOperationResult<AuthenticatedSession> CreateSessionAfterVerification(

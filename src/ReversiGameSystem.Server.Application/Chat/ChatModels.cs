@@ -61,6 +61,7 @@ public enum ChatStatus
     MessageBlocked,
     /// <summary>The account has an active moderation sanction.</summary>
     PlayerMuted,
+    /// <summary>The sender exceeded the allowed message rate limit.</summary>
     RateLimitExceeded
 }
 

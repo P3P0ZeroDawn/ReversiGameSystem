@@ -100,6 +100,7 @@ SELECT @result;";
     {
         VerificationPurpose.Login => "LOGIN",
         VerificationPurpose.Registration => "ACCOUNT_CREATION",
+        VerificationPurpose.PasswordReset => "PASSWORD_RESET",
         _ => throw new ArgumentOutOfRangeException(nameof(purpose))
     };
 

@@ -294,7 +294,7 @@ internal static class Program
         VerificationCodeService verification = new VerificationCodeService(
             issuer, new VerificationCodeRepository(), clock);
         SessionApplicationService applicationService = new SessionApplicationService(
-            new AccountLoginRepository(),
+            new AccountRepository(),
             new Pbkdf2PasswordHasher(),
             verification,
             sessions);

@@ -33,7 +33,7 @@ internal sealed class ReviewAccountDatabaseTests : IVerificationEmailSender
         VerificationCodeIssuer issuer = new VerificationCodeIssuer(this,
             new VerificationCodeProtector(new byte[32]), _clock);
         _applicationService = new SessionApplicationService(
-            new AccountLoginRepository(),
+            new AccountRepository(),
             _hasher,
             new VerificationCodeService(issuer, new VerificationCodeRepository(), _clock),
             _sessions);

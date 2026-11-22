@@ -83,6 +83,26 @@ public interface IAccountService
     public void ChangePassword(string sessionToken, string currentPassword, string newPassword);
 
     /// <summary>
+    /// Validates the email format and requests a one-use password reset code.
+    /// </summary>
+    /// <param name="emailAddress">
+    /// The account email address for recovery.
+    /// </param>
+    /// <returns>
+    /// A plausible UTC expiration instant without revealing whether an active account exists.
+    /// </returns>
+    /// <exception cref="FaultException{AccountFault}">
+    /// A declared account rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
+    [OperationContract]
+    [FaultContract(typeof(AccountFault), Namespace = ContractNamespaces.Data)]
+    [FaultContract(typeof(ServiceFault), Namespace = ContractNamespaces.Diagnostics)]
+    public DateTime RequestPasswordResetCode(string emailAddress);
+
+    /// <summary>
     /// Verifies a recovery code and changes the active account password.
     /// </summary>
     /// <param name="emailAddress">

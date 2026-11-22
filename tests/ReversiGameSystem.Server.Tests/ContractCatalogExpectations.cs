@@ -23,6 +23,7 @@ internal static class ContractCatalogExpectations
             "AccountReference CompleteRegistration(NewAccount account)",
             "void ChangePassword(string sessionToken, string currentPassword, "
                 + "string newPassword)",
+            "DateTime RequestPasswordResetCode(string emailAddress)",
             "void ResetPassword(string emailAddress, string verificationCode, "
                 + "string newPassword)",
             "void DeactivateAccount(string sessionToken, string currentPassword)",

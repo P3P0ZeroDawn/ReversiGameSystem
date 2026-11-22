@@ -7,7 +7,7 @@ using ReversiGameSystem.Server.Application.Accounts;
 namespace ReversiGameSystem.Server.Persistence.Sessions;
 
 /// <summary>Stores active authenticated and guest sessions in the server process.</summary>
-public sealed class SessionRepository : ISessionRepository
+public sealed class SessionRepository : ISessionRepository, ISessionLifecycleRepository
 {
     private static readonly TimeSpan DefaultLifetime = TimeSpan.FromHours(8);
     private readonly ConcurrentDictionary<string, AuthenticatedSession> _authenticated =
@@ -110,8 +110,12 @@ public sealed class SessionRepository : ISessionRepository
         string sessionToken)
     {
         SessionOperationResult<AuthenticatedSession> result;
-        if (string.IsNullOrWhiteSpace(sessionToken)
-            || !_authenticated.TryGetValue(sessionToken, out AuthenticatedSession? active))
+        if (string.IsNullOrWhiteSpace(sessionToken))
+        {
+            result = SessionOperationResult<AuthenticatedSession>.CreateFailure(
+                SessionOperationStatus.MissingSessionToken);
+        }
+        else if (!_authenticated.TryGetValue(sessionToken, out AuthenticatedSession? active))
         {
             result = SessionOperationResult<AuthenticatedSession>.CreateFailure(
                 SessionOperationStatus.InvalidSession);
@@ -166,6 +170,63 @@ public sealed class SessionRepository : ISessionRepository
         {
             _guests.Remove(sessionToken);
         }
+    }
+
+    /// <inheritdoc />
+    public string[] RevokeByAccountId(long accountId)
+    {
+        if (accountId <= 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        List<string> revokedTokens = new List<string>();
+        foreach (KeyValuePair<string, AuthenticatedSession> entry in _authenticated)
+        {
+            if (entry.Value.AccountId == accountId
+                && _authenticated.TryRemove(entry.Key, out _))
+            {
+                revokedTokens.Add(entry.Key);
+            }
+        }
+
+        return revokedTokens.ToArray();
+    }
+
+    /// <inheritdoc />
+    public string[] RemoveExpiredSessions()
+    {
+        DateTime nowUtc = _clock.UtcNow;
+        List<string> expiredTokens = new List<string>();
+
+        foreach (KeyValuePair<string, AuthenticatedSession> entry in _authenticated)
+        {
+            if (entry.Value.ExpiresAtUtc <= nowUtc
+                && _authenticated.TryRemove(entry.Key, out _))
+            {
+                expiredTokens.Add(entry.Key);
+            }
+        }
+
+        lock (_guestSessionSync)
+        {
+            List<string> expiredGuests = new List<string>();
+            foreach (KeyValuePair<string, GuestSession> entry in _guests)
+            {
+                if (entry.Value.ExpiresAtUtc <= nowUtc)
+                {
+                    expiredGuests.Add(entry.Key);
+                }
+            }
+
+            foreach (string token in expiredGuests)
+            {
+                _guests.Remove(token);
+                expiredTokens.Add(token);
+            }
+        }
+
+        return expiredTokens.ToArray();
     }
 
     private void RemoveExpiredGuests()

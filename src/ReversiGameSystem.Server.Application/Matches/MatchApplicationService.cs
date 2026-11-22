@@ -330,20 +330,21 @@ public sealed class MatchApplicationService
 
     private MatchResult<AuthenticatedSession> ResolveActiveSession(string token)
     {
-        if (string.IsNullOrWhiteSpace(token))
+        SessionOperationResult<AuthenticatedSession> session =
+            _sessions.FindAuthenticated(token);
+        if (session.Status == SessionOperationStatus.MissingSessionToken)
         {
             return new MatchResult<AuthenticatedSession>(
                 MatchStatus.MissingSessionToken);
         }
-        if (!_sessions.TryGet(token, out AuthenticatedSession? player)
-            || player == null
-            || player.ExpiresAtUtc <= _clock.UtcNow)
+
+        if (session.Status != SessionOperationStatus.Success)
         {
             return new MatchResult<AuthenticatedSession>(
                 MatchStatus.InvalidSession);
         }
 
-        return new MatchResult<AuthenticatedSession>(player);
+        return new MatchResult<AuthenticatedSession>(session.GetValue());
     }
 
     private static MatchStatus ValidateSettings(MatchSettings? settings)

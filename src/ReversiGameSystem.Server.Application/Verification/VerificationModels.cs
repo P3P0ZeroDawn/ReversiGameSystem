@@ -8,7 +8,9 @@ public enum VerificationPurpose
     /// <summary>Authorizes opening an account session.</summary>
     Login,
     /// <summary>Authorizes creating the proposed account.</summary>
-    Registration
+    Registration,
+    /// <summary>Authorizes resetting the account password.</summary>
+    PasswordReset
 }
 
 /// <summary>Contains the verification message accepted by the delivery service.</summary>
@@ -63,6 +65,22 @@ public sealed class VerificationIdentity
         string email = emailAddress.Trim().ToUpperInvariant();
         return new VerificationIdentity(VerificationPurpose.Registration,
             "registration:" + name.Length + ":" + name + email, emailAddress.Trim());
+    }
+
+    /// <summary>Binds a password reset code to a stable account identifier.</summary>
+    /// <param name="accountId">The persistent account identifier.</param>
+    /// <param name="emailAddress">The account mailbox.</param>
+    /// <returns>The password reset verification identity.</returns>
+    public static VerificationIdentity ForPasswordReset(long accountId, string emailAddress)
+    {
+        string recipient = emailAddress.Trim();
+        string accountKey = accountId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        string identityKey = "password-reset:" + accountKey + ":" + recipient.ToUpperInvariant();
+        VerificationIdentity identity = new VerificationIdentity(
+            VerificationPurpose.PasswordReset,
+            identityKey,
+            recipient);
+        return identity;
     }
 }
 

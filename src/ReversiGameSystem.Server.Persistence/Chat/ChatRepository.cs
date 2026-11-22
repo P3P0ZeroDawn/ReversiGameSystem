@@ -19,6 +19,7 @@ public class ChatRepository : IChatRepository
 {
     private const string ActiveAccountStatusCode = "ACTIVE";
     private const string InProgressMatchStatusCode = "IN_PROGRESS";
+    private const string SystemParticipantTypeCode = "SYSTEM";
     private const string AccountLockResourcePrefix = "chat-account:";
     private const string MatchLockResourcePrefix = "chat-match:";
     private readonly IUtcClock _clock;
@@ -67,6 +68,7 @@ public class ChatRepository : IChatRepository
         if (status == ChatStatus.Success)
         {
             ApplicationChatMessage[] messages = context.ChatMessage
+                .AsNoTracking()
                 .Where(message => message.matchId == matchId)
                 .OrderBy(message => message.messageNumber)
                 .ToArray()
@@ -199,7 +201,8 @@ public class ChatRepository : IChatRepository
                 status = ChatStatus.MatchNotInProgress;
             }
             else if (context.MatchParticipant.Any(participant =>
-                participant.matchId == matchId && participant.participantTypeCode == "SYSTEM"))
+                participant.matchId == matchId
+                && participant.participantTypeCode == SystemParticipantTypeCode))
             {
                 status = ChatStatus.Unauthorized;
             }
@@ -238,6 +241,7 @@ public class ChatRepository : IChatRepository
         string content)
     {
         return context.ModerationPattern
+            .AsNoTracking()
             .Where(pattern => pattern.isEnabled && pattern.ModerationRule.isEnabled)
             .OrderBy(pattern => pattern.moderationPatternId)
             .ToArray()

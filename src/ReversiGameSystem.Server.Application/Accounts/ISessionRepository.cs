@@ -37,3 +37,16 @@ public interface ISessionRepository
     /// <param name="sessionToken">The opaque session token.</param>
     public void Revoke(string sessionToken);
 }
+
+/// <summary>Manages bulk session revocation and expiration cleanup.</summary>
+public interface ISessionLifecycleRepository
+{
+    /// <summary>Revokes all active authenticated sessions belonging to an account.</summary>
+    /// <param name="accountId">The persistent account identifier.</param>
+    /// <returns>The revoked session tokens.</returns>
+    string[] RevokeByAccountId(long accountId);
+
+    /// <summary>Removes expired authenticated and guest sessions from storage.</summary>
+    /// <returns>The expired session tokens that were removed.</returns>
+    string[] RemoveExpiredSessions();
+}

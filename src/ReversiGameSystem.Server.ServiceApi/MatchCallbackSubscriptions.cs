@@ -189,10 +189,6 @@ public sealed class MatchCallbackSubscriptions<TCallback> : IDisposable
 
                 send(channel.Token, channel.MatchId, channel.Callback);
             }
-            catch (ReversiGameSystem.Server.Application.Accounts.SessionRejectedException)
-            {
-                Remove(channel, true);
-            }
             catch (Exception exception) when (exception is CommunicationException
                 or TimeoutException
                 or ObjectDisposedException)

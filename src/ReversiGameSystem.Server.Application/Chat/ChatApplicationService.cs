@@ -35,7 +35,7 @@ public class ChatApplicationService
     public ChatStatus EvaluateParticipantAccess(string sessionToken, long matchId)
     {
         SessionOperationResult<AuthenticatedSession> session =
-            ResolveAuthenticatedSession(sessionToken);
+            _sessions.FindAuthenticated(sessionToken);
         ChatStatus status = MapSessionStatus(session.Status);
         if (status == ChatStatus.Success && matchId <= 0)
         {
@@ -58,7 +58,7 @@ public class ChatApplicationService
     public ChatChannelAccess PrepareChatChannel(string sessionToken, long matchId)
     {
         SessionOperationResult<AuthenticatedSession> session =
-            ResolveAuthenticatedSession(sessionToken);
+            _sessions.FindAuthenticated(sessionToken);
         if (session.Status != SessionOperationStatus.Success)
         {
             return new ChatChannelAccess(MapSessionStatus(session.Status));
@@ -85,7 +85,7 @@ public class ChatApplicationService
         string content)
     {
         SessionOperationResult<AuthenticatedSession> session =
-            ResolveAuthenticatedSession(sessionToken);
+            _sessions.FindAuthenticated(sessionToken);
         if (session.Status != SessionOperationStatus.Success)
         {
             return new ChatMessageSubmission(MapSessionStatus(session.Status));
@@ -120,7 +120,7 @@ public class ChatApplicationService
     public ChatHistory LoadChatHistory(string sessionToken, long matchId)
     {
         SessionOperationResult<AuthenticatedSession> session =
-            ResolveAuthenticatedSession(sessionToken);
+            _sessions.FindAuthenticated(sessionToken);
         if (session.Status != SessionOperationStatus.Success)
         {
             return new ChatHistory(MapSessionStatus(session.Status));
@@ -144,9 +144,9 @@ public class ChatApplicationService
         long matchId)
     {
         SessionOperationResult<AuthenticatedSession> mutedSession =
-            ResolveAuthenticatedSession(mutedSessionToken);
+            _sessions.FindAuthenticated(mutedSessionToken);
         SessionOperationResult<AuthenticatedSession> recipientSession =
-            ResolveAuthenticatedSession(recipientSessionToken);
+            _sessions.FindAuthenticated(recipientSessionToken);
         bool canReceive = mutedSession.Status == SessionOperationStatus.Success
             && recipientSession.Status == SessionOperationStatus.Success
             && mutedSession.GetValue().AccountId == recipientSession.GetValue().AccountId;
@@ -159,23 +159,6 @@ public class ChatApplicationService
         }
 
         return canReceive;
-    }
-
-    private SessionOperationResult<AuthenticatedSession> ResolveAuthenticatedSession(
-        string sessionToken)
-    {
-        SessionOperationResult<AuthenticatedSession> session;
-        if (string.IsNullOrWhiteSpace(sessionToken))
-        {
-            session = SessionOperationResult<AuthenticatedSession>.CreateFailure(
-                SessionOperationStatus.MissingSessionToken);
-        }
-        else
-        {
-            session = _sessions.FindAuthenticated(sessionToken);
-        }
-
-        return session;
     }
 
     private static ChatStatus MapSessionStatus(SessionOperationStatus status)

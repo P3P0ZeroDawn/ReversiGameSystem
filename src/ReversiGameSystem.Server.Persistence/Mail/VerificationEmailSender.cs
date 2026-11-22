@@ -76,7 +76,10 @@ public sealed class VerificationEmailSender : IVerificationEmailSender
         {
             VerificationPurpose.Login => "sign-in / inicio de sesión",
             VerificationPurpose.Registration => "registration / registro",
-            _ => throw new ArgumentOutOfRangeException(nameof(email.Purpose))
+            VerificationPurpose.PasswordReset => "password reset / restablecimiento de contraseña",
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(email),
+                "Unsupported verification purpose.")
         };
         MimeMessage message = new MimeMessage();
         message.From.Add(new MailboxAddress(_settings.FromName, _settings.FromAddress));

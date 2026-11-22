@@ -562,19 +562,19 @@ public sealed class GameplayMatchApplicationService
 
     private MatchResult<AuthenticatedSession> ResolveActiveSession(string sessionToken)
     {
-        if (string.IsNullOrWhiteSpace(sessionToken))
+        SessionOperationResult<AuthenticatedSession> session =
+            _sessions.FindAuthenticated(sessionToken);
+        if (session.Status == SessionOperationStatus.MissingSessionToken)
         {
             return new MatchResult<AuthenticatedSession>(MatchStatus.MissingSessionToken);
         }
 
-        if (!_sessions.TryGet(sessionToken, out AuthenticatedSession? player)
-            || player == null
-            || player.ExpiresAtUtc <= _clock.UtcNow)
+        if (session.Status != SessionOperationStatus.Success)
         {
             return new MatchResult<AuthenticatedSession>(MatchStatus.InvalidSession);
         }
 
-        return new MatchResult<AuthenticatedSession>(player);
+        return new MatchResult<AuthenticatedSession>(session.GetValue());
     }
 
     private static bool RepresentsSameState(Match currentMatch, Match snapshot)

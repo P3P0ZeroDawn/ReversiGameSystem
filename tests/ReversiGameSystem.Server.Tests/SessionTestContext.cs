@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Verification;
 using ReversiGameSystem.Server.Persistence.Sessions;
@@ -7,7 +6,7 @@ using ReversiGameSystem.Server.Persistence.Sessions;
 namespace ReversiGameSystem.Server.Tests;
 
 internal sealed class SessionTestContext : IUtcClock, IVerificationEmailSender,
-    IVerificationCodeRepository, IAccountLoginRepository, IPasswordHasher
+    IVerificationCodeRepository, IAccountRepository, IPasswordHasher
 {
     internal SessionTestContext()
     {
@@ -50,7 +49,7 @@ internal sealed class SessionTestContext : IUtcClock, IVerificationEmailSender,
         return ConsumeStatus;
     }
 
-    public Task<AccountLoginLookupResult> FindByLoginAsync(string login)
+    public AccountResult<LoginAccount> FindByLogin(string login)
     {
         if (Unavailable)
         {
@@ -64,7 +63,37 @@ internal sealed class SessionTestContext : IUtcClock, IVerificationEmailSender,
             "test-hash",
             Inactive ? "INACTIVE" : "ACTIVE",
             "en-US");
-        return Task.FromResult(AccountLoginLookupResult.CreateFound(account));
+        return new AccountResult<LoginAccount>(account);
+    }
+
+    public AccountResult<LoginAccount> FindByEmail(string emailAddress)
+    {
+        throw new NotSupportedException();
+    }
+
+    public AccountResult<LoginAccount> FindById(long accountId)
+    {
+        throw new NotSupportedException();
+    }
+
+    public AccountStatus CheckRegistrationAvailability(string username, string emailAddress)
+    {
+        throw new NotSupportedException();
+    }
+
+    public AccountResult<long> CreateAccount(AccountRegistrationData registration)
+    {
+        throw new NotSupportedException();
+    }
+
+    public AccountStatus UpdatePasswordHash(long accountId, string newPasswordHash)
+    {
+        throw new NotSupportedException();
+    }
+
+    public AccountStatus DeactivateAccount(long accountId)
+    {
+        throw new NotSupportedException();
     }
 
     public string Hash(string password) => "test-hash";

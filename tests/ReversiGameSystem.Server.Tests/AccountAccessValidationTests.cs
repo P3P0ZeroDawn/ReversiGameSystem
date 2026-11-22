@@ -61,7 +61,7 @@ public sealed class AccountAccessValidationTests
         SessionApplicationService service = CreateApplicationService(
             new AccountLoginRepositoryStub
             {
-                Result = AccountLoginLookupResult.CreateNotFound()
+                Result = new AccountResult<LoginAccount>(AccountStatus.AccountNotFound)
             }, new LoginPasswordHasherStub());
 
         // Act
@@ -142,7 +142,7 @@ public sealed class AccountAccessValidationTests
             TimeSpan.FromMinutes(30));
 
         // Act
-        LoginAccount account = FoundAccount("ACTIVE").GetFoundAccount();
+        LoginAccount account = FoundAccount("ACTIVE").Value!;
         AuthenticatedSession first = store.Create(account);
         AuthenticatedSession second = store.Create(account);
         bool found = store.TryGet(first.SessionToken, out AuthenticatedSession? active);
@@ -173,9 +173,9 @@ public sealed class AccountAccessValidationTests
         TestAssert.AreEqual(false, removed);
     }
 
-    private static AccountLoginLookupResult FoundAccount(string statusCode)
+    private static AccountResult<LoginAccount> FoundAccount(string statusCode)
     {
-        return AccountLoginLookupResult.CreateFound(
+        return new AccountResult<LoginAccount>(
             new LoginAccount(
                 42,
                 "PlayerOne",
@@ -186,7 +186,7 @@ public sealed class AccountAccessValidationTests
     }
 
     private static SessionApplicationService CreateApplicationService(
-        IAccountLoginRepository accounts,
+        IAccountRepository accounts,
         IPasswordHasher passwordHasher)
     {
         MutableUtcClock clock = new MutableUtcClock(
@@ -207,16 +207,16 @@ public sealed class AccountAccessValidationTests
     }
 }
 
-internal sealed class AccountLoginRepositoryStub : IAccountLoginRepository
+internal sealed class AccountLoginRepositoryStub : IAccountRepository
 {
     internal string? Login { get; private set; }
 
-    internal AccountLoginLookupResult Result { get; set; } =
-        AccountLoginLookupResult.CreateNotFound();
+    internal AccountResult<LoginAccount> Result { get; set; } =
+        new AccountResult<LoginAccount>(AccountStatus.AccountNotFound);
 
     internal Exception? Failure { get; set; }
 
-    public Task<AccountLoginLookupResult> FindByLoginAsync(string login)
+    public AccountResult<LoginAccount> FindByLogin(string login)
     {
         if (Failure != null)
         {
@@ -224,7 +224,37 @@ internal sealed class AccountLoginRepositoryStub : IAccountLoginRepository
         }
 
         Login = login;
-        return Task.FromResult(Result);
+        return Result;
+    }
+
+    public AccountResult<LoginAccount> FindByEmail(string emailAddress)
+    {
+        throw new NotSupportedException();
+    }
+
+    public AccountResult<LoginAccount> FindById(long accountId)
+    {
+        throw new NotSupportedException();
+    }
+
+    public AccountStatus CheckRegistrationAvailability(string username, string emailAddress)
+    {
+        throw new NotSupportedException();
+    }
+
+    public AccountResult<long> CreateAccount(AccountRegistrationData registration)
+    {
+        throw new NotSupportedException();
+    }
+
+    public AccountStatus UpdatePasswordHash(long accountId, string newPasswordHash)
+    {
+        throw new NotSupportedException();
+    }
+
+    public AccountStatus DeactivateAccount(long accountId)
+    {
+        throw new NotSupportedException();
     }
 }
 
