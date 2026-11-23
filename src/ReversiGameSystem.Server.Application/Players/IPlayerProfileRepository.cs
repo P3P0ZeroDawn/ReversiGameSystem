@@ -22,7 +22,7 @@ public interface IPlayerProfileRepository
     /// <param name="accountId">The account to modify.</param>
     /// <param name="username">The normalized and validated username.</param>
     /// <returns>The expected operation status.</returns>
-    public ProfileOperationStatus ChangeUsername(
+    public ProfileStatus ChangeUsername(
         long accountId,
         string username);
 
@@ -30,7 +30,7 @@ public interface IPlayerProfileRepository
     /// <param name="accountId">The account to modify.</param>
     /// <param name="imageReference">The server-owned image reference.</param>
     /// <returns>The expected operation status.</returns>
-    public ProfileOperationStatus SetProfileImage(
+    public ProfileStatus SetProfileImage(
         long accountId,
         string imageReference);
 }

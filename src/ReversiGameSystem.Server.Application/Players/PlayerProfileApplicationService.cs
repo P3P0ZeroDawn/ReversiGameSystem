@@ -26,13 +26,13 @@ public sealed class PlayerProfileApplicationService
     {
         SessionResult<AuthenticatedSession> sessionResult =
             _sessions.FindAuthenticated(sessionToken);
-        if (sessionResult.Status != SessionOperationStatus.Success || sessionResult.Value == null)
+        if (sessionResult.Status != SessionStatus.Success || sessionResult.Value == null)
         {
             return new ProfileResult<PlayerProfile>(MapSessionStatus(sessionResult.Status));
         }
         if (targetAccountId.HasValue && targetAccountId.Value <= 0)
         {
-            return new ProfileResult<PlayerProfile>(ProfileOperationStatus.InvalidAccountId);
+            return new ProfileResult<PlayerProfile>(ProfileStatus.InvalidAccountId);
         }
 
         long callerAccountId = sessionResult.Value.AccountId;
@@ -41,7 +41,7 @@ public sealed class PlayerProfileApplicationService
             ProfileResult<PlayerProfile> callerLookup = _profiles.GetProfile(callerAccountId);
             if (callerLookup.Value == null)
             {
-                return new ProfileResult<PlayerProfile>(ProfileOperationStatus.InactiveAccount);
+                return new ProfileResult<PlayerProfile>(ProfileStatus.InactiveAccount);
             }
 
             return callerLookup;
@@ -49,7 +49,7 @@ public sealed class PlayerProfileApplicationService
 
         if (!_profiles.IsActive(callerAccountId))
         {
-            return new ProfileResult<PlayerProfile>(ProfileOperationStatus.InactiveAccount);
+            return new ProfileResult<PlayerProfile>(ProfileStatus.InactiveAccount);
         }
 
         return _profiles.GetProfile(targetAccountId.Value);
@@ -61,13 +61,13 @@ public sealed class PlayerProfileApplicationService
     {
         SessionResult<AuthenticatedSession> sessionResult =
             _sessions.FindAuthenticated(sessionToken);
-        if (sessionResult.Status != SessionOperationStatus.Success || sessionResult.Value == null)
+        if (sessionResult.Status != SessionStatus.Success || sessionResult.Value == null)
         {
             return new GetProfileImageResult(MapSessionStatus(sessionResult.Status));
         }
         if (targetAccountId.HasValue && targetAccountId.Value <= 0)
         {
-            return new GetProfileImageResult(ProfileOperationStatus.InvalidAccountId);
+            return new GetProfileImageResult(ProfileStatus.InvalidAccountId);
         }
 
         long callerAccountId = sessionResult.Value.AccountId;
@@ -88,13 +88,13 @@ public sealed class PlayerProfileApplicationService
         return new GetProfileImageResult(image);
     }
 
-    public ProfileOperationStatus ChangeUsername(
+    public ProfileStatus ChangeUsername(
         string sessionToken,
         string username)
     {
         SessionResult<AuthenticatedSession> sessionResult =
             _sessions.FindAuthenticated(sessionToken);
-        if (sessionResult.Status != SessionOperationStatus.Success || sessionResult.Value == null)
+        if (sessionResult.Status != SessionStatus.Success || sessionResult.Value == null)
         {
             return MapSessionStatus(sessionResult.Status);
         }
@@ -103,7 +103,7 @@ public sealed class PlayerProfileApplicationService
         string normalized = username == null ? string.Empty : username.Trim();
         if (UsernamePolicy.Validate(normalized) != UsernameValidationError.None)
         {
-            return ProfileOperationStatus.InvalidUsername;
+            return ProfileStatus.InvalidUsername;
         }
 
         return _profiles.ChangeUsername(accountId, normalized);
@@ -114,13 +114,13 @@ public sealed class PlayerProfileApplicationService
     /// <param name="image">The proposed image content and media type.</param>
     /// <returns>The expected modification status.</returns>
     /// <exception cref="AggregateException">Association and cleanup both failed.</exception>
-    public ProfileOperationStatus UpdateImage(
+    public ProfileStatus UpdateImage(
         string sessionToken,
         ProfileImageData? image)
     {
         SessionResult<AuthenticatedSession> sessionResult =
             _sessions.FindAuthenticated(sessionToken);
-        if (sessionResult.Status != SessionOperationStatus.Success || sessionResult.Value == null)
+        if (sessionResult.Status != SessionStatus.Success || sessionResult.Value == null)
         {
             return MapSessionStatus(sessionResult.Status);
         }
@@ -128,7 +128,7 @@ public sealed class PlayerProfileApplicationService
         long accountId = sessionResult.Value.AccountId;
         if (image == null)
         {
-            return ProfileOperationStatus.InvalidImage;
+            return ProfileStatus.InvalidImage;
         }
 
         ProfileResult<string> saveResult = _images.SaveImage(image);
@@ -140,11 +140,11 @@ public sealed class PlayerProfileApplicationService
         return AssociateProfileImage(accountId, saveResult.Value);
     }
 
-    private ProfileOperationStatus AssociateProfileImage(
+    private ProfileStatus AssociateProfileImage(
         long accountId,
         string imageReference)
     {
-        ProfileOperationStatus updateStatus;
+        ProfileStatus updateStatus;
         try
         {
             updateStatus = _profiles.SetProfileImage(accountId, imageReference);
@@ -155,7 +155,7 @@ public sealed class PlayerProfileApplicationService
             throw;
         }
 
-        if (updateStatus != ProfileOperationStatus.Success)
+        if (updateStatus != ProfileStatus.Success)
         {
             _images.DeleteImage(imageReference);
         }
@@ -188,7 +188,7 @@ public sealed class PlayerProfileApplicationService
                 _profiles.GetProfileImageReference(callerAccountId);
             if (callerReference.Value == null)
             {
-                return new ProfileResult<string>(ProfileOperationStatus.InactiveAccount);
+                return new ProfileResult<string>(ProfileStatus.InactiveAccount);
             }
 
             return callerReference;
@@ -196,22 +196,22 @@ public sealed class PlayerProfileApplicationService
 
         if (!_profiles.IsActive(callerAccountId))
         {
-            return new ProfileResult<string>(ProfileOperationStatus.InactiveAccount);
+            return new ProfileResult<string>(ProfileStatus.InactiveAccount);
         }
 
         return _profiles.GetProfileImageReference(targetAccountId.Value);
     }
 
-    private static ProfileOperationStatus MapSessionStatus(SessionOperationStatus status)
+    private static ProfileStatus MapSessionStatus(SessionStatus status)
     {
-        ProfileOperationStatus mapped;
+        ProfileStatus mapped;
         switch (status)
         {
-            case SessionOperationStatus.MissingSessionToken:
-                mapped = ProfileOperationStatus.MissingSessionToken;
+            case SessionStatus.MissingSessionToken:
+                mapped = ProfileStatus.MissingSessionToken;
                 break;
-            case SessionOperationStatus.InvalidSession:
-                mapped = ProfileOperationStatus.InvalidSession;
+            case SessionStatus.InvalidSession:
+                mapped = ProfileStatus.InvalidSession;
                 break;
             default:
                 throw new ArgumentOutOfRangeException(

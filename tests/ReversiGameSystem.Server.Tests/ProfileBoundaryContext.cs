@@ -62,7 +62,7 @@ internal sealed class ProfileImageRepositoryStub : IPlayerImageRepository
     {
         if (RejectSave)
         {
-            return new ProfileResult<string>(ProfileOperationStatus.InvalidImage);
+            return new ProfileResult<string>(ProfileStatus.InvalidImage);
         }
 
         return new ProfileResult<string>("new-image");

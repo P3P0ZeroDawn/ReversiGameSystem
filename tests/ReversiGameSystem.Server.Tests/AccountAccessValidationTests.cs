@@ -27,7 +27,7 @@ public sealed class AccountAccessValidationTests
 
         // Assert
         TestAssert.AreEqual("player@example.com", accountStore.Login);
-        TestAssert.AreEqual(SessionOperationStatus.Success, result.Status);
+        TestAssert.AreEqual(SessionStatus.Success, result.Status);
     }
 
     [TestMethod]
@@ -41,7 +41,7 @@ public sealed class AccountAccessValidationTests
         SessionResult<DateTime> result = service.RequestLoginCode("", "");
 
         // Assert
-        TestAssert.AreEqual(SessionOperationStatus.InvalidCredentials, result.Status);
+        TestAssert.AreEqual(SessionStatus.InvalidCredentials, result.Status);
         TestAssert.AreEqual<string?>(null, accountStore.Login);
     }
 
@@ -61,7 +61,7 @@ public sealed class AccountAccessValidationTests
             "Password1!");
 
         // Assert
-        TestAssert.AreEqual(SessionOperationStatus.InvalidCredentials, result.Status);
+        TestAssert.AreEqual(SessionStatus.InvalidCredentials, result.Status);
     }
 
     [TestMethod]
@@ -77,7 +77,7 @@ public sealed class AccountAccessValidationTests
             "WrongPassword1!");
 
         // Assert
-        TestAssert.AreEqual(SessionOperationStatus.InvalidCredentials, result.Status);
+        TestAssert.AreEqual(SessionStatus.InvalidCredentials, result.Status);
     }
 
     [TestMethod]
@@ -93,7 +93,7 @@ public sealed class AccountAccessValidationTests
             "Áb12345!");
 
         // Assert
-        TestAssert.AreEqual(SessionOperationStatus.InactiveAccount, result.Status);
+        TestAssert.AreEqual(SessionStatus.InactiveAccount, result.Status);
     }
 
     [TestMethod]
@@ -146,13 +146,13 @@ public sealed class AccountAccessValidationTests
         SessionResult<AuthenticatedSession> removed = store.FindAuthenticated(first.SessionToken);
 
         // Assert
-        TestAssert.AreEqual(SessionOperationStatus.Success, found.Status);
+        TestAssert.AreEqual(SessionStatus.Success, found.Status);
         TestAssert.AreEqual<long?>(42, found.Value?.AccountId);
-        TestAssert.AreEqual(SessionOperationStatus.InvalidSession, missing.Status);
-        TestAssert.AreEqual(SessionOperationStatus.MissingSessionToken, empty.Status);
-        TestAssert.AreEqual(SessionOperationStatus.InvalidSession, revoked.Status);
-        TestAssert.AreEqual(SessionOperationStatus.InvalidSession, expired.Status);
-        TestAssert.AreEqual(SessionOperationStatus.InvalidSession, removed.Status);
+        TestAssert.AreEqual(SessionStatus.InvalidSession, missing.Status);
+        TestAssert.AreEqual(SessionStatus.MissingSessionToken, empty.Status);
+        TestAssert.AreEqual(SessionStatus.InvalidSession, revoked.Status);
+        TestAssert.AreEqual(SessionStatus.InvalidSession, expired.Status);
+        TestAssert.AreEqual(SessionStatus.InvalidSession, removed.Status);
     }
 
     private static AccountResult<LoginAccount> FoundAccount(string statusCode)

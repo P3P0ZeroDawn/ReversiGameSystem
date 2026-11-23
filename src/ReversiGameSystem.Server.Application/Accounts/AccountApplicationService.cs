@@ -126,10 +126,10 @@ public sealed class AccountApplicationService
     {
         SessionResult<AuthenticatedSession> sessionResult =
             _sessions.FindAuthenticated(sessionToken);
-        if (sessionResult.Status != SessionOperationStatus.Success || sessionResult.Value == null)
+        if (sessionResult.Status != SessionStatus.Success || sessionResult.Value == null)
         {
             AccountStatus sessionFailure =
-                sessionResult.Status == SessionOperationStatus.MissingSessionToken
+                sessionResult.Status == SessionStatus.MissingSessionToken
                     ? AccountStatus.MissingSessionToken
                     : AccountStatus.InvalidSession;
             return sessionFailure;
@@ -258,10 +258,10 @@ public sealed class AccountApplicationService
     {
         SessionResult<AuthenticatedSession> sessionResult =
             _sessions.FindAuthenticated(sessionToken);
-        if (sessionResult.Status != SessionOperationStatus.Success || sessionResult.Value == null)
+        if (sessionResult.Status != SessionStatus.Success || sessionResult.Value == null)
         {
             AccountStatus sessionFailure =
-                sessionResult.Status == SessionOperationStatus.MissingSessionToken
+                sessionResult.Status == SessionStatus.MissingSessionToken
                     ? AccountStatus.MissingSessionToken
                     : AccountStatus.InvalidSession;
             return sessionFailure;
@@ -298,7 +298,7 @@ public sealed class AccountApplicationService
         if (registration.ProfileImage != null)
         {
             ProfileResult<string> imageResult = _images.SaveImage(registration.ProfileImage);
-            if (imageResult.Status != ProfileOperationStatus.Success
+            if (imageResult.Status != ProfileStatus.Success
                 || string.IsNullOrWhiteSpace(imageResult.Value))
             {
                 return new AccountResult<AccountSummary>(AccountStatus.InvalidImage);

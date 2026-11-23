@@ -34,12 +34,12 @@ public sealed class FriendshipApplicationService
     {
         SessionResult<AuthenticatedSession> sessionResult =
             _sessions.FindAuthenticated(sessionToken);
-        if (sessionResult.Status == SessionOperationStatus.MissingSessionToken)
+        if (sessionResult.Status == SessionStatus.MissingSessionToken)
         {
             return new FriendshipResult<AuthenticatedSession>(FriendshipStatus.MissingSessionToken);
         }
 
-        if (sessionResult.Status != SessionOperationStatus.Success || sessionResult.Value == null)
+        if (sessionResult.Status != SessionStatus.Success || sessionResult.Value == null)
         {
             return new FriendshipResult<AuthenticatedSession>(FriendshipStatus.InvalidSession);
         }

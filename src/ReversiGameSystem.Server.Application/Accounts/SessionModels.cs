@@ -3,7 +3,7 @@ using System;
 namespace ReversiGameSystem.Server.Application.Accounts;
 
 /// <summary>Identifies the expected outcome of a session operation.</summary>
-public enum SessionOperationStatus
+public enum SessionStatus
 {
     /// <summary>The session operation completed successfully.</summary>
     Success,
@@ -34,9 +34,9 @@ public sealed class SessionResult<T>
     /// <exception cref="ArgumentOutOfRangeException">
     /// The supplied status represents success.
     /// </exception>
-    public SessionResult(SessionOperationStatus status)
+    public SessionResult(SessionStatus status)
     {
-        if (status == SessionOperationStatus.Success)
+        if (status == SessionStatus.Success)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(status),
@@ -56,12 +56,12 @@ public sealed class SessionResult<T>
             throw new ArgumentNullException(nameof(value));
         }
 
-        Status = SessionOperationStatus.Success;
+        Status = SessionStatus.Success;
         Value = value;
     }
 
     /// <summary>Gets the expected operation status.</summary>
-    public SessionOperationStatus Status { get; }
+    public SessionStatus Status { get; }
 
     /// <summary>Gets the successful operation value, or default on failure.</summary>
     public T? Value { get; }

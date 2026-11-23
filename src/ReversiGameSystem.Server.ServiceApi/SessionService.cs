@@ -120,7 +120,7 @@ public sealed class SessionService : ISessionService
     /// </exception>
     public void CloseSession(string sessionToken)
     {
-        SessionOperationStatus status = _applicationService.CloseSession(sessionToken);
+        SessionStatus status = _applicationService.CloseSession(sessionToken);
         ThrowFaultIfFailed(status);
 
         NotifySessionClosed(sessionToken);
@@ -152,23 +152,23 @@ public sealed class SessionService : ISessionService
         }
     }
 
-    private static void ThrowFaultIfFailed(SessionOperationStatus status)
+    private static void ThrowFaultIfFailed(SessionStatus status)
     {
-        if (status == SessionOperationStatus.Success)
+        if (status == SessionStatus.Success)
         {
             return;
         }
 
         SessionFailure failure = status switch
         {
-            SessionOperationStatus.InvalidCredentials => SessionFailure.InvalidCredentials,
-            SessionOperationStatus.InactiveAccount => SessionFailure.InactiveAccount,
-            SessionOperationStatus.InvalidVerificationCode => SessionFailure.InvalidVerificationCode,
-            SessionOperationStatus.ExpiredVerificationCode => SessionFailure.ExpiredVerificationCode,
-            SessionOperationStatus.InvalidGuestName => SessionFailure.InvalidGuestName,
-            SessionOperationStatus.GuestNameUnavailable => SessionFailure.GuestNameUnavailable,
-            SessionOperationStatus.MissingSessionToken => SessionFailure.MissingSessionToken,
-            SessionOperationStatus.InvalidSession => SessionFailure.InvalidSession,
+            SessionStatus.InvalidCredentials => SessionFailure.InvalidCredentials,
+            SessionStatus.InactiveAccount => SessionFailure.InactiveAccount,
+            SessionStatus.InvalidVerificationCode => SessionFailure.InvalidVerificationCode,
+            SessionStatus.ExpiredVerificationCode => SessionFailure.ExpiredVerificationCode,
+            SessionStatus.InvalidGuestName => SessionFailure.InvalidGuestName,
+            SessionStatus.GuestNameUnavailable => SessionFailure.GuestNameUnavailable,
+            SessionStatus.MissingSessionToken => SessionFailure.MissingSessionToken,
+            SessionStatus.InvalidSession => SessionFailure.InvalidSession,
             _ => throw new ArgumentOutOfRangeException(
                 nameof(status),
                 "Unsupported session operation status.")

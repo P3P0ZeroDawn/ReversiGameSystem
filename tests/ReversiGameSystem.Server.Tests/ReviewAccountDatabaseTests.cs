@@ -163,7 +163,7 @@ internal sealed class ReviewAccountDatabaseTests : IEmailSender
             "WrongPassword1!");
 
         // Assert
-        TestAssert.AreEqual(SessionOperationStatus.InvalidCredentials, result.Status);
+        TestAssert.AreEqual(SessionStatus.InvalidCredentials, result.Status);
         TestAssert.AreEqual(0, _mail.Count);
         TestAssert.AreEqual(0, Convert.ToInt32(Scalar(
             "SELECT COUNT(*) FROM dbo.VerificationCode")));
@@ -182,7 +182,7 @@ internal sealed class ReviewAccountDatabaseTests : IEmailSender
             _applicationService.CompleteLogin("ReviewAlpha", wrongCode);
 
         // Assert
-        TestAssert.AreEqual(SessionOperationStatus.InvalidVerificationCode, result.Status);
+        TestAssert.AreEqual(SessionStatus.InvalidVerificationCode, result.Status);
         TestAssert.AreEqual(1, Convert.ToInt32(Scalar(
             "SELECT failedAttempts FROM dbo.VerificationCode")));
     }
@@ -206,8 +206,8 @@ internal sealed class ReviewAccountDatabaseTests : IEmailSender
             "Both accounts require distinct sessions.");
         TestAssert.AreEqual("ReviewAlpha", first.Username);
         TestAssert.AreEqual("ReviewBeta", second.Username);
-        TestAssert.IsTrue(_sessions.FindAuthenticated(first.SessionToken).Status == SessionOperationStatus.Success
-            && _sessions.FindAuthenticated(second.SessionToken).Status == SessionOperationStatus.Success,
+        TestAssert.IsTrue(_sessions.FindAuthenticated(first.SessionToken).Status == SessionStatus.Success
+            && _sessions.FindAuthenticated(second.SessionToken).Status == SessionStatus.Success,
             "Both real in-memory sessions must exist.");
         TestAssert.AreEqual(2, Convert.ToInt32(Scalar("SELECT COUNT(*) FROM dbo.VerificationCode "
             + "WHERE usedAtUtc IS NOT NULL")));

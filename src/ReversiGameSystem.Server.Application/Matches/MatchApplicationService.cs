@@ -305,7 +305,7 @@ public sealed class MatchApplicationService
             {
                 string token = tokens[index];
                 if (_sessionsPendingLobbyCleanup.Contains(token)
-                    || _sessions.FindAuthenticated(token).Status != SessionOperationStatus.Success)
+                    || _sessions.FindAuthenticated(token).Status != SessionStatus.Success)
                 {
                     cancelled.AddRange(CancelTrackedMatches(token));
                 }
@@ -319,13 +319,13 @@ public sealed class MatchApplicationService
     {
         SessionResult<AuthenticatedSession> session =
             _sessions.FindAuthenticated(token);
-        if (session.Status == SessionOperationStatus.MissingSessionToken)
+        if (session.Status == SessionStatus.MissingSessionToken)
         {
             return new MatchResult<AuthenticatedSession>(
                 MatchStatus.MissingSessionToken);
         }
 
-        if (session.Status != SessionOperationStatus.Success || session.Value == null)
+        if (session.Status != SessionStatus.Success || session.Value == null)
         {
             return new MatchResult<AuthenticatedSession>(
                 MatchStatus.InvalidSession);
@@ -420,7 +420,7 @@ public sealed class MatchApplicationService
         lock (_lobbySync)
         {
             bool sessionRemainsValid =
-                _sessions.FindAuthenticated(token).Status == SessionOperationStatus.Success;
+                _sessions.FindAuthenticated(token).Status == SessionStatus.Success;
             bool preparationRemainsTracked = IsMatchTracked(token, preparation.Match.Id);
             if (_sessionsPendingLobbyCleanup.Contains(token)
                 || !preparationRemainsTracked

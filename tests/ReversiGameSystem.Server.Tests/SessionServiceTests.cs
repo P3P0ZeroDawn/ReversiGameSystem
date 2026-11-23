@@ -50,11 +50,11 @@ public sealed class SessionServiceTests
             TestAssert.AreEqual<long>(42, session.Account.AccountId);
             TestAssert.AreEqual("en-US", session.PreferredLocaleCode);
             TestAssert.AreEqual(
-                SessionOperationStatus.Success,
+                SessionStatus.Success,
                 context.Sessions.FindAuthenticated(session.SessionToken).Status);
             channel.CloseSession(session.SessionToken);
             TestAssert.AreEqual(
-                SessionOperationStatus.InvalidSession,
+                SessionStatus.InvalidSession,
                 context.Sessions.FindAuthenticated(session.SessionToken).Status);
             channel.CloseSession(session.SessionToken);
             return true;
@@ -134,7 +134,7 @@ public sealed class SessionServiceTests
             context.ApplicationService.CompleteLogin("PlayerOne", "000012");
 
         // Assert
-        TestAssert.AreEqual(SessionOperationStatus.InactiveAccount, result.Status);
+        TestAssert.AreEqual(SessionStatus.InactiveAccount, result.Status);
     }
 
     [TestMethod]
@@ -150,7 +150,7 @@ public sealed class SessionServiceTests
             context.ApplicationService.CompleteLogin("PlayerOne", "000012");
 
         // Assert
-        TestAssert.AreEqual(SessionOperationStatus.InvalidVerificationCode, result.Status);
+        TestAssert.AreEqual(SessionStatus.InvalidVerificationCode, result.Status);
     }
 
     [TestMethod]
@@ -213,14 +213,14 @@ public sealed class SessionServiceTests
         {
             SessionResult<GuestSession> result =
                 context.ApplicationService.OpenGuestSession("Visitor");
-            if (result.Status == SessionOperationStatus.Success)
+            if (result.Status == SessionStatus.Success)
             {
                 Interlocked.Increment(ref accepted);
             }
             else
             {
                 TestAssert.AreEqual(
-                    SessionOperationStatus.GuestNameUnavailable,
+                    SessionStatus.GuestNameUnavailable,
                     result.Status);
                 Interlocked.Increment(ref rejected);
             }

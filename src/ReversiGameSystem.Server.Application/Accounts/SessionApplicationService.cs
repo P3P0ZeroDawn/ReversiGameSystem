@@ -51,7 +51,7 @@ public sealed class SessionApplicationService
         SessionResult<LoginAccount> accountResult = ValidateCredentials(
             loginIdentifier,
             password);
-        if (accountResult.Status != SessionOperationStatus.Success || accountResult.Value == null)
+        if (accountResult.Status != SessionStatus.Success || accountResult.Value == null)
         {
             return new SessionResult<DateTime>(accountResult.Status);
         }
@@ -74,8 +74,8 @@ public sealed class SessionApplicationService
     {
         SessionResult<LoginAccount> initialResult = ResolveAccount(
             loginIdentifier,
-            SessionOperationStatus.InvalidVerificationCode);
-        if (initialResult.Status != SessionOperationStatus.Success || initialResult.Value == null)
+            SessionStatus.InvalidVerificationCode);
+        if (initialResult.Status != SessionStatus.Success || initialResult.Value == null)
         {
             return new SessionResult<AuthenticatedSession>(initialResult.Status);
         }
@@ -89,10 +89,10 @@ public sealed class SessionApplicationService
             verificationCode);
         if (verification != VerificationStatus.Accepted)
         {
-            SessionOperationStatus failureStatus =
+            SessionStatus failureStatus =
                 verification == VerificationStatus.Expired
-                    ? SessionOperationStatus.ExpiredVerificationCode
-                    : SessionOperationStatus.InvalidVerificationCode;
+                    ? SessionStatus.ExpiredVerificationCode
+                    : SessionStatus.InvalidVerificationCode;
             return new SessionResult<AuthenticatedSession>(failureStatus);
         }
 
@@ -109,7 +109,7 @@ public sealed class SessionApplicationService
         string normalizedName = displayName?.Trim() ?? string.Empty;
         if (UsernamePolicy.Validate(normalizedName) != UsernameValidationError.None)
         {
-            return new SessionResult<GuestSession>(SessionOperationStatus.InvalidGuestName);
+            return new SessionResult<GuestSession>(SessionStatus.InvalidGuestName);
         }
 
         GuestSession guestSession = new GuestSession(
@@ -118,7 +118,7 @@ public sealed class SessionApplicationService
             _sessions.CalculateExpirationUtc());
         if (!_sessions.TryReserveGuest(guestSession))
         {
-            return new SessionResult<GuestSession>(SessionOperationStatus.GuestNameUnavailable);
+            return new SessionResult<GuestSession>(SessionStatus.GuestNameUnavailable);
         }
 
         return new SessionResult<GuestSession>(guestSession);
@@ -129,15 +129,15 @@ public sealed class SessionApplicationService
     /// </summary>
     /// <param name="sessionToken">The opaque session token.</param>
     /// <returns>The expected closure status.</returns>
-    public SessionOperationStatus CloseSession(string sessionToken)
+    public SessionStatus CloseSession(string sessionToken)
     {
         if (string.IsNullOrWhiteSpace(sessionToken))
         {
-            return SessionOperationStatus.MissingSessionToken;
+            return SessionStatus.MissingSessionToken;
         }
 
         _sessions.RevokeSession(sessionToken);
-        return SessionOperationStatus.Success;
+        return SessionStatus.Success;
     }
 
     private SessionResult<LoginAccount> ValidateCredentials(
@@ -146,8 +146,8 @@ public sealed class SessionApplicationService
     {
         SessionResult<LoginAccount> result = ResolveAccount(
             loginIdentifier,
-            SessionOperationStatus.InvalidCredentials);
-        if (result.Status != SessionOperationStatus.Success || result.Value == null)
+            SessionStatus.InvalidCredentials);
+        if (result.Status != SessionStatus.Success || result.Value == null)
         {
             return result;
         }
@@ -160,12 +160,12 @@ public sealed class SessionApplicationService
                 account.PasswordHash);
         if (!isPasswordValid)
         {
-            return new SessionResult<LoginAccount>(SessionOperationStatus.InvalidCredentials);
+            return new SessionResult<LoginAccount>(SessionStatus.InvalidCredentials);
         }
 
         if (!string.Equals(account.StatusCode, ActiveStatusCode, StringComparison.Ordinal))
         {
-            return new SessionResult<LoginAccount>(SessionOperationStatus.InactiveAccount);
+            return new SessionResult<LoginAccount>(SessionStatus.InactiveAccount);
         }
 
         return result;
@@ -173,7 +173,7 @@ public sealed class SessionApplicationService
 
     private SessionResult<LoginAccount> ResolveAccount(
         string loginIdentifier,
-        SessionOperationStatus missingAccountStatus)
+        SessionStatus missingAccountStatus)
     {
         string identifier = loginIdentifier?.Trim() ?? string.Empty;
         if (identifier.Length == 0 || identifier.Length > MaximumLoginIdentifierLength)
@@ -196,8 +196,8 @@ public sealed class SessionApplicationService
     {
         SessionResult<LoginAccount> currentResult = ResolveAccount(
             loginIdentifier,
-            SessionOperationStatus.InvalidVerificationCode);
-        if (currentResult.Status != SessionOperationStatus.Success || currentResult.Value == null)
+            SessionStatus.InvalidVerificationCode);
+        if (currentResult.Status != SessionStatus.Success || currentResult.Value == null)
         {
             return new SessionResult<AuthenticatedSession>(currentResult.Status);
         }
@@ -213,13 +213,13 @@ public sealed class SessionApplicationService
         if (!sameIdentity)
         {
             return new SessionResult<AuthenticatedSession>(
-                SessionOperationStatus.InvalidVerificationCode);
+                SessionStatus.InvalidVerificationCode);
         }
 
         if (!string.Equals(currentAccount.StatusCode, ActiveStatusCode, StringComparison.Ordinal))
         {
             return new SessionResult<AuthenticatedSession>(
-                SessionOperationStatus.InactiveAccount);
+                SessionStatus.InactiveAccount);
         }
 
         AuthenticatedSession session = StoreNewAuthenticatedSession(currentAccount);

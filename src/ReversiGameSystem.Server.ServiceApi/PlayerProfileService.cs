@@ -104,7 +104,7 @@ public sealed class PlayerProfileService : IPlayerProfileService
     /// </exception>
     public void ChangeUsername(string sessionToken, string username)
     {
-        ProfileOperationStatus status = _applicationService.ChangeUsername(
+        ProfileStatus status = _applicationService.ChangeUsername(
             sessionToken,
             username);
         ThrowFaultIfFailed(status);
@@ -128,7 +128,7 @@ public sealed class PlayerProfileService : IPlayerProfileService
     {
         ProfileImageData? imageData = image == null ? null
             : new ProfileImageData(image.Content, image.MediaType);
-        ProfileOperationStatus status = _applicationService.UpdateImage(
+        ProfileStatus status = _applicationService.UpdateImage(
             sessionToken,
             imageData);
         ThrowFaultIfFailed(status);
@@ -141,17 +141,17 @@ public sealed class PlayerProfileService : IPlayerProfileService
                 "A successful profile result must contain its value.");
     }
 
-    private static void ThrowFaultIfFailed(ProfileOperationStatus status)
+    private static void ThrowFaultIfFailed(ProfileStatus status)
     {
-        if (status == ProfileOperationStatus.Success)
+        if (status == ProfileStatus.Success)
         {
             return;
         }
-        if (status == ProfileOperationStatus.MissingSessionToken)
+        if (status == ProfileStatus.MissingSessionToken)
         {
             throw ServiceFaultFactory.CreateSessionFault(SessionFailure.MissingSessionToken);
         }
-        if (status == ProfileOperationStatus.InvalidSession)
+        if (status == ProfileStatus.InvalidSession)
         {
             throw ServiceFaultFactory.CreateSessionFault(SessionFailure.InvalidSession);
         }
@@ -163,16 +163,16 @@ public sealed class PlayerProfileService : IPlayerProfileService
         }, "The profile request was rejected.");
     }
 
-    private static ProfileFailure MapProfileFailure(ProfileOperationStatus status)
+    private static ProfileFailure MapProfileFailure(ProfileStatus status)
     {
         ProfileFailure failure = status switch
         {
-            ProfileOperationStatus.InactiveAccount => ProfileFailure.InactiveAccount,
-            ProfileOperationStatus.InvalidAccountId => ProfileFailure.InvalidAccountId,
-            ProfileOperationStatus.AccountNotFound => ProfileFailure.AccountNotFound,
-            ProfileOperationStatus.InvalidUsername => ProfileFailure.InvalidUsername,
-            ProfileOperationStatus.UsernameUnavailable => ProfileFailure.UsernameUnavailable,
-            ProfileOperationStatus.InvalidImage => ProfileFailure.InvalidImage,
+            ProfileStatus.InactiveAccount => ProfileFailure.InactiveAccount,
+            ProfileStatus.InvalidAccountId => ProfileFailure.InvalidAccountId,
+            ProfileStatus.AccountNotFound => ProfileFailure.AccountNotFound,
+            ProfileStatus.InvalidUsername => ProfileFailure.InvalidUsername,
+            ProfileStatus.UsernameUnavailable => ProfileFailure.UsernameUnavailable,
+            ProfileStatus.InvalidImage => ProfileFailure.InvalidImage,
             _ => throw new ArgumentOutOfRangeException(nameof(status))
         };
 

@@ -116,8 +116,8 @@ public sealed class SessionStore
     /// </summary>
     /// <param name="sessionToken">The opaque session token.</param>
     /// <returns>
-    /// The active session, <see cref="SessionOperationStatus.MissingSessionToken"/>,
-    /// or <see cref="SessionOperationStatus.InvalidSession"/>.
+    /// The active session, <see cref="SessionStatus.MissingSessionToken"/>,
+    /// or <see cref="SessionStatus.InvalidSession"/>.
     /// </returns>
     public SessionResult<AuthenticatedSession> FindAuthenticated(
         string sessionToken)
@@ -125,13 +125,13 @@ public sealed class SessionStore
         if (string.IsNullOrWhiteSpace(sessionToken))
         {
             return new SessionResult<AuthenticatedSession>(
-                SessionOperationStatus.MissingSessionToken);
+                SessionStatus.MissingSessionToken);
         }
 
         if (!_authenticated.TryGetValue(sessionToken, out AuthenticatedSession? active))
         {
             return new SessionResult<AuthenticatedSession>(
-                SessionOperationStatus.InvalidSession);
+                SessionStatus.InvalidSession);
         }
 
         if (active.ExpiresAtUtc <= _clock.UtcNow)
@@ -142,7 +142,7 @@ public sealed class SessionStore
             }
 
             return new SessionResult<AuthenticatedSession>(
-                SessionOperationStatus.InvalidSession);
+                SessionStatus.InvalidSession);
         }
 
         return new SessionResult<AuthenticatedSession>(active);

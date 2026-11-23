@@ -24,7 +24,7 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
     {
         if (accountId <= 0)
         {
-            return new ProfileResult<PlayerProfile>(ProfileOperationStatus.AccountNotFound);
+            return new ProfileResult<PlayerProfile>(ProfileStatus.AccountNotFound);
         }
 
         using (ReversiGameSystemEntities context = new ReversiGameSystemEntities())
@@ -38,7 +38,7 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
     {
         if (accountId <= 0)
         {
-            return new ProfileResult<string>(ProfileOperationStatus.AccountNotFound);
+            return new ProfileResult<string>(ProfileStatus.AccountNotFound);
         }
 
         using (ReversiGameSystemEntities context = new ReversiGameSystemEntities())
@@ -54,7 +54,7 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
                 .FirstOrDefault();
             if (lookup == null)
             {
-                return new ProfileResult<string>(ProfileOperationStatus.AccountNotFound);
+                return new ProfileResult<string>(ProfileStatus.AccountNotFound);
             }
 
             return new ProfileResult<string>(lookup.ProfileImageUri ?? string.Empty);
@@ -77,11 +77,11 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
     }
 
     /// <inheritdoc />
-    public ProfileOperationStatus ChangeUsername(
+    public ProfileStatus ChangeUsername(
         long accountId,
         string username)
     {
-        ProfileOperationStatus updateStatus;
+        ProfileStatus updateStatus;
         try
         {
             using (ReversiGameSystemEntities context = new ReversiGameSystemEntities())
@@ -93,7 +93,7 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
                     && item.statusCode == ActiveAccountStatusCode);
                 if (account == null)
                 {
-                    updateStatus = ProfileOperationStatus.InactiveAccount;
+                    updateStatus = ProfileStatus.InactiveAccount;
                 }
                 else
                 {
@@ -103,28 +103,28 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
                         && other.username == username);
                     if (usernameUnavailable)
                     {
-                        updateStatus = ProfileOperationStatus.UsernameUnavailable;
+                        updateStatus = ProfileStatus.UsernameUnavailable;
                     }
                     else
                     {
                         account.username = username;
                         context.SaveChanges();
                         transaction.Commit();
-                        updateStatus = ProfileOperationStatus.Success;
+                        updateStatus = ProfileStatus.Success;
                     }
                 }
             }
         }
         catch (DbUpdateException exception) when (IsUniqueViolation(exception))
         {
-            updateStatus = ProfileOperationStatus.UsernameUnavailable;
+            updateStatus = ProfileStatus.UsernameUnavailable;
         }
 
         return updateStatus;
     }
 
     /// <inheritdoc />
-    public ProfileOperationStatus SetProfileImage(
+    public ProfileStatus SetProfileImage(
         long accountId,
         string imageReference)
     {
@@ -137,13 +137,13 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
                 && item.statusCode == ActiveAccountStatusCode);
             if (account == null)
             {
-                return ProfileOperationStatus.InactiveAccount;
+                return ProfileStatus.InactiveAccount;
             }
 
             account.profileImageUri = imageReference;
             context.SaveChanges();
             transaction.Commit();
-            return ProfileOperationStatus.Success;
+            return ProfileStatus.Success;
         }
     }
 
@@ -164,7 +164,7 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
             .FirstOrDefault();
         if (identity == null)
         {
-            return new ProfileResult<PlayerProfile>(ProfileOperationStatus.AccountNotFound);
+            return new ProfileResult<PlayerProfile>(ProfileStatus.AccountNotFound);
         }
 
         List<ResultCount> resultCounts = LoadResultCounts(context, accountId);

@@ -60,7 +60,7 @@ public class ChatApplicationService
     {
         SessionResult<AuthenticatedSession> session =
             _sessions.FindAuthenticated(sessionToken);
-        if (session.Status != SessionOperationStatus.Success || session.Value == null)
+        if (session.Status != SessionStatus.Success || session.Value == null)
         {
             return new ChatChannelAccess(MapSessionStatus(session.Status));
         }
@@ -87,7 +87,7 @@ public class ChatApplicationService
     {
         SessionResult<AuthenticatedSession> session =
             _sessions.FindAuthenticated(sessionToken);
-        if (session.Status != SessionOperationStatus.Success || session.Value == null)
+        if (session.Status != SessionStatus.Success || session.Value == null)
         {
             return new ChatMessageSubmission(MapSessionStatus(session.Status));
         }
@@ -122,7 +122,7 @@ public class ChatApplicationService
     {
         SessionResult<AuthenticatedSession> session =
             _sessions.FindAuthenticated(sessionToken);
-        if (session.Status != SessionOperationStatus.Success || session.Value == null)
+        if (session.Status != SessionStatus.Success || session.Value == null)
         {
             return new ChatHistory(MapSessionStatus(session.Status));
         }
@@ -153,22 +153,22 @@ public class ChatApplicationService
             _sessions.FindAuthenticated(mutedSessionToken);
         SessionResult<AuthenticatedSession> recipientSession =
             _sessions.FindAuthenticated(recipientSessionToken);
-        bool canReceive = mutedSession.Status == SessionOperationStatus.Success
+        bool canReceive = mutedSession.Status == SessionStatus.Success
             && mutedSession.Value != null
-            && recipientSession.Status == SessionOperationStatus.Success
+            && recipientSession.Status == SessionStatus.Success
             && recipientSession.Value != null
             && mutedSession.Value.AccountId == recipientSession.Value.AccountId;
         return canReceive;
     }
 
-    private static ChatStatus MapSessionStatus(SessionOperationStatus status)
+    private static ChatStatus MapSessionStatus(SessionStatus status)
     {
         ChatStatus chatStatus = ChatStatus.InvalidSession;
-        if (status == SessionOperationStatus.Success)
+        if (status == SessionStatus.Success)
         {
             chatStatus = ChatStatus.Success;
         }
-        else if (status == SessionOperationStatus.MissingSessionToken)
+        else if (status == SessionStatus.MissingSessionToken)
         {
             chatStatus = ChatStatus.MissingSessionToken;
         }

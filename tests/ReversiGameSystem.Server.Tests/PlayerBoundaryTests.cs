@@ -204,7 +204,7 @@ public sealed class PlayerBoundaryTests
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         context.Profiles.ChangeUsernameStatus =
-            ProfileOperationStatus.UsernameUnavailable;
+            ProfileStatus.UsernameUnavailable;
 
         FaultException<ProfileFault> fault = TestAssert.Throws<FaultException<ProfileFault>>(
             () => Invoke<IPlayerProfileService, bool>(context.Service, channel =>

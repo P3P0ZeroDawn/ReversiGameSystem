@@ -64,7 +64,7 @@ public sealed class ProfileImageRepository : IPlayerImageRepository
         byte[]? recoded = RecodeImage(image);
         if (recoded == null)
         {
-            return new ProfileResult<string>(ProfileOperationStatus.InvalidImage);
+            return new ProfileResult<string>(ProfileStatus.InvalidImage);
         }
 
         string reference = _referencePrefix + Guid.NewGuid().ToString("N")

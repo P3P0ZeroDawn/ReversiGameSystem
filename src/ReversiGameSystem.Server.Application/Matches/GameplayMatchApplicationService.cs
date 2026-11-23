@@ -615,12 +615,12 @@ public sealed class GameplayMatchApplicationService
     {
         SessionResult<AuthenticatedSession> session =
             _sessions.FindAuthenticated(sessionToken);
-        if (session.Status == SessionOperationStatus.MissingSessionToken)
+        if (session.Status == SessionStatus.MissingSessionToken)
         {
             return new MatchResult<AuthenticatedSession>(MatchStatus.MissingSessionToken);
         }
 
-        if (session.Status != SessionOperationStatus.Success || session.Value == null)
+        if (session.Status != SessionStatus.Success || session.Value == null)
         {
             return new MatchResult<AuthenticatedSession>(MatchStatus.InvalidSession);
         }

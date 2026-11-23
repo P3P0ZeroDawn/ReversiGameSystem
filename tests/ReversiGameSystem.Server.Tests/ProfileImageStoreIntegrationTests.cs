@@ -29,7 +29,7 @@ internal sealed class ProfileImageStoreIntegrationTests
                 new ProfileImageData(imageContent, "image/png"));
 
             // Assert
-            TestAssert.AreEqual(ProfileOperationStatus.Success, result.Status);
+            TestAssert.AreEqual(ProfileStatus.Success, result.Status);
             TestAssert.AreEqual(true, result.Value?.StartsWith("profile-images/"));
             TestAssert.AreEqual(1, Directory.GetFiles(root).Length);
 
@@ -68,10 +68,10 @@ internal sealed class ProfileImageStoreIntegrationTests
                 new ProfileImageData(new byte[] { 1, 2 }, "image/png"));
 
             // Assert
-            TestAssert.AreEqual(ProfileOperationStatus.Success, saved.Status);
+            TestAssert.AreEqual(ProfileStatus.Success, saved.Status);
             string savedReference = TestAssert.IsNotNull(saved.Value);
             TestAssert.AreEqual(true, savedReference.StartsWith("profile-images/"));
-            TestAssert.AreEqual(ProfileOperationStatus.InvalidImage, rejected.Status);
+            TestAssert.AreEqual(ProfileStatus.InvalidImage, rejected.Status);
             TestAssert.AreEqual<string?>(null, rejected.Value);
             TestAssert.AreEqual(1, Directory.GetFiles(root).Length);
 

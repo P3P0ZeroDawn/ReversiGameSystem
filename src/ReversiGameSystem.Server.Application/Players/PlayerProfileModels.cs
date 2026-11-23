@@ -61,7 +61,7 @@ public sealed class PlayerProfile
 }
 
 /// <summary>Identifies an expected outcome of a player profile operation.</summary>
-public enum ProfileOperationStatus
+public enum ProfileStatus
 {
     /// <summary>The requested public data is available.</summary>
     Success,
@@ -95,15 +95,15 @@ public sealed class ProfileResult<T>
     public ProfileResult(T value)
     {
         Value = value ?? throw new ArgumentNullException(nameof(value));
-        Status = ProfileOperationStatus.Success;
+        Status = ProfileStatus.Success;
     }
 
     /// <summary>Initializes a rejected profile result with its expected status.</summary>
     /// <param name="status">The failure status.</param>
     /// <exception cref="ArgumentOutOfRangeException">The status represents success.</exception>
-    public ProfileResult(ProfileOperationStatus status)
+    public ProfileResult(ProfileStatus status)
     {
-        if (status == ProfileOperationStatus.Success)
+        if (status == ProfileStatus.Success)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(status),
@@ -115,7 +115,7 @@ public sealed class ProfileResult<T>
     }
 
     /// <summary>Gets the authoritative operation status.</summary>
-    public ProfileOperationStatus Status { get; }
+    public ProfileStatus Status { get; }
 
     /// <summary>Gets the payload when successful, or default when rejected.</summary>
     public T? Value { get; }
@@ -129,16 +129,16 @@ public sealed class GetProfileImageResult
     /// </summary>
     public GetProfileImageResult()
     {
-        Status = ProfileOperationStatus.Success;
+        Status = ProfileStatus.Success;
         Image = null;
     }
 
     /// <summary>Creates a rejected profile image query result.</summary>
     /// <param name="status">The failure status.</param>
     /// <exception cref="ArgumentOutOfRangeException">The status represents success.</exception>
-    public GetProfileImageResult(ProfileOperationStatus status)
+    public GetProfileImageResult(ProfileStatus status)
     {
-        if (status == ProfileOperationStatus.Success)
+        if (status == ProfileStatus.Success)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(status),
@@ -155,12 +155,12 @@ public sealed class GetProfileImageResult
     /// <param name="image">The custom image, or null when using the default image.</param>
     public GetProfileImageResult(ProfileImageData? image)
     {
-        Status = ProfileOperationStatus.Success;
+        Status = ProfileStatus.Success;
         Image = image;
     }
 
     /// <summary>Gets the expected read status.</summary>
-    public ProfileOperationStatus Status { get; }
+    public ProfileStatus Status { get; }
 
     /// <summary>Gets the custom image, or null when the profile uses the default.</summary>
     public ProfileImageData? Image { get; }
