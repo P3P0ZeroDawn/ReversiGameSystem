@@ -1,25 +1,28 @@
 using System;
 using System.Globalization;
 using System.Security.Cryptography;
-using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Common;
 
 namespace ReversiGameSystem.Server.Application.Verification;
 
 /// <summary>Generates, protects and delivers a code before it may replace pending state.</summary>
 public sealed class VerificationCodeIssuer
 {
-    private readonly IVerificationEmailSender _sender;
+    private static readonly TimeSpan CodeLifetime = TimeSpan.FromMinutes(5);
+    private readonly IEmailSender _emailSender;
     private readonly VerificationCodeProtector _protector;
     private readonly IUtcClock _clock;
 
     /// <summary>Creates a code issuer with delivery, protection and server time.</summary>
-    /// <param name="sender">The delivery mechanism.</param>
+    /// <param name="emailSender">The email delivery service.</param>
     /// <param name="protector">The keyed digest protector.</param>
     /// <param name="clock">The authoritative UTC clock.</param>
-    public VerificationCodeIssuer(IVerificationEmailSender sender,
-        VerificationCodeProtector protector, IUtcClock clock)
+    public VerificationCodeIssuer(
+        IEmailSender emailSender,
+        VerificationCodeProtector protector,
+        IUtcClock clock)
     {
-        _sender = sender ?? throw new ArgumentNullException(nameof(sender));
+        _emailSender = emailSender ?? throw new ArgumentNullException(nameof(emailSender));
         _protector = protector ?? throw new ArgumentNullException(nameof(protector));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
     }
@@ -31,7 +34,7 @@ public sealed class VerificationCodeIssuer
     {
         string code = CreateCode();
         DateTime createdAtUtc = _clock.UtcNow;
-        DateTime expiresAtUtc = createdAtUtc.AddMinutes(5);
+        DateTime expiresAtUtc = createdAtUtc.Add(CodeLifetime);
         PendingVerificationCode pending = new PendingVerificationCode
         {
             IdentityKey = identity.Key,
@@ -41,11 +44,9 @@ public sealed class VerificationCodeIssuer
             Digest = _protector.Protect(identity.Key, code),
             ExpiresAtUtc = expiresAtUtc
         };
-        _sender.Send(new VerificationEmail
-        {
-            RecipientAddress = identity.RecipientAddress, Code = code,
-            Purpose = identity.Purpose, ExpiresAtUtc = expiresAtUtc
-        });
+
+        EmailMessage message = CreateEmailMessage(identity, code, expiresAtUtc);
+        _emailSender.Send(message);
         return pending;
     }
 
@@ -56,6 +57,46 @@ public sealed class VerificationCodeIssuer
     public byte[] Protect(VerificationIdentity identity, string code)
     {
         return _protector.Protect(identity.Key, code);
+    }
+
+    private static EmailMessage CreateEmailMessage(
+        VerificationIdentity identity,
+        string code,
+        DateTime expiresAtUtc)
+    {
+        string purposeLabel = GetPurposeLabel(identity.Purpose);
+        string subject = "Reversi: " + purposeLabel;
+        string expires = expiresAtUtc.ToUniversalTime()
+            .ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
+        string body = $"Your verification code / Tu código de verificación: {code}\n"
+            + $"Purpose / Propósito: {purposeLabel}\nExpires / Vence: {expires}\n"
+            + "Use it once. Do not share it. / Úsalo una vez. No lo compartas.";
+
+        EmailMessage email = new EmailMessage(identity.RecipientAddress, subject, body);
+        return email;
+    }
+
+    private static string GetPurposeLabel(VerificationPurpose purpose)
+    {
+        string label;
+        switch (purpose)
+        {
+            case VerificationPurpose.Login:
+                label = "sign-in / inicio de sesión";
+                break;
+            case VerificationPurpose.Registration:
+                label = "registration / registro";
+                break;
+            case VerificationPurpose.PasswordReset:
+                label = "password reset / restablecimiento de contraseña";
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(
+                    nameof(purpose),
+                    "Unsupported verification purpose.");
+        }
+
+        return label;
     }
 
     private static string CreateCode()
@@ -72,7 +113,9 @@ public sealed class VerificationCodeIssuer
                 value = BitConverter.ToUInt32(bytes, 0);
             }
             while (value >= Limit);
-            return (value % Range).ToString("D6", CultureInfo.InvariantCulture);
+
+            string formattedCode = (value % Range).ToString("D6", CultureInfo.InvariantCulture);
+            return formattedCode;
         }
     }
 }

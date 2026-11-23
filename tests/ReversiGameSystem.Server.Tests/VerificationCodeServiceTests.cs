@@ -19,15 +19,18 @@ public sealed class VerificationCodeServiceTests
         // Act
         DateTime expiration = context.Codes.Request(Identity);
         // Assert
-        VerificationEmail email = TestAssert.IsNotNull(context.Email);
+        ReversiGameSystem.Server.Application.Common.EmailMessage email =
+            TestAssert.IsNotNull(context.Email);
         TestAssert.AreEqual(context.UtcNow.AddMinutes(5), expiration);
-        TestAssert.AreEqual(expiration, email.ExpiresAtUtc);
         TestAssert.AreEqual("player@example.com", email.RecipientAddress);
-        TestAssert.IsTrue(email.Code.Length == 6 && email.Code.All(c => c >= '0' && c <= '9'),
-            "A verification code must contain exactly six ASCII digits.");
+        System.Text.RegularExpressions.Match codeMatch =
+            System.Text.RegularExpressions.Regex.Match(email.Body, @"\b(\d{6})\b");
+        TestAssert.IsTrue(codeMatch.Success, "A verification code must contain exactly six ASCII digits.");
+        string code = codeMatch.Groups[1].Value;
         PendingVerificationCode pending = TestAssert.IsNotNull(context.Pending);
+        TestAssert.AreEqual(expiration, pending.ExpiresAtUtc);
         TestAssert.IsTrue(pending.Digest.SequenceEqual(
-            context.Protector.Protect(Identity.Key, email.Code)),
+            context.Protector.Protect(Identity.Key, code)),
             "The persisted digest must authenticate the delivered code and its identity.");
     }
 

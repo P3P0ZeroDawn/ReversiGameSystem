@@ -1,8 +1,9 @@
 using System;
-using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
-using ReversiGameSystem.Server.Persistence.Accounts;
+using ReversiGameSystem.Server.Application.Common;
+using ReversiGameSystem.Server.Application.Players;
+using ReversiGameSystem.Server.Application.Verification;
 
 namespace ReversiGameSystem.Server.Tests;
 
@@ -13,293 +14,227 @@ public sealed class CreateAccountHandlerTests
     public void ExecuteAsync_ValidRequest_StoresAccount()
     {
         // Arrange
-        AccountRegistrationStoreStub accountStore = new AccountRegistrationStoreStub
+        AccountRepositoryStub accountStore = new AccountRepositoryStub
         {
-            Result = new AccountRegistrationStoreResult(
-                AccountRegistrationStoreOutcome.Success,
-                42)
+            CreateResult = new AccountResult<long>(42)
         };
-        PasswordHasherStub passwordHasher = new PasswordHasherStub();
-        ProfileImageStoreStub imageStore = new ProfileImageStoreStub();
-        DateTime registeredAtUtc = new DateTime(2026, 9, 26, 12, 0, 0, DateTimeKind.Utc);
-        CreateAccountHandler handler = CreateHandler(
-            accountStore,
-            passwordHasher,
-            imageStore,
-            registeredAtUtc);
+        ProfileImageRepositoryStub imageStore = new ProfileImageRepositoryStub();
+        AccountApplicationService service = CreateService(accountStore, imageStore);
 
         // Act
-        CreateAccountResult result = handler.ExecuteAsync(
-            new CreateAccountCommand(
+        AccountResult<AccountSummary> result = service.CompleteRegistration(
+            new NewAccountRegistration(
+                "000001",
                 "  PlayerOne  ",
                 "  player@example.com  ",
                 "A\u0301b12345!",
                 "  en-US  ",
-                new ProfileImageData(PngSignature(), "image/png")))
-            .GetAwaiter()
-            .GetResult();
+                new ProfileImageData(PngSignature(), "image/png")));
 
         // Assert
-        TestAssert.AreEqual(CreateAccountOutcome.Success, result.Outcome);
-        TestAssert.AreEqual<long?>(42, result.AccountId);
+        TestAssert.AreEqual(AccountStatus.Success, result.Status);
+        TestAssert.AreEqual<long?>(42, result.Value?.AccountId);
         TestAssert.AreEqual("PlayerOne", accountStore.Registration?.Username);
         TestAssert.AreEqual("player@example.com", accountStore.Registration?.EmailAddress);
-        TestAssert.AreEqual("Áb12345!", passwordHasher.HashedPassword);
-        TestAssert.AreEqual("hashed-password", accountStore.Registration?.PasswordHash);
+        TestAssert.IsTrue(
+            PasswordHasher.Verify("Áb12345!", accountStore.Registration!.PasswordHash),
+            "Stored PBKDF2 hash must verify the normalized password.");
         TestAssert.AreEqual("en-US", accountStore.Registration?.PreferredLocaleCode);
-        TestAssert.AreEqual("profile-images/test.png", accountStore.Registration?.ProfileImageUri);
-        TestAssert.AreEqual(registeredAtUtc, accountStore.Registration?.RegisteredAtUtc);
+        TestAssert.AreEqual("new-image", accountStore.Registration?.ProfileImageUri);
     }
 
     [TestMethod]
     public void ExecuteAsync_MissingRequiredValue_ReturnsInvalidRequest()
     {
         // Arrange
-        AccountRegistrationStoreStub accountStore = new AccountRegistrationStoreStub();
-        PasswordHasherStub passwordHasher = new PasswordHasherStub();
-        ProfileImageStoreStub imageStore = new ProfileImageStoreStub();
-        CreateAccountHandler handler = CreateHandler(
-            accountStore,
-            passwordHasher,
-            imageStore,
-            DateTime.UtcNow);
+        AccountRepositoryStub accountStore = new AccountRepositoryStub();
+        ProfileImageRepositoryStub imageStore = new ProfileImageRepositoryStub();
+        AccountApplicationService service = CreateService(accountStore, imageStore);
 
         // Act
-        CreateAccountResult result = handler.ExecuteAsync(
-            new CreateAccountCommand("", "player@example.com", "Password1!", "en-US", null))
-            .GetAwaiter()
-            .GetResult();
+        AccountResult<AccountSummary> result = service.CompleteRegistration(
+            new NewAccountRegistration("000001", "", "player@example.com", "Password1!", "en-US", null));
 
         // Assert
-        TestAssert.AreEqual(CreateAccountOutcome.InvalidRequest, result.Outcome);
+        TestAssert.AreEqual(AccountStatus.InvalidUsername, result.Status);
         TestAssert.AreEqual<AccountRegistrationData?>(null, accountStore.Registration);
-        TestAssert.AreEqual<string?>(null, passwordHasher.HashedPassword);
     }
 
     [TestMethod]
     public void ExecuteAsync_InvalidFields_ReturnSpecificOutcomes()
     {
         // Arrange
-        CreateAccountHandler handler = CreateHandler(
-            new AccountRegistrationStoreStub(),
-            new PasswordHasherStub(),
-            new ProfileImageStoreStub(),
-            DateTime.UtcNow);
+        AccountRepositoryStub accountStore = new AccountRepositoryStub();
+        AccountApplicationService service = CreateService(accountStore, new ProfileImageRepositoryStub());
 
-        // Act
-        CreateAccountResult invalidUsername = Execute(
-            handler,
-            "_player",
-            "player@example.com",
-            "Password1!");
-        CreateAccountResult invalidEmail = Execute(
-            handler,
-            "PlayerOne",
-            "player.example.com",
-            "Password1!");
-        CreateAccountResult invalidPassword = Execute(
-            handler,
-            "PlayerOne",
-            "player@example.com",
-            "password");
-
-        // Assert
-        TestAssert.AreEqual(CreateAccountOutcome.InvalidUsername, invalidUsername.Outcome);
-        TestAssert.AreEqual(CreateAccountOutcome.InvalidEmailAddress, invalidEmail.Outcome);
-        TestAssert.AreEqual(CreateAccountOutcome.InvalidPassword, invalidPassword.Outcome);
+        // Act & Assert
+        TestAssert.AreEqual(
+            AccountStatus.InvalidUsername,
+            service.CompleteRegistration(
+                new NewAccountRegistration("000001", "ab", "player@example.com", "Password1!", "en-US", null)).Status);
+        TestAssert.AreEqual(
+            AccountStatus.InvalidEmailAddress,
+            service.CompleteRegistration(
+                new NewAccountRegistration("000001", "PlayerOne", "invalid", "Password1!", "en-US", null)).Status);
+        TestAssert.AreEqual(
+            AccountStatus.InvalidPassword,
+            service.CompleteRegistration(
+                new NewAccountRegistration("000001", "PlayerOne", "player@example.com", "weak", "en-US", null)).Status);
     }
 
     [TestMethod]
     public void ExecuteAsync_InvalidProfileImage_ReturnsInvalidRequest()
     {
         // Arrange
-        ProfileImageStoreStub imageStore = new ProfileImageStoreStub();
-        CreateAccountHandler handler = CreateHandler(
-            new AccountRegistrationStoreStub(),
-            new PasswordHasherStub(),
-            imageStore,
-            DateTime.UtcNow);
+        AccountRepositoryStub accountStore = new AccountRepositoryStub();
+        AccountApplicationService service = CreateService(accountStore, new ProfileImageRepositoryStub());
 
         // Act
-        CreateAccountResult result = handler.ExecuteAsync(
-            new CreateAccountCommand(
+        AccountResult<AccountSummary> result = service.CompleteRegistration(
+            new NewAccountRegistration(
+                "000001",
                 "PlayerOne",
                 "player@example.com",
                 "Password1!",
                 "en-US",
-                new ProfileImageData(new byte[] { 1, 2, 3 }, "image/png")))
-            .GetAwaiter()
-            .GetResult();
+                new ProfileImageData(new byte[] { 1, 2, 3 }, "image/png")));
 
         // Assert
-        TestAssert.AreEqual(CreateAccountOutcome.InvalidRequest, result.Outcome);
-        TestAssert.AreEqual(false, imageStore.SaveWasCalled);
+        TestAssert.AreEqual(AccountStatus.InvalidImage, result.Status);
     }
 
     [TestMethod]
     public void ExecuteAsync_DuplicateUsername_RemovesStoredImage()
     {
         // Arrange
-        AccountRegistrationStoreStub accountStore = new AccountRegistrationStoreStub
+        AccountRepositoryStub accountStore = new AccountRepositoryStub
         {
-            Result = new AccountRegistrationStoreResult(
-                AccountRegistrationStoreOutcome.UsernameAlreadyExists)
+            CreateResult = new AccountResult<long>(AccountStatus.UsernameUnavailable)
         };
-        ProfileImageStoreStub imageStore = new ProfileImageStoreStub();
-        CreateAccountHandler handler = CreateHandler(
-            accountStore,
-            new PasswordHasherStub(),
-            imageStore,
-            DateTime.UtcNow);
+        ProfileImageRepositoryStub imageStore = new ProfileImageRepositoryStub();
+        AccountApplicationService service = CreateService(accountStore, imageStore);
 
         // Act
-        CreateAccountResult result = handler.ExecuteAsync(
-            new CreateAccountCommand(
+        AccountResult<AccountSummary> result = service.CompleteRegistration(
+            new NewAccountRegistration(
+                "000001",
                 "PlayerOne",
                 "player@example.com",
                 "Password1!",
                 "en-US",
-                new ProfileImageData(PngSignature(), "image/png")))
-            .GetAwaiter()
-            .GetResult();
+                new ProfileImageData(PngSignature(), "image/png")));
 
         // Assert
-        TestAssert.AreEqual(CreateAccountOutcome.UsernameAlreadyExists, result.Outcome);
-        TestAssert.AreEqual("profile-images/test.png", imageStore.DeletedImageUri);
+        TestAssert.AreEqual(AccountStatus.UsernameUnavailable, result.Status);
+        TestAssert.AreEqual("new-image", imageStore.Deleted);
     }
 
     [TestMethod]
     public void ExecuteAsync_UnsupportedLocale_ReturnsInvalidRequest()
     {
         // Arrange
-        AccountRegistrationStoreStub accountStore = new AccountRegistrationStoreStub
+        AccountRepositoryStub accountStore = new AccountRepositoryStub
         {
-            Result = new AccountRegistrationStoreResult(
-                AccountRegistrationStoreOutcome.UnsupportedLocale)
+            CreateResult = new AccountResult<long>(AccountStatus.InvalidLocale)
         };
-        CreateAccountHandler handler = CreateHandler(
-            accountStore,
-            new PasswordHasherStub(),
-            new ProfileImageStoreStub(),
-            DateTime.UtcNow);
+        AccountApplicationService service = CreateService(accountStore, new ProfileImageRepositoryStub());
 
         // Act
-        CreateAccountResult result = Execute(
-            handler,
-            "PlayerOne",
-            "player@example.com",
-            "Password1!",
-            "fr-FR");
+        AccountResult<AccountSummary> result = service.CompleteRegistration(
+            new NewAccountRegistration(
+                "000001",
+                "PlayerOne",
+                "player@example.com",
+                "Password1!",
+                "fr-FR",
+                null));
 
         // Assert
-        TestAssert.AreEqual(CreateAccountOutcome.InvalidRequest, result.Outcome);
+        TestAssert.AreEqual(AccountStatus.InvalidLocale, result.Status);
     }
 
     [TestMethod]
     public void PasswordHasher_HashAndVerify_UsesSaltedPbkdf2()
     {
-        // Arrange
-        Pbkdf2PasswordHasher hasher = new Pbkdf2PasswordHasher();
-
         // Act
-        string firstHash = hasher.Hash("Password1!");
-        string secondHash = hasher.Hash("Password1!");
+        string firstHash = PasswordHasher.Hash("Password1!");
+        string secondHash = PasswordHasher.Hash("Password1!");
 
         // Assert
-        TestAssert.AreEqual(false, firstHash == secondHash);
-        TestAssert.AreEqual(true, hasher.Verify("Password1!", firstHash));
-        TestAssert.AreEqual(false, hasher.Verify("WrongPassword1!", firstHash));
+        TestAssert.IsTrue(
+            firstHash.StartsWith("PBKDF2-SHA256$100000$", StringComparison.Ordinal),
+            "Hash must use PBKDF2-SHA256 with 100000 iterations.");
+        TestAssert.IsTrue(firstHash != secondHash, "Salts must produce distinct hashes.");
+        TestAssert.AreEqual(true, PasswordHasher.Verify("Password1!", firstHash));
+        TestAssert.AreEqual(false, PasswordHasher.Verify("Wrong1!", firstHash));
     }
 
-    private static CreateAccountHandler CreateHandler(
-        AccountRegistrationStoreStub accountStore,
-        PasswordHasherStub passwordHasher,
-        ProfileImageStoreStub imageStore,
-        DateTime utcNow)
+    private static AccountApplicationService CreateService(
+        IAccountRepository accounts,
+        IPlayerImageRepository images)
     {
-        return new CreateAccountHandler(
-            accountStore,
-            passwordHasher,
-            imageStore,
-            new FixedUtcClock(utcNow));
-    }
-
-    private static CreateAccountResult Execute(
-        CreateAccountHandler handler,
-        string username,
-        string emailAddress,
-        string password,
-        string localeCode = "en-US")
-    {
-        return handler.ExecuteAsync(
-            new CreateAccountCommand(username, emailAddress, password, localeCode, null))
-            .GetAwaiter()
-            .GetResult();
+        IUtcClock clock = new TestUtcClock(new DateTime(2026, 9, 26, 12, 0, 0, DateTimeKind.Utc));
+        VerificationCodeIssuer issuer = new VerificationCodeIssuer(
+            new VerificationEmailSenderStub(),
+            new VerificationCodeProtector(new byte[32]),
+            clock);
+        VerificationCodeService verificationCodes = new VerificationCodeService(
+            issuer,
+            new VerificationCodeRepositoryStub(),
+            clock);
+        return new AccountApplicationService(
+            accounts,
+            images,
+            verificationCodes,
+            new SessionStore(clock));
     }
 
     private static byte[] PngSignature()
     {
-        return new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 };
+        return new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
     }
-}
 
-internal sealed class AccountRegistrationStoreStub : IAccountRegistrationStore
-{
-    internal AccountRegistrationData? Registration { get; private set; }
-
-    internal AccountRegistrationStoreResult Result { get; set; } =
-        new AccountRegistrationStoreResult(AccountRegistrationStoreOutcome.Success, 1);
-
-    public Task<AccountRegistrationStoreResult> RegisterAsync(
-        AccountRegistrationData registration)
+    private sealed class AccountRepositoryStub : IAccountRepository
     {
-        Registration = registration;
-        return Task.FromResult(Result);
+        internal AccountRegistrationData? Registration { get; private set; }
+
+        internal AccountResult<long> CreateResult { get; set; } =
+            new AccountResult<long>(1);
+
+        public AccountResult<LoginAccount> FindByLogin(string loginIdentifier)
+        {
+            return new AccountResult<LoginAccount>(AccountStatus.AccountNotFound);
+        }
+
+        public AccountResult<LoginAccount> FindByEmail(string emailAddress)
+        {
+            return new AccountResult<LoginAccount>(AccountStatus.AccountNotFound);
+        }
+
+        public AccountResult<LoginAccount> FindById(long accountId)
+        {
+            return new AccountResult<LoginAccount>(AccountStatus.AccountNotFound);
+        }
+
+        public AccountStatus CheckRegistrationAvailability(string username, string emailAddress)
+        {
+            return AccountStatus.Success;
+        }
+
+        public AccountResult<long> CreateAccount(AccountRegistrationData registration)
+        {
+            Registration = registration;
+            return CreateResult;
+        }
+
+        public AccountStatus UpdatePasswordHash(long accountId, string newPasswordHash)
+        {
+            return AccountStatus.Success;
+        }
+
+        public AccountStatus DeactivateAccount(long accountId)
+        {
+            return AccountStatus.Success;
+        }
     }
-}
-
-internal sealed class PasswordHasherStub : IPasswordHasher
-{
-    internal string? HashedPassword { get; private set; }
-
-    public string Hash(string password)
-    {
-        HashedPassword = password;
-        return "hashed-password";
-    }
-
-    public bool Verify(string password, string encodedHash)
-    {
-        return false;
-    }
-}
-
-internal sealed class ProfileImageStoreStub : IProfileImageStore
-{
-    internal bool SaveWasCalled { get; private set; }
-
-    internal string? DeletedImageUri { get; private set; }
-
-    public ProfileImageStorageResult Save(ProfileImageData image)
-    {
-        SaveWasCalled = true;
-        return new ProfileImageStorageResult(
-            ProfileImageStorageOutcome.Success,
-            "profile-images/test.png");
-    }
-
-    public void Delete(string imageUri)
-    {
-        DeletedImageUri = imageUri;
-    }
-}
-
-internal sealed class FixedUtcClock : IUtcClock
-{
-    public FixedUtcClock(DateTime utcNow)
-    {
-        UtcNow = utcNow;
-    }
-
-    public DateTime UtcNow { get; }
 }

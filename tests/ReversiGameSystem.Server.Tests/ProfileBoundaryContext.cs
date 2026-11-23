@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Players;
 using ReversiGameSystem.Server.ServiceApi;
@@ -10,6 +9,13 @@ internal sealed class ProfileBoundaryContext
 {
     internal ProfileBoundaryContext()
     {
+        Sessions.TryAddAuthenticated(new AuthenticatedSession(
+            "session-token",
+            42,
+            "PlayerOne",
+            "player@example.com",
+            "en-US",
+            DateTime.UtcNow.AddHours(1)));
         Profiles.Profiles.Add(42, new PlayerProfile(
             42,
             "PlayerOne",
@@ -19,11 +25,7 @@ internal sealed class ProfileBoundaryContext
             1));
     }
 
-    internal PlayerProfileSessionStoreStub Sessions { get; } = new PlayerProfileSessionStoreStub
-    {
-        Session = new AuthenticatedSession("session-token", 42, "PlayerOne",
-            "player@example.com", "en-US", DateTime.UtcNow.AddHours(1))
-    };
+    internal SessionStore Sessions { get; } = new SessionStore(new TestUtcClock());
     internal PlayerProfileRepositoryStub Profiles { get; } =
         new PlayerProfileRepositoryStub();
     internal ProfileImageRepositoryStub Images { get; } = new ProfileImageRepositoryStub();
@@ -68,15 +70,5 @@ internal sealed class ProfileImageRepositoryStub : IPlayerImageRepository
     public void DeleteImage(string imageReference)
     {
         Deleted = imageReference;
-    }
-}
-
-internal sealed class RecordingRegistrationHandler : ICreateAccountHandler
-{
-    internal CreateAccountCommand? Command { get; private set; }
-    public Task<CreateAccountResult> ExecuteAsync(CreateAccountCommand command)
-    {
-        Command = command;
-        return Task.FromResult(new CreateAccountResult(CreateAccountOutcome.Success, 42));
     }
 }

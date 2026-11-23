@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.ServiceModel;
-using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Contracts.Callbacks;
 using ReversiGameSystem.Server.Contracts.Faults;
@@ -21,7 +20,6 @@ namespace ReversiGameSystem.Server.ServiceApi;
 public sealed class GameplayMatchService : IGameplayMatchService
 {
     private readonly GameplayMatchApplicationService _applicationService;
-    private readonly ISessionRepository _sessions;
     private readonly GameplayMatchPresence _presence;
     private readonly MatchCallbackSubscriptions<IGameplayMatchServiceCallback>
         _callbackSubscriptions;
@@ -30,19 +28,16 @@ public sealed class GameplayMatchService : IGameplayMatchService
     /// Initializes a new instance of the <see cref="GameplayMatchService"/> class.
     /// </summary>
     /// <param name="applicationService">The gameplay application service.</param>
-    /// <param name="sessions">The authenticated session repository.</param>
     /// <param name="presence">The active match participant presence tracker.</param>
     /// <param name="callbackSubscriptions">The gameplay duplex callback subscriptions.</param>
     /// <exception cref="ArgumentNullException">A required dependency is null.</exception>
     public GameplayMatchService(
         GameplayMatchApplicationService applicationService,
-        ISessionRepository sessions,
         GameplayMatchPresence presence,
         MatchCallbackSubscriptions<IGameplayMatchServiceCallback> callbackSubscriptions)
     {
         _applicationService = applicationService
             ?? throw new ArgumentNullException(nameof(applicationService));
-        _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
         _presence = presence ?? throw new ArgumentNullException(nameof(presence));
         _callbackSubscriptions = callbackSubscriptions
             ?? throw new ArgumentNullException(nameof(callbackSubscriptions));
@@ -52,7 +47,7 @@ public sealed class GameplayMatchService : IGameplayMatchService
     public void OpenMatchChannel(string sessionToken, long matchId)
     {
         Match match = RequireAuthorizedMatch(sessionToken, matchId);
-        MatchParticipant participant = RequireParticipant(match, sessionToken);
+        MatchParticipant participant = RequireParticipant(sessionToken, matchId);
         if (!_applicationService.IsTrackedMatchInProgress(matchId))
         {
             throw ServiceFaultFactory.CreateMatchFault(MatchFailure.MatchNotInProgress);
@@ -75,7 +70,7 @@ public sealed class GameplayMatchService : IGameplayMatchService
     public MatchInformation GetMatchInformation(string sessionToken, long matchId)
     {
         Match match = RequireAuthorizedMatch(sessionToken, matchId);
-        MatchParticipant participant = RequireParticipant(match, sessionToken);
+        MatchParticipant participant = RequireParticipant(sessionToken, matchId);
 
         return new MatchInformation
         {
@@ -142,13 +137,16 @@ public sealed class GameplayMatchService : IGameplayMatchService
     /// <inheritdoc />
     public MatchSummary[] GetMatchHistory(string sessionToken)
     {
-        AuthenticatedSession session = RequireActiveSession(sessionToken);
+        MatchResult<long> accountResult = _applicationService.GetSessionAccountId(sessionToken);
+        ThrowFaultIfFailed(accountResult.Status);
+
         MatchResult<Match[]> result = _applicationService.GetMatchHistory(sessionToken);
         ThrowFaultIfFailed(result.Status);
 
         Match[] matches = RequireValue(result);
+        long accountId = accountResult.Value;
         return matches
-            .Select(match => MatchContractMapper.MapSummary(match, session.AccountId))
+            .Select(match => MatchContractMapper.MapSummary(match, accountId))
             .ToArray();
     }
 
@@ -205,22 +203,6 @@ public sealed class GameplayMatchService : IGameplayMatchService
                 "A successful match result must contain its value.");
     }
 
-    private AuthenticatedSession RequireActiveSession(string sessionToken)
-    {
-        if (string.IsNullOrWhiteSpace(sessionToken))
-        {
-            throw ServiceFaultFactory.CreateSessionFault(SessionFailure.MissingSessionToken);
-        }
-
-        if (!_sessions.TryGet(sessionToken, out AuthenticatedSession? session)
-            || session == null)
-        {
-            throw ServiceFaultFactory.CreateSessionFault(SessionFailure.InvalidSession);
-        }
-
-        return session;
-    }
-
     private static MatchPlacement? MapPlacement(PiecePlacement? placement)
     {
         if (placement == null)
@@ -257,38 +239,27 @@ public sealed class GameplayMatchService : IGameplayMatchService
 
     private static MatchFailure MapMatchFailure(MatchStatus status)
     {
-        switch (status)
+        MatchFailure failure = status switch
         {
-            case MatchStatus.InactiveAccount:
-                return MatchFailure.InactiveAccount;
-            case MatchStatus.InvalidMatchId:
-                return MatchFailure.InvalidMatchId;
-            case MatchStatus.MatchNotFound:
-                return MatchFailure.MatchNotFound;
-            case MatchStatus.MatchNotWaiting:
-                return MatchFailure.MatchNotWaiting;
-            case MatchStatus.MatchNotInProgress:
-                return MatchFailure.MatchNotInProgress;
-            case MatchStatus.MissingPlacement:
-                return MatchFailure.MissingPlacement;
-            case MatchStatus.InvalidMatchStateVersion:
-                return MatchFailure.InvalidMatchStateVersion;
-            case MatchStatus.StaleMatchStateVersion:
-                return MatchFailure.StaleMatchStateVersion;
-            case MatchStatus.NotPlayersTurn:
-                return MatchFailure.NotPlayersTurn;
-            case MatchStatus.InvalidPosition:
-                return MatchFailure.InvalidPosition;
-            case MatchStatus.SpectatingUnavailable:
-                return MatchFailure.SpectatingUnavailable;
-            case MatchStatus.Unauthorized:
-                return MatchFailure.Unauthorized;
-            default:
-                throw new ArgumentOutOfRangeException(
-                    nameof(status),
-                    status,
-                    "Unsupported match status.");
-        }
+            MatchStatus.InactiveAccount => MatchFailure.InactiveAccount,
+            MatchStatus.InvalidMatchId => MatchFailure.InvalidMatchId,
+            MatchStatus.MatchNotFound => MatchFailure.MatchNotFound,
+            MatchStatus.MatchNotWaiting => MatchFailure.MatchNotWaiting,
+            MatchStatus.MatchNotInProgress => MatchFailure.MatchNotInProgress,
+            MatchStatus.MissingPlacement => MatchFailure.MissingPlacement,
+            MatchStatus.InvalidMatchStateVersion => MatchFailure.InvalidMatchStateVersion,
+            MatchStatus.StaleMatchStateVersion => MatchFailure.StaleMatchStateVersion,
+            MatchStatus.NotPlayersTurn => MatchFailure.NotPlayersTurn,
+            MatchStatus.InvalidPosition => MatchFailure.InvalidPosition,
+            MatchStatus.SpectatingUnavailable => MatchFailure.SpectatingUnavailable,
+            MatchStatus.Unauthorized => MatchFailure.Unauthorized,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(status),
+                status,
+                "Unsupported match status.")
+        };
+
+        return failure;
     }
 
     private Match RequireAuthorizedMatch(string sessionToken, long matchId)
@@ -301,16 +272,11 @@ public sealed class GameplayMatchService : IGameplayMatchService
         return RequireValue(result);
     }
 
-    private MatchParticipant RequireParticipant(Match match, string sessionToken)
+    private MatchParticipant RequireParticipant(string sessionToken, long matchId)
     {
-        AuthenticatedSession session = RequireActiveSession(sessionToken);
-        MatchParticipant? participant = match.Participants.FirstOrDefault(
-            current => current.AccountId == session.AccountId);
-        if (participant == null)
-        {
-            throw ServiceFaultFactory.CreateMatchFault(MatchFailure.Unauthorized);
-        }
-
-        return participant;
+        MatchResult<MatchParticipant> result =
+            _applicationService.GetAuthorizedParticipant(sessionToken, matchId);
+        ThrowFaultIfFailed(result.Status);
+        return RequireValue(result);
     }
 }

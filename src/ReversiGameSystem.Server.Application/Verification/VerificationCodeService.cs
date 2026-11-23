@@ -1,11 +1,13 @@
 using System;
-using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Common;
 
 namespace ReversiGameSystem.Server.Application.Verification;
 
 /// <summary>Coordinates delivery and durable single-use verification.</summary>
 public sealed class VerificationCodeService
 {
+    private const int VerificationCodeLength = 6;
+    private const int RequestLockStripeCount = 32;
     private static readonly object[] RequestGates = CreateRequestGates();
     private readonly VerificationCodeIssuer _issuer;
     private readonly IVerificationCodeRepository _repository;
@@ -21,6 +23,14 @@ public sealed class VerificationCodeService
         _issuer = issuer ?? throw new ArgumentNullException(nameof(issuer));
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+    }
+
+    /// <summary>Calculates a plausible expiration instant for a new code.</summary>
+    /// <returns>The UTC expiration instant five minutes from now.</returns>
+    public DateTime CalculatePlausibleExpiry()
+    {
+        DateTime expiryUtc = _clock.UtcNow.AddMinutes(5);
+        return expiryUtc;
     }
 
     /// <summary>Replaces a pending code only after delivery has been accepted.</summary>
@@ -45,7 +55,7 @@ public sealed class VerificationCodeService
     public VerificationStatus Consume(VerificationIdentity identity, string code)
     {
         string candidate = code ?? string.Empty;
-        if (candidate.Length > 6)
+        if (candidate.Length > VerificationCodeLength)
         {
             candidate = string.Empty;
         }
@@ -59,7 +69,7 @@ public sealed class VerificationCodeService
 
     private static object[] CreateRequestGates()
     {
-        object[] gates = new object[32];
+        object[] gates = new object[RequestLockStripeCount];
         for (int index = 0; index < gates.Length; index++)
         {
             gates[index] = new object();

@@ -6,12 +6,12 @@ namespace ReversiGameSystem.Server.Application.Players;
 
 public sealed class PlayerProfileApplicationService
 {
-    private readonly ISessionRepository _sessions;
+    private readonly SessionStore _sessions;
     private readonly IPlayerProfileRepository _profiles;
     private readonly IPlayerImageRepository _images;
 
     public PlayerProfileApplicationService(
-        ISessionRepository sessions,
+        SessionStore sessions,
         IPlayerProfileRepository profiles,
         IPlayerImageRepository images)
     {
@@ -24,9 +24,9 @@ public sealed class PlayerProfileApplicationService
         string sessionToken,
         long? targetAccountId)
     {
-        SessionOperationResult<AuthenticatedSession> sessionResult =
-            ResolveAuthenticatedSession(sessionToken);
-        if (sessionResult.Status != SessionOperationStatus.Success)
+        SessionResult<AuthenticatedSession> sessionResult =
+            _sessions.FindAuthenticated(sessionToken);
+        if (sessionResult.Status != SessionOperationStatus.Success || sessionResult.Value == null)
         {
             return new ProfileResult<PlayerProfile>(MapSessionStatus(sessionResult.Status));
         }
@@ -35,7 +35,7 @@ public sealed class PlayerProfileApplicationService
             return new ProfileResult<PlayerProfile>(ProfileOperationStatus.InvalidAccountId);
         }
 
-        long callerAccountId = sessionResult.GetValue().AccountId;
+        long callerAccountId = sessionResult.Value.AccountId;
         if (!targetAccountId.HasValue || targetAccountId.Value == callerAccountId)
         {
             ProfileResult<PlayerProfile> callerLookup = _profiles.GetProfile(callerAccountId);
@@ -59,9 +59,9 @@ public sealed class PlayerProfileApplicationService
         string sessionToken,
         long? targetAccountId)
     {
-        SessionOperationResult<AuthenticatedSession> sessionResult =
-            ResolveAuthenticatedSession(sessionToken);
-        if (sessionResult.Status != SessionOperationStatus.Success)
+        SessionResult<AuthenticatedSession> sessionResult =
+            _sessions.FindAuthenticated(sessionToken);
+        if (sessionResult.Status != SessionOperationStatus.Success || sessionResult.Value == null)
         {
             return new GetProfileImageResult(MapSessionStatus(sessionResult.Status));
         }
@@ -70,7 +70,7 @@ public sealed class PlayerProfileApplicationService
             return new GetProfileImageResult(ProfileOperationStatus.InvalidAccountId);
         }
 
-        long callerAccountId = sessionResult.GetValue().AccountId;
+        long callerAccountId = sessionResult.Value.AccountId;
         ProfileResult<string> referenceResult = ResolveProfileImageReference(
             callerAccountId,
             targetAccountId);
@@ -81,7 +81,7 @@ public sealed class PlayerProfileApplicationService
 
         if (string.IsNullOrWhiteSpace(referenceResult.Value))
         {
-            return new GetProfileImageResult((ProfileImageData?)null);
+            return new GetProfileImageResult();
         }
 
         ProfileImageData image = _images.ReadImage(referenceResult.Value);
@@ -92,14 +92,14 @@ public sealed class PlayerProfileApplicationService
         string sessionToken,
         string username)
     {
-        SessionOperationResult<AuthenticatedSession> sessionResult =
-            ResolveAuthenticatedSession(sessionToken);
-        if (sessionResult.Status != SessionOperationStatus.Success)
+        SessionResult<AuthenticatedSession> sessionResult =
+            _sessions.FindAuthenticated(sessionToken);
+        if (sessionResult.Status != SessionOperationStatus.Success || sessionResult.Value == null)
         {
             return MapSessionStatus(sessionResult.Status);
         }
 
-        long accountId = sessionResult.GetValue().AccountId;
+        long accountId = sessionResult.Value.AccountId;
         string normalized = username == null ? string.Empty : username.Trim();
         if (UsernamePolicy.Validate(normalized) != UsernameValidationError.None)
         {
@@ -118,14 +118,14 @@ public sealed class PlayerProfileApplicationService
         string sessionToken,
         ProfileImageData? image)
     {
-        SessionOperationResult<AuthenticatedSession> sessionResult =
-            ResolveAuthenticatedSession(sessionToken);
-        if (sessionResult.Status != SessionOperationStatus.Success)
+        SessionResult<AuthenticatedSession> sessionResult =
+            _sessions.FindAuthenticated(sessionToken);
+        if (sessionResult.Status != SessionOperationStatus.Success || sessionResult.Value == null)
         {
             return MapSessionStatus(sessionResult.Status);
         }
 
-        long accountId = sessionResult.GetValue().AccountId;
+        long accountId = sessionResult.Value.AccountId;
         if (image == null)
         {
             return ProfileOperationStatus.InvalidImage;
@@ -202,25 +202,23 @@ public sealed class PlayerProfileApplicationService
         return _profiles.GetProfileImageReference(targetAccountId.Value);
     }
 
-    private SessionOperationResult<AuthenticatedSession> ResolveAuthenticatedSession(
-        string sessionToken)
-    {
-        if (string.IsNullOrWhiteSpace(sessionToken))
-        {
-            return SessionOperationResult<AuthenticatedSession>.CreateFailure(
-                SessionOperationStatus.MissingSessionToken);
-        }
-
-        return _sessions.FindAuthenticated(sessionToken);
-    }
-
     private static ProfileOperationStatus MapSessionStatus(SessionOperationStatus status)
     {
-        if (status == SessionOperationStatus.MissingSessionToken)
+        ProfileOperationStatus mapped;
+        switch (status)
         {
-            return ProfileOperationStatus.MissingSessionToken;
+            case SessionOperationStatus.MissingSessionToken:
+                mapped = ProfileOperationStatus.MissingSessionToken;
+                break;
+            case SessionOperationStatus.InvalidSession:
+                mapped = ProfileOperationStatus.InvalidSession;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(
+                    nameof(status),
+                    "Unsupported session status.");
         }
 
-        return ProfileOperationStatus.InvalidSession;
+        return mapped;
     }
 }

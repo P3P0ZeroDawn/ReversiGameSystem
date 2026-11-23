@@ -2,8 +2,8 @@ using System;
 using System.Data;
 using System.Data.Entity;
 using System.Linq;
-using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Chat;
+using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Domain.Chat;
 using ReversiGameSystem.Server.Persistence.Matches;
 using ReversiGameSystem.Server.Persistence.Model;
@@ -61,8 +61,6 @@ public class ChatRepository : IChatRepository
     public ChatHistory LoadMessageHistory(long accountId, long matchId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
-        using DbContextTransaction transaction = context.Database.BeginTransaction(
-            IsolationLevel.Serializable);
         ChatStatus status = EvaluateAccessStatus(context, accountId, matchId);
         ChatHistory result;
         if (status == ChatStatus.Success)
@@ -74,7 +72,6 @@ public class ChatRepository : IChatRepository
                 .ToArray()
                 .Select(MapChatMessage)
                 .ToArray();
-            transaction.Commit();
             result = new ChatHistory(messages);
         }
         else

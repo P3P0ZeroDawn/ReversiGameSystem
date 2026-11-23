@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Common;
 
 namespace ReversiGameSystem.Server.Application.Matches;
 
@@ -12,10 +13,10 @@ public sealed class MatchApplicationService
     private const int MinimumTurnDurationSeconds = 10;
     private const int MaximumTurnDurationSeconds = 120;
     private const string HumanOpponentKind = "Human";
-    private readonly ISessionRepository _sessions;
+    private readonly SessionStore _sessions;
     private readonly IMatchRepository _matches;
     private readonly IUtcClock _clock;
-    private readonly IMatchInvitationEmailSender? _emailSender;
+    private readonly IEmailSender? _emailSender;
     private readonly Dictionary<string, Dictionary<long, long>> _createdMatches =
         new Dictionary<string, Dictionary<long, long>>(StringComparer.Ordinal);
     private readonly HashSet<string> _sessionsPendingLobbyCleanup =
@@ -25,7 +26,7 @@ public sealed class MatchApplicationService
     public event Action<Match>? MatchStarted;
 
     public MatchApplicationService(
-        ISessionRepository sessions,
+        SessionStore sessions,
         IMatchRepository matches,
         IUtcClock clock)
         : this(sessions, matches, clock, null)
@@ -33,10 +34,10 @@ public sealed class MatchApplicationService
     }
 
     public MatchApplicationService(
-        ISessionRepository sessions,
+        SessionStore sessions,
         IMatchRepository matches,
         IUtcClock clock,
-        IMatchInvitationEmailSender? emailSender)
+        IEmailSender? emailSender)
     {
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
         _matches = matches ?? throw new ArgumentNullException(nameof(matches));
@@ -81,7 +82,7 @@ public sealed class MatchApplicationService
         long friendAccountId,
         MatchSettings? settings)
     {
-        if (IsActiveGuestSession(token))
+        if (_sessions.IsGuestActive(token))
         {
             return new MatchResult<Match>(MatchStatus.Unauthorized);
         }
@@ -169,7 +170,7 @@ public sealed class MatchApplicationService
             return new MatchResult<Match>(MatchStatus.InvalidMatchCode);
         }
 
-        if (IsActiveGuestSession(token))
+        if (_sessions.IsGuestActive(token))
         {
             MatchStatus guestStatus = _matches.ValidateGuestJoin(normalized);
             if (guestStatus != MatchStatus.Success)
@@ -304,9 +305,7 @@ public sealed class MatchApplicationService
             {
                 string token = tokens[index];
                 if (_sessionsPendingLobbyCleanup.Contains(token)
-                    || !_sessions.TryGet(token, out AuthenticatedSession? session)
-                    || session == null
-                    || session.ExpiresAtUtc <= _clock.UtcNow)
+                    || _sessions.FindAuthenticated(token).Status != SessionOperationStatus.Success)
                 {
                     cancelled.AddRange(CancelTrackedMatches(token));
                 }
@@ -316,21 +315,9 @@ public sealed class MatchApplicationService
         return cancelled.ToArray();
     }
 
-    private bool IsActiveGuestSession(string token)
-    {
-        if (string.IsNullOrWhiteSpace(token)
-            || !_sessions.TryGetGuest(token, out GuestSession? guest)
-            || guest == null)
-        {
-            return false;
-        }
-
-        return guest.ExpiresAtUtc > _clock.UtcNow;
-    }
-
     private MatchResult<AuthenticatedSession> ResolveActiveSession(string token)
     {
-        SessionOperationResult<AuthenticatedSession> session =
+        SessionResult<AuthenticatedSession> session =
             _sessions.FindAuthenticated(token);
         if (session.Status == SessionOperationStatus.MissingSessionToken)
         {
@@ -338,13 +325,13 @@ public sealed class MatchApplicationService
                 MatchStatus.MissingSessionToken);
         }
 
-        if (session.Status != SessionOperationStatus.Success)
+        if (session.Status != SessionOperationStatus.Success || session.Value == null)
         {
             return new MatchResult<AuthenticatedSession>(
                 MatchStatus.InvalidSession);
         }
 
-        return new MatchResult<AuthenticatedSession>(session.GetValue());
+        return new MatchResult<AuthenticatedSession>(session.Value);
     }
 
     private static MatchStatus ValidateSettings(MatchSettings? settings)
@@ -383,7 +370,7 @@ public sealed class MatchApplicationService
                 throw new InvalidOperationException(
                     "A prepared private match must contain a join code.");
             }
-            MatchInvitationEmail email = new MatchInvitationEmail(
+            EmailMessage email = CreateInvitationEmail(
                 preparation.FriendEmail,
                 player.Username,
                 matchCode);
@@ -432,11 +419,8 @@ public sealed class MatchApplicationService
         MatchResult<Match> deliveryResult;
         lock (_lobbySync)
         {
-            bool sessionRemainsValid = _sessions.TryGet(
-                token,
-                out AuthenticatedSession? currentSession)
-                && currentSession != null
-                && currentSession.ExpiresAtUtc > _clock.UtcNow;
+            bool sessionRemainsValid =
+                _sessions.FindAuthenticated(token).Status == SessionOperationStatus.Success;
             bool preparationRemainsTracked = IsMatchTracked(token, preparation.Match.Id);
             if (_sessionsPendingLobbyCleanup.Contains(token)
                 || !preparationRemainsTracked
@@ -542,5 +526,26 @@ public sealed class MatchApplicationService
         }
 
         return cancelled.ToArray();
+    }
+
+    private static EmailMessage CreateInvitationEmail(
+        string recipientEmail,
+        string creatorDisplayName,
+        string matchCode)
+    {
+        const string Subject = "Reversi: Invitación a partida / Match invitation";
+        string body = "Hello / Hola,\n\n"
+            + creatorDisplayName + " has invited you to play a match of Reversi. / "
+            + creatorDisplayName + " te ha invitado a jugar una partida de Reversi.\n\n"
+            + "Match code / Código de partida: " + matchCode + "\n\n"
+            + "Instructions / Instrucciones:\n"
+            + "1. Sign in to your Reversi account. / Inicia sesión en tu cuenta de Reversi.\n"
+            + "2. Go to 'Join with code' in Available Matches and enter this code. / "
+            + "Ve a 'Unirse con código' en Partidas Disponibles e ingresa este código.\n\n"
+            + "«Puedes unirte con este código mientras el creador siga esperando» / "
+            + "«You can join with this code while the creator is still waiting»\n";
+
+        EmailMessage message = new EmailMessage(recipientEmail, Subject, body);
+        return message;
     }
 }

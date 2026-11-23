@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Domain.Matches;
-using ReversiGameSystem.Server.Persistence.Sessions;
 
 namespace ReversiGameSystem.Server.Tests;
 
@@ -573,7 +573,7 @@ public sealed class GameplayApplicationServiceTests
 internal sealed class GameplayTestContext
 {
     internal MutableTestClock Clock { get; }
-    internal ISessionRepository Sessions { get; }
+    internal SessionStore Sessions { get; }
     internal MockGameplayMatchRepository Repository { get; }
     internal GameplayMatchApplicationService ApplicationService { get; }
     internal AuthenticatedSession PlayerOne { get; }
@@ -583,14 +583,13 @@ internal sealed class GameplayTestContext
     internal GameplayTestContext()
     {
         Clock = new MutableTestClock(new DateTime(2026, 11, 11, 20, 0, 0, DateTimeKind.Utc));
-        SessionRepository sessionRepo = new SessionRepository(Clock);
-        Sessions = sessionRepo;
+        Sessions = new SessionStore(Clock);
         Repository = new MockGameplayMatchRepository();
         ApplicationService = new GameplayMatchApplicationService(Sessions, Repository, Clock);
 
-        PlayerOne = sessionRepo.Create(new LoginAccount(101, "PlayerAlpha", "p1@test.invalid", "hash", "ACTIVE", "en-US"));
-        PlayerTwo = sessionRepo.Create(new LoginAccount(202, "PlayerBeta", "p2@test.invalid", "hash", "ACTIVE", "en-US"));
-        Spectator = sessionRepo.Create(new LoginAccount(303, "SpectatorSam", "spec@test.invalid", "hash", "ACTIVE", "en-US"));
+        PlayerOne = TestSessionHelper.CreateSession(Sessions, 101, "PlayerAlpha");
+        PlayerTwo = TestSessionHelper.CreateSession(Sessions, 202, "PlayerBeta");
+        Spectator = TestSessionHelper.CreateSession(Sessions, 303, "SpectatorSam");
     }
 
     internal Match CreateMatch(int turnDurationSeconds)

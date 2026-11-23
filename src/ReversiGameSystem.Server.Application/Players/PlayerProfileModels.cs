@@ -124,6 +124,15 @@ public sealed class ProfileResult<T>
 /// <summary>Contains the expected result of a public profile image query.</summary>
 public sealed class GetProfileImageResult
 {
+    /// <summary>
+    /// Creates a successful profile image query result indicating no custom image.
+    /// </summary>
+    public GetProfileImageResult()
+    {
+        Status = ProfileOperationStatus.Success;
+        Image = null;
+    }
+
     /// <summary>Creates a rejected profile image query result.</summary>
     /// <param name="status">The failure status.</param>
     /// <exception cref="ArgumentOutOfRangeException">The status represents success.</exception>

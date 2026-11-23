@@ -1,5 +1,6 @@
 using System;
 using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Domain.Chat;
 
 namespace ReversiGameSystem.Server.Application.Chat;
@@ -9,17 +10,17 @@ public class ChatApplicationService
 {
     private const int MaximumMessagesPerWindow = 2;
     private static readonly TimeSpan MessageRateWindow = TimeSpan.FromSeconds(1);
-    private readonly ISessionRepository _sessions;
+    private readonly SessionStore _sessions;
     private readonly IChatRepository _chat;
     private readonly IUtcClock _clock;
 
     /// <summary>Initializes the chat application service.</summary>
-    /// <param name="sessions">The authenticated session repository.</param>
+    /// <param name="sessions">The in-memory active session store.</param>
     /// <param name="chat">The durable chat repository.</param>
     /// <param name="clock">The source of current UTC time.</param>
     /// <exception cref="ArgumentNullException">A dependency is absent.</exception>
     public ChatApplicationService(
-        ISessionRepository sessions,
+        SessionStore sessions,
         IChatRepository chat,
         IUtcClock clock)
     {
@@ -34,17 +35,17 @@ public class ChatApplicationService
     /// <returns>The expected access status.</returns>
     public ChatStatus EvaluateParticipantAccess(string sessionToken, long matchId)
     {
-        SessionOperationResult<AuthenticatedSession> session =
+        SessionResult<AuthenticatedSession> session =
             _sessions.FindAuthenticated(sessionToken);
         ChatStatus status = MapSessionStatus(session.Status);
         if (status == ChatStatus.Success && matchId <= 0)
         {
             status = ChatStatus.InvalidMatchId;
         }
-        else if (status == ChatStatus.Success)
+        else if (status == ChatStatus.Success && session.Value != null)
         {
             status = _chat.EvaluateParticipantAccess(
-                session.GetValue().AccountId,
+                session.Value.AccountId,
                 matchId);
         }
 
@@ -57,9 +58,9 @@ public class ChatApplicationService
     /// <returns>The expected access result.</returns>
     public ChatChannelAccess PrepareChatChannel(string sessionToken, long matchId)
     {
-        SessionOperationResult<AuthenticatedSession> session =
+        SessionResult<AuthenticatedSession> session =
             _sessions.FindAuthenticated(sessionToken);
-        if (session.Status != SessionOperationStatus.Success)
+        if (session.Status != SessionOperationStatus.Success || session.Value == null)
         {
             return new ChatChannelAccess(MapSessionStatus(session.Status));
         }
@@ -69,7 +70,7 @@ public class ChatApplicationService
         }
 
         return _chat.LoadChannelAccess(
-            session.GetValue().AccountId,
+            session.Value.AccountId,
             matchId,
             _clock.UtcNow);
     }
@@ -84,9 +85,9 @@ public class ChatApplicationService
         long matchId,
         string content)
     {
-        SessionOperationResult<AuthenticatedSession> session =
+        SessionResult<AuthenticatedSession> session =
             _sessions.FindAuthenticated(sessionToken);
-        if (session.Status != SessionOperationStatus.Success)
+        if (session.Status != SessionOperationStatus.Success || session.Value == null)
         {
             return new ChatMessageSubmission(MapSessionStatus(session.Status));
         }
@@ -106,7 +107,7 @@ public class ChatApplicationService
         }
 
         return _chat.ProcessMessageSubmission(
-            session.GetValue().AccountId,
+            session.Value.AccountId,
             matchId,
             trimmedContent,
             MaximumMessagesPerWindow,
@@ -119,9 +120,9 @@ public class ChatApplicationService
     /// <returns>The expected history result.</returns>
     public ChatHistory LoadChatHistory(string sessionToken, long matchId)
     {
-        SessionOperationResult<AuthenticatedSession> session =
+        SessionResult<AuthenticatedSession> session =
             _sessions.FindAuthenticated(sessionToken);
-        if (session.Status != SessionOperationStatus.Success)
+        if (session.Status != SessionOperationStatus.Success || session.Value == null)
         {
             return new ChatHistory(MapSessionStatus(session.Status));
         }
@@ -130,7 +131,7 @@ public class ChatApplicationService
             return new ChatHistory(ChatStatus.InvalidMatchId);
         }
 
-        return _chat.LoadMessageHistory(session.GetValue().AccountId, matchId);
+        return _chat.LoadMessageHistory(session.Value.AccountId, matchId);
     }
 
     /// <summary>Checks whether a channel belongs to the muted account and match.</summary>
@@ -143,21 +144,20 @@ public class ChatApplicationService
         string recipientSessionToken,
         long matchId)
     {
-        SessionOperationResult<AuthenticatedSession> mutedSession =
-            _sessions.FindAuthenticated(mutedSessionToken);
-        SessionOperationResult<AuthenticatedSession> recipientSession =
-            _sessions.FindAuthenticated(recipientSessionToken);
-        bool canReceive = mutedSession.Status == SessionOperationStatus.Success
-            && recipientSession.Status == SessionOperationStatus.Success
-            && mutedSession.GetValue().AccountId == recipientSession.GetValue().AccountId;
-        if (canReceive)
+        if (matchId <= 0)
         {
-            canReceive = _chat.EvaluateParticipantAccess(
-                recipientSession.GetValue().AccountId,
-                matchId)
-                == ChatStatus.Success;
+            return false;
         }
 
+        SessionResult<AuthenticatedSession> mutedSession =
+            _sessions.FindAuthenticated(mutedSessionToken);
+        SessionResult<AuthenticatedSession> recipientSession =
+            _sessions.FindAuthenticated(recipientSessionToken);
+        bool canReceive = mutedSession.Status == SessionOperationStatus.Success
+            && mutedSession.Value != null
+            && recipientSession.Status == SessionOperationStatus.Success
+            && recipientSession.Value != null
+            && mutedSession.Value.AccountId == recipientSession.Value.AccountId;
         return canReceive;
     }
 

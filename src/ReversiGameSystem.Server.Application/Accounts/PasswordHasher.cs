@@ -1,14 +1,13 @@
 using System;
 using System.Security.Cryptography;
 using System.Text;
-using ReversiGameSystem.Server.Application.Accounts;
 
-namespace ReversiGameSystem.Server.Persistence.Accounts;
+namespace ReversiGameSystem.Server.Application.Accounts;
 
 /// <summary>
-/// Represents pbkdf2 password hasher.
+/// Hashes and verifies account passwords using PBKDF2 with SHA-256.
 /// </summary>
-public sealed class Pbkdf2PasswordHasher : IPasswordHasher
+public static class PasswordHasher
 {
     private const string Algorithm = "PBKDF2-SHA256";
     private const int IterationCount = 100000;
@@ -17,11 +16,12 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
     private const int HashSize = 32;
 
     /// <summary>
-    /// Performs the hash operation.
+    /// Generates a salted PBKDF2-SHA256 hash for the supplied password.
     /// </summary>
-    /// <param name="password">The password.</param>
-    /// <returns>The result of the operation.</returns>
-    public string Hash(string password)
+    /// <param name="password">The plaintext password to hash.</param>
+    /// <returns>The encoded hash containing algorithm, iterations, salt, and digest.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="password"/> is null.</exception>
+    public static string Hash(string password)
     {
         if (password == null)
         {
@@ -35,21 +35,22 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
         }
 
         byte[] hash = Derive(password, salt, IterationCount);
-        return string.Join(
+        string encodedHash = string.Join(
             "$",
             Algorithm,
             IterationCount.ToString(),
             Convert.ToBase64String(salt),
             Convert.ToBase64String(hash));
+        return encodedHash;
     }
 
     /// <summary>
-    /// Performs the verify operation.
+    /// Verifies a plaintext password against a stored PBKDF2-SHA256 hash.
     /// </summary>
-    /// <param name="password">The password.</param>
-    /// <param name="encodedHash">The encoded hash.</param>
-    /// <returns>The result of the operation.</returns>
-    public bool Verify(string password, string encodedHash)
+    /// <param name="password">The candidate plaintext password.</param>
+    /// <param name="encodedHash">The stored encoded password hash.</param>
+    /// <returns><c>true</c> if the password matches the stored hash; otherwise, <c>false</c>.</returns>
+    public static bool Verify(string? password, string encodedHash)
     {
         if (password == null || string.IsNullOrWhiteSpace(encodedHash))
         {

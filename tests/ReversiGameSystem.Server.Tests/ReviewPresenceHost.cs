@@ -16,7 +16,7 @@ internal static class ReviewPresenceHost
 
     private static void Host(
         SessionApplicationService applicationService,
-        ISessionRepository sessions)
+        SessionStore sessions)
     {
         SessionService session = new SessionService(
             applicationService,

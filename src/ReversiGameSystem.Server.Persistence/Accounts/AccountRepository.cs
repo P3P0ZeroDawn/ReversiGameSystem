@@ -3,6 +3,7 @@ using System.Data;
 using System.Data.Entity;
 using System.Linq;
 using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Persistence.Matches;
 using ReversiGameSystem.Server.Persistence.Model;
 
@@ -19,6 +20,17 @@ public sealed class AccountRepository : IAccountRepository
     private const string WaitingMatchStatusCode = "WAITING";
     private const string InProgressMatchStatusCode = "IN_PROGRESS";
     private const string RegistrationLockResource = "account-registration";
+    private readonly IUtcClock _clock;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AccountRepository"/> class.
+    /// </summary>
+    /// <param name="clock">The authoritative UTC clock.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="clock"/> is null.</exception>
+    public AccountRepository(IUtcClock clock)
+    {
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+    }
 
     /// <inheritdoc />
     public AccountResult<LoginAccount> FindByLogin(string loginIdentifier)
@@ -189,7 +201,7 @@ public sealed class AccountRepository : IAccountRepository
         return isParticipant;
     }
 
-    private static AccountResult<long> SaveNewAccount(
+    private AccountResult<long> SaveNewAccount(
         ReversiGameSystemEntities context,
         AccountRegistrationData registration)
     {
@@ -213,7 +225,7 @@ public sealed class AccountRepository : IAccountRepository
             return new AccountResult<long>(AccountStatus.InvalidLocale);
         }
 
-        Account accountEntity = BuildAccountEntity(registration);
+        Account accountEntity = BuildAccountEntity(registration, _clock.UtcNow);
         context.Account.Add(accountEntity);
         context.SaveChanges();
 
@@ -221,7 +233,9 @@ public sealed class AccountRepository : IAccountRepository
         return result;
     }
 
-    private static Account BuildAccountEntity(AccountRegistrationData registration)
+    private static Account BuildAccountEntity(
+        AccountRegistrationData registration,
+        DateTime registeredAtUtc)
     {
         Account account = new Account
         {
@@ -230,7 +244,7 @@ public sealed class AccountRepository : IAccountRepository
             passwordHash = registration.PasswordHash,
             profileImageUri = registration.ProfileImageUri,
             statusCode = ActiveStatusCode,
-            registeredAtUtc = registration.RegisteredAtUtc
+            registeredAtUtc = registeredAtUtc
         };
 
         AccountSettings settings = new AccountSettings

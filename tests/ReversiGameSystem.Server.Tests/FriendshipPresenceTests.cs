@@ -50,15 +50,15 @@ public sealed class FriendshipPresenceTests
         Wait(() => observer.Count(2, FriendChange.Connected) == 1);
 
         // Act
-        context.Revoke("two");
+        context.Expire("two");
         context.Subscriptions.Remove("two");
-        context.Revoke("two-b");
+        context.Expire("two-b");
         context.Subscriptions.Remove("two-b");
 
         // Assert
         TestAssert.IsTrue(observer.Channel.GetFriends("one")[0].IsOnline, "Third session must keep account online.");
         TestAssert.AreEqual(0, observer.Count(2, FriendChange.Disconnected));
-        context.Revoke("two-c");
+        context.Expire("two-c");
         context.Subscriptions.Remove("two-c");
         Wait(() => observer.Count(2, FriendChange.Disconnected) == 1);
         TestAssert.IsTrue(!observer.Channel.GetFriends("one")[0].IsOnline, "Last revocation must disconnect.");
@@ -142,7 +142,7 @@ public sealed class FriendshipPresenceTests
         // Arrange
         using FriendshipPresenceTestContext context = new FriendshipPresenceTestContext();
         FriendshipPresenceTestClient revoked = context.Connect("one");
-        context.Revoke("one");
+        context.Expire("one");
         context.Subscriptions.Remove("one");
         context.AddSession("one-live", 1);
         FriendshipPresenceTestClient live = context.Connect("one-live");
@@ -210,7 +210,7 @@ public sealed class FriendshipPresenceTests
             "The existing channel must recover its friend snapshot.");
         TestAssert.IsTrue(friend.Channel.GetFriends("two")[0].IsOnline,
             "A repository failure must not remove the observer's presence.");
-        context.Revoke("two");
+        context.Expire("two");
         context.Subscriptions.Remove("two");
         Wait(() => observer.Count(2, FriendChange.Disconnected) == 1);
     }

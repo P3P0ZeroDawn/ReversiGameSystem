@@ -2,7 +2,7 @@ using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Chat;
-using ReversiGameSystem.Server.Persistence.Sessions;
+using ReversiGameSystem.Server.Application.Common;
 
 namespace ReversiGameSystem.Server.Tests;
 
@@ -65,10 +65,10 @@ public sealed class ChatApplicationServiceTests
     public void CanReceiveMuteNotification_SameAccountSession_AuthorizesRecipient()
     {
         ChatTestContext context = new ChatTestContext();
-        AuthenticatedSession secondSession = context.Sessions.Create(
-            ChatTestContext.CreateAccount(1, "PlayerOne"));
-        AuthenticatedSession differentAccount = context.Sessions.Create(
-            ChatTestContext.CreateAccount(2, "PlayerTwo"));
+        AuthenticatedSession secondSession = TestSessionHelper.CreateSession(
+            context.Sessions, 1, "PlayerOne");
+        AuthenticatedSession differentAccount = TestSessionHelper.CreateSession(
+            context.Sessions, 2, "PlayerTwo");
 
         bool sameAccount = context.ApplicationService.CanReceiveMuteNotification(
             context.FirstSession.SessionToken,
@@ -81,7 +81,7 @@ public sealed class ChatApplicationServiceTests
 
         TestAssert.AreEqual(true, sameAccount);
         TestAssert.AreEqual(false, otherAccount);
-        TestAssert.AreEqual(1, context.Repository.AccessEvaluationCalls);
+        TestAssert.AreEqual(0, context.Repository.AccessEvaluationCalls);
     }
 
     private sealed class ChatTestContext
@@ -89,15 +89,15 @@ public sealed class ChatApplicationServiceTests
         internal ChatTestContext()
         {
             Clock = new ChatClock(new DateTime(2026, 11, 8, 12, 0, 0, DateTimeKind.Utc));
-            Sessions = new SessionRepository(Clock);
+            Sessions = new SessionStore(Clock);
             Repository = new ChatRepositoryStub();
-            FirstSession = Sessions.Create(CreateAccount(1, "PlayerOne"));
+            FirstSession = TestSessionHelper.CreateSession(Sessions, 1, "PlayerOne");
             ApplicationService = new ChatApplicationService(Sessions, Repository, Clock);
         }
 
         internal ChatClock Clock { get; }
 
-        internal SessionRepository Sessions { get; }
+        internal SessionStore Sessions { get; }
 
         internal ChatRepositoryStub Repository { get; }
 

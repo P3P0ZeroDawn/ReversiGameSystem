@@ -40,7 +40,7 @@ public sealed class SessionService : ISessionService
     /// <inheritdoc />
     public DateTime RequestLoginCode(string loginIdentifier, string password)
     {
-        SessionOperationResult<DateTime> result = _applicationService.RequestLoginCode(
+        SessionResult<DateTime> result = _applicationService.RequestLoginCode(
             loginIdentifier,
             password);
         if (result.Status != SessionOperationStatus.Success)
@@ -48,7 +48,7 @@ public sealed class SessionService : ISessionService
             throw MapFailure(result.Status);
         }
 
-        return result.GetValue();
+        return result.Value;
     }
 
     /// <inheritdoc />
@@ -56,27 +56,27 @@ public sealed class SessionService : ISessionService
         string loginIdentifier,
         string verificationCode)
     {
-        SessionOperationResult<ApplicationAuthenticatedSession> result =
+        SessionResult<ApplicationAuthenticatedSession> result =
             _applicationService.CompleteLogin(loginIdentifier, verificationCode);
-        if (result.Status != SessionOperationStatus.Success)
+        if (result.Status != SessionOperationStatus.Success || result.Value == null)
         {
             throw MapFailure(result.Status);
         }
 
-        return MapAuthenticatedSession(result.GetValue());
+        return MapAuthenticatedSession(result.Value);
     }
 
     /// <inheritdoc />
     public ContractGuestSession OpenGuestSession(string displayName)
     {
-        SessionOperationResult<ApplicationGuestSession> result =
+        SessionResult<ApplicationGuestSession> result =
             _applicationService.OpenGuestSession(displayName);
-        if (result.Status != SessionOperationStatus.Success)
+        if (result.Status != SessionOperationStatus.Success || result.Value == null)
         {
             throw MapFailure(result.Status);
         }
 
-        return MapGuestSession(result.GetValue());
+        return MapGuestSession(result.Value);
     }
 
     /// <inheritdoc />
@@ -119,39 +119,20 @@ public sealed class SessionService : ISessionService
 
     private static FaultException<SessionFault> MapFailure(SessionOperationStatus status)
     {
-        SessionFailure failure;
-        if (status == SessionOperationStatus.InvalidCredentials)
+        SessionFailure failure = status switch
         {
-            failure = SessionFailure.InvalidCredentials;
-        }
-        else if (status == SessionOperationStatus.InactiveAccount)
-        {
-            failure = SessionFailure.InactiveAccount;
-        }
-        else if (status == SessionOperationStatus.InvalidVerificationCode)
-        {
-            failure = SessionFailure.InvalidVerificationCode;
-        }
-        else if (status == SessionOperationStatus.ExpiredVerificationCode)
-        {
-            failure = SessionFailure.ExpiredVerificationCode;
-        }
-        else if (status == SessionOperationStatus.InvalidGuestName)
-        {
-            failure = SessionFailure.InvalidGuestName;
-        }
-        else if (status == SessionOperationStatus.GuestNameUnavailable)
-        {
-            failure = SessionFailure.GuestNameUnavailable;
-        }
-        else if (status == SessionOperationStatus.MissingSessionToken)
-        {
-            failure = SessionFailure.MissingSessionToken;
-        }
-        else
-        {
-            throw new ArgumentOutOfRangeException(nameof(status));
-        }
+            SessionOperationStatus.InvalidCredentials => SessionFailure.InvalidCredentials,
+            SessionOperationStatus.InactiveAccount => SessionFailure.InactiveAccount,
+            SessionOperationStatus.InvalidVerificationCode => SessionFailure.InvalidVerificationCode,
+            SessionOperationStatus.ExpiredVerificationCode => SessionFailure.ExpiredVerificationCode,
+            SessionOperationStatus.InvalidGuestName => SessionFailure.InvalidGuestName,
+            SessionOperationStatus.GuestNameUnavailable => SessionFailure.GuestNameUnavailable,
+            SessionOperationStatus.MissingSessionToken => SessionFailure.MissingSessionToken,
+            SessionOperationStatus.InvalidSession => SessionFailure.InvalidSession,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(status),
+                "Unsupported session operation status.")
+        };
 
         return ServiceFaultFactory.CreateSessionFault(failure);
     }

@@ -15,13 +15,9 @@ using ReversiGameSystem.Server.ServiceApi;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class FriendshipPresenceTestContext : IDisposable, ISessionRepository,
-    IFriendshipRepository
+internal sealed class FriendshipPresenceTestContext : IDisposable, IFriendshipRepository
 {
-    private readonly ConcurrentDictionary<string, AuthenticatedSession> _sessions =
-        new ConcurrentDictionary<string, AuthenticatedSession>();
-    private readonly ConcurrentDictionary<string, bool> _expired =
-        new ConcurrentDictionary<string, bool>();
+    private readonly SessionStore _sessions = new SessionStore(new TestUtcClock());
     private readonly List<FriendshipPresenceTestClient> _clients = new List<FriendshipPresenceTestClient>();
     private readonly ServiceHost _host;
     private readonly Timer _sweepTimer;
@@ -52,7 +48,7 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, ISessionRepos
     {
         PresenceRegistry = new AccountPresenceRegistry();
         Subscriptions = new FriendshipSubscriptions(logger);
-        ApplicationService = new FriendshipApplicationService(this, this);
+        ApplicationService = new FriendshipApplicationService(_sessions, this);
         PresenceRegistry.PresenceChanged += (accountId, isOnline) =>
         {
             try
@@ -97,8 +93,13 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, ISessionRepos
 
     internal void AddSession(string token, long accountId)
     {
-        _sessions[token] = new AuthenticatedSession(token, accountId,
-            "Player" + accountId, "unused", "en-US", DateTime.UtcNow.AddHours(1));
+        _sessions.TryAddAuthenticated(new AuthenticatedSession(
+            token,
+            accountId,
+            "Player" + accountId,
+            "unused",
+            "en-US",
+            _sessions.CalculateExpirationUtc()));
     }
 
     internal FriendshipPresenceTestClient Connect(string token)
@@ -116,49 +117,9 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, ISessionRepos
         return client;
     }
 
-    public void Revoke(string sessionToken)
-    {
-        _sessions.TryRemove(sessionToken, out _);
-    }
-
     internal void Expire(string token)
     {
-        _expired[token] = true;
-    }
-
-    public bool TryGet(string sessionToken, out AuthenticatedSession? session)
-    {
-        session = null;
-        return !_expired.ContainsKey(sessionToken ?? string.Empty)
-            && _sessions.TryGetValue(sessionToken ?? string.Empty, out session);
-    }
-
-    public SessionOperationResult<AuthenticatedSession> FindAuthenticated(string sessionToken)
-    {
-        AuthenticatedSession? session;
-        if (TryGet(sessionToken, out session) && session is not null)
-        {
-            return SessionOperationResult<AuthenticatedSession>.CreateSuccess(session);
-        }
-
-        return SessionOperationResult<AuthenticatedSession>.CreateFailure(
-            SessionOperationStatus.InvalidSession);
-    }
-
-    public AuthenticatedSession Create(LoginAccount account)
-    {
-        throw new NotSupportedException();
-    }
-
-    public SessionOperationResult<GuestSession> CreateGuest(string displayName)
-    {
-        throw new NotSupportedException();
-    }
-
-    public bool TryGetGuest(string sessionToken, out GuestSession? session)
-    {
-        session = null;
-        return false;
+        _sessions.RevokeSession(token);
     }
 
     public bool IsAccountActive(long accountId)

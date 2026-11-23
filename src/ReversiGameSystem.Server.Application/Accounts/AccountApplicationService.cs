@@ -13,46 +13,31 @@ public sealed class AccountApplicationService
 {
     private const string ActiveStatusCode = "ACTIVE";
     private const int MaximumLocaleCodeLength = 35;
-    private static readonly TimeSpan VerificationCodeLifetime = TimeSpan.FromMinutes(5);
 
     private readonly IAccountRepository _accounts;
-    private readonly IPasswordHasher _passwordHasher;
     private readonly IPlayerImageRepository _images;
     private readonly VerificationCodeService _verificationCodes;
-    private readonly ISessionRepository _sessions;
-    private readonly ISessionLifecycleRepository _sessionLifecycle;
-    private readonly IUtcClock _clock;
+    private readonly SessionStore _sessions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AccountApplicationService"/> class.
     /// </summary>
     /// <param name="accounts">The authoritative account repository.</param>
-    /// <param name="passwordHasher">The password hashing service.</param>
     /// <param name="images">The profile image repository.</param>
     /// <param name="verificationCodes">The verification code workflow.</param>
-    /// <param name="sessions">The active session repository.</param>
-    /// <param name="sessionLifecycle">The session revocation repository.</param>
-    /// <param name="clock">The authoritative UTC clock.</param>
+    /// <param name="sessions">The in-memory active session store.</param>
     /// <exception cref="ArgumentNullException">A required dependency is absent.</exception>
     public AccountApplicationService(
         IAccountRepository accounts,
-        IPasswordHasher passwordHasher,
         IPlayerImageRepository images,
         VerificationCodeService verificationCodes,
-        ISessionRepository sessions,
-        ISessionLifecycleRepository sessionLifecycle,
-        IUtcClock clock)
+        SessionStore sessions)
     {
         _accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
-        _passwordHasher = passwordHasher
-            ?? throw new ArgumentNullException(nameof(passwordHasher));
         _images = images ?? throw new ArgumentNullException(nameof(images));
         _verificationCodes = verificationCodes
             ?? throw new ArgumentNullException(nameof(verificationCodes));
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
-        _sessionLifecycle = sessionLifecycle
-            ?? throw new ArgumentNullException(nameof(sessionLifecycle));
-        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
     }
 
     /// <summary>
@@ -139,9 +124,9 @@ public sealed class AccountApplicationService
         string currentPassword,
         string newPassword)
     {
-        SessionOperationResult<AuthenticatedSession> sessionResult =
+        SessionResult<AuthenticatedSession> sessionResult =
             _sessions.FindAuthenticated(sessionToken);
-        if (sessionResult.Status != SessionOperationStatus.Success)
+        if (sessionResult.Status != SessionOperationStatus.Success || sessionResult.Value == null)
         {
             AccountStatus sessionFailure =
                 sessionResult.Status == SessionOperationStatus.MissingSessionToken
@@ -156,7 +141,7 @@ public sealed class AccountApplicationService
             return AccountStatus.InvalidPassword;
         }
 
-        AuthenticatedSession session = sessionResult.GetValue();
+        AuthenticatedSession session = sessionResult.Value;
         AccountResult<LoginAccount> accountResult = _accounts.FindById(session.AccountId);
         if (accountResult.Status != AccountStatus.Success
             || accountResult.Value == null
@@ -166,7 +151,6 @@ public sealed class AccountApplicationService
         }
 
         LoginAccount account = accountResult.Value;
-
         if (!VerifyPassword(currentPassword, account.PasswordHash))
         {
             return AccountStatus.IncorrectCurrentPassword;
@@ -205,7 +189,7 @@ public sealed class AccountApplicationService
             return new AccountResult<DateTime>(expiresAtUtc);
         }
 
-        DateTime plausibleExpiryUtc = _clock.UtcNow.Add(VerificationCodeLifetime);
+        DateTime plausibleExpiryUtc = _verificationCodes.CalculatePlausibleExpiry();
         AccountResult<DateTime> hiddenResult = new AccountResult<DateTime>(plausibleExpiryUtc);
         return hiddenResult;
     }
@@ -258,7 +242,7 @@ public sealed class AccountApplicationService
         AccountStatus updateStatus = _accounts.UpdatePasswordHash(account.AccountId, newHash);
         if (updateStatus == AccountStatus.Success)
         {
-            _sessionLifecycle.RevokeByAccountId(account.AccountId);
+            _sessions.RevokeAccountSessions(account.AccountId);
         }
 
         return updateStatus;
@@ -272,9 +256,9 @@ public sealed class AccountApplicationService
     /// <returns>The expected operation status.</returns>
     public AccountStatus DeactivateAccount(string sessionToken, string currentPassword)
     {
-        SessionOperationResult<AuthenticatedSession> sessionResult =
+        SessionResult<AuthenticatedSession> sessionResult =
             _sessions.FindAuthenticated(sessionToken);
-        if (sessionResult.Status != SessionOperationStatus.Success)
+        if (sessionResult.Status != SessionOperationStatus.Success || sessionResult.Value == null)
         {
             AccountStatus sessionFailure =
                 sessionResult.Status == SessionOperationStatus.MissingSessionToken
@@ -283,19 +267,16 @@ public sealed class AccountApplicationService
             return sessionFailure;
         }
 
-        AuthenticatedSession session = sessionResult.GetValue();
+        AuthenticatedSession session = sessionResult.Value;
         AccountResult<LoginAccount> accountResult = _accounts.FindById(session.AccountId);
-        if (accountResult.Status != AccountStatus.Success || accountResult.Value == null)
+        if (accountResult.Status != AccountStatus.Success
+            || accountResult.Value == null
+            || accountResult.Value.StatusCode != ActiveStatusCode)
         {
             return AccountStatus.InactiveAccount;
         }
 
         LoginAccount account = accountResult.Value;
-        if (account.StatusCode != ActiveStatusCode)
-        {
-            return AccountStatus.InactiveAccount;
-        }
-
         if (!VerifyPassword(currentPassword, account.PasswordHash))
         {
             return AccountStatus.IncorrectCurrentPassword;
@@ -304,7 +285,7 @@ public sealed class AccountApplicationService
         AccountStatus deactivationStatus = _accounts.DeactivateAccount(account.AccountId);
         if (deactivationStatus == AccountStatus.Success)
         {
-            _sessionLifecycle.RevokeByAccountId(account.AccountId);
+            _sessions.RevokeAccountSessions(account.AccountId);
         }
 
         return deactivationStatus;
@@ -336,8 +317,7 @@ public sealed class AccountApplicationService
             emailAddress,
             passwordHash,
             localeCode,
-            imageUri,
-            _clock.UtcNow);
+            imageUri);
         AccountResult<long> createResult = _accounts.CreateAccount(registrationData);
         if (createResult.Status != AccountStatus.Success)
         {
@@ -411,13 +391,13 @@ public sealed class AccountApplicationService
         return AccountStatus.InvalidVerificationCode;
     }
 
-    private string HashPassword(string password)
+    private static string HashPassword(string password)
     {
         string normalizedPassword = password.Normalize(NormalizationForm.FormC);
-        return _passwordHasher.Hash(normalizedPassword);
+        return PasswordHasher.Hash(normalizedPassword);
     }
 
-    private bool VerifyPassword(string? candidatePassword, string storedHash)
+    private static bool VerifyPassword(string? candidatePassword, string storedHash)
     {
         if (candidatePassword == null || candidatePassword.Length == 0)
         {
@@ -425,6 +405,6 @@ public sealed class AccountApplicationService
         }
 
         string normalizedPassword = candidatePassword.Normalize(NormalizationForm.FormC);
-        return _passwordHasher.Verify(normalizedPassword, storedHash);
+        return PasswordHasher.Verify(normalizedPassword, storedHash);
     }
 }

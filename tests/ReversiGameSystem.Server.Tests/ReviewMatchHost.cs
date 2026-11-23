@@ -31,10 +31,10 @@ internal static class ReviewMatchHost
 
     private static void Host(
         SessionApplicationService applicationService,
-        ISessionRepository store)
+        SessionStore store)
     {
         PrepareSchema();
-        SystemUtcClock clock = new SystemUtcClock();
+        TestUtcClock clock = new TestUtcClock();
         MatchRepository matchRepository = new MatchRepository();
         MatchApplicationService matches = new MatchApplicationService(store, matchRepository, clock);
         GameplayMatchApplicationService gameplayMatches =
@@ -86,7 +86,6 @@ internal static class ReviewMatchHost
         MatchLobbyService lobby = new MatchLobbyService(matches, lobbySubscriptions);
         GameplayMatchService gameplay = new GameplayMatchService(
             gameplayMatches,
-            store,
             gameplayPresence,
             gameplaySubscriptions);
         MatchChatService chat = new MatchChatService(messages, chatSubscriptions);

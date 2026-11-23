@@ -13,7 +13,7 @@ internal static class ServiceFaultFactory
         string? contractName = OperationContext.Current?.EndpointDispatcher?.ContractName;
         string failureCode = contractName switch
         {
-            nameof(IAccountAccessService) => "ACCOUNT_REGISTRATION_FAILURE",
+            nameof(IAccountService) => "ACCOUNT_OPERATION_FAILURE",
             nameof(ISessionService) => "SESSION_OPERATION_FAILURE",
             nameof(ILeaderboardService) => "LEADERBOARD_OPERATION_FAILURE",
             nameof(IMatchLobbyService) => "MATCH_LOBBY_OPERATION_FAILURE",
@@ -32,6 +32,14 @@ internal static class ServiceFaultFactory
         return new FaultException<ServiceFault>(
             detail,
             "The server could not complete the operation.");
+    }
+
+    internal static FaultException<AccountFault> CreateAccountFault(AccountFailure reason)
+    {
+        return new FaultException<AccountFault>(new AccountFault
+        {
+            Reason = reason
+        }, "The account request was rejected.");
     }
 
     internal static FaultException<MatchFault> CreateMatchFault(MatchFailure reason)

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Chat;
+using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Application.Friendships;
 using ReversiGameSystem.Server.Application.Leaderboards;
 using ReversiGameSystem.Server.Application.Matches;
@@ -25,7 +26,6 @@ using ReversiGameSystem.Server.Persistence.Mail;
 using ReversiGameSystem.Server.Persistence.Matches;
 using ReversiGameSystem.Server.Persistence.Players;
 using ReversiGameSystem.Server.Persistence.Preferences;
-using ReversiGameSystem.Server.Persistence.Sessions;
 using ReversiGameSystem.Server.Persistence.Verification;
 using ReversiGameSystem.Server.ServiceApi;
 using Serilog;
@@ -81,7 +81,11 @@ internal static class Program
                 try
                 {
                     SystemUtcClock clock = new SystemUtcClock();
-                    SessionRepository sessions = new SessionRepository(clock);
+                    SessionStore sessions = new SessionStore(clock);
+                    SmtpEmailSender emailSender = new SmtpEmailSender(MailSettings.Load());
+                    AccountRepository accountRepository = new AccountRepository(clock);
+                    VerificationCodeService verificationCodes = CreateVerificationCodeService(
+                        emailSender, clock);
                     AccountPresenceRegistry presenceRegistry = new AccountPresenceRegistry();
                     using (FriendshipSubscriptions friendshipSubscriptions =
                         new FriendshipSubscriptions(
@@ -100,8 +104,6 @@ internal static class Program
                             friendshipApplicationService,
                             presenceRegistry,
                             friendshipSubscriptions);
-                        MatchInvitationEmailSender matchInvitationEmailSender =
-                            new MatchInvitationEmailSender(MailSettings.Load());
                         MatchRepository matchRepository = new MatchRepository();
                         matchRepository.CancelAbandonedWaitingMatches();
                         MatchApplicationService matchApplicationService =
@@ -109,7 +111,7 @@ internal static class Program
                                 sessions,
                                 matchRepository,
                                 clock,
-                                matchInvitationEmailSender);
+                                emailSender);
                         GameplayMatchApplicationService gameplayMatchApplicationService =
                             new GameplayMatchApplicationService(
                                 sessions,
@@ -168,7 +170,6 @@ internal static class Program
                                 GameplayMatchService gameplayMatchService =
                                     new GameplayMatchService(
                                         gameplayMatchApplicationService,
-                                        sessions,
                                         gameplayPresence,
                                         gameplaySubscriptions);
                                 ChatRepository chatRepository = new ChatRepository(clock);
@@ -187,10 +188,18 @@ internal static class Program
                                 MatchChatService matchChatService = new MatchChatService(
                                     chatApplicationService,
                                     chatSubscriptions);
-                                SessionService sessionService = CreateSessionService(
-                                    loggerFactory.CreateLogger<SessionService>(), sessions, clock);
-                                sessionService.SessionClosed += friendshipSubscriptions.Remove;
-                                sessionService.SessionClosed += sessionToken =>
+                                SessionService sessionService = new SessionService(
+                                    new SessionApplicationService(
+                                        accountRepository,
+                                        verificationCodes,
+                                        sessions),
+                                    loggerFactory.CreateLogger<SessionService>());
+                                AccountService accountService = CreateAccountService(
+                                    accountRepository,
+                                    verificationCodes,
+                                    sessions);
+                                sessions.SessionRevoked += friendshipSubscriptions.Remove;
+                                sessions.SessionRevoked += sessionToken =>
                                 {
                                     lobbySubscriptions.RemoveSession(sessionToken);
                                     CancelWaitingLobbiesForSession(
@@ -198,13 +207,11 @@ internal static class Program
                                         matchApplicationService,
                                         lobbySubscriptions);
                                 };
-                                sessionService.SessionClosed += gameplaySubscriptions.RemoveSession;
-                                sessionService.SessionClosed += chatSubscriptions.RemoveSession;
+                                sessions.SessionRevoked += gameplaySubscriptions.RemoveSession;
+                                sessions.SessionRevoked += chatSubscriptions.RemoveSession;
                                 ServiceHost[] hosts =
                                 {
-                                    CreateServiceHost(
-                                        CreateAccountAccessService(),
-                                        loggerFactory),
+                                    CreateServiceHost(accountService, loggerFactory),
                                     CreateServiceHost(sessionService, loggerFactory),
                                     CreateServiceHost(
                                         CreatePlayerProfileService(sessions),
@@ -251,6 +258,11 @@ internal static class Program
                                         () => SweepExpiredLobbies(
                                             matchApplicationService,
                                             lobbySubscriptions),
+                                        loggerFactory.CreateLogger<PeriodicTaskRunner>()),
+                                    new PeriodicTaskRunner(
+                                        nameof(SessionStore.RemoveExpiredSessions),
+                                        TimeSpan.FromSeconds(30),
+                                        sessions.RemoveExpiredSessions,
                                         loggerFactory.CreateLogger<PeriodicTaskRunner>())
                                 };
                                 return Run(hosts, runners, hostLogger);
@@ -267,22 +279,23 @@ internal static class Program
         }
     }
 
-    private static AccountAccessService CreateAccountAccessService()
+    private static AccountService CreateAccountService(
+        AccountRepository accounts,
+        VerificationCodeService verificationCodes,
+        SessionStore sessions)
     {
-        SystemUtcClock clock = new SystemUtcClock();
-        Pbkdf2PasswordHasher passwordHasher = new Pbkdf2PasswordHasher();
-        string imageDirectory = GetProfileImageDirectory();
-
-        CreateAccountHandler createAccountHandler = new CreateAccountHandler(
-            new EntityFrameworkAccountRegistrationStore(),
-            passwordHasher,
-            new FileSystemProfileImageStore(imageDirectory),
-            clock);
-        return new AccountAccessService(createAccountHandler);
+        ProfileImageRepository images = new ProfileImageRepository(GetProfileImageDirectory());
+        AccountApplicationService applicationService = new AccountApplicationService(
+            accounts,
+            images,
+            verificationCodes,
+            sessions);
+        return new AccountService(applicationService);
     }
 
-    private static SessionService CreateSessionService(ILogger<SessionService> logger,
-        ISessionRepository sessions, IUtcClock clock)
+    private static VerificationCodeService CreateVerificationCodeService(
+        IEmailSender emailSender,
+        IUtcClock clock)
     {
         byte[] secret = Convert.FromBase64String(
             EnvironmentSettings.ReadRequired("REVERSI_VERIFICATION_SECRET"));
@@ -296,20 +309,14 @@ internal static class Program
             Array.Clear(secret, 0, secret.Length);
         }
 
-        VerificationCodeIssuer issuer = new VerificationCodeIssuer(
-            new VerificationEmailSender(MailSettings.Load()), protector, clock);
+        VerificationCodeIssuer issuer = new VerificationCodeIssuer(emailSender, protector, clock);
         VerificationCodeService verification = new VerificationCodeService(
             issuer, new VerificationCodeRepository(), clock);
-        SessionApplicationService applicationService = new SessionApplicationService(
-            new AccountRepository(),
-            new Pbkdf2PasswordHasher(),
-            verification,
-            sessions);
-        return new SessionService(applicationService, logger);
+        return verification;
     }
 
     private static PlayerProfileService CreatePlayerProfileService(
-        ISessionRepository sessions)
+        SessionStore sessions)
     {
         PlayerProfileRepository profiles = new PlayerProfileRepository();
         ProfileImageRepository images = new ProfileImageRepository(GetProfileImageDirectory());
@@ -322,7 +329,7 @@ internal static class Program
     }
 
     private static PlayerPreferencesService CreatePlayerPreferencesService(
-        ISessionRepository sessions)
+        SessionStore sessions)
     {
         string directory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),

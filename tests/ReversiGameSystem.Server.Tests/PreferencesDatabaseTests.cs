@@ -30,11 +30,11 @@ internal static class PreferencesDatabaseTests
     }
 
     private static void VerifyPreferences(SessionApplicationService authentication,
-        ISessionRepository sessions)
+        SessionStore sessions)
     {
         AuthenticatedSession alpha = authentication.CompleteLogin(
-            "ReviewAlpha", "000001").GetValue();
-        authentication.CompleteLogin("ReviewBeta", "000002").GetValue();
+            "ReviewAlpha", "000001").Value!;
+        authentication.CompleteLogin("ReviewBeta", "000002");
         ValidateDisposableConnection();
         const string SeedBackgroundSql =
             "UPDATE dbo.AccountSettings SET boardBackgroundUri = @reference WHERE accountId = @id";
@@ -66,9 +66,8 @@ internal static class PreferencesDatabaseTests
             PlayerPreferences stored = repository.ReadPreferences(alpha.AccountId).Preferences;
             TestAssert.AreEqual(ExistingReference, stored.BoardBackgroundReference);
             TestAssert.AreEqual(false, stored.UseCustomBoardBackground);
-            TestAssert.AreEqual("en-US", new AccountLoginRepository()
-                .FindByLoginAsync("ReviewAlpha")
-                .GetAwaiter().GetResult().GetFoundAccount().PreferredLocaleCode);
+            TestAssert.AreEqual("en-US", new AccountRepository(new TestUtcClock())
+                .FindByLogin("ReviewAlpha").Value?.PreferredLocaleCode);
 
             ProfileImageData image = CreateImage();
             TestAssert.AreEqual(PreferencesStatus.Success,

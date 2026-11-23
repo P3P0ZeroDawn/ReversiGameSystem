@@ -1,21 +1,22 @@
 using System;
 using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Application.Verification;
-using ReversiGameSystem.Server.Persistence.Sessions;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class SessionTestContext : IUtcClock, IVerificationEmailSender,
-    IVerificationCodeRepository, IAccountRepository, IPasswordHasher
+internal sealed class SessionTestContext : IUtcClock, IEmailSender,
+    IVerificationCodeRepository, IAccountRepository
 {
+    private static readonly string TestPasswordHash = PasswordHasher.Hash("Password1!");
+
     internal SessionTestContext()
     {
         Protector = new VerificationCodeProtector(new byte[32]);
         Issuer = new VerificationCodeIssuer(this, Protector, this);
         Codes = new VerificationCodeService(Issuer, this, this);
-        Sessions = new RecordingSessionRepository(this);
+        Sessions = new SessionStore(this);
         ApplicationService = new SessionApplicationService(
-            this,
             this,
             Codes,
             Sessions);
@@ -25,9 +26,9 @@ internal sealed class SessionTestContext : IUtcClock, IVerificationEmailSender,
     internal VerificationCodeProtector Protector { get; }
     internal VerificationCodeIssuer Issuer { get; }
     internal VerificationCodeService Codes { get; }
-    internal RecordingSessionRepository Sessions { get; }
+    internal SessionStore Sessions { get; }
     internal SessionApplicationService ApplicationService { get; }
-    internal VerificationEmail? Email { get; private set; }
+    internal EmailMessage? Email { get; private set; }
     internal PendingVerificationCode? Pending { get; private set; }
     internal VerificationAttempt? Attempt { get; private set; }
     internal bool FailDelivery { get; set; }
@@ -35,7 +36,7 @@ internal sealed class SessionTestContext : IUtcClock, IVerificationEmailSender,
     internal bool Unavailable { get; set; }
     internal VerificationStatus ConsumeStatus { get; set; } = VerificationStatus.Accepted;
 
-    public void Send(VerificationEmail email)
+    public void Send(EmailMessage email)
     {
         if (FailDelivery) { throw new TimeoutException("Private provider diagnostic."); }
         Email = email;
@@ -60,7 +61,7 @@ internal sealed class SessionTestContext : IUtcClock, IVerificationEmailSender,
             42,
             "PlayerOne",
             "player@example.com",
-            "test-hash",
+            TestPasswordHash,
             Inactive ? "INACTIVE" : "ACTIVE",
             "en-US");
         return new AccountResult<LoginAccount>(account);
@@ -94,51 +95,5 @@ internal sealed class SessionTestContext : IUtcClock, IVerificationEmailSender,
     public AccountStatus DeactivateAccount(long accountId)
     {
         throw new NotSupportedException();
-    }
-
-    public string Hash(string password) => "test-hash";
-    public bool Verify(string password, string encodedHash) => password == "Password1!";
-}
-
-internal sealed class RecordingSessionRepository : ISessionRepository
-{
-    private readonly SessionRepository _inner;
-
-    internal RecordingSessionRepository(IUtcClock clock)
-    {
-        _inner = new SessionRepository(clock);
-    }
-
-    internal int CreatedCount { get; private set; }
-
-    public AuthenticatedSession Create(LoginAccount account)
-    {
-        CreatedCount++;
-        return _inner.Create(account);
-    }
-
-    public SessionOperationResult<GuestSession> CreateGuest(string displayName)
-    {
-        return _inner.CreateGuest(displayName);
-    }
-
-    public bool TryGet(string token, out AuthenticatedSession? session)
-    {
-        return _inner.TryGet(token, out session);
-    }
-
-    public SessionOperationResult<AuthenticatedSession> FindAuthenticated(string token)
-    {
-        return _inner.FindAuthenticated(token);
-    }
-
-    public bool TryGetGuest(string token, out GuestSession? session)
-    {
-        return _inner.TryGetGuest(token, out session);
-    }
-
-    public void Revoke(string token)
-    {
-        _inner.Revoke(token);
     }
 }

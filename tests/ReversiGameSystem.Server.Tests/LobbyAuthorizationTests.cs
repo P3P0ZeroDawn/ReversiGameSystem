@@ -52,7 +52,7 @@ public sealed class LobbyAuthorizationTests
     {
         // Arrange
         AuthorizationContext context = new AuthorizationContext();
-        context.Sessions.Sessions.Revoke(context.Player.SessionToken);
+        context.Sessions.Sessions.RevokeSession(context.Player.SessionToken);
 
         // Act
         MatchStatus status = context.Handler.EvaluateLobbyAccess(
@@ -112,8 +112,7 @@ public sealed class LobbyAuthorizationTests
         internal AuthorizationContext()
         {
             Sessions = new SessionTestContext();
-            Player = Sessions.Sessions.Create(new LoginAccount(
-                42, "LobbyPlayer", "lobby@example.com", "test-hash", "ACTIVE", "en-US"));
+            Player = TestSessionHelper.CreateSession(Sessions.Sessions, 42, "LobbyPlayer");
             Store = new AuthorizationStore();
             Handler = new MatchApplicationService(Sessions.Sessions, Store, Sessions);
         }

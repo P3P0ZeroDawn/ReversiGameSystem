@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Common;
 
 namespace ReversiGameSystem.Server.Application.Matches;
 
@@ -11,7 +12,7 @@ public sealed class GameplayMatchApplicationService
     private const string StateFinished = "Finished";
     private static readonly TimeSpan PersistenceRetryInterval = TimeSpan.FromSeconds(5);
 
-    private readonly ISessionRepository _sessions;
+    private readonly SessionStore _sessions;
     private readonly IGameplayRepository _matches;
     private readonly IUtcClock _clock;
     private readonly object _activeMatchesSync = new object();
@@ -20,7 +21,7 @@ public sealed class GameplayMatchApplicationService
     private DateTime _nextPersistenceRetryUtc;
 
     public GameplayMatchApplicationService(
-        ISessionRepository sessions,
+        SessionStore sessions,
         IGameplayRepository matches,
         IUtcClock clock)
     {
@@ -299,6 +300,47 @@ public sealed class GameplayMatchApplicationService
         return _matches.LoadMatchHistory(playerResult.Value.AccountId);
     }
 
+    public MatchResult<long> GetSessionAccountId(string sessionToken)
+    {
+        MatchResult<AuthenticatedSession> playerResult = ResolveActiveSession(sessionToken);
+        if (playerResult.Value == null)
+        {
+            return new MatchResult<long>(playerResult.Status);
+        }
+
+        MatchResult<long> result = new MatchResult<long>(playerResult.Value.AccountId);
+        return result;
+    }
+
+    public MatchResult<MatchParticipant> GetAuthorizedParticipant(
+        string sessionToken,
+        long matchId)
+    {
+        MatchResult<MatchSessionContext> resolved = ResolveSessionAndMatch(sessionToken, matchId);
+        if (resolved.Value == null)
+        {
+            return new MatchResult<MatchParticipant>(resolved.Status);
+        }
+
+        Match match = resolved.Value.Match;
+        long accountId = resolved.Value.Player.AccountId;
+        MatchParticipant? participant = null;
+        lock (match.SyncRoot)
+        {
+            participant = Array.Find(
+                match.Participants,
+                candidate => candidate.AccountId == accountId);
+        }
+
+        if (participant == null)
+        {
+            return new MatchResult<MatchParticipant>(MatchStatus.Unauthorized);
+        }
+
+        MatchResult<MatchParticipant> result = new MatchResult<MatchParticipant>(participant);
+        return result;
+    }
+
     public MatchResult<MatchMove[]> GetMoveHistory(string sessionToken, long matchId)
     {
         MatchResult<MatchSessionContext> resolved = ResolveSessionAndMatch(sessionToken, matchId);
@@ -371,26 +413,35 @@ public sealed class GameplayMatchApplicationService
 
     private List<Match> CollectExpiredMatches(DateTime now)
     {
-        List<Match> expiredMatches = new List<Match>();
+        Match[] activeMatches;
         lock (_activeMatchesSync)
         {
-            foreach (Match match in _activeMatches.Values)
-            {
-                if (!string.Equals(match.State, StateInProgress, StringComparison.Ordinal))
-                {
-                    continue;
-                }
+            activeMatches = _activeMatches.Values.ToArray();
+        }
 
-                DateTime turnStart = match.TurnStartedAtUtc ?? match.StartedAtUtc ?? now;
-                MatchParticipant? participant = Array.Find(
-                    match.Participants, player => player.SeatNumber == match.CurrentTurnSeatNumber);
-                TimeSpan duration = participant != null && participant.IsSystem
-                    ? GameplayMatchRules.SystemMoveDelay
-                    : TimeSpan.FromSeconds(match.TurnDurationSeconds);
-                if (now >= turnStart.Add(duration))
+        List<Match> expiredMatches = new List<Match>();
+        for (int index = 0; index < activeMatches.Length; index++)
+        {
+            Match match = activeMatches[index];
+            bool isExpired = false;
+            lock (match.SyncRoot)
+            {
+                if (string.Equals(match.State, StateInProgress, StringComparison.Ordinal))
                 {
-                    expiredMatches.Add(match);
+                    DateTime turnStart = match.TurnStartedAtUtc ?? match.StartedAtUtc ?? now;
+                    MatchParticipant? participant = Array.Find(
+                        match.Participants,
+                        player => player.SeatNumber == match.CurrentTurnSeatNumber);
+                    TimeSpan duration = participant != null && participant.IsSystem
+                        ? GameplayMatchRules.SystemMoveDelay
+                        : TimeSpan.FromSeconds(match.TurnDurationSeconds);
+                    isExpired = now >= turnStart.Add(duration);
                 }
+            }
+
+            if (isExpired)
+            {
+                expiredMatches.Add(match);
             }
         }
 
@@ -562,19 +613,19 @@ public sealed class GameplayMatchApplicationService
 
     private MatchResult<AuthenticatedSession> ResolveActiveSession(string sessionToken)
     {
-        SessionOperationResult<AuthenticatedSession> session =
+        SessionResult<AuthenticatedSession> session =
             _sessions.FindAuthenticated(sessionToken);
         if (session.Status == SessionOperationStatus.MissingSessionToken)
         {
             return new MatchResult<AuthenticatedSession>(MatchStatus.MissingSessionToken);
         }
 
-        if (session.Status != SessionOperationStatus.Success)
+        if (session.Status != SessionOperationStatus.Success || session.Value == null)
         {
             return new MatchResult<AuthenticatedSession>(MatchStatus.InvalidSession);
         }
 
-        return new MatchResult<AuthenticatedSession>(session.GetValue());
+        return new MatchResult<AuthenticatedSession>(session.Value);
     }
 
     private static bool RepresentsSameState(Match currentMatch, Match snapshot)

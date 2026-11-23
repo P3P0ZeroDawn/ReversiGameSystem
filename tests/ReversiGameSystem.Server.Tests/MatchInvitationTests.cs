@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MimeKit;
 using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Contracts.Common;
 using ReversiGameSystem.Server.Contracts.Faults;
@@ -96,10 +97,10 @@ public sealed class MatchInvitationTests
         TestAssert.AreEqual("Waiting", result.State);
         TestAssert.AreEqual(true, result.IsPrivate);
         TestAssert.AreEqual(1, mailer.SentEmails.Count);
-        MatchInvitationEmail sent = mailer.SentEmails[0];
-        TestAssert.AreEqual("beta@example.com", sent.RecipientEmail);
-        TestAssert.AreEqual("AlphaPlayer", sent.CreatorDisplayName);
-        TestAssert.AreEqual(result.Code, sent.MatchCode);
+        EmailMessage sent = mailer.SentEmails[0];
+        TestAssert.AreEqual("beta@example.com", sent.RecipientAddress);
+        TestAssert.IsTrue(sent.Body.Contains("AlphaPlayer"), "Email body should contain inviter username.");
+        TestAssert.IsTrue(sent.Body.Contains(result.Code ?? string.Empty), "Email body should contain match code.");
     }
 
     /// <summary>
@@ -127,7 +128,7 @@ public sealed class MatchInvitationTests
         TestAssert.AreEqual("Waiting", result.State);
         TestAssert.AreEqual(true, result.IsPrivate);
         TestAssert.AreEqual(1, mailer.SentEmails.Count);
-        TestAssert.AreEqual("gamma@example.com", mailer.SentEmails[0].RecipientEmail);
+        TestAssert.AreEqual("gamma@example.com", mailer.SentEmails[0].RecipientAddress);
     }
 
     /// <summary>
@@ -138,7 +139,8 @@ public sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        GuestSession guest = context.Sessions.CreateGuest("Guest-GuestAlpha").GetValue();
+        GuestSession guest = context.ApplicationService.OpenGuestSession("GuestAlpha").Value
+            ?? throw new InvalidOperationException("Guest session expected.");
         InvitationMockStore store = new InvitationMockStore();
         InMemoryInvitationSender mailer = new InMemoryInvitationSender();
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
@@ -257,8 +259,8 @@ public sealed class MatchInvitationTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        AuthenticatedSession inactiveCaller = context.Sessions.Create(
-            new LoginAccount(10, "InactiveAlpha", "alpha@example.com", "hash", "INACTIVE", "en-US"));
+        AuthenticatedSession inactiveCaller = TestSessionHelper.CreateSession(
+            context.Sessions, 10, "InactiveAlpha");
         InvitationMockStore store = new InvitationMockStore();
         store.RegisterFriendship(10, 20, "beta@example.com");
         store.RegisterAccount(10, "alpha@example.com", false);
@@ -414,7 +416,7 @@ public sealed class MatchInvitationTests
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
         mailer.BeforeSendCallback = () =>
         {
-            context.Sessions.Revoke(creator.SessionToken);
+            context.Sessions.RevokeSession(creator.SessionToken);
         };
 
         // Act
@@ -708,12 +710,17 @@ public sealed class MatchInvitationTests
         WithTestMailSettings(() =>
         {
             MailSettings settings = MailSettings.Load();
-            MatchInvitationEmailSender sender = new MatchInvitationEmailSender(settings);
-            MatchInvitationEmail email = new MatchInvitationEmail("beta@example.com", "AlphaPlayer", "REV999");
+            SmtpEmailSender sender = new SmtpEmailSender(settings);
+            MethodInfo createInvitationMethod = TestAssert.IsNotNull(
+                typeof(MatchApplicationService).GetMethod(
+                    "CreateInvitationEmail",
+                    BindingFlags.NonPublic | BindingFlags.Static));
+            EmailMessage email = (EmailMessage)TestAssert.IsNotNull(
+                createInvitationMethod.Invoke(null, new object[] { "beta@example.com", "AlphaPlayer", "REV999" }));
 
             // Act
             MethodInfo method = TestAssert.IsNotNull(
-                typeof(MatchInvitationEmailSender).GetMethod("CreateMessage", BindingFlags.NonPublic | BindingFlags.Instance));
+                typeof(SmtpEmailSender).GetMethod("CreateMimeMessage", BindingFlags.NonPublic | BindingFlags.Instance));
             object? rawResult = method.Invoke(sender, new object[] { email });
             MimeMessage message = (MimeMessage)TestAssert.IsNotNull(rawResult);
             string body = TestAssert.IsNotNull(message.TextBody);
@@ -759,17 +766,16 @@ public sealed class MatchInvitationTests
     private static AuthenticatedSession CreatePlayer(
         SessionTestContext context, long accountId, string username)
     {
-        return context.Sessions.Create(new LoginAccount(
-            accountId, username, username.ToLowerInvariant() + "@example.com", "hash", "ACTIVE", "en-US"));
+        return TestSessionHelper.CreateSession(context.Sessions, accountId, username);
     }
 
-    private sealed class InMemoryInvitationSender : IMatchInvitationEmailSender
+    private sealed class InMemoryInvitationSender : IEmailSender
     {
-        internal List<MatchInvitationEmail> SentEmails { get; } = new List<MatchInvitationEmail>();
+        internal List<EmailMessage> SentEmails { get; } = new List<EmailMessage>();
         internal bool FailSend { get; set; }
         internal Action? BeforeSendCallback { get; set; }
 
-        public void Send(MatchInvitationEmail email)
+        public void Send(EmailMessage email)
         {
             BeforeSendCallback?.Invoke();
             if (FailSend)

@@ -3,12 +3,12 @@ using System.ServiceModel;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Contracts.Callbacks;
 using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.Contracts.Matches;
 using ReversiGameSystem.Server.ServiceApi;
-using ReversiGameSystem.Server.Persistence.Sessions;
 
 namespace ReversiGameSystem.Server.Tests;
 
@@ -59,7 +59,7 @@ public sealed class MatchBoundaryTests
     {
         // Arrange
         BoundaryStore store = new BoundaryStore();
-        MatchApplicationService handler = new MatchApplicationService(new BoundarySessions(), store, new BoundaryClock());
+        MatchApplicationService handler = new MatchApplicationService(CreateValidSessionStore(), store, new BoundaryClock());
         MatchLobbyService service = CreateLobby(handler);
 
         // Act & Assert
@@ -76,8 +76,12 @@ public sealed class MatchBoundaryTests
         // Arrange
         BoundaryStore store = new BoundaryStore();
         BoundaryClock clock = new BoundaryClock();
-        SessionRepository sessions = new SessionRepository(clock);
-        GuestSession guest = sessions.CreateGuest("Guest-GuestBoundary").GetValue();
+        SessionStore sessions = new SessionStore(clock);
+        GuestSession guest = new GuestSession(
+            "guest-token",
+            "Guest-GuestBoundary",
+            sessions.CalculateExpirationUtc());
+        sessions.TryReserveGuest(guest);
         MatchApplicationService handler = new MatchApplicationService(sessions, store, clock, new BoundaryMailer());
         MatchLobbyService service = CreateLobby(handler);
 
@@ -92,7 +96,7 @@ public sealed class MatchBoundaryTests
     {
         // Arrange
         BoundaryStore store = new BoundaryStore();
-        BoundarySessions sessions = new BoundarySessions();
+        SessionStore sessions = CreateValidSessionStore();
         MatchApplicationService handler = new MatchApplicationService(sessions, store, new BoundaryClock(), new BoundaryMailer());
         MatchLobbyService service = CreateLobby(handler);
 
@@ -107,7 +111,7 @@ public sealed class MatchBoundaryTests
     {
         // Arrange
         BoundaryStore store = new BoundaryStore();
-        BoundarySessions sessions = new BoundarySessions();
+        SessionStore sessions = CreateValidSessionStore();
         MatchApplicationService handler = new MatchApplicationService(sessions, store, new BoundaryClock(), new BoundaryMailer());
         MatchLobbyService service = CreateLobby(handler);
 
@@ -122,7 +126,7 @@ public sealed class MatchBoundaryTests
     {
         // Arrange
         BoundaryStore store = new BoundaryStore();
-        BoundarySessions sessions = new BoundarySessions();
+        SessionStore sessions = CreateValidSessionStore();
         MatchApplicationService handler = new MatchApplicationService(sessions, store, new BoundaryClock(), new BoundaryMailer());
         MatchLobbyService service = CreateLobby(handler);
 
@@ -137,7 +141,7 @@ public sealed class MatchBoundaryTests
     {
         // Arrange
         BoundaryStore store = new BoundaryStore();
-        BoundarySessions sessions = new BoundarySessions();
+        SessionStore sessions = CreateValidSessionStore();
         MatchApplicationService handler = new MatchApplicationService(sessions, store, new BoundaryClock(), new BoundaryMailer());
         MatchLobbyService service = CreateLobby(handler);
 
@@ -152,7 +156,7 @@ public sealed class MatchBoundaryTests
     {
         // Arrange
         BoundaryStore store = new BoundaryStore();
-        BoundarySessions sessions = new BoundarySessions();
+        SessionStore sessions = CreateValidSessionStore();
         MatchApplicationService handler = new MatchApplicationService(sessions, store, new BoundaryClock(), new BoundaryMailer());
         MatchLobbyService service = CreateLobby(handler);
 
@@ -166,7 +170,7 @@ public sealed class MatchBoundaryTests
 
     private static GameplayMatchService CreateGameplay(BoundaryStore store)
     {
-        BoundarySessions sessions = new BoundarySessions();
+        SessionStore sessions = CreateValidSessionStore();
         GameplayMatchApplicationService applicationService =
             new GameplayMatchApplicationService(sessions, store, new BoundaryClock());
         MatchCallbackSubscriptions<IGameplayMatchServiceCallback> subscriptions =
@@ -175,7 +179,6 @@ public sealed class MatchBoundaryTests
                 NullLogger.Instance);
         return new GameplayMatchService(
             applicationService,
-            sessions,
             new GameplayMatchPresence(),
             subscriptions);
     }
@@ -189,9 +192,9 @@ public sealed class MatchBoundaryTests
         return new MatchLobbyService(handler, subscriptions);
     }
 
-    private sealed class BoundaryMailer : IMatchInvitationEmailSender
+    private sealed class BoundaryMailer : IEmailSender
     {
-        public void Send(MatchInvitationEmail email)
+        public void Send(EmailMessage email)
         {
         }
     }
@@ -201,37 +204,17 @@ public sealed class MatchBoundaryTests
         public DateTime UtcNow => new DateTime(2026, 10, 30, 12, 0, 0, DateTimeKind.Utc);
     }
 
-    private sealed class BoundarySessions : ISessionRepository
+    private static SessionStore CreateValidSessionStore()
     {
-        public AuthenticatedSession Create(LoginAccount account) => throw new NotSupportedException();
-        public SessionOperationResult<GuestSession> CreateGuest(string displayName) =>
-            throw new NotSupportedException();
-        public void Revoke(string sessionToken) => throw new NotSupportedException();
-        public bool TryGet(string sessionToken, out AuthenticatedSession? session)
-        {
-            session = new AuthenticatedSession("valid", 1, "BoundaryPlayer", "test@example.invalid", "en-US",
-                DateTime.UtcNow.AddDays(1));
-            return sessionToken == "valid";
-        }
-
-        public SessionOperationResult<AuthenticatedSession> FindAuthenticated(
-            string sessionToken)
-        {
-            AuthenticatedSession? session;
-            if (TryGet(sessionToken, out session) && session is not null)
-            {
-                return SessionOperationResult<AuthenticatedSession>.CreateSuccess(session);
-            }
-
-            return SessionOperationResult<AuthenticatedSession>.CreateFailure(
-                SessionOperationStatus.InvalidSession);
-        }
-
-        public bool TryGetGuest(string sessionToken, out GuestSession? session)
-        {
-            session = null;
-            return false;
-        }
+        SessionStore sessions = new SessionStore(new BoundaryClock());
+        sessions.TryAddAuthenticated(new AuthenticatedSession(
+            "valid",
+            1,
+            "BoundaryPlayer",
+            "test@example.invalid",
+            "en-US",
+            DateTime.UtcNow.AddDays(1)));
+        return sessions;
     }
 
     private sealed class BoundaryStore : IMatchRepository, IGameplayRepository

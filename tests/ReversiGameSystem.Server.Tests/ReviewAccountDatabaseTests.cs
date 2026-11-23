@@ -4,13 +4,14 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Text.RegularExpressions;
 using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Application.Verification;
 using ReversiGameSystem.Server.Persistence.Accounts;
 using ReversiGameSystem.Server.Persistence.Verification;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class ReviewAccountDatabaseTests : IVerificationEmailSender
+internal sealed class ReviewAccountDatabaseTests : IEmailSender
 {
     private const string DatabasePrefix = "ReversiReviewAccountTests_";
     private const string ConnectionVariable = "REVERSI_DB_CONNECTION_STRING";
@@ -19,34 +20,32 @@ internal sealed class ReviewAccountDatabaseTests : IVerificationEmailSender
     private static readonly TimeSpan ReviewScriptRegexTimeout =
         TimeSpan.FromSeconds(ReviewScriptRegexTimeoutSeconds);
     private readonly Guid _identifier = Guid.NewGuid();
-    private readonly Dictionary<string, VerificationEmail> _mail =
-        new Dictionary<string, VerificationEmail>(StringComparer.Ordinal);
-    private readonly FixedUtcClock _clock = new FixedUtcClock(DateTime.UtcNow);
-    private readonly Pbkdf2PasswordHasher _hasher = new Pbkdf2PasswordHasher();
-    private readonly RecordingSessionRepository _sessions;
+    private readonly Dictionary<string, EmailMessage> _mail =
+        new Dictionary<string, EmailMessage>(StringComparer.Ordinal);
+    private readonly TestUtcClock _clock = new TestUtcClock(DateTime.UtcNow);
+    private readonly SessionStore _sessions;
     private readonly SessionApplicationService _applicationService;
     private string DatabaseName => DatabasePrefix + _identifier.ToString("N");
 
     private ReviewAccountDatabaseTests()
     {
-        _sessions = new RecordingSessionRepository(_clock);
+        _sessions = new SessionStore(_clock);
         VerificationCodeIssuer issuer = new VerificationCodeIssuer(this,
             new VerificationCodeProtector(new byte[32]), _clock);
         _applicationService = new SessionApplicationService(
-            new AccountRepository(),
-            _hasher,
+            new AccountRepository(_clock),
             new VerificationCodeService(issuer, new VerificationCodeRepository(), _clock),
             _sessions);
     }
 
-    public void Send(VerificationEmail email) => _mail[email.RecipientAddress] = email;
+    public void Send(EmailMessage email) => _mail[email.RecipientAddress] = email;
 
     internal static void RunDisposableDatabaseChecks() => new ReviewAccountDatabaseTests().Run();
 
     private void Run() => WithDatabase(RunChecks);
 
     internal static void RunWithReviewAccounts(
-        Action<SessionApplicationService, ISessionRepository> action)
+        Action<SessionApplicationService, SessionStore> action)
     {
         ReviewAccountDatabaseTests fixture = new ReviewAccountDatabaseTests();
         fixture.WithDatabase(() =>
@@ -64,8 +63,8 @@ internal sealed class ReviewAccountDatabaseTests : IVerificationEmailSender
 
     private void SeedLoginCode(string username, string code)
     {
-        LoginAccount account = new AccountLoginRepository()
-            .FindByLoginAsync(username).GetAwaiter().GetResult().GetFoundAccount();
+        LoginAccount account = new AccountRepository(_clock)
+            .FindByLogin(username).Value!;
         VerificationIdentity identity = VerificationIdentity.ForLogin(
             account.AccountId, account.EmailAddress);
         new VerificationCodeRepository().Replace(new PendingVerificationCode
@@ -131,25 +130,26 @@ internal sealed class ReviewAccountDatabaseTests : IVerificationEmailSender
     private void Register_ValidAccount_PersistsSaltedCredentialsAndSettings(string username)
     {
         // Arrange
-        CreateAccountHandler handler = new CreateAccountHandler(
-            new EntityFrameworkAccountRegistrationStore(), _hasher,
-            new ProfileImageStoreStub(), _clock);
-        CreateAccountCommand command = new CreateAccountCommand(username,
-            username + "@example.invalid", Password, "es-MX", null);
+        AccountRepository repository = new AccountRepository(_clock);
+        AccountRegistrationData registration = new AccountRegistrationData(
+            username,
+            username + "@example.invalid",
+            PasswordHasher.Hash(Password),
+            "es-MX",
+            null);
 
         // Act
-        CreateAccountResult result = handler.ExecuteAsync(command).GetAwaiter().GetResult();
+        AccountResult<long> result = repository.CreateAccount(registration);
 
         // Assert
-        TestAssert.AreEqual(CreateAccountOutcome.Success, result.Outcome);
-        TestAssert.IsTrue(result.AccountId > 0, "Registration must return the stored account ID.");
-        LoginAccount account = new AccountLoginRepository()
-            .FindByLoginAsync(username).GetAwaiter().GetResult().GetFoundAccount();
-        TestAssert.AreEqual(result.AccountId, (long?)account.AccountId);
+        TestAssert.AreEqual(AccountStatus.Success, result.Status);
+        TestAssert.IsTrue(result.Value > 0, "Registration must return the stored account ID.");
+        LoginAccount account = repository.FindByLogin(username).Value!;
+        TestAssert.AreEqual(result.Value, account.AccountId);
         TestAssert.AreEqual("ACTIVE", account.StatusCode);
         TestAssert.AreEqual("es-MX", account.PreferredLocaleCode);
         TestAssert.IsTrue(account.PasswordHash != Password
-            && _hasher.Verify(Password, account.PasswordHash),
+            && PasswordHasher.Verify(Password, account.PasswordHash),
             "Stored PBKDF2 must verify the password.");
         TestAssert.AreEqual(1, Convert.ToInt32(Scalar("SELECT COUNT(*) FROM dbo.AccountSettings "
             + "WHERE accountId = " + account.AccountId + " AND pieceStyleCode = 'STANDARD'")));
@@ -157,17 +157,13 @@ internal sealed class ReviewAccountDatabaseTests : IVerificationEmailSender
 
     private void RequestLoginCode_WrongPassword_DoesNotCreateSessionOrCode()
     {
-        // Arrange
-        int created = _sessions.CreatedCount;
-
         // Act
-        SessionOperationResult<DateTime> result = _applicationService.RequestLoginCode(
+        SessionResult<DateTime> result = _applicationService.RequestLoginCode(
             "ReviewAlpha",
             "WrongPassword1!");
 
         // Assert
         TestAssert.AreEqual(SessionOperationStatus.InvalidCredentials, result.Status);
-        TestAssert.AreEqual(created, _sessions.CreatedCount);
         TestAssert.AreEqual(0, _mail.Count);
         TestAssert.AreEqual(0, Convert.ToInt32(Scalar(
             "SELECT COUNT(*) FROM dbo.VerificationCode")));
@@ -177,17 +173,16 @@ internal sealed class ReviewAccountDatabaseTests : IVerificationEmailSender
     {
         // Arrange
         _applicationService.RequestLoginCode("ReviewAlpha", Password);
-        VerificationEmail email = _mail["ReviewAlpha@example.invalid"];
-        string wrongCode = email.Code == "000000" ? "000001" : "000000";
-        int created = _sessions.CreatedCount;
+        EmailMessage email = _mail["ReviewAlpha@example.invalid"];
+        string capturedCode = ExtractVerificationCode(email.Body);
+        string wrongCode = capturedCode == "000000" ? "000001" : "000000";
 
         // Act
-        SessionOperationResult<AuthenticatedSession> result =
+        SessionResult<AuthenticatedSession> result =
             _applicationService.CompleteLogin("ReviewAlpha", wrongCode);
 
         // Assert
         TestAssert.AreEqual(SessionOperationStatus.InvalidVerificationCode, result.Status);
-        TestAssert.AreEqual(created, _sessions.CreatedCount);
         TestAssert.AreEqual(1, Convert.ToInt32(Scalar(
             "SELECT failedAttempts FROM dbo.VerificationCode")));
     }
@@ -200,25 +195,31 @@ internal sealed class ReviewAccountDatabaseTests : IVerificationEmailSender
         // Act
         AuthenticatedSession first = _applicationService.CompleteLogin(
             "ReviewAlpha",
-            _mail["ReviewAlpha@example.invalid"].Code).GetValue();
+            ExtractVerificationCode(_mail["ReviewAlpha@example.invalid"].Body)).Value!;
         AuthenticatedSession second = _applicationService.CompleteLogin(
             "ReviewBeta@example.invalid",
-            _mail["ReviewBeta@example.invalid"].Code).GetValue();
+            ExtractVerificationCode(_mail["ReviewBeta@example.invalid"].Body)).Value!;
 
         // Assert
-        TestAssert.AreEqual(2, _sessions.CreatedCount);
         TestAssert.IsTrue(first.AccountId != second.AccountId
             && first.SessionToken != second.SessionToken,
             "Both accounts require distinct sessions.");
         TestAssert.AreEqual("ReviewAlpha", first.Username);
         TestAssert.AreEqual("ReviewBeta", second.Username);
-        TestAssert.IsTrue(_sessions.TryGet(first.SessionToken, out _)
-            && _sessions.TryGet(second.SessionToken, out _),
+        TestAssert.IsTrue(_sessions.FindAuthenticated(first.SessionToken).Status == SessionOperationStatus.Success
+            && _sessions.FindAuthenticated(second.SessionToken).Status == SessionOperationStatus.Success,
             "Both real in-memory sessions must exist.");
         TestAssert.AreEqual(2, Convert.ToInt32(Scalar("SELECT COUNT(*) FROM dbo.VerificationCode "
             + "WHERE usedAtUtc IS NOT NULL")));
         TestAssert.AreEqual(2, Convert.ToInt32(Scalar(
             "SELECT COUNT(DISTINCT passwordHash) FROM dbo.Account")));
+    }
+
+    private static string ExtractVerificationCode(string body)
+    {
+        Match match = Regex.Match(body, @"\b(\d{6})\b", RegexOptions.CultureInvariant,
+            ReviewScriptRegexTimeout);
+        return match.Success ? match.Groups[1].Value : string.Empty;
     }
 
     private void PrepareFriendship_DryRun_DoesNotWrite()

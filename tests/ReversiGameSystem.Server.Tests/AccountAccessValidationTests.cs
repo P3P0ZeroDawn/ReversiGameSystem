@@ -1,15 +1,16 @@
 using System;
-using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Application.Verification;
-using ReversiGameSystem.Server.Persistence.Sessions;
 
 namespace ReversiGameSystem.Server.Tests;
 
 [TestClass]
 public sealed class AccountAccessValidationTests
 {
+    private static readonly string ActivePasswordHash = PasswordHasher.Hash("Áb12345!");
+
     [TestMethod]
     public void ValidateCredentials_ValidCredentials_NormalizesAndReturnsActiveAccount()
     {
@@ -18,22 +19,14 @@ public sealed class AccountAccessValidationTests
         {
             Result = FoundAccount("ACTIVE")
         };
-        LoginPasswordHasherStub passwordHasher = new LoginPasswordHasherStub
-        {
-            VerifyResult = true
-        };
-        SessionApplicationService service = CreateApplicationService(
-            accountStore,
-            passwordHasher);
+        SessionApplicationService service = CreateApplicationService(accountStore);
 
         // Act
-        SessionOperationResult<DateTime> result = service.RequestLoginCode(
+        SessionResult<DateTime> result = service.RequestLoginCode(
             "  player@example.com  ", "A\u0301b12345!");
 
         // Assert
         TestAssert.AreEqual("player@example.com", accountStore.Login);
-        TestAssert.AreEqual("Áb12345!", passwordHasher.Password);
-        TestAssert.AreEqual("stored-hash", passwordHasher.EncodedHash);
         TestAssert.AreEqual(SessionOperationStatus.Success, result.Status);
     }
 
@@ -42,12 +35,10 @@ public sealed class AccountAccessValidationTests
     {
         // Arrange
         AccountLoginRepositoryStub accountStore = new AccountLoginRepositoryStub();
-        SessionApplicationService service = CreateApplicationService(
-            accountStore,
-            new LoginPasswordHasherStub());
+        SessionApplicationService service = CreateApplicationService(accountStore);
 
         // Act
-        SessionOperationResult<DateTime> result = service.RequestLoginCode("", "");
+        SessionResult<DateTime> result = service.RequestLoginCode("", "");
 
         // Assert
         TestAssert.AreEqual(SessionOperationStatus.InvalidCredentials, result.Status);
@@ -62,10 +53,10 @@ public sealed class AccountAccessValidationTests
             new AccountLoginRepositoryStub
             {
                 Result = new AccountResult<LoginAccount>(AccountStatus.AccountNotFound)
-            }, new LoginPasswordHasherStub());
+            });
 
         // Act
-        SessionOperationResult<DateTime> result = service.RequestLoginCode(
+        SessionResult<DateTime> result = service.RequestLoginCode(
             "UnknownPlayer",
             "Password1!");
 
@@ -77,21 +68,16 @@ public sealed class AccountAccessValidationTests
     public void ValidateCredentials_WrongPassword_ReturnsInvalidCredentials()
     {
         // Arrange
-        LoginPasswordHasherStub passwordHasher = new LoginPasswordHasherStub
-        {
-            VerifyResult = false
-        };
         SessionApplicationService service = CreateApplicationService(
-            new AccountLoginRepositoryStub { Result = FoundAccount("ACTIVE") }, passwordHasher);
+            new AccountLoginRepositoryStub { Result = FoundAccount("ACTIVE") });
 
         // Act
-        SessionOperationResult<DateTime> result = service.RequestLoginCode(
+        SessionResult<DateTime> result = service.RequestLoginCode(
             "PlayerOne",
             "WrongPassword1!");
 
         // Assert
         TestAssert.AreEqual(SessionOperationStatus.InvalidCredentials, result.Status);
-        TestAssert.AreEqual("WrongPassword1!", passwordHasher.Password);
     }
 
     [TestMethod]
@@ -99,13 +85,12 @@ public sealed class AccountAccessValidationTests
     {
         // Arrange
         SessionApplicationService service = CreateApplicationService(
-            new AccountLoginRepositoryStub { Result = FoundAccount("DISABLED") },
-            new LoginPasswordHasherStub { VerifyResult = true });
+            new AccountLoginRepositoryStub { Result = FoundAccount("DISABLED") });
 
         // Act
-        SessionOperationResult<DateTime> result = service.RequestLoginCode(
+        SessionResult<DateTime> result = service.RequestLoginCode(
             "PlayerOne",
-            "Password1!");
+            "Áb12345!");
 
         // Assert
         TestAssert.AreEqual(SessionOperationStatus.InactiveAccount, result.Status);
@@ -119,9 +104,7 @@ public sealed class AccountAccessValidationTests
         {
             Failure = new InvalidOperationException("Account lookup is unavailable.")
         };
-        SessionApplicationService service = CreateApplicationService(
-            accountStore,
-            new LoginPasswordHasherStub());
+        SessionApplicationService service = CreateApplicationService(accountStore);
 
         // Act
         InvalidOperationException exception = TestAssert.Throws<InvalidOperationException>(
@@ -137,40 +120,39 @@ public sealed class AccountAccessValidationTests
         // Arrange
         MutableUtcClock clock = new MutableUtcClock(
             new DateTime(2026, 9, 26, 12, 0, 0, DateTimeKind.Utc));
-        SessionRepository store = new SessionRepository(
+        SessionStore store = new SessionStore(
             clock,
             TimeSpan.FromMinutes(30));
 
         // Act
         LoginAccount account = FoundAccount("ACTIVE").Value!;
-        AuthenticatedSession first = store.Create(account);
-        AuthenticatedSession second = store.Create(account);
-        bool found = store.TryGet(first.SessionToken, out AuthenticatedSession? active);
-        bool missing = store.TryGet("unknown", out AuthenticatedSession? absent);
-        bool empty = store.TryGet(string.Empty, out AuthenticatedSession? emptySession);
-        store.Revoke(second.SessionToken);
-        bool revoked = store.TryGet(second.SessionToken, out AuthenticatedSession? closed);
+        AuthenticatedSession first = new AuthenticatedSession(
+            "token-1", account.AccountId, account.Username, account.EmailAddress,
+            account.PreferredLocaleCode, store.CalculateExpirationUtc());
+        AuthenticatedSession second = new AuthenticatedSession(
+            "token-2", account.AccountId, account.Username, account.EmailAddress,
+            account.PreferredLocaleCode, store.CalculateExpirationUtc());
+        store.TryAddAuthenticated(first);
+        store.TryAddAuthenticated(second);
+
+        SessionResult<AuthenticatedSession> found = store.FindAuthenticated(first.SessionToken);
+        SessionResult<AuthenticatedSession> missing = store.FindAuthenticated("unknown");
+        SessionResult<AuthenticatedSession> empty = store.FindAuthenticated(string.Empty);
+        store.RevokeSession(second.SessionToken);
+        SessionResult<AuthenticatedSession> revoked = store.FindAuthenticated(second.SessionToken);
         clock.UtcNow = first.ExpiresAtUtc;
-        bool expired = store.TryGet(first.SessionToken, out AuthenticatedSession? stale);
+        SessionResult<AuthenticatedSession> expired = store.FindAuthenticated(first.SessionToken);
         clock.UtcNow = clock.UtcNow.AddMinutes(-1);
-        bool removed = store.TryGet(first.SessionToken, out _);
+        SessionResult<AuthenticatedSession> removed = store.FindAuthenticated(first.SessionToken);
 
         // Assert
-        TestAssert.AreEqual(false, first.SessionToken == second.SessionToken);
-        TestAssert.AreEqual(true, found);
-        TestAssert.AreEqual<long?>(42, active?.AccountId);
-        TestAssert.AreEqual(account.Username, first.Username);
-        TestAssert.AreEqual(account.EmailAddress, first.EmailAddress);
-        TestAssert.AreEqual(account.PreferredLocaleCode, first.PreferredLocaleCode);
-        TestAssert.AreEqual(false, missing);
-        TestAssert.AreEqual<AuthenticatedSession?>(null, absent);
-        TestAssert.AreEqual(false, empty);
-        TestAssert.AreEqual<AuthenticatedSession?>(null, emptySession);
-        TestAssert.AreEqual(false, revoked);
-        TestAssert.AreEqual<AuthenticatedSession?>(null, closed);
-        TestAssert.AreEqual(false, expired);
-        TestAssert.AreEqual<AuthenticatedSession?>(null, stale);
-        TestAssert.AreEqual(false, removed);
+        TestAssert.AreEqual(SessionOperationStatus.Success, found.Status);
+        TestAssert.AreEqual<long?>(42, found.Value?.AccountId);
+        TestAssert.AreEqual(SessionOperationStatus.InvalidSession, missing.Status);
+        TestAssert.AreEqual(SessionOperationStatus.MissingSessionToken, empty.Status);
+        TestAssert.AreEqual(SessionOperationStatus.InvalidSession, revoked.Status);
+        TestAssert.AreEqual(SessionOperationStatus.InvalidSession, expired.Status);
+        TestAssert.AreEqual(SessionOperationStatus.InvalidSession, removed.Status);
     }
 
     private static AccountResult<LoginAccount> FoundAccount(string statusCode)
@@ -180,14 +162,13 @@ public sealed class AccountAccessValidationTests
                 42,
                 "PlayerOne",
                 "player@example.com",
-                "stored-hash",
+                ActivePasswordHash,
                 statusCode,
                 "en-US"));
     }
 
     private static SessionApplicationService CreateApplicationService(
-        IAccountRepository accounts,
-        IPasswordHasher passwordHasher)
+        IAccountRepository accounts)
     {
         MutableUtcClock clock = new MutableUtcClock(
             new DateTime(2026, 9, 26, 12, 0, 0, DateTimeKind.Utc));
@@ -201,9 +182,8 @@ public sealed class AccountAccessValidationTests
             clock);
         return new SessionApplicationService(
             accounts,
-            passwordHasher,
             verificationCodes,
-            new SessionRepository(clock));
+            new SessionStore(clock));
     }
 }
 
@@ -258,9 +238,9 @@ internal sealed class AccountLoginRepositoryStub : IAccountRepository
     }
 }
 
-internal sealed class VerificationEmailSenderStub : IVerificationEmailSender
+internal sealed class VerificationEmailSenderStub : IEmailSender
 {
-    public void Send(VerificationEmail email)
+    public void Send(EmailMessage email)
     {
     }
 }
@@ -274,27 +254,6 @@ internal sealed class VerificationCodeRepositoryStub : IVerificationCodeReposito
     public VerificationStatus Consume(VerificationAttempt attempt)
     {
         return VerificationStatus.Accepted;
-    }
-}
-
-internal sealed class LoginPasswordHasherStub : IPasswordHasher
-{
-    internal bool VerifyResult { get; set; }
-
-    internal string? Password { get; private set; }
-
-    internal string? EncodedHash { get; private set; }
-
-    public string Hash(string password)
-    {
-        return "stored-hash";
-    }
-
-    public bool Verify(string password, string encodedHash)
-    {
-        Password = password;
-        EncodedHash = encodedHash;
-        return VerifyResult;
     }
 }
 

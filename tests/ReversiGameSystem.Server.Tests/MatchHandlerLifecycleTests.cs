@@ -1,6 +1,7 @@
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Application.Matches;
 
 namespace ReversiGameSystem.Server.Tests;
@@ -39,7 +40,7 @@ public sealed class MatchApplicationServiceLifecycleTests
         LifecycleStore store = new LifecycleStore { FailCancel = true };
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context);
         _ = handler.CreateMatch(player.SessionToken, new MatchSettings()).Value;
-        context.Sessions.Revoke(player.SessionToken);
+        context.Sessions.RevokeSession(player.SessionToken);
 
         // Act
         TestAssert.Throws<InvalidOperationException>(() => handler.CancelWaitingForSession(player.SessionToken));
@@ -114,7 +115,8 @@ public sealed class MatchApplicationServiceLifecycleTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        GuestSession guest = context.Sessions.CreateGuest("Guest-GuestPlayer").GetValue();
+        GuestSession guest = context.ApplicationService.OpenGuestSession("GuestPlayer").Value
+            ?? throw new InvalidOperationException("Guest session expected.");
         LifecycleStore store = new LifecycleStore();
         FailingInvitationEmailSender mailer = new FailingInvitationEmailSender();
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
@@ -131,13 +133,12 @@ public sealed class MatchApplicationServiceLifecycleTests
 
     private static AuthenticatedSession CreatePlayer(SessionTestContext context)
     {
-        return context.Sessions.Create(new LoginAccount(42, "PlayerOne", "player@example.com",
-            "test-hash", "ACTIVE", "en-US"));
+        return TestSessionHelper.CreateSession(context.Sessions, 42, "PlayerOne");
     }
 
-    private sealed class FailingInvitationEmailSender : IMatchInvitationEmailSender
+    private sealed class FailingInvitationEmailSender : IEmailSender
     {
-        public void Send(MatchInvitationEmail email)
+        public void Send(EmailMessage email)
         {
             throw new InvalidOperationException("Simulated provider outage.");
         }

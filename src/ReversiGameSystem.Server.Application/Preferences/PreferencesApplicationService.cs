@@ -11,11 +11,11 @@ public sealed class PreferencesApplicationService
     private const string SpanishLocale = "es-MX";
     private const string StandardPieceStyle = "STANDARD";
     private const string ProfilePicturesPieceStyle = "PROFILE_PICTURES";
-    private readonly ISessionRepository _sessions;
+    private readonly SessionStore _sessions;
     private readonly IPreferencesRepository _preferences;
     private readonly IPlayerImageRepository _images;
 
-    public PreferencesApplicationService(ISessionRepository sessions,
+    public PreferencesApplicationService(SessionStore sessions,
         IPreferencesRepository preferences, IPlayerImageRepository images)
     {
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
@@ -25,27 +25,29 @@ public sealed class PreferencesApplicationService
 
     public PreferencesAccess GetPreferences(string sessionToken)
     {
-        SessionOperationResult<AuthenticatedSession> access = ResolveSession(sessionToken);
+        SessionResult<AuthenticatedSession> access =
+            _sessions.FindAuthenticated(sessionToken);
         PreferencesAccess preferences;
-        if (access.Status != SessionOperationStatus.Success)
+        if (access.Status != SessionOperationStatus.Success || access.Value == null)
         {
             preferences = new PreferencesAccess(MapSessionStatus(access.Status));
         }
         else
         {
-            preferences = _preferences.ReadPreferences(access.GetValue().AccountId);
+            preferences = _preferences.ReadPreferences(access.Value.AccountId);
         }
         return preferences;
     }
 
     public PreferencesStatus UpdatePreferences(string sessionToken, PlayerPreferences? preferences)
     {
-        SessionOperationResult<AuthenticatedSession> access = ResolveSession(sessionToken);
-        if (access.Status != SessionOperationStatus.Success)
+        SessionResult<AuthenticatedSession> access =
+            _sessions.FindAuthenticated(sessionToken);
+        if (access.Status != SessionOperationStatus.Success || access.Value == null)
         {
             return MapSessionStatus(access.Status);
         }
-        PreferencesAccess caller = _preferences.ReadPreferences(access.GetValue().AccountId);
+        PreferencesAccess caller = _preferences.ReadPreferences(access.Value.AccountId);
         if (caller.Status != PreferencesStatus.Success)
         {
             return caller.Status;
@@ -53,7 +55,7 @@ public sealed class PreferencesApplicationService
         PreferencesStatus status = ValidatePreferences(preferences);
         if (status == PreferencesStatus.Success && preferences != null)
         {
-            status = _preferences.SavePreferences(access.GetValue().AccountId, preferences);
+            status = _preferences.SavePreferences(access.Value.AccountId, preferences);
         }
         return status;
     }
@@ -76,12 +78,13 @@ public sealed class PreferencesApplicationService
 
     public PreferencesStatus ChangeBoardBackground(string sessionToken, ProfileImageData? image)
     {
-        SessionOperationResult<AuthenticatedSession> session = ResolveSession(sessionToken);
-        if (session.Status != SessionOperationStatus.Success)
+        SessionResult<AuthenticatedSession> session =
+            _sessions.FindAuthenticated(sessionToken);
+        if (session.Status != SessionOperationStatus.Success || session.Value == null)
         {
             return MapSessionStatus(session.Status);
         }
-        long accountId = session.GetValue().AccountId;
+        long accountId = session.Value.AccountId;
         PreferencesAccess access = _preferences.ReadPreferences(accountId);
         if (access.Status != PreferencesStatus.Success)
         {
@@ -120,21 +123,6 @@ public sealed class PreferencesApplicationService
             _images.DeleteImage(reference);
         }
         return status;
-    }
-
-    private SessionOperationResult<AuthenticatedSession> ResolveSession(string token)
-    {
-        SessionOperationResult<AuthenticatedSession> access;
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            access = SessionOperationResult<AuthenticatedSession>.CreateFailure(
-                SessionOperationStatus.MissingSessionToken);
-        }
-        else
-        {
-            access = _sessions.FindAuthenticated(token);
-        }
-        return access;
     }
 
     private static PreferencesStatus MapSessionStatus(SessionOperationStatus status)

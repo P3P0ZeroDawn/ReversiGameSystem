@@ -14,10 +14,7 @@ public sealed class PlayerProfileApplicationServiceTests
     public void GetProfile_CurrentPlayer_ReturnsCalculatedStatistics()
     {
         // Arrange
-        PlayerProfileSessionStoreStub sessions = new PlayerProfileSessionStoreStub
-        {
-            Session = CreateSession(42)
-        };
+        SessionStore sessions = CreateSessionStore(CreateSession(42));
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         profiles.Profiles.Add(42, new PlayerProfile(
             42,
@@ -33,7 +30,6 @@ public sealed class PlayerProfileApplicationServiceTests
 
         // Assert
         TestAssert.AreEqual(ProfileOperationStatus.Success, result.Status);
-        TestAssert.AreEqual("session-token", sessions.SessionToken);
         TestAssert.AreEqual(1, profiles.AccountIds.Count);
         TestAssert.AreEqual(42L, profiles.AccountIds[0]);
         TestAssert.AreEqual("PlayerOne", result.Value?.Username);
@@ -53,7 +49,7 @@ public sealed class PlayerProfileApplicationServiceTests
         profiles.Profiles.Add(42, new PlayerProfile(42, "PlayerOne", null, 1, 0, 0));
         profiles.Profiles.Add(99, new PlayerProfile(99, "OtherPlayer", null, 0, 0, 0));
         PlayerProfileApplicationService applicationService = CreateService(
-            new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
+            CreateSessionStore(CreateSession(42)),
             profiles);
 
         // Act
@@ -74,7 +70,7 @@ public sealed class PlayerProfileApplicationServiceTests
         // Arrange
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         PlayerProfileApplicationService applicationService = CreateService(
-            new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
+            CreateSessionStore(CreateSession(42)),
             profiles);
 
         // Act
@@ -91,7 +87,7 @@ public sealed class PlayerProfileApplicationServiceTests
         // Arrange
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         PlayerProfileApplicationService applicationService = CreateService(
-            new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
+            CreateSessionStore(CreateSession(42)),
             profiles);
 
         // Act
@@ -108,7 +104,7 @@ public sealed class PlayerProfileApplicationServiceTests
         // Arrange
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         PlayerProfileApplicationService applicationService = CreateService(
-            new PlayerProfileSessionStoreStub(),
+            CreateSessionStore(),
             profiles);
 
         // Act
@@ -125,7 +121,7 @@ public sealed class PlayerProfileApplicationServiceTests
         // Arrange
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         PlayerProfileApplicationService applicationService = CreateService(
-            new PlayerProfileSessionStoreStub(),
+            CreateSessionStore(),
             profiles);
 
         // Act
@@ -144,7 +140,7 @@ public sealed class PlayerProfileApplicationServiceTests
         // Arrange
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         PlayerProfileApplicationService applicationService = CreateService(
-            new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
+            CreateSessionStore(CreateSession(42)),
             profiles);
 
         // Act
@@ -163,7 +159,7 @@ public sealed class PlayerProfileApplicationServiceTests
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         profiles.Profiles.Add(42, new PlayerProfile(42, "PlayerOne", null, 1, 0, 0));
         PlayerProfileApplicationService applicationService = CreateService(
-            new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
+            CreateSessionStore(CreateSession(42)),
             profiles);
 
         // Act
@@ -179,7 +175,7 @@ public sealed class PlayerProfileApplicationServiceTests
     {
         // Arrange
         PlayerProfileApplicationService applicationService = CreateService(
-            new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
+            CreateSessionStore(CreateSession(42)),
             new PlayerProfileRepositoryStub { ThrowOnGet = true });
 
         // Act & Assert
@@ -194,7 +190,7 @@ public sealed class PlayerProfileApplicationServiceTests
         PlayerProfileRepositoryStub profiles = CreateActiveProfiles();
         ProfileImageRepositoryStub images = new ProfileImageRepositoryStub();
         PlayerProfileApplicationService applicationService = new PlayerProfileApplicationService(
-            new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
+            CreateSessionStore(CreateSession(42)),
             profiles,
             images);
 
@@ -223,7 +219,7 @@ public sealed class PlayerProfileApplicationServiceTests
             0));
         ProfileImageRepositoryStub images = new ProfileImageRepositoryStub();
         PlayerProfileApplicationService applicationService = new PlayerProfileApplicationService(
-            new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
+            CreateSessionStore(CreateSession(42)),
             profiles,
             images);
 
@@ -245,7 +241,7 @@ public sealed class PlayerProfileApplicationServiceTests
         // Arrange
         PlayerProfileRepositoryStub profiles = CreateActiveProfiles();
         PlayerProfileApplicationService applicationService = CreateService(
-            new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
+            CreateSessionStore(CreateSession(42)),
             profiles);
 
         // Act
@@ -265,7 +261,7 @@ public sealed class PlayerProfileApplicationServiceTests
         // Arrange
         PlayerProfileRepositoryStub profiles = CreateActiveProfiles();
         PlayerProfileApplicationService applicationService = CreateService(
-            new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
+            CreateSessionStore(CreateSession(42)),
             profiles);
 
         // Act
@@ -283,7 +279,7 @@ public sealed class PlayerProfileApplicationServiceTests
         PlayerProfileRepositoryStub profiles = CreateActiveProfiles();
         profiles.ChangeUsernameStatus = ProfileOperationStatus.UsernameUnavailable;
         PlayerProfileApplicationService applicationService = CreateService(
-            new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
+            CreateSessionStore(CreateSession(42)),
             profiles);
 
         // Act
@@ -303,7 +299,7 @@ public sealed class PlayerProfileApplicationServiceTests
         profiles.SetImageStatus = ProfileOperationStatus.InactiveAccount;
         ProfileImageRepositoryStub images = new ProfileImageRepositoryStub();
         PlayerProfileApplicationService applicationService = new PlayerProfileApplicationService(
-            new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
+            CreateSessionStore(CreateSession(42)),
             profiles,
             images);
 
@@ -325,7 +321,7 @@ public sealed class PlayerProfileApplicationServiceTests
         profiles.ThrowOnSetImage = true;
         ProfileImageRepositoryStub images = new ProfileImageRepositoryStub();
         PlayerProfileApplicationService applicationService = new PlayerProfileApplicationService(
-            new PlayerProfileSessionStoreStub { Session = CreateSession(42) },
+            CreateSessionStore(CreateSession(42)),
             profiles,
             images);
 
@@ -337,8 +333,19 @@ public sealed class PlayerProfileApplicationServiceTests
         TestAssert.AreEqual("new-image", images.Deleted);
     }
 
+    private static SessionStore CreateSessionStore(AuthenticatedSession? session = null)
+    {
+        SessionStore store = new SessionStore(new TestUtcClock());
+        if (session != null)
+        {
+            store.TryAddAuthenticated(session);
+        }
+
+        return store;
+    }
+
     private static PlayerProfileApplicationService CreateService(
-        PlayerProfileSessionStoreStub sessions,
+        SessionStore sessions,
         PlayerProfileRepositoryStub profiles)
     {
         return new PlayerProfileApplicationService(
@@ -363,57 +370,6 @@ public sealed class PlayerProfileApplicationServiceTests
             "player@example.com",
             "en-US",
             DateTime.UtcNow.AddHours(8));
-    }
-}
-
-internal sealed class PlayerProfileSessionStoreStub : ISessionRepository
-{
-    internal AuthenticatedSession? Session { get; set; }
-
-    internal string? SessionToken { get; private set; }
-
-    public AuthenticatedSession Create(LoginAccount account)
-    {
-        throw new NotSupportedException();
-    }
-
-    public SessionOperationResult<GuestSession> CreateGuest(string displayName)
-    {
-        throw new NotSupportedException();
-    }
-
-    public bool TryGet(string sessionToken, out AuthenticatedSession? session)
-    {
-        SessionToken = sessionToken;
-        session = Session?.SessionToken == sessionToken ? Session : null;
-        return session != null;
-    }
-
-    public SessionOperationResult<AuthenticatedSession> FindAuthenticated(
-        string sessionToken)
-    {
-        AuthenticatedSession? session;
-        if (TryGet(sessionToken, out session) && session is not null)
-        {
-            return SessionOperationResult<AuthenticatedSession>.CreateSuccess(session);
-        }
-
-        return SessionOperationResult<AuthenticatedSession>.CreateFailure(
-            SessionOperationStatus.InvalidSession);
-    }
-
-    public bool TryGetGuest(string sessionToken, out GuestSession? session)
-    {
-        session = null;
-        return false;
-    }
-
-    public void Revoke(string sessionToken)
-    {
-        if (Session?.SessionToken == sessionToken)
-        {
-            Session = null;
-        }
     }
 }
 

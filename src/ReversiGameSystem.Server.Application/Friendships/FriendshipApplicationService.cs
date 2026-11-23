@@ -8,17 +8,17 @@ namespace ReversiGameSystem.Server.Application.Friendships;
 /// </summary>
 public sealed class FriendshipApplicationService
 {
-    private readonly ISessionRepository _sessions;
+    private readonly SessionStore _sessions;
     private readonly IFriendshipRepository _friendships;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FriendshipApplicationService"/> class.
     /// </summary>
-    /// <param name="sessions">The authoritative session repository.</param>
+    /// <param name="sessions">The in-memory active session store.</param>
     /// <param name="friendships">The active friendships repository.</param>
     /// <exception cref="ArgumentNullException">A required dependency is null.</exception>
     public FriendshipApplicationService(
-        ISessionRepository sessions,
+        SessionStore sessions,
         IFriendshipRepository friendships)
     {
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
@@ -32,16 +32,19 @@ public sealed class FriendshipApplicationService
     /// <returns>The result containing the authenticated session, or an expected rejection status.</returns>
     public FriendshipResult<AuthenticatedSession> EvaluateChannelAccess(string sessionToken)
     {
-        if (string.IsNullOrWhiteSpace(sessionToken))
+        SessionResult<AuthenticatedSession> sessionResult =
+            _sessions.FindAuthenticated(sessionToken);
+        if (sessionResult.Status == SessionOperationStatus.MissingSessionToken)
         {
             return new FriendshipResult<AuthenticatedSession>(FriendshipStatus.MissingSessionToken);
         }
 
-        if (!_sessions.TryGet(sessionToken, out AuthenticatedSession? session) || session == null)
+        if (sessionResult.Status != SessionOperationStatus.Success || sessionResult.Value == null)
         {
             return new FriendshipResult<AuthenticatedSession>(FriendshipStatus.InvalidSession);
         }
 
+        AuthenticatedSession session = sessionResult.Value;
         if (!_friendships.IsAccountActive(session.AccountId))
         {
             return new FriendshipResult<AuthenticatedSession>(FriendshipStatus.InactiveAccount);

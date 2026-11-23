@@ -2,8 +2,11 @@ using System;
 using System.ServiceModel;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Application.Leaderboards;
 using ReversiGameSystem.Server.Application.Players;
+using ReversiGameSystem.Server.Application.Verification;
 using ReversiGameSystem.Server.Contracts.Accounts;
 using ReversiGameSystem.Server.Contracts.Common;
 using ReversiGameSystem.Server.Contracts.Faults;
@@ -19,30 +22,42 @@ public sealed class PlayerBoundaryTests
     public void RegisterAccount_ThroughWcf_MapsCredentialsAndOutcome()
     {
         // Arrange
-        RecordingRegistrationHandler handler = new RecordingRegistrationHandler();
-        AccountAccessService service = new AccountAccessService(handler);
+        AccountServiceBoundaryStub stub = new AccountServiceBoundaryStub();
+        VerificationCodeProtector protector = new VerificationCodeProtector(new byte[32]);
+        VerificationCodeIssuer issuer = new VerificationCodeIssuer(stub, protector, stub);
+        VerificationCodeService verificationCodes = new VerificationCodeService(issuer, stub, stub);
+        SessionStore sessions = new SessionStore(stub);
+        AccountApplicationService applicationService = new AccountApplicationService(
+            stub,
+            stub,
+            verificationCodes,
+            sessions);
+        AccountService service = new AccountService(applicationService);
+
         // Act
-        AccountRegistrationOutcome result = Invoke<IAccountAccessService, AccountRegistrationOutcome>(
-            service, channel => channel.RegisterAccountAsync(new AccountRegistrationCredentials
+        AccountReference result = Invoke<IAccountService, AccountReference>(
+            service, channel => channel.CompleteRegistration(new NewAccount
             {
+                VerificationCode = "123456",
                 Username = "PlayerOne",
                 EmailAddress = "player@example.com",
                 Password = "Password1!",
                 PreferredLocaleCode = "en-US",
-                ProfileImage = new ProfileImageContent
+                ProfileImage = new ImageContent
                 {
                     MediaType = "image/png",
-                    Content = new byte[] { 1, 2 }
+                    Content = new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }
                 }
-            }).GetAwaiter().GetResult());
+            }));
+
         // Assert
-        TestAssert.AreEqual("PlayerOne", handler.Command?.Username);
-        TestAssert.AreEqual("player@example.com", handler.Command?.EmailAddress);
-        TestAssert.AreEqual("Password1!", handler.Command?.Password);
-        TestAssert.AreEqual("en-US", handler.Command?.PreferredLocaleCode);
-        TestAssert.AreEqual("image/png", handler.Command?.ProfileImage?.MediaType);
-        TestAssert.AreEqual((byte)2, handler.Command?.ProfileImage?.Content[1]);
-        TestAssert.AreEqual(42L, TestAssert.IsNotNull(result.RegisteredAccount).AccountId);
+        TestAssert.AreEqual("PlayerOne", stub.LastRegistration?.Username);
+        TestAssert.AreEqual("player@example.com", stub.LastRegistration?.EmailAddress);
+        TestAssert.AreEqual("en-US", stub.LastRegistration?.PreferredLocaleCode);
+        TestAssert.AreEqual("image/png", stub.LastImage?.MediaType);
+        TestAssert.AreEqual((byte)80, stub.LastImage?.Content[1]);
+        TestAssert.AreEqual(42L, result.AccountId);
+        TestAssert.AreEqual("PlayerOne", result.Username);
     }
 
     [TestMethod]
@@ -64,7 +79,7 @@ public sealed class PlayerBoundaryTests
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         AssertSessionFault(context, "", SessionFailure.MissingSessionToken);
-        context.Sessions.Session = null;
+        context.Sessions.RevokeSession("session-token");
         AssertSessionFault(context, "unknown", SessionFailure.InvalidSession);
     }
 
@@ -314,6 +329,65 @@ public sealed class PlayerBoundaryTests
             ((ICommunicationObject)channel!).Abort();
             factory.Abort();
             throw;
+        }
+    }
+
+    private sealed class AccountServiceBoundaryStub :
+        IAccountRepository,
+        IPlayerImageRepository,
+        IVerificationCodeRepository,
+        IEmailSender,
+        IUtcClock
+    {
+        public DateTime UtcNow { get; set; } = new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc);
+        internal AccountRegistrationData? LastRegistration { get; private set; }
+        internal ProfileImageData? LastImage { get; private set; }
+
+        public AccountResult<LoginAccount> FindByLogin(string loginIdentifier) =>
+            new AccountResult<LoginAccount>(AccountStatus.AccountNotFound);
+
+        public AccountResult<LoginAccount> FindByEmail(string emailAddress) =>
+            new AccountResult<LoginAccount>(AccountStatus.AccountNotFound);
+
+        public AccountResult<LoginAccount> FindById(long accountId) =>
+            new AccountResult<LoginAccount>(AccountStatus.AccountNotFound);
+
+        public AccountStatus CheckRegistrationAvailability(string username, string emailAddress) =>
+            AccountStatus.Success;
+
+        public AccountResult<long> CreateAccount(AccountRegistrationData registration)
+        {
+            LastRegistration = registration;
+            return new AccountResult<long>(42L);
+        }
+
+        public AccountStatus UpdatePasswordHash(long accountId, string newPasswordHash) =>
+            AccountStatus.Success;
+
+        public AccountStatus DeactivateAccount(long accountId) => AccountStatus.Success;
+
+        public ProfileImageData ReadImage(string imageReference) =>
+            throw new NotSupportedException();
+
+        public ProfileResult<string> SaveImage(ProfileImageData image)
+        {
+            LastImage = image;
+            return new ProfileResult<string>("img/42.png");
+        }
+
+        public void DeleteImage(string imageReference)
+        {
+        }
+
+        public void Replace(PendingVerificationCode code)
+        {
+        }
+
+        public VerificationStatus Consume(VerificationAttempt attempt) =>
+            VerificationStatus.Accepted;
+
+        public void Send(EmailMessage message)
+        {
         }
     }
 }

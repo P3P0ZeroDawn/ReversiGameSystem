@@ -4,8 +4,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Players;
 using ReversiGameSystem.Server.Application.Preferences;
-using ReversiGameSystem.Server.Persistence.Accounts;
-using ReversiGameSystem.Server.Persistence.Sessions;
 
 namespace ReversiGameSystem.Server.Tests;
 
@@ -28,7 +26,7 @@ public sealed class PreferencesApplicationServiceTests
     public void GetPreferences_RevokedSession_ReturnsInvalidSession()
     {
         PreferencesFixture fixture = new PreferencesFixture();
-        fixture.Sessions.Revoke(fixture.Session.SessionToken);
+        fixture.Sessions.RevokeSession(fixture.Session.SessionToken);
 
         PreferencesAccess access = fixture.Service.GetPreferences(fixture.Session.SessionToken);
 
@@ -172,7 +170,7 @@ public sealed class PreferencesApplicationServiceTests
 
     private sealed class PreferencesFixture
     {
-        internal SessionRepository Sessions { get; } = new SessionRepository(new SystemUtcClock());
+        internal SessionStore Sessions { get; } = new SessionStore(new TestUtcClock());
         internal PreferencesRepositoryStub Repository { get; } = new PreferencesRepositoryStub();
         internal ImageRepositoryStub Images { get; } = new ImageRepositoryStub();
         internal AuthenticatedSession Session { get; }
@@ -180,8 +178,7 @@ public sealed class PreferencesApplicationServiceTests
 
         internal PreferencesFixture()
         {
-            Session = Sessions.Create(new LoginAccount(
-                1, "PreferencesPlayer", "player@example.invalid", "unused", "ACTIVE", "es-MX"));
+            Session = TestSessionHelper.CreateSession(Sessions, 1, "PreferencesPlayer", "es-MX");
             Service = new PreferencesApplicationService(Sessions, Repository, Images);
         }
     }

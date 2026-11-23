@@ -25,114 +25,46 @@ public enum SessionOperationStatus
     InvalidSession
 }
 
-/// <summary>Contains an expected session outcome and its successful value.</summary>
+/// <summary>Contains an expected session outcome and its optional value.</summary>
 /// <typeparam name="T">The successful value type.</typeparam>
-public sealed class SessionOperationResult<T>
+public sealed class SessionResult<T>
 {
-    private readonly T? _value;
-
-    private SessionOperationResult(SessionOperationStatus status, T? value)
+    /// <summary>Creates a failed session result.</summary>
+    /// <param name="status">The expected failure status.</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// The supplied status represents success.
+    /// </exception>
+    public SessionResult(SessionOperationStatus status)
     {
+        if (status == SessionOperationStatus.Success)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(status),
+                "A failure result cannot use Success status.");
+        }
+
         Status = status;
-        _value = value;
     }
 
-    /// <summary>Gets the expected operation status.</summary>
-    public SessionOperationStatus Status { get; }
-
-    /// <summary>Creates a successful result containing its required value.</summary>
+    /// <summary>Creates a successful session result.</summary>
     /// <param name="value">The successful operation value.</param>
-    /// <returns>A successful session operation result.</returns>
     /// <exception cref="ArgumentNullException">The value is absent.</exception>
-    public static SessionOperationResult<T> CreateSuccess(T value)
+    public SessionResult(T value)
     {
         if (value is null)
         {
             throw new ArgumentNullException(nameof(value));
         }
 
-        return new SessionOperationResult<T>(SessionOperationStatus.Success, value);
+        Status = SessionOperationStatus.Success;
+        Value = value;
     }
 
-    /// <summary>Creates an expected failed result without a value.</summary>
-    /// <param name="status">The expected failure status.</param>
-    /// <returns>A failed session operation result.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">
-    /// The supplied status represents success.
-    /// </exception>
-    public static SessionOperationResult<T> CreateFailure(SessionOperationStatus status)
-    {
-        if (status == SessionOperationStatus.Success)
-        {
-            throw new ArgumentOutOfRangeException(nameof(status));
-        }
+    /// <summary>Gets the expected operation status.</summary>
+    public SessionOperationStatus Status { get; }
 
-        return new SessionOperationResult<T>(status, default);
-    }
-
-    /// <summary>Gets the value contained in a successful result.</summary>
-    /// <returns>The successful operation value.</returns>
-    /// <exception cref="InvalidOperationException">The operation did not succeed.</exception>
-    public T GetValue()
-    {
-        if (Status != SessionOperationStatus.Success || _value is null)
-        {
-            throw new InvalidOperationException(
-                "A successful session result must contain a value.");
-        }
-
-        return _value;
-    }
-}
-
-/// <summary>Contains the result of one account login lookup.</summary>
-public sealed class AccountLoginLookupResult
-{
-    private readonly LoginAccount? _account;
-
-    private AccountLoginLookupResult(bool isFound, LoginAccount? account)
-    {
-        IsFound = isFound;
-        _account = account;
-    }
-
-    /// <summary>Gets whether an account was found.</summary>
-    public bool IsFound { get; }
-
-    /// <summary>Creates a successful lookup containing its account.</summary>
-    /// <param name="account">The account found by the repository.</param>
-    /// <returns>A successful account lookup.</returns>
-    /// <exception cref="ArgumentNullException">The account is absent.</exception>
-    public static AccountLoginLookupResult CreateFound(LoginAccount account)
-    {
-        if (account == null)
-        {
-            throw new ArgumentNullException(nameof(account));
-        }
-
-        return new AccountLoginLookupResult(true, account);
-    }
-
-    /// <summary>Creates a lookup indicating that no account was found.</summary>
-    /// <returns>An account lookup without a result.</returns>
-    public static AccountLoginLookupResult CreateNotFound()
-    {
-        return new AccountLoginLookupResult(false, null);
-    }
-
-    /// <summary>Gets the account contained in a successful lookup.</summary>
-    /// <returns>The account found by the repository.</returns>
-    /// <exception cref="InvalidOperationException">No account was found.</exception>
-    public LoginAccount GetFoundAccount()
-    {
-        if (_account == null)
-        {
-            throw new InvalidOperationException(
-                "A successful account lookup must contain an account.");
-        }
-
-        return _account;
-    }
+    /// <summary>Gets the successful operation value, or default on failure.</summary>
+    public T? Value { get; }
 }
 
 /// <summary>Contains the account data required by verified login.</summary>

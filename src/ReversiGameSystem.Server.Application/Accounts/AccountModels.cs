@@ -135,6 +135,72 @@ public sealed class NewAccountRegistration
 }
 
 /// <summary>
+/// Represents validated profile or background image bytes and media type.
+/// </summary>
+public sealed class ProfileImageData
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProfileImageData"/> class.
+    /// </summary>
+    /// <param name="content">The raw image bytes.</param>
+    /// <param name="mediaType">The MIME media type.</param>
+    public ProfileImageData(byte[] content, string mediaType)
+    {
+        Content = content;
+        MediaType = mediaType;
+    }
+
+    /// <summary>Gets the raw image bytes.</summary>
+    public byte[] Content { get; }
+
+    /// <summary>Gets the MIME media type.</summary>
+    public string MediaType { get; }
+}
+
+/// <summary>
+/// Contains account registration fields persisted by the account repository.
+/// </summary>
+public sealed class AccountRegistrationData
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AccountRegistrationData"/> class.
+    /// </summary>
+    /// <param name="username">The validated username.</param>
+    /// <param name="emailAddress">The validated email address.</param>
+    /// <param name="passwordHash">The encoded password hash.</param>
+    /// <param name="preferredLocaleCode">The preferred locale code.</param>
+    /// <param name="profileImageUri">The optional stored profile image reference.</param>
+    public AccountRegistrationData(
+        string username,
+        string emailAddress,
+        string passwordHash,
+        string preferredLocaleCode,
+        string? profileImageUri)
+    {
+        Username = username;
+        EmailAddress = emailAddress;
+        PasswordHash = passwordHash;
+        PreferredLocaleCode = preferredLocaleCode;
+        ProfileImageUri = profileImageUri;
+    }
+
+    /// <summary>Gets the validated username.</summary>
+    public string Username { get; }
+
+    /// <summary>Gets the validated email address.</summary>
+    public string EmailAddress { get; }
+
+    /// <summary>Gets the encoded password hash.</summary>
+    public string PasswordHash { get; }
+
+    /// <summary>Gets the preferred locale code.</summary>
+    public string PreferredLocaleCode { get; }
+
+    /// <summary>Gets the optional stored profile image reference.</summary>
+    public string? ProfileImageUri { get; }
+}
+
+/// <summary>
 /// Represents the public identity of a newly registered account.
 /// </summary>
 public sealed class AccountSummary

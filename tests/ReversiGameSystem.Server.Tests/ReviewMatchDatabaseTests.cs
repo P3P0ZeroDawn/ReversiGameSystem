@@ -19,17 +19,16 @@ internal static class ReviewMatchDatabaseTests
 
     private static void Check(
         SessionApplicationService sessions,
-        ISessionRepository store)
+        SessionStore store)
     {
         // Arrange
         ReviewMatchHost.PrepareSchema();
         AuthenticatedSession alphaSession = sessions.CompleteLogin("ReviewAlpha", "000001")
-            .GetValue();
+            .Value!;
         string alpha = alphaSession.SessionToken;
         long alphaAccountId = alphaSession.AccountId;
-        string beta = sessions.CompleteLogin("ReviewBeta", "000002")
-            .GetValue().SessionToken;
-        MatchApplicationService matches = new MatchApplicationService(store, new MatchRepository(), new SystemUtcClock());
+        string beta = sessions.CompleteLogin("ReviewBeta", "000002").Value!.SessionToken;
+        MatchApplicationService matches = new MatchApplicationService(store, new MatchRepository(), new TestUtcClock());
         DateTime now = DateTime.UtcNow;
         DateTime wholeSecondUtc = now.AddTicks(-(now.Ticks % TimeSpan.TicksPerSecond));
         MutableTestClock chatClock = new MutableTestClock(wholeSecondUtc);

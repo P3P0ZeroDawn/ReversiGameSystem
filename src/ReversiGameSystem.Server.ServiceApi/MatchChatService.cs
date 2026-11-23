@@ -95,36 +95,15 @@ public class MatchChatService : IMatchChatService
 
     private void PublishMuteNotification(string sessionToken, ChatMute mute)
     {
-        _callbackSubscriptions.PublishAll(
-            (recipient, matchId, callback) => SendMuteNotification(
+        _callbackSubscriptions.PublishAll((recipient, matchId, callback) =>
+        {
+            if (_applicationService.CanReceiveMuteNotification(
                 sessionToken,
                 recipient,
-                matchId,
-                callback,
-                mute));
-    }
-
-    private void SendMuteNotification(
-        string mutedSessionToken,
-        string recipientSessionToken,
-        long matchId,
-        IMatchChatServiceCallback callback,
-        ChatMute mute)
-    {
-        if (!_applicationService.CanReceiveMuteNotification(
-            mutedSessionToken,
-            recipientSessionToken,
-            matchId))
-        {
-            return;
-        }
-
-        callback.OnPlayerMuted(new ChatMuteNotification
-        {
-            MatchId = matchId,
-            StartsAtUtc = mute.StartsAtUtc,
-            EndsAtUtc = mute.EndsAtUtc,
-            ReasonCode = mute.ReasonCode
+                matchId))
+            {
+                callback.OnPlayerMuted(MapMuteNotification(matchId, mute));
+            }
         });
     }
 
@@ -174,6 +153,17 @@ public class MatchChatService : IMatchChatService
             SenderSeatNumber = message.SenderSeatNumber,
             Content = message.Content,
             SentAtUtc = message.SentAtUtc
+        };
+    }
+
+    private static ChatMuteNotification MapMuteNotification(long matchId, ChatMute mute)
+    {
+        return new ChatMuteNotification
+        {
+            MatchId = matchId,
+            StartsAtUtc = mute.StartsAtUtc,
+            EndsAtUtc = mute.EndsAtUtc,
+            ReasonCode = mute.ReasonCode
         };
     }
 

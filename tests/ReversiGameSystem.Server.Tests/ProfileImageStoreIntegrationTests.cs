@@ -19,22 +19,22 @@ internal sealed class ProfileImageStoreIntegrationTests
 
         try
         {
-            FileSystemProfileImageStore store = new FileSystemProfileImageStore(root);
+            ProfileImageRepository store = new ProfileImageRepository(root);
             byte[] imageContent = Convert.FromBase64String(
                 "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwC" +
                 "AAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
 
             // Act
-            ProfileImageStorageResult result = store.Save(
+            ProfileResult<string> result = store.SaveImage(
                 new ProfileImageData(imageContent, "image/png"));
 
             // Assert
-            TestAssert.AreEqual(ProfileImageStorageOutcome.Success, result.Outcome);
-            TestAssert.AreEqual(true, result.ImageUri?.StartsWith("profile-images/"));
+            TestAssert.AreEqual(ProfileOperationStatus.Success, result.Status);
+            TestAssert.AreEqual(true, result.Value?.StartsWith("profile-images/"));
             TestAssert.AreEqual(1, Directory.GetFiles(root).Length);
 
-            string imageUri = TestAssert.IsNotNull(result.ImageUri);
-            store.Delete(imageUri);
+            string imageUri = TestAssert.IsNotNull(result.Value);
+            store.DeleteImage(imageUri);
             TestAssert.AreEqual(0, Directory.GetFiles(root).Length);
         }
         finally

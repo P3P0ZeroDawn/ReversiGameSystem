@@ -5,7 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using ReversiGameSystem.Server.Application.Verification;
+using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Persistence.Mail;
 
 namespace ReversiGameSystem.Server.Tests;
@@ -45,18 +45,16 @@ public sealed class VerificationEmailSenderTests
             Task<TcpClient> connection = listener.AcceptTcpClientAsync();
             WithSettings(port, () =>
             {
-                VerificationEmailSender sender = new VerificationEmailSender(MailSettings.Load());
+                SmtpEmailSender sender = new SmtpEmailSender(MailSettings.Load());
                 Stopwatch elapsed = Stopwatch.StartNew();
                 bool failed = false;
                 // Act
                 try
                 {
-                    sender.Send(new VerificationEmail
-                    {
-                        RecipientAddress = "recipient@example.invalid", Code = "000012",
-                        Purpose = VerificationPurpose.Login,
-                        ExpiresAtUtc = DateTime.UtcNow.AddMinutes(5)
-                    });
+                    sender.Send(new EmailMessage(
+                        "recipient@example.invalid",
+                        "Reversi: sign-in / inicio de sesión",
+                        "Your verification code / Tu código de verificación: 000012"));
                 }
                 catch (Exception exception) when (exception is OperationCanceledException
                     || exception is System.IO.IOException || exception is TimeoutException
