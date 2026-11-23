@@ -9,9 +9,9 @@ Diseño de Software
 | Proyecto             | Reversi                         |
 | -------------------- | ------------------------------- |
 | Equipo e integrantes | César Daniel Ortega Castillejos<br>Pedro Enrique Sánchez Rodríguez |
-| Versión del documento | v0.2 |
-| Entrega | Segundo avance |
-| Fecha | 15/11/2026 |
+| Versión del documento | v0.3 |
+| Entrega | Tercer corte |
+| Fecha | 22/11/2026 |
 
 # Documento de Arquitectura de Software (SAD)
 
@@ -27,10 +27,11 @@ Diseño de Software
 | Audiencia | Autoridad docente para evaluar la solidez y trazabilidad del diseño; equipo de desarrollo para guiar la construcción e integración de módulos; y testers (QA) para derivar las pruebas de verificación de los escenarios de calidad. |
 | Alcance | Cubre el diseño integral del cliente de escritorio (WPF), el servidor autoritativo de partidas y sesiones (WCF) y la persistencia relacional (SQL Server). Quedan fuera del alcance el servicio de transporte de correo electrónico (dependencia externa), clientes web/móviles y el modo de juego local fuera de línea. |
 
-| **Versión** | **Fecha** | **Cambios principales** |
-| --- | --- | --- |
-| v0.1 | 10/10/2026 | Primera entrega parcial: definición de frontera, interesados, drivers de calidad, árbol de utilidad, ASR prioritarios, decisiones ADR (001 a 006), catálogo de módulos C-01 a C-14, vistas V-01/V-02 y riesgos iniciales. |
-| v0.2 | 15/11/2026 | Segundo avance. Se conciliaron los escenarios de calidad y los ASR. Se actualizaron los ADR y el catálogo de elementos a partir de las iteraciones ADD. Se documentaron las reglas de dependencia y se justificó la selección de vistas 4+1. |
+| **Versión** | **Fecha**  | **Cambios principales**                                                                                                                                                                                                                      |
+| ----------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v0.1        | 10/10/2026 | Primera entrega parcial: definición de frontera, interesados, drivers de calidad, árbol de utilidad, ASR prioritarios, decisiones ADR (001 a 006), catálogo de módulos C-01 a C-14, vistas V-01/V-02 y riesgos iniciales.                    |
+| v0.2        | 15/11/2026 | Segundo avance. Se conciliaron los escenarios de calidad y los ASR. Se actualizaron los ADR y el catálogo de elementos a partir de las iteraciones ADD. Se documentaron las reglas de dependencia y se justificó la selección de vistas 4+1. |
+| v0.3        | 22/11/2026 | Tercer corte. Se incorpora IT11 de preferencias de idioma, se documentan los contratos de los nueve drivers y la arquitectura en ejecución y se incorporan las fichas lógica y de procesos.                                                  |
 
 ### 1.2 Resumen de la arquitectura
 
@@ -56,13 +57,13 @@ La solución usa un servidor autoritativo y separa los niveles lógicos de clien
 
 ### 1.4 Uso de IA generativa
 
-| Qué pidieron                                                                                                                                                                                                                                         | Qué aceptaron y qué rechazaron                                                                                                                                                                                                                                                                                                                                                                 | Cómo lo verificaron                                                                                                                                                           |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Mejora de redacción apegada al dominio:** Redacción y pulido técnico de descripciones arquitectónicas, fichas de decisión (ADR), justificaciones de ASR y escenarios de calidad con terminología formal del dominio de Reversi y tácticas del SEI. | **Aceptado:** La terminología formal, la redacción neutral de caja negra en las respuestas de escenarios (eliminando fugas prematuras de solución) y los trade-offs de diseño.<br><br>**Rechazado:** Propuestas que sugerían tecnologías o mecanismos fuera del alcance y stack estipulado (tales como colas RabbitMQ o persistencia síncrona en cada turno).                                  | Cotejo manual contra el glosario del proyecto (1.3), las restricciones técnicas formales (RES-TEC) y los términos de calidad del SEI / ISO 25010.                             |
-| **Verificación de llenado correcto según reglas de la plantilla:** Auditoría de la estructura de las secciones de la primera entrega frente a las instrucciones de la plantilla SAD v5.0 y la lista de comprobación proporcionada.                   | **Aceptado:** El ajuste en la cantidad de elementos (10 escenarios y 7 ASR), la inclusión de las filas obligatorias de seguridad (activo, actor, límite) y el formato tabular de las fichas.<br><br>**Rechazado:** Formatos de redacción libre o listas desestructuradas que no respetaban las tablas canónicas de la plantilla.                                               | Comparación punto por punto contra la lista de comprobación proporcionada de la plantilla y la rúbrica de evaluación docente.                                                 |
-| **Verificación de identificadores permitidos en el documento:** Validación estricta del cumplimiento de la regla de los siete identificadores canónicos y trazabilidad entre secciones.                                                              | **Aceptado:** La corrección y eliminación de sub-abreviaciones inventadas (reemplazando `QAS-SEG` por la nomenclatura canónica `QAS-Seguridad`), y la unificación de los catálogos de componentes (`C-01` a `C-14`) y riesgos (`R-01` a `R-03`).<br><br>**Rechazado:** Cualquier prefijo intermedio que violara la regla de identificadores de la plantilla.                                   | Rastreo y búsqueda en el texto para comprobar que solo existan los prefijos permitidos (QAS, ASR, ADR, C, V, EV, R) y que las referencias cruzadas entre secciones coincidan. |
-| **Análisis y síntesis de avances de iteraciones:** Extracción y discriminación de la información técnica generada en las notas de las Iteraciones 1 a 5 de ADD para trasladar las decisiones esenciales a la entrega formal.                         | **Aceptado:** Sugerencias para la selección de decisiones arquitectónicas estructurales y la representación de la evolución histórica (marcando ADR-001 y ADR-002 como sustituidos por ADR-004 y ADR-005 tras la Iteración 5).<br><br>**Rechazado:** Trasladar decisiones de nivel de código, dependencias de bajo nivel o características descartadas (como el modo de juego fuera de línea). | Contraste contra las bitácoras de diseño de las Iteraciones 1 a 5 y los acuerdos de alcance establecidos con la autoridad organizacional.                                     |
-| Consolidación del segundo avance con las iteraciones ADD y revisión contra el Word original. | Se conservaron las decisiones de diseño sustentadas por las iteraciones, el catálogo de módulos y las reglas de dependencia. Las estimaciones de red se registraron como análisis. | Se contrastaron las secciones y las tablas con la plantilla. Se cotejaron los ADR, los elementos y las vistas con los documentos de diseño. |
+| Qué pidieron                                                                                                                                                                                                                                                                            | Qué aceptaron y qué rechazaron                                                                                                                                                                                                                                                                                                                                                                 | Cómo lo verificaron                                                                                                                                                           |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Mejora de redacción apegada al dominio:** Redacción y pulido técnico de descripciones arquitectónicas, fichas de decisión (ADR), justificaciones de ASR y escenarios de calidad con terminología formal del dominio de Reversi y tácticas del SEI.                                    | **Aceptado:** La terminología formal, la redacción neutral de caja negra en las respuestas de escenarios (eliminando fugas prematuras de solución) y los trade-offs de diseño.<br><br>**Rechazado:** Propuestas que sugerían tecnologías o mecanismos fuera del alcance y stack estipulado (tales como colas RabbitMQ o persistencia síncrona en cada turno).                                  | Cotejo manual contra el glosario del proyecto (1.3), las restricciones técnicas formales (RES-TEC) y los términos de calidad del SEI / ISO 25010.                             |
+| **Verificación de llenado correcto según reglas de la plantilla:** Auditoría de la estructura de las secciones de la primera entrega frente a las instrucciones de la plantilla SAD v5.0 y la lista de comprobación proporcionada.                                                      | **Aceptado:** El ajuste en la cantidad de elementos (10 escenarios y 7 ASR), la inclusión de las filas obligatorias de seguridad (activo, actor, límite) y el formato tabular de las fichas.<br><br>**Rechazado:** Formatos de redacción libre o listas desestructuradas que no respetaban las tablas canónicas de la plantilla.                                                               | Comparación punto por punto contra la lista de comprobación proporcionada de la plantilla y la rúbrica de evaluación docente.                                                 |
+| **Verificación de identificadores permitidos en el documento:** Validación estricta del cumplimiento de la regla de los siete identificadores canónicos y trazabilidad entre secciones.                                                                                                 | **Aceptado:** La corrección y eliminación de sub-abreviaciones inventadas (reemplazando `QAS-SEG` por la nomenclatura canónica `QAS-Seguridad`), y la unificación de los catálogos de componentes (`C-01` a `C-14`) y riesgos (`R-01` a `R-03`).<br><br>**Rechazado:** Cualquier prefijo intermedio que violara la regla de identificadores de la plantilla.                                   | Rastreo y búsqueda en el texto para comprobar que solo existan los prefijos permitidos (QAS, ASR, ADR, C, V, EV, R) y que las referencias cruzadas entre secciones coincidan. |
+| **Análisis y síntesis de avances de iteraciones:** Extracción y discriminación de la información técnica generada en las notas de las Iteraciones 1 a 5 de ADD para trasladar las decisiones esenciales a la entrega formal.                                                            | **Aceptado:** Sugerencias para la selección de decisiones arquitectónicas estructurales y la representación de la evolución histórica (marcando ADR-001 y ADR-002 como sustituidos por ADR-004 y ADR-005 tras la Iteración 5).<br><br>**Rechazado:** Trasladar decisiones de nivel de código, dependencias de bajo nivel o características descartadas (como el modo de juego fuera de línea). | Contraste contra las bitácoras de diseño de las Iteraciones 1 a 5 y los acuerdos de alcance establecidos con la autoridad organizacional.                                     |
+| Consolidación del segundo avance con las iteraciones ADD y revisión contra el Word original.                                                                                                                                                                                            | Se conservaron las decisiones de diseño sustentadas por las iteraciones, el catálogo de módulos y las reglas de dependencia. Las estimaciones de red se registraron como análisis.                                                                                                                                                                                                             | Se contrastaron las secciones y las tablas con la plantilla. Se cotejaron los ADR, los elementos y las vistas con los documentos de diseño.                                   |
 
 ---
 
@@ -272,6 +273,8 @@ QAS-Desplegabilidad-1 se conserva como escenario planeado para la Iteración 4. 
 | **ADR-012** | Opción de jugar contra el sistema desde la sala de espera | Aceptado | Sin ASR prioritario. Atiende QAS-Usabilidad-2. |
 | **ADR-013** | Propagación del estado completo de la partida | Aceptado | ASR-03 |
 | **ADR-014** | Tiempo límite para el proveedor de correo | Aceptado | ASR-04 |
+| **ADR-015** | Almacenamiento de preferencias de idioma en el servidor | Aceptado | ASR-05 (CU-09) |
+| **ADR-015** | Almacenamiento de preferencias de idioma en el servidor | Aceptado | ASR-05 y CU-09 |
 
 ### 3.2 Fichas de decisión
 
@@ -429,6 +432,17 @@ QAS-Desplegabilidad-1 se conserva como escenario planeado para la Iteración 4. 
 | **Riesgos** | Ninguno residual registrado (dependencia externa acotada a 5 s) |
 | **Elementos afectados** | C-08, C-11, DEP-01 |
 
+| ADR-015 | Almacenamiento de preferencias de idioma en el servidor |
+| --- | --- |
+| **Estado** | Aceptado |
+| **Contexto** | Para soportar `CU-09` (Modificar idioma de interfaz) conservando la preferencia de cada cuenta entre sesiones y dispositivos sin mezclarla con los datos públicos del jugador ni acoplar los recursos visuales con la comunicación y almacenamiento (`STK-02`, `ASR-05`) en IT11. |
+| **Alternativas** | **A (Preferencia de cuenta almacenada en el servidor con módulo dedicado):** Incorporar un flujo remoto propio (`C-42` a `C-45`) que guarda el idioma de la cuenta en el servidor antes de aplicarlo en pantalla, mientras los invitados aplican el idioma solo durante su sesión. *A favor:* Conserva el idioma de la cuenta entre sesiones y separa la configuración de uso respecto al perfil público. *En contra:* Guardar la preferencia de cuenta depende de disponibilidad remota y un fallo posterior de carga local de recursos puede dejar temporalmente distinto el idioma guardado del mostrado.<br><br>**B (Almacenar la preferencia únicamente en el equipo cliente):** Guardar el idioma en archivos locales sin contrato remoto. *A favor:* Cambia de idioma sin consultar al servidor. *En contra:* La preferencia queda ligada a un solo equipo y no sigue a la cuenta.<br><br>**C (Incluir la preferencia dentro del flujo de modificación de perfil):** Reutilizar el servicio de perfil existente para guardar el idioma. *A favor:* Evita agregar nuevas fronteras para preferencias. *En contra:* Mezcla la configuración de interfaz del usuario con los datos públicos de su perfil. |
+| **Criterios** | Persistencia asociada a la cuenta, separación de responsabilidades (`STK-02`) y uso de contratos remotos (`ASR-05`). |
+| **Decisión** | Se elige la Alternativa A: se incorporan `C-42` a `C-45` para consultar y guardar el idioma de la cuenta en el servidor antes de aplicarlo visualmente en `C-18`. |
+| **Consecuencias** | La preferencia de idioma persiste asociada a la cuenta con fronteras limpias en cliente, servicio, negocio y datos. Se acepta la dependencia remota al guardar y el desacople temporal si falla la carga local de recursos tras confirmar el guardado. |
+| **Riesgos** | Ninguno identificado |
+| **Elementos afectados** | C-01, C-18, C-42, C-43, C-44, C-45 |
+
 ---
 
 ## 4. Estructura
@@ -454,7 +468,7 @@ QAS-Desplegabilidad-1 se conserva como escenario planeado para la Iteración 4. 
 | C-15 | Raíz de composición del servidor (Servidor · Arranque) | Ensambla el servidor y conecta contratos con implementaciones. | C-04, módulos de negocio y C-11 a C-13. |
 | C-16 | Acceso y registro (submódulo de C-01) | Presenta el inicio de sesión, el acceso como invitado y la creación de cuentas. | Cliente de sesiones, Cliente de cuentas, políticas de entrada y apoyo de presentación. |
 | C-17 | Menú principal (submódulo de C-01) | Muestra la clasificación y la lista de amigos. Permite acceder a partidas y cerrar sesión. | Cliente de clasificación, Cliente de amistades, Cliente de sesiones y apoyo de presentación. |
-| C-18 | Perfil y configuración (submódulo de C-01) | Presenta el perfil y las opciones de interfaz. Desde el perfil también se pueden enviar solicitudes de amistad. | Cliente de perfil, Cliente de cuentas y apoyo de presentación. |
+| C-18 | Perfil y configuración (submódulo de C-01) | Presenta el perfil y las opciones de interfaz. Desde el perfil también se pueden enviar solicitudes de amistad. | Cliente de perfil, Cliente de cuentas, Cliente de preferencias y apoyo de presentación. |
 | C-19 | Amistades (submódulo de C-01) | Presenta la búsqueda de jugadores y las solicitudes de amistad. | Cliente de amistades y apoyo de presentación. |
 | C-20 | Sala de partida (submódulo de C-01) | Presenta la creación, la búsqueda y la espera de partidas. | Cliente de partidas, comprobaciones de juego y apoyo de presentación. |
 | C-21 | Partida en curso (submódulo de C-01) | Muestra el tablero, recibe las acciones de juego y presenta el chat de la partida. | Cliente de partidas, comprobaciones de juego y apoyo de presentación. |
@@ -478,18 +492,26 @@ QAS-Desplegabilidad-1 se conserva como escenario planeado para la Iteración 4. 
 | C-39 | Módulo de datos de chat (submódulo de C-12) | Implementa el contrato de persistencia de chat y traduce hacia la base de datos relacional. | Contrato de persistencia de chat (implementa), Base de datos relacional |
 | C-40 | Módulo de datos de amistades (submódulo de C-12) | Implementa el contrato de persistencia de amistades y traduce hacia la base de datos relacional. | Contrato de persistencia de amistades (implementa), Base de datos relacional |
 | C-41 | Módulo de datos de jugadores (submódulo de C-12) | Implementa el contrato de persistencia de jugadores y traduce hacia la base de datos relacional. | Contrato de persistencia de jugadores (implementa), Base de datos relacional |
+| C-42 | Cliente de preferencias (submódulo de C-03) | Consulta y actualiza el idioma de la cuenta. | Contrato remoto de preferencias de jugador. |
+| C-43 | Servicio de preferencias de jugador (submódulo de C-04) | Expone la consulta y actualización de preferencias. | C-44 y C-13. |
+| C-44 | Módulo de preferencias (Negocio del servidor) | Comprueba la sesión y el idioma y coordina su almacenamiento. | C-08 (sesiones) y Contrato de persistencia de preferencias. |
+| C-45 | Módulo de datos de preferencias (submódulo de C-12) | Guarda y consulta preferencias de la cuenta. | Contrato de persistencia de preferencias y C-14. |
 
 Los submódulos heredan la capa del módulo que los agrupa. Los contratos de salida se definen en negocio y los contratos remotos se exponen en servicios. La ficha V-02 indica cómo leer los nombres de la figura junto con los identificadores del catálogo.
 
 ### 4.2 Interfaces críticas
 
-*Entrega final*
-
-Sólo las interfaces cuyo incumplimiento produce un riesgo real: dinero, estado compartido, datos personales…
-
 | Interfaz | Provista por / usada por | Operaciones | Contrato: condiciones de entrada, resultado garantizado y errores relevantes |
 | --- | --- | --- | --- |
-| [Nombre] | [C-_ / C-_] | […] | […] |
+| Cuentas (CU-01) | C-30 / C-25 | Solicitar código y completar registro. | Requiere nombre y correo disponibles, contraseña válida y código vigente del registro. El éxito crea una cuenta activa con correo verificado e invalida el código. Datos incompletos, formato inválido, duplicados y código incorrecto o vencido rechazan el registro. Fallos de correo o almacenamiento se informan sin dejar una cuenta utilizable parcialmente creada. Cancelar antes de completar conserva el registro sin finalizar. |
+| Preferencias de idioma (CU-09) | C-43 / C-42 | Consultar preferencias y guardar idioma. | Requiere sesión válida de cuenta e idioma soportado. El éxito confirma el guardado antes de aplicar los recursos visuales. Cancelar o elegir el idioma activo conserva la configuración. Un fallo de guardado conserva el idioma mostrado. Si el guardado ya se confirmó y falla la carga local, se conserva el idioma visual anterior y se informa el fallo de recursos. |
+| Sala (CU-11, CU-15) | C-35 / C-29 | Crear, unirse, iniciar contra el sistema y cancelar sala. | Requiere sesión válida y configuración admitida. Crear produce una sala con creador y código. Unirse por selección o por ingreso de código converge en comprobar en el servidor que sigue esperando y tiene cupo. Código inválido, sala ocupada o iniciada e intento de unirse a la propia sala rechazan la solicitud. El éxito asigna el segundo participante e inicia la partida. Cancelar la espera invalida el acceso por código. Fallos de almacenamiento evitan una modificación parcial. |
+| Partida en curso (CU-16) | C-36 / C-29 | Realizar jugada y consultar estado confirmado. | Requiere sesión válida, participación, turno, partida activa, posición legal y versión esperada vigente. El éxito establece un nuevo estado y versión en el servidor y devuelve el estado confirmado. Una solicitud inválida conserva el estado. Pasar turno y finalizar se resuelven según los movimientos disponibles. El servidor resuelve cada vencimiento una vez y declara derrota al tercer turno consecutivo agotado. Si se pierde la respuesta, el resultado queda desconocido para el cliente hasta consultar el estado. La confirmación precede al guardado relacional y acepta el riesgo R-01. |
+| Solicitudes de amistad (CU-21, CU-23) | C-34 / C-28 | Enviar y responder solicitud. | Requiere sesión válida y cuentas disponibles. Enviar crea una solicitud pendiente única. Autoenvío, amistad existente o solicitud duplicada se rechazan. Solo el destinatario puede aceptar o rechazar una solicitud pendiente. Aceptar establece la amistad y resuelve la solicitud como una misma operación. Una solicitud ya resuelta o un fallo de actualización conserva el estado válido anterior. Cancelar conserva la solicitud. |
+| Chat (CU-26) | C-37 / C-29 | Enviar mensaje. | Requiere sesión de cuenta, participación autorizada, contenido válido y ausencia de muteo vigente. El éxito guarda y distribuye el mensaje. Contenido vacío, falta de autorización o muteo rechazan el envío. El contenido prohibido se bloquea y puede registrar infracción y muteo conforme a la política. Un error al guardar el mensaje impide presentarlo como enviado. Un fallo al guardar la infracción mantiene el bloqueo. Un muteo solo se informa como aplicado tras confirmar su registro. |
+| Sesión de invitado (CU-28) | C-31 / C-24 | Abrir sesión temporal. | Requiere nombre proporcionado, válido y disponible. El éxito crea una sesión temporal e informa sus restricciones de acceso a chat, amistades y estadísticas persistentes. Nombre inválido u ocupado se rechaza. Cancelación o fallo de creación conserva la ausencia de sesión. |
+
+En las operaciones remotas, una sesión vencida o inválida impide la modificación solicitada. Si la conexión falla antes de recibir respuesta de una operación que modifica estado, el cliente consulta el resultado vigente antes de repetirla. El cliente desconoce la organización interna del almacenamiento. Para una jugada, la confirmación significa aceptación del nuevo estado por el servidor. Su guardado relacional posterior se reintenta si falla. Una caída previa al guardado puede perder progreso confirmado, como recoge R-01.
 
 ### 4.3 Reglas de dependencia
 
@@ -511,20 +533,16 @@ Sólo las interfaces cuyo incumplimiento produce un riesgo real: dinero, estado 
 
 ## 5. Arquitectura en ejecución
 
-*Entrega final*
-
-Cada preocupación tiene una decisión, o un «no aplica» con su razón. No es una lista de tecnologías: toda tecnología mencionada se conecta con un ADR o un ASR.
-
 | Preocupación | Decisión, o «no aplica porque…» | ADR / ASR | Vista o evidencia |
 | --- | --- | --- | --- |
-| Distribución y comunicación | […] | […] | [V-_ / EV-_] |
-| Datos, estado y propiedad | […] | […] | [V-_ / EV-_] |
-| Concurrencia y coordinación | […] | […] | [V-_ / EV-_] |
-| Resiliencia y disponibilidad | […] | […] | [V-_ / EV-_] |
-| Seguridad y límites de confianza | […] | […] | [V-_ / EV-_] |
-| Despliegue y entornos | […] | […] | [V-_ / EV-_] |
-| Observabilidad y operación | […] | […] | [V-_ / EV-_] |
-| Costo operacional | […] | […] | [V-_ / EV-_] |
+| Distribución y comunicación | El cliente consume contratos WCF. La partida devuelve y notifica el estado completo y versionado. | ADR-003, ADR-010, ADR-013 / ASR-05 | V-02, V-03, V-05 |
+| Datos, estado y propiedad | El servidor conserva el estado oficial. Una jugada se confirma cuando el nuevo estado queda aceptado en el servidor. La sincronización relacional posterior puede quedar pendiente de reintento. | ADR-005, ADR-006 / ASR-01, ASR-02 | V-04, V-05 |
+| Concurrencia y coordinación | La comparación de versión y aplicación de jugada ocurren bajo el mismo acceso exclusivo por partida. | ADR-011 / ASR-01 | V-05 |
+| Resiliencia y disponibilidad | El estado y la asociación temporal permiten recuperar la partida dentro de 30 segundos. El correo tiene un límite de 5 segundos. | ADR-006, ADR-014 / ASR-02, ASR-04 | V-02, V-03 |
+| Seguridad y límites de confianza | El servidor valida sesión, participación, turno, posición y versión. Cada operación protege el estado de la cuenta o partida sobre el que actúa. | ADR-005, ADR-011 / ASR-01 | V-05 y contratos de 4.2 |
+| Despliegue y entornos | Cliente en el equipo del jugador. Servicio y motor relacional como procesos independientes del equipo servidor. El empaquetado de IT4 queda planeado. | ADR-004 / ASR-05 | V-03 |
+| Observabilidad y operación | Los servicios usan el registro de eventos para los fallos del servidor. Los errores de negocio se comunican por el contrato de su operación. | ADR-008 | V-02 y contratos de 4.2 |
+| Costo operacional | El equipo mantiene dos dispositivos de despliegue y acepta recursos compartidos entre servicio y motor relacional. El análisis de red de IT10 sustenta el envío completo bajo sus supuestos. | ADR-004, ADR-013 | V-03, V-05 |
 
 ---
 
@@ -550,8 +568,10 @@ Para documentar la arquitectura de Reversi usaremos las vistas lógica, de desar
 | Vista | Nombre | Tipo de vista | Qué muestra | Decisión que refleja |
 | --- | --- | --- | --- | --- |
 | **V-01** | Vista de contexto del sistema | Contexto | Delimitación de la frontera del sistema Reversi, actores humanos y servicios externos con los que interactúa. | ADR-003, ADR-006 |
-| **V-02** | Vista de estructura de módulos | Estructura | Organización de los módulos del cliente y del servidor y sus contratos. | ADR-004, ADR-007, ADR-008, ADR-009, ADR-010 |
+| **V-02** | Vista de estructura de módulos | Estructura | Organización de los módulos del cliente y del servidor y sus contratos. | ADR-004, ADR-007, ADR-008, ADR-009, ADR-010, ADR-015 |
 | **V-03** | Vista de despliegue | Despliegue | Ubicación de la aplicación cliente, el servidor Reversi y el motor de base de datos en dos dispositivos. | ADR-004 |
+| **V-04** | Vista lógica de la partida | Estructura | Partida, participantes, movimientos y estado confirmado. | ADR-005, ADR-006, ADR-011 |
+| **V-05** | Vista de procesos de una jugada | Ejecución | Validación de versión y propagación del estado confirmado. | ADR-011, ADR-013 |
 
 ---
 
@@ -563,7 +583,7 @@ Para documentar la arquitectura de Reversi usaremos las vistas lógica, de desar
 | **Notación y leyenda**             | Diagrama de contexto tipo C4 (Nivel 1). Bloque central delimitando la frontera del Sistema Reversi; cajas externas para actores humanos y servicios externos (DEP-01); flechas dirigidas rotuladas indicando el sentido de los mensajes.                                                                                              |
 | **Se corresponde con** | Los módulos de V-02 pertenecen al sistema delimitado en V-01. |
 
-![[Context-dark.png]]
+![Contexto del sistema](Documento-Entrega/Context-dark.png)
 
 ---
 
@@ -577,7 +597,7 @@ Para documentar la arquitectura de Reversi usaremos las vistas lógica, de desar
 
 ![Reversi Módulos](Documento-Entrega/Reversi%20Módulos.png)
 
-Correspondencia de V-02 con 4.1. Los flujos de presentación de la figura son C-16 a C-23, los clientes remotos son C-24 a C-29 y los servicios son C-30 a C-37. «Módulo de juego» en la capa de negocio del cliente corresponde a C-02, Módulo validador de interfaz. En el servidor, «Módulo de juego» corresponde a C-05. Los módulos de datos por área corresponden a C-38 a C-41.
+Correspondencia de V-02 con 4.1. Los flujos de presentación de la figura son C-16 a C-23; los clientes remotos son C-24 a C-29 y C-42 (preferencias); los servicios son C-30 a C-37 y C-43 (preferencias de jugador). «Módulo de juego» en la capa de negocio del cliente corresponde a C-02, Módulo validador de interfaz. En el servidor, «Módulo de juego» corresponde a C-05 y el área de preferencias corresponde a C-44. Los módulos de datos por área corresponden a C-38 a C-41 y C-45 (preferencias).
 
 ---
 
@@ -590,6 +610,70 @@ Correspondencia de V-02 con 4.1. Los flujos de presentación de la figura son C-
 | **Se corresponde con** | En V-02, C-01 a C-03 se ejecutan en la aplicación cliente. Los módulos del servidor se ejecutan en la aplicación de servicio, incluido C-12. La base relacional C-14 se aloja en el motor de base de datos del mismo dispositivo servidor. |
 
 ![[docs/Design Project/Documento-Entrega/Reversi despliegue.png]]
+
+---
+
+| V-04 Vista lógica de la partida | |
+| --- | --- |
+| Tipo de vista | Estructura |
+| Para quién y para qué | Equipo y evaluadores. Permite comprender las relaciones del dominio que usa el recorrido de una jugada. |
+| Preocupaciones que atiende | Identidad de los participantes, pertenencia del movimiento a la partida y propiedad del estado confirmado. |
+| Notación y leyenda | UML de clases. Las asociaciones muestran las relaciones y multiplicidades. |
+| Se corresponde con | En V-02, el Módulo de juego C-05 coordina la partida y sus movimientos y C-07 conserva el estado activo. V-05 muestra cómo se actualiza ese estado. |
+
+![[docs/Design Project/Documento-Entrega/V-04_Vista_logica_partida.png]]
+
+| V-05 Vista de procesos de una jugada | |
+| --- | --- |
+| Tipo de vista | Ejecución |
+| Para quién y para qué | Equipo y evaluadores. Permite seguir las condiciones que preceden a la actualización y la entrega del estado a los jugadores. |
+| Preocupaciones que atiende | Rechazo de versión obsoleta, acceso exclusivo por partida y entrega de versiones repetidas. |
+| Notación y leyenda | UML de secuencia. Las líneas de vida representan participantes en ejecución de los módulos de V-02. Los mensajes ordenan las interacciones y los fragmentos alternativos representan los resultados de la comprobación. |
+| Se corresponde con | Cliente de partidas C-29, Servicio de partida en curso C-36, Módulo de juego C-05, Módulo de estado de juego C-07 y Módulo motor de juego C-06 conservan sus responsabilidades de V-02. V-03 ubica los procesos y V-04 identifica el estado y el movimiento afectados. |
+
+![Validación de la versión](Octava%20iteración/Validación%20de%20la%20versión%20al%20realizar%20una%20jugada%20válida.png)
+
+![Propagación del estado confirmado](Décima%20iteración/Propagación%20del%20estado%20confirmado%20después%20de%20una%20jugada.png)
+
+#### Procesos adicionales de los contratos críticos (4.2)
+
+**CU-01 Crear cuenta**
+
+![[docs/Design Project/Documento-Entrega/CU-01_Solicitar_codigo.png]]
+
+![[docs/Design Project/Documento-Entrega/CU-01_Completar_registro.png]]
+
+**CU-09 Cambiar idioma**
+
+![[docs/Design Project/Documento-Entrega/CU-09_Cambiar_idioma_cuenta.png]]
+
+![[docs/Design Project/Documento-Entrega/CU-09_Cambiar_idioma_invitado.png]]
+
+**CU-11 y CU-15 Crear y unirse a partida**
+
+![[docs/Design Project/Documento-Entrega/CU-11_Crear_sala.png]]
+
+![[docs/Design Project/Documento-Entrega/CU-11_Acciones_sala_espera.png]]
+
+![[docs/Design Project/Documento-Entrega/CU-15_Unirse_partida.png]]
+
+**CU-21 y CU-23 Enviar y responder amistad**
+
+![[docs/Design Project/Documento-Entrega/CU-21_Enviar_amistad.png]]
+
+![[docs/Design Project/Documento-Entrega/CU-23_Responder_amistad.png]]
+
+**CU-26 Enviar mensaje**
+
+![[docs/Design Project/Documento-Entrega/CU-26_Enviar_mensaje_muteo.png]]
+
+![[docs/Design Project/Documento-Entrega/CU-26_Moderacion_chat.png]]
+
+**CU-28 Entrar como invitado**
+
+![[docs/Design Project/Documento-Entrega/CU-28_Entrar_invitado.png]]
+
+El escenario principal del +1 es CU-16. STK-01 elige una posición sobre un estado confirmado. En V-04, el movimiento pertenece a una partida y un participante. En V-02 intervienen el Cliente de partidas, el servicio y los módulos de juego. V-05 muestra la comprobación y la entrega del resultado. V-03 ubica esos participantes en el dispositivo cliente y el dispositivo servidor. Una versión obsoleta produce rechazo y consulta del estado vigente. La pérdida de respuesta deja el resultado desconocido para el cliente hasta esa consulta. La reincorporación dentro de 30 segundos complementa el recorrido conforme a ASR-02.
 
 ---
 
@@ -638,7 +722,7 @@ Registren aquí cada EV que citen. Una evidencia puede ser una revisión por esc
 
 | R        | Tipo      | Descripción                                                                                                                                                                                                                                                                                               | Qué se hará                                                                                                                                                                                                               |
 | -------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **R-01** | Riesgo    | Mantener el estado activo de las partidas en la memoria RAM del servidor sin persistencia transaccional síncrona en disco (ADR-006). Ante una caída inesperada del proceso del host o fallo de energía, se pierde el progreso de las partidas en curso no concluidas.                                     | Registrar eventos clave en el log de auditoría local (C-13) y ejecutar pruebas de corte forzado de proceso durante la fase de integración para validar el comportamiento residual.                                        |
+| **R-01** | Riesgo | Una jugada confirmada por el servidor puede estar pendiente de guardado relacional. Se asume que el estado aceptado podrá guardarse posteriormente. Una caída del proceso antes de completar la sincronización puede perder ese progreso confirmado. | Mantener la sincronización pendiente y reintentar. Verificar el comportamiento ante fallo de guardado y caída del proceso durante la evaluación. |
 | **R-02** | Deuda     | Duplicación deliberada de la comprobación básica de casillas entre el cliente WPF y el servidor WCF (ADR-005). Existe riesgo de divergencia (rule drift): la interfaz podría habilitar casillas que el servidor luego rechace si no se mantienen sincronizados ambos módulos ante futuras modificaciones. | Definir una batería idéntica de pruebas unitarias automatizadas (**`QAS-FacilidadPrueba-1`**) para validar la misma matriz de jugadas sobre el validador del cliente y el motor del servidor antes del cierre de versión. |
 | **R-03** | Pendiente | El servicio y el motor relacional comparten recursos del dispositivo servidor (ADR-004). La carga simultánea puede afectar el tiempo de propagación (ADR-013).                                                                                                                                            | Medir el recorrido de extremo a extremo con 8 jugadores en 4 partidas y registrar el percentil 95 conforme a ASR-03.                                                                                                      |
 
