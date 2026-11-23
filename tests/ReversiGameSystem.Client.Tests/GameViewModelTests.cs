@@ -48,7 +48,7 @@ internal static class GameViewModelTests
         TestAssert.AreEqual(false, model.IsMuted);
     }
 
-    internal static void SendMessage_MutedPlayer_ReturnsPlayerMuted()
+    internal static void SendChatMessage_MutedPlayer_ReturnsPlayerMuted()
     {
         using GameplayClient gameplay = MatchClientsTests.CreateGameplay("unused");
         using MatchChatClient chat = MatchClientsTests.CreateChat("unused");
@@ -61,7 +61,7 @@ internal static class GameViewModelTests
             gameplay, chat, MatchId, false, new SynchronizationContext());
         model.MessageText = "A message while muted";
 
-        ChatStatus status = model.SendMessage().GetAwaiter().GetResult();
+        ChatStatus status = model.SendChatMessage().GetAwaiter().GetResult();
 
         TestAssert.AreEqual(ChatStatus.PlayerMuted, status);
     }

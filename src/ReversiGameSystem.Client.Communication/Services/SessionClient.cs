@@ -1,7 +1,6 @@
 using System;
 using System.Runtime.Serialization;
 using System.ServiceModel;
-using System.ServiceModel.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Proxy = ReversiGameSystem.ServerProxy;
@@ -10,9 +9,6 @@ namespace ReversiGameSystem.Services;
 
 internal sealed class SessionClient : ISessionClient
 {
-    private const string CorrelationHeaderName = "CorrelationId";
-    private const string CorrelationHeaderNamespace = "urn:reversi:diagnostics:v1";
-
     private readonly ILogger<SessionClient> _logger;
     private readonly Func<Proxy.SessionServiceClient> _createClient;
 
@@ -35,15 +31,16 @@ internal sealed class SessionClient : ISessionClient
     {
         try
         {
-            await Execute(client => client.RequestLoginCodeAsync(loginIdentifier, password));
+            await SendSessionOperation(client =>
+                client.RequestLoginCodeAsync(loginIdentifier, password));
             return SessionStatus.Success;
         }
         catch (FaultException<Proxy.SessionFault> fault)
             when (Enum.IsDefined(typeof(Proxy.SessionFailure), fault.Detail.Reason))
         {
-            return MapStatus(fault.Detail.Reason);
+            return MapSessionStatus(fault.Detail.Reason);
         }
-        catch (Exception exception) when (IsCommunicationFailure(exception))
+        catch (Exception exception) when (RemoteCall.IsConnectionFailure(exception))
         {
             return SessionStatus.ServiceUnavailable;
         }
@@ -55,7 +52,7 @@ internal sealed class SessionClient : ISessionClient
     {
         try
         {
-            Proxy.AuthenticatedSession remoteSession = await Execute(
+            Proxy.AuthenticatedSession remoteSession = await SendSessionOperation(
                 client => client.CompleteLoginAsync(loginIdentifier, verificationCode));
             return new SessionResult<AuthenticatedAccountSession>(
                 CreateAuthenticatedSession(remoteSession));
@@ -64,9 +61,9 @@ internal sealed class SessionClient : ISessionClient
             when (Enum.IsDefined(typeof(Proxy.SessionFailure), fault.Detail.Reason))
         {
             return new SessionResult<AuthenticatedAccountSession>(
-                MapStatus(fault.Detail.Reason));
+                MapSessionStatus(fault.Detail.Reason));
         }
-        catch (Exception exception) when (IsCommunicationFailure(exception))
+        catch (Exception exception) when (RemoteCall.IsConnectionFailure(exception))
         {
             return new SessionResult<AuthenticatedAccountSession>(
                 SessionStatus.ServiceUnavailable);
@@ -77,16 +74,16 @@ internal sealed class SessionClient : ISessionClient
     {
         try
         {
-            Proxy.GuestSession remoteSession = await Execute(
+            Proxy.GuestSession remoteSession = await SendSessionOperation(
                 client => client.OpenGuestSessionAsync(displayName));
             return new SessionResult<GuestAccountSession>(CreateGuestSession(remoteSession));
         }
         catch (FaultException<Proxy.SessionFault> fault)
             when (Enum.IsDefined(typeof(Proxy.SessionFailure), fault.Detail.Reason))
         {
-            return new SessionResult<GuestAccountSession>(MapStatus(fault.Detail.Reason));
+            return new SessionResult<GuestAccountSession>(MapSessionStatus(fault.Detail.Reason));
         }
-        catch (Exception exception) when (IsCommunicationFailure(exception))
+        catch (Exception exception) when (RemoteCall.IsConnectionFailure(exception))
         {
             return new SessionResult<GuestAccountSession>(SessionStatus.ServiceUnavailable);
         }
@@ -96,71 +93,31 @@ internal sealed class SessionClient : ISessionClient
     {
         try
         {
-            await Execute(async client =>
-            {
-                await client.CloseSessionAsync(sessionToken);
-                return true;
-            });
+            await SendSessionOperation(client => client.CloseSessionAsync(sessionToken));
             return SessionStatus.Success;
         }
         catch (FaultException<Proxy.SessionFault> fault)
             when (Enum.IsDefined(typeof(Proxy.SessionFailure), fault.Detail.Reason))
         {
-            return MapStatus(fault.Detail.Reason);
+            return MapSessionStatus(fault.Detail.Reason);
         }
-        catch (Exception exception) when (IsCommunicationFailure(exception))
+        catch (Exception exception) when (RemoteCall.IsConnectionFailure(exception))
         {
             return SessionStatus.ServiceUnavailable;
         }
     }
 
-    private async Task<TResult> Execute<TResult>(
+    private Task<TResult> SendSessionOperation<TResult>(
         Func<Proxy.SessionServiceClient, Task<TResult>> operation)
     {
         Proxy.SessionServiceClient client = _createClient();
-        string correlationId = Guid.NewGuid().ToString("D");
-        try
-        {
-            TResult result = await Invoke(client, operation, correlationId);
-            CloseAcknowledgedChannel(client, correlationId);
-            return result;
-        }
-        catch (FaultException<Proxy.SessionFault> fault)
-            when (Enum.IsDefined(typeof(Proxy.SessionFailure), fault.Detail.Reason))
-        {
-            _logger.LogInformation(
-                "The session request was rejected with {Reason}. CorrelationId: {CorrelationId}",
-                fault.Detail.Reason,
-                correlationId);
-            throw;
-        }
-        catch (Exception exception) when (IsCommunicationFailure(exception))
-        {
-            _logger.LogWarning(
-                exception,
-                "The session request failed. CorrelationId: {CorrelationId}",
-                correlationId);
-            throw;
-        }
-        finally
-        {
-            client.Abort();
-        }
+        return RemoteCall.SendServiceCall(client, () => operation(client), _logger);
     }
 
-    private static Task<TResult> Invoke<TResult>(
-        Proxy.SessionServiceClient client,
-        Func<Proxy.SessionServiceClient, Task<TResult>> operation,
-        string correlationId)
+    private Task SendSessionOperation(Func<Proxy.SessionServiceClient, Task> operation)
     {
-        using (OperationContextScope scope = new OperationContextScope(client.InnerChannel))
-        {
-            OperationContext.Current.OutgoingMessageHeaders.Add(MessageHeader.CreateHeader(
-                CorrelationHeaderName,
-                CorrelationHeaderNamespace,
-                correlationId));
-            return operation(client);
-        }
+        Proxy.SessionServiceClient client = _createClient();
+        return RemoteCall.SendServiceCall(client, () => operation(client), _logger);
     }
 
     private static AuthenticatedAccountSession CreateAuthenticatedSession(
@@ -202,64 +159,22 @@ internal sealed class SessionClient : ISessionClient
             remoteSession.ExpiresAtUtc);
     }
 
-    private static SessionStatus MapStatus(Proxy.SessionFailure failure)
+    private static SessionStatus MapSessionStatus(Proxy.SessionFailure failure)
     {
-        SessionStatus status;
-        switch (failure)
+        SessionStatus status = failure switch
         {
-            case Proxy.SessionFailure.InvalidCredentials:
-                status = SessionStatus.InvalidCredentials;
-                break;
-            case Proxy.SessionFailure.InactiveAccount:
-                status = SessionStatus.InactiveAccount;
-                break;
-            case Proxy.SessionFailure.InvalidVerificationCode:
-                status = SessionStatus.InvalidVerificationCode;
-                break;
-            case Proxy.SessionFailure.ExpiredVerificationCode:
-                status = SessionStatus.ExpiredVerificationCode;
-                break;
-            case Proxy.SessionFailure.InvalidGuestName:
-                status = SessionStatus.InvalidGuestName;
-                break;
-            case Proxy.SessionFailure.GuestNameUnavailable:
-                status = SessionStatus.GuestNameUnavailable;
-                break;
-            case Proxy.SessionFailure.MissingSessionToken:
-                status = SessionStatus.MissingSessionToken;
-                break;
-            case Proxy.SessionFailure.InvalidSession:
-                status = SessionStatus.InvalidSession;
-                break;
-            default:
-                throw new SerializationException("The session service returned an unknown failure.");
-        }
+            Proxy.SessionFailure.InvalidCredentials => SessionStatus.InvalidCredentials,
+            Proxy.SessionFailure.InactiveAccount => SessionStatus.InactiveAccount,
+            Proxy.SessionFailure.InvalidVerificationCode => SessionStatus.InvalidVerificationCode,
+            Proxy.SessionFailure.ExpiredVerificationCode => SessionStatus.ExpiredVerificationCode,
+            Proxy.SessionFailure.InvalidGuestName => SessionStatus.InvalidGuestName,
+            Proxy.SessionFailure.GuestNameUnavailable => SessionStatus.GuestNameUnavailable,
+            Proxy.SessionFailure.MissingSessionToken => SessionStatus.MissingSessionToken,
+            Proxy.SessionFailure.InvalidSession => SessionStatus.InvalidSession,
+            _ =>
+                throw new SerializationException("The session service returned an unknown failure.")
+        };
 
         return status;
-    }
-
-    private static bool IsCommunicationFailure(Exception exception)
-    {
-        return exception is TimeoutException
-            || (exception is CommunicationException && exception is not FaultException);
-    }
-
-    private void CloseAcknowledgedChannel(
-        Proxy.SessionServiceClient client,
-        string correlationId)
-    {
-        try
-        {
-            client.Close();
-        }
-        catch (Exception exception) when (
-            exception is CommunicationException || exception is TimeoutException)
-        {
-            _logger.LogWarning(
-                exception,
-                "The acknowledged session channel could not close. "
-                    + "CorrelationId: {CorrelationId}",
-                correlationId);
-        }
     }
 }

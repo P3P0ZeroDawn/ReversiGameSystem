@@ -89,9 +89,11 @@ public partial class AvailableMatchesPage : Page
         IsEnabled = true;
         if (status != MatchStatus.Success)
         {
-            string messageKey = RemoteMatchMessages.Key(status, _guestName != null);
+            string messageKey = RemoteMatchMessages.GetMessageResourceKey(
+                status, _guestName != null);
             availableMatchesItemsControl.ItemsSource = null;
-            emptyMatchesTextBlock.SetBinding(TextBlock.TextProperty, new Binding("[" + messageKey + "]")
+            emptyMatchesTextBlock.SetBinding(TextBlock.TextProperty,
+                new Binding("[" + messageKey + "]")
             { Source = localization });
             _dialogService.ShowError(this, "AvailableMatches_RetrievalErrorTitle",
                 messageKey);
@@ -99,7 +101,8 @@ public partial class AvailableMatchesPage : Page
         }
         AvailableMatch[] matches = client.ReadAvailableMatches();
 
-        emptyMatchesTextBlock.SetBinding(TextBlock.TextProperty, new Binding("[AvailableMatches_EmptyMessage]")
+        emptyMatchesTextBlock.SetBinding(TextBlock.TextProperty,
+            new Binding("[AvailableMatches_EmptyMessage]")
         { Source = localization });
         foreach (AvailableMatch match in matches)
         {
@@ -164,7 +167,7 @@ public partial class AvailableMatchesPage : Page
         else
         {
             _dialogService.ShowError(this, "JoinMatch_PersistenceErrorTitle",
-                RemoteMatchMessages.Key(status, _guestName != null));
+                RemoteMatchMessages.GetMessageResourceKey(status, _guestName != null));
             await LoadMatches();
         }
         IsEnabled = true;
@@ -178,17 +181,10 @@ public partial class AvailableMatchesPage : Page
             $"JoinMatch_{resourceName}Message");
     }
 
-    private void ShowJoinError(string resourceName)
-    {
-        _dialogService.ShowError(
-            this,
-            $"JoinMatch_{resourceName}Title",
-            $"JoinMatch_{resourceName}Message");
-    }
-
     private void OnSpectateMatchClick(object sender, RoutedEventArgs e)
     {
-        _dialogService.ShowWarning(this, "AvailableMatches_RetrievalErrorTitle", "RemoteMatch_NotAvailable");
+        _dialogService.ShowWarning(this, "AvailableMatches_RetrievalErrorTitle",
+            "RemoteMatch_NotAvailable");
     }
 
     private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -220,6 +216,5 @@ public partial class AvailableMatchesPage : Page
         public string HostName { get; set; } = string.Empty;
         public string CreatedAgoText { get; set; } = string.Empty;
         public string StateText { get; set; } = string.Empty;
-        public Visibility SpectateVisibility { get; set; }
     }
 }

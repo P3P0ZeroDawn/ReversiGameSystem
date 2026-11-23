@@ -5,9 +5,9 @@ using ReversiGameSystem.Services;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class LobbySettingsTests
+internal static class LobbySettingsTests
 {
-    private static readonly string[] s_requiredKeys =
+    private static readonly string[] RequiredResourceKeys =
     {
         "MatchSettings_Title",
         "MatchSettings_Description",
@@ -22,47 +22,39 @@ internal sealed class LobbySettingsTests
         "WaitingForOpponent_TurnTimeFormat"
     };
 
-    internal void ChangeTurnDuration_UnreachableServer_ReturnsServiceUnavailable()
+    internal static void ChangeTurnDuration_UnreachableServer_ReturnsServiceUnavailable()
     {
-        // Arrange
         const long MatchId = 100L;
         const int TurnDurationSeconds = 60;
         using MatchLobbyClient client = MatchClientsTests.CreateLobby("test-token");
 
-        // Act
         MatchStatus status = client.ChangeTurnDuration(MatchId, TurnDurationSeconds)
             .GetAwaiter()
             .GetResult();
 
-        // Assert
         TestAssert.AreEqual(MatchStatus.ServiceUnavailable, status);
     }
 
-    internal void RemoteMatchMessages_InvalidTurnDuration_ResolvesExpectedResourceKey()
+    internal static void RemoteMatchMessages_InvalidTurnDuration_ResolvesExpectedResourceKey()
     {
-        // Arrange
         const MatchStatus Status = MatchStatus.InvalidTurnDuration;
 
-        // Act
-        string key = RemoteMatchMessages.Key(Status);
+        string key = RemoteMatchMessages.GetMessageResourceKey(Status);
 
-        // Assert
         TestAssert.AreEqual("MatchCreation_InvalidTurnTimeMessage", key);
     }
 
-    internal void LocalizationResources_MatchSettingsKeys_ExistInSupportedCultures()
+    internal static void LocalizationResources_MatchSettingsKeys_ExistInSupportedCultures()
     {
-        // Arrange
         ResourceManager resources = new ResourceManager(
             "ReversiGameSystem.Properties.Resources",
             typeof(App).Assembly);
         string[] cultures = { "en-US", "es-MX" };
 
-        // Act & Assert
         foreach (string culture in cultures)
         {
             CultureInfo cultureInfo = CultureInfo.GetCultureInfo(culture);
-            foreach (string key in s_requiredKeys)
+            foreach (string key in RequiredResourceKeys)
             {
                 string? localizedValue = resources.GetString(key, cultureInfo);
                 TestAssert.AreEqual(false, string.IsNullOrWhiteSpace(localizedValue));

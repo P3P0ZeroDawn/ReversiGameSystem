@@ -56,7 +56,6 @@ public partial class MainMenuPage : Page
 
     private async System.Threading.Tasks.Task LoadLeaderboard()
     {
-        _leaderboardLoaded = true;
         LeaderboardResult result = await ClientRuntime.LeaderboardService.GetLeaderboard(
             LeaderboardEntryLimit);
         if (result.Status != LeaderboardStatus.Success)
@@ -75,6 +74,7 @@ public partial class MainMenuPage : Page
             items.Add(CreateLeaderboardItem(entry, culture));
         }
 
+        _leaderboardLoaded = true;
         topWinnersItemsControl.ItemsSource = items;
         topWinnersEmptyTextBlock.Visibility = items.Count == 0
             ? Visibility.Visible
@@ -136,22 +136,28 @@ public partial class MainMenuPage : Page
         _friendsLoading = true;
         refreshFriendsButton.IsEnabled = false;
         friendsStatusTextBlock.Text = LocalizationManager.Instance["Friends_Loading"];
-        FriendshipResult result = await ClientRuntime.FriendshipService.GetFriends(
-            ClientRuntime.CurrentSession.SessionToken ?? string.Empty);
-        if (result.Status == FriendshipStatus.InvalidSession)
+        try
         {
-            ShowFriendsUnavailable("Friends_SessionUnavailable");
+            FriendshipResult result = await ClientRuntime.FriendshipService.GetFriends(
+                ClientRuntime.CurrentSession.SessionToken ?? string.Empty);
+            if (result.Status == FriendshipStatus.InvalidSession)
+            {
+                ShowFriendsUnavailable("Friends_SessionUnavailable");
+            }
+            else if (result.Status == FriendshipStatus.ServiceUnavailable)
+            {
+                ShowFriendsUnavailable("Friends_PresenceUnavailable");
+            }
+            else if (IsLoaded)
+            {
+                RenderFriends();
+            }
         }
-        else if (result.Status == FriendshipStatus.ServiceUnavailable)
+        finally
         {
-            ShowFriendsUnavailable("Friends_PresenceUnavailable");
+            _friendsLoading = false;
+            refreshFriendsButton.IsEnabled = true;
         }
-        else if (IsLoaded)
-        {
-            RenderFriends();
-        }
-        _friendsLoading = false;
-        refreshFriendsButton.IsEnabled = true;
     }
 
     private async void OnRefreshFriendsClick(object sender, RoutedEventArgs e)
@@ -196,12 +202,13 @@ public partial class MainMenuPage : Page
             return;
         }
         List<FriendItem> items = new List<FriendItem>();
-        foreach (FriendSummary friend in ClientRuntime.FriendshipService.GetSnapshot())
+        foreach (FriendSummary friend in ClientRuntime.FriendshipService.ReadFriends())
         {
             items.Add(new FriendItem(friend));
         }
         friendsItemsControl.ItemsSource = items;
-        friendsEmptyTextBlock.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        friendsEmptyTextBlock.Visibility = items.Count == 0
+            ? Visibility.Visible : Visibility.Collapsed;
         friendsStatusTextBlock.Text = string.Empty;
     }
 
@@ -248,20 +255,27 @@ public partial class MainMenuPage : Page
         }
 
         IsEnabled = false;
-        MatchLobbyClient client = ClientRuntime.GetMatchLobbyClient(guest: false);
-        MatchStatus status =
-            await client.InviteToMatch(friendAccountId, turnDurationSeconds);
-        if (status == MatchStatus.Success)
+        try
         {
-            LobbySnapshot lobby = client.ReadCurrentLobby();
-            NavigationService?.Navigate(new WaitingForOpponentPage(client, lobby, guestName: null));
+            MatchLobbyClient client = ClientRuntime.GetMatchLobbyClient(guest: false);
+            MatchStatus status =
+                await client.InviteToMatch(friendAccountId, turnDurationSeconds);
+            if (status == MatchStatus.Success)
+            {
+                LobbySnapshot lobby = client.ReadCurrentLobby();
+                NavigationService?.Navigate(
+                    new WaitingForOpponentPage(client, lobby, guestName: null));
+            }
+            else
+            {
+                _dialogService.ShowError(this, "InviteMatch_ErrorTitle",
+                    RemoteMatchMessages.GetMessageResourceKey(status, guest: false));
+            }
         }
-        else
+        finally
         {
-            _dialogService.ShowError(this, "InviteMatch_ErrorTitle",
-                RemoteMatchMessages.Key(status, guest: false));
+            IsEnabled = true;
         }
-        IsEnabled = true;
     }
 
     private void OnCreateGameClick(object sender, RoutedEventArgs e)
@@ -286,23 +300,28 @@ public partial class MainMenuPage : Page
     private async void OnLogoutClick(object sender, RoutedEventArgs e)
     {
         IsEnabled = false;
-        string? token = ClientRuntime.CurrentSession.SessionToken;
-        SessionStatus status = SessionStatus.Success;
-        if (token != null && !string.IsNullOrWhiteSpace(token))
+        try
         {
-            status = await ClientRuntime.SessionService.CloseSession(token);
+            string? sessionToken = ClientRuntime.CurrentSession.SessionToken;
+            SessionStatus status = SessionStatus.Success;
+            if (sessionToken != null && !string.IsNullOrWhiteSpace(sessionToken))
+            {
+                status = await ClientRuntime.SessionService.CloseSession(sessionToken);
+            }
+            if (status == SessionStatus.ServiceUnavailable)
+            {
+                _dialogService.ShowError(this,
+                    "Session_CloseFailedTitle", "Session_CloseFailedMessage");
+                return;
+            }
+            ClientRuntime.FriendshipService.Close();
+            ClientRuntime.CurrentSession.Clear();
+            NavigationService?.Navigate(new LoginScreenPage());
         }
-        if (status == SessionStatus.ServiceUnavailable)
+        finally
         {
-            _dialogService.ShowError(this, "Session_CloseFailedTitle", "Session_CloseFailedMessage");
             IsEnabled = true;
-            return;
         }
-        IsEnabled = true;
-
-        ClientRuntime.FriendshipService.Close();
-        ClientRuntime.CurrentSession.Clear();
-        NavigationService?.Navigate(new LoginScreenPage());
     }
 
     private void OnMyProfileClick(object sender, RoutedEventArgs e)

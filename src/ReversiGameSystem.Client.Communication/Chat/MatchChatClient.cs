@@ -13,22 +13,22 @@ namespace ReversiGameSystem.Services;
 [CallbackBehavior(UseSynchronizationContext = false, ConcurrencyMode = ConcurrencyMode.Multiple)]
 internal sealed class MatchChatClient : IDisposable, Proxy.IMatchChatServiceCallback
 {
-    private readonly string _token;
+    private readonly string _sessionToken;
     private readonly object _chatDataLock = new object();
     private readonly DuplexChannel<Proxy.MatchChatServiceClient, Proxy.IMatchChatService> _channel;
 
-    private readonly Dictionary<long, SortedDictionary<int, ChatMessage>> _messages =
+    private readonly Dictionary<long, SortedDictionary<int, ChatMessage>> _messagesByMatch =
         new Dictionary<long, SortedDictionary<int, ChatMessage>>();
     private DateTime? _muteEndsAtUtc;
 
-    internal MatchChatClient(string token, ILogger<MatchChatClient> logger)
-        : this(token, null, logger)
+    internal MatchChatClient(string sessionToken, ILogger<MatchChatClient> logger)
+        : this(sessionToken, null, logger)
     {
     }
 
-    internal MatchChatClient(string token, string? endpoint, ILogger<MatchChatClient> logger)
+    internal MatchChatClient(string sessionToken, string? endpoint, ILogger<MatchChatClient> logger)
     {
-        _token = token;
+        _sessionToken = sessionToken;
         Proxy.MatchChatServiceClient CreateClient()
         {
             Proxy.MatchChatServiceClient client;
@@ -66,7 +66,7 @@ internal sealed class MatchChatClient : IDisposable, Proxy.IMatchChatServiceCall
         long matchId, CancellationToken cancellation = default)
     {
         return SendChatOperation(
-            client => client.OpenChatChannelAsync(_token, matchId), cancellation);
+            client => client.OpenChatChannelAsync(_sessionToken, matchId), cancellation);
     }
 
     internal Task<ChatStatus> LoadChatHistory(
@@ -74,9 +74,10 @@ internal sealed class MatchChatClient : IDisposable, Proxy.IMatchChatServiceCall
     {
         async Task LoadMessages(Proxy.MatchChatServiceClient client)
         {
-            Proxy.MatchChatEntry[] messages = await client.GetChatHistoryAsync(_token, matchId)
+            Proxy.MatchChatEntry[] messageHistory = await client.GetChatHistoryAsync(
+                _sessionToken, matchId)
                 .ConfigureAwait(false);
-            foreach (Proxy.MatchChatEntry message in messages)
+            foreach (Proxy.MatchChatEntry message in messageHistory)
             {
                 StoreMessage(MapMessage(message));
             }
@@ -90,7 +91,7 @@ internal sealed class MatchChatClient : IDisposable, Proxy.IMatchChatServiceCall
         async Task SubmitMessage(Proxy.MatchChatServiceClient client)
         {
             Proxy.MatchChatEntry message = await client.SendChatMessageAsync(
-                _token, matchId, content.Trim()).ConfigureAwait(false);
+                _sessionToken, matchId, content.Trim()).ConfigureAwait(false);
             StoreMessage(MapMessage(message));
         }
         return SendChatOperation(SubmitMessage, cancellation);
@@ -158,7 +159,7 @@ internal sealed class MatchChatClient : IDisposable, Proxy.IMatchChatServiceCall
                 Proxy.MatchFailure.Unauthorized => ChatStatus.Unauthorized,
                 Proxy.MatchFailure.MatchNotFound => ChatStatus.MatchNotFound,
                 Proxy.MatchFailure.MatchNotInProgress => ChatStatus.MatchNotInProgress,
-                _ => ChatStatus.ServiceUnavailable
+                _ => throw new ArgumentOutOfRangeException(nameof(exception))
             };
         }
         return status;
@@ -186,27 +187,27 @@ internal sealed class MatchChatClient : IDisposable, Proxy.IMatchChatServiceCall
     {
         lock (_chatDataLock)
         {
-            if (!_messages.ContainsKey(id))
+            if (!_messagesByMatch.ContainsKey(id))
             {
                 return Array.Empty<ChatMessage>();
             }
-            return _messages[id].Values.ToArray();
+            return _messagesByMatch[id].Values.ToArray();
         }
     }
     private void StoreMessage(ChatMessage message)
     {
         lock (_chatDataLock)
         {
-            if (!_messages.ContainsKey(message.MatchId))
+            if (!_messagesByMatch.ContainsKey(message.MatchId))
             {
-                _messages.Add(
+                _messagesByMatch.Add(
                     message.MatchId, new SortedDictionary<int, ChatMessage>());
             }
-            if (_messages[message.MatchId].ContainsKey(message.Number))
+            if (_messagesByMatch[message.MatchId].ContainsKey(message.Number))
             {
                 return;
             }
-            _messages[message.MatchId].Add(message.Number, message);
+            _messagesByMatch[message.MatchId].Add(message.Number, message);
         }
 
         MessagesChanged?.Invoke(message.MatchId);
@@ -225,23 +226,15 @@ internal sealed class MatchChatClient : IDisposable, Proxy.IMatchChatServiceCall
     }
     private static ChatStatus MapChatFailure(Proxy.ChatFailure failure)
     {
-        ChatStatus status = ChatStatus.MessageBlocked;
-        if (failure == Proxy.ChatFailure.EmptyMessage)
+        ChatStatus status = failure switch
         {
-            status = ChatStatus.EmptyMessage;
-        }
-        else if (failure == Proxy.ChatFailure.MessageTooLong)
-        {
-            status = ChatStatus.MessageTooLong;
-        }
-        else if (failure == Proxy.ChatFailure.PlayerMuted)
-        {
-            status = ChatStatus.PlayerMuted;
-        }
-        else if (failure == Proxy.ChatFailure.RateLimitExceeded)
-        {
-            status = ChatStatus.RateLimitExceeded;
-        }
+            Proxy.ChatFailure.EmptyMessage => ChatStatus.EmptyMessage,
+            Proxy.ChatFailure.MessageTooLong => ChatStatus.MessageTooLong,
+            Proxy.ChatFailure.MessageBlocked => ChatStatus.MessageBlocked,
+            Proxy.ChatFailure.PlayerMuted => ChatStatus.PlayerMuted,
+            Proxy.ChatFailure.RateLimitExceeded => ChatStatus.RateLimitExceeded,
+            _ => throw new ArgumentOutOfRangeException(nameof(failure))
+        };
         return status;
     }
 }

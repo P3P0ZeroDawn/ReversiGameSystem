@@ -106,9 +106,9 @@ internal static class MatchClientsTests
             }
         }
         TestAssert.AreEqual("JoinMatch_MatchCodeNotAvailableMessage",
-            RemoteMatchMessages.Key(MatchStatus.MatchCodeUnavailable));
+            RemoteMatchMessages.GetMessageResourceKey(MatchStatus.MatchCodeUnavailable));
         TestAssert.AreEqual("RemoteMatch_ConnectionFailed",
-            RemoteMatchMessages.Key(MatchStatus.ServiceUnavailable));
+            RemoteMatchMessages.GetMessageResourceKey(MatchStatus.ServiceUnavailable));
     }
 
     internal static void Callbacks_ConclusionSnapshot_PreservesWinnerAndAbandonmentReason()

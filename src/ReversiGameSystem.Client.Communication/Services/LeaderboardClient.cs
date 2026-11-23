@@ -31,7 +31,7 @@ internal sealed class LeaderboardClient
             remoteEntries = await Execute(
                 client => client.GetLeaderboardAsync(maximumEntries));
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        catch (Exception exception) when (RemoteCall.IsConnectionFailure(exception))
         {
             return new LeaderboardResult(
                 LeaderboardStatus.ServiceUnavailable, Array.Empty<LeaderboardEntry>());
@@ -53,6 +53,6 @@ internal sealed class LeaderboardClient
         Func<Proxy.LeaderboardServiceClient, Task<TResult>> operation)
     {
         Proxy.LeaderboardServiceClient client = _createClient();
-        return RemoteCall.Execute(client, () => operation(client), _logger);
+        return RemoteCall.SendServiceCall(client, () => operation(client), _logger);
     }
 }

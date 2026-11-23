@@ -5,10 +5,17 @@ de cambios permanece en Git y no se repite aquí.
 
 ## Prioridad inmediata del cliente
 
-1. Dejar operativo el guardado del idioma preferido en la base de datos y su recuperación al iniciar sesión.
-2. Revisar inmediatamente el manejo de excepciones del cliente recién implementado.
+El guardado del idioma y su recuperación al iniciar sesión están comprobados manualmente.
 
-El resto de preferencias es secundario. La revisión general de pruebas sigue al final.
+1. Revisar el manejo de excepciones del cliente recién implementado antes de migrar más servicios.
+2. Al finalizar las migraciones, inventariar las pruebas existentes, completar las faltantes y
+   revisar su cumplimiento del estándar y su ejecución individual en Visual Studio.
+
+La verificación debe cubrir gameplay/MVVM, rival automático e inactividad, reconexión de 30 segundos,
+chat (muteo y límite de mensajes), idioma persistente, cierre de sesión, clasificación de excepciones
+y registros sin datos sensibles. Incluir fallos durante la reconexión y al escribir los logs.
+
+El resto de preferencias es secundario. La comprobación con Hamachi sigue pendiente.
 
 ## Criterio de finalización
 

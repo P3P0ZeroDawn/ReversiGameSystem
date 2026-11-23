@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.ServiceModel;
 using ReversiGameSystem.Matches;
@@ -9,27 +8,6 @@ namespace ReversiGameSystem.Services;
 
 internal static class MatchContractMapper
 {
-    private static readonly IReadOnlyDictionary<Proxy.MatchFailure, MatchStatus>
-        s_matchStatuses = new Dictionary<Proxy.MatchFailure, MatchStatus>
-        {
-            { Proxy.MatchFailure.InvalidMatchId, MatchStatus.InvalidMatchId },
-            { Proxy.MatchFailure.InvalidConfiguration, MatchStatus.InvalidConfiguration },
-            { Proxy.MatchFailure.InvalidTurnDuration, MatchStatus.InvalidTurnDuration },
-            { Proxy.MatchFailure.MatchNotFound, MatchStatus.MatchNotFound },
-            { Proxy.MatchFailure.CannotJoinOwnMatch, MatchStatus.CannotJoinOwnMatch },
-            { Proxy.MatchFailure.InvalidMatchCode, MatchStatus.InvalidMatchCode },
-            { Proxy.MatchFailure.MatchCodeUnavailable, MatchStatus.MatchCodeUnavailable },
-            { Proxy.MatchFailure.Unauthorized, MatchStatus.Unauthorized },
-            { Proxy.MatchFailure.MatchNotWaiting, MatchStatus.MatchNotWaiting },
-            { Proxy.MatchFailure.MatchNotInProgress, MatchStatus.MatchNotInProgress },
-            { Proxy.MatchFailure.MissingPlacement, MatchStatus.MissingPlacement },
-            { Proxy.MatchFailure.InvalidMatchStateVersion, MatchStatus.InvalidMatchStateVersion },
-            { Proxy.MatchFailure.StaleMatchStateVersion, MatchStatus.StaleMatchStateVersion },
-            { Proxy.MatchFailure.NotPlayersTurn, MatchStatus.NotPlayersTurn },
-            { Proxy.MatchFailure.InvalidPosition, MatchStatus.InvalidPosition },
-            { Proxy.MatchFailure.SpectatingUnavailable, MatchStatus.SpectatingUnavailable },
-            { Proxy.MatchFailure.InactiveAccount, MatchStatus.InactiveAccount }
-        };
     internal static MatchStateSnapshot MapState(Proxy.MatchStateSnapshot state)
     {
         ConfirmedBoardCell[] board = state.Board.Select(MapBoardCell).ToArray();
@@ -51,12 +29,14 @@ internal static class MatchContractMapper
     }
     private static ConfirmedBoardCell MapBoardCell(Proxy.BoardCellState cell)
     {
-        return cell switch
+        ConfirmedBoardCell boardCell = cell switch
         {
             Proxy.BoardCellState.Black => ConfirmedBoardCell.Black,
             Proxy.BoardCellState.White => ConfirmedBoardCell.White,
-            _ => ConfirmedBoardCell.Empty
+            Proxy.BoardCellState.Empty => ConfirmedBoardCell.Empty,
+            _ => throw new ArgumentOutOfRangeException(nameof(cell))
         };
+        return boardCell;
     }
     private static RemoteMatchConclusion MapConclusion(Proxy.MatchConclusion conclusion)
     {
@@ -70,7 +50,7 @@ internal static class MatchContractMapper
             && Enum.IsDefined(typeof(Proxy.SessionFailure), session.Detail.Reason);
         if (exception is FaultException<Proxy.MatchFault> match)
         {
-            recognized = s_matchStatuses.ContainsKey(match.Detail.Reason);
+            recognized = Enum.IsDefined(typeof(Proxy.MatchFailure), match.Detail.Reason);
         }
         else if (exception is FaultException<Proxy.FriendshipFault> friendship)
         {
@@ -87,7 +67,27 @@ internal static class MatchContractMapper
         MatchStatus status;
         if (exception is FaultException<Proxy.MatchFault> matchFault)
         {
-            status = s_matchStatuses[matchFault.Detail.Reason];
+            status = matchFault.Detail.Reason switch
+            {
+                Proxy.MatchFailure.InvalidMatchId => MatchStatus.InvalidMatchId,
+                Proxy.MatchFailure.InvalidConfiguration => MatchStatus.InvalidConfiguration,
+                Proxy.MatchFailure.InvalidTurnDuration => MatchStatus.InvalidTurnDuration,
+                Proxy.MatchFailure.MatchNotFound => MatchStatus.MatchNotFound,
+                Proxy.MatchFailure.CannotJoinOwnMatch => MatchStatus.CannotJoinOwnMatch,
+                Proxy.MatchFailure.InvalidMatchCode => MatchStatus.InvalidMatchCode,
+                Proxy.MatchFailure.MatchCodeUnavailable => MatchStatus.MatchCodeUnavailable,
+                Proxy.MatchFailure.Unauthorized => MatchStatus.Unauthorized,
+                Proxy.MatchFailure.MatchNotWaiting => MatchStatus.MatchNotWaiting,
+                Proxy.MatchFailure.MatchNotInProgress => MatchStatus.MatchNotInProgress,
+                Proxy.MatchFailure.MissingPlacement => MatchStatus.MissingPlacement,
+                Proxy.MatchFailure.InvalidMatchStateVersion => MatchStatus.InvalidMatchStateVersion,
+                Proxy.MatchFailure.StaleMatchStateVersion => MatchStatus.StaleMatchStateVersion,
+                Proxy.MatchFailure.NotPlayersTurn => MatchStatus.NotPlayersTurn,
+                Proxy.MatchFailure.InvalidPosition => MatchStatus.InvalidPosition,
+                Proxy.MatchFailure.SpectatingUnavailable => MatchStatus.SpectatingUnavailable,
+                Proxy.MatchFailure.InactiveAccount => MatchStatus.InactiveAccount,
+                _ => throw new ArgumentOutOfRangeException(nameof(exception))
+            };
         }
         else if (exception is FaultException<Proxy.SessionFault>)
         {

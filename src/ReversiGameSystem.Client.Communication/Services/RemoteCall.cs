@@ -9,10 +9,13 @@ namespace ReversiGameSystem.Services;
 
 internal static class RemoteCall
 {
+    private const string RequestFailureMessagePrefix = "The remote request failed. CorrelationId: ";
+    private const string ConnectionFailureMessage =
+        "The remote connection failed. CorrelationId: {CorrelationId}";
     private const string CorrelationHeaderName = "CorrelationId";
     private const string CorrelationHeaderNamespace = "urn:reversi:diagnostics:v1";
 
-    internal static async Task<TResult> Execute<TContract, TResult, TCategory>(
+    internal static async Task<TResult> SendServiceCall<TContract, TResult, TCategory>(
         ClientBase<TContract> client, Func<Task<TResult>> operation, ILogger<TCategory> logger)
         where TContract : class
     {
@@ -30,11 +33,16 @@ internal static class RemoteCall
             CloseAcknowledgedChannel(client, logger, correlationId);
             return value;
         }
-        catch (Exception exception) when (IsExpectedFailure(exception))
+        catch (Exception exception) when (IsConnectionFailure(exception))
         {
             logger.LogWarning(exception,
-                "The remote connection failed. CorrelationId: {CorrelationId}", correlationId);
-            throw;
+                ConnectionFailureMessage, correlationId);
+            string message = RequestFailureMessagePrefix + correlationId;
+            if (exception is TimeoutException)
+            {
+                throw new TimeoutException(message, exception);
+            }
+            throw new CommunicationException(message, exception);
         }
         finally
         {
@@ -42,7 +50,7 @@ internal static class RemoteCall
         }
     }
 
-    internal static async Task Execute<TContract, TCategory>(
+    internal static async Task SendServiceCall<TContract, TCategory>(
         ClientBase<TContract> client, Func<Task> operation, ILogger<TCategory> logger)
         where TContract : class
     {
@@ -59,11 +67,16 @@ internal static class RemoteCall
             await pending.ConfigureAwait(false);
             CloseAcknowledgedChannel(client, logger, correlationId);
         }
-        catch (Exception exception) when (IsExpectedFailure(exception))
+        catch (Exception exception) when (IsConnectionFailure(exception))
         {
             logger.LogWarning(exception,
-                "The remote connection failed. CorrelationId: {CorrelationId}", correlationId);
-            throw;
+                ConnectionFailureMessage, correlationId);
+            string message = RequestFailureMessagePrefix + correlationId;
+            if (exception is TimeoutException)
+            {
+                throw new TimeoutException(message, exception);
+            }
+            throw new CommunicationException(message, exception);
         }
         finally
         {
@@ -78,7 +91,7 @@ internal static class RemoteCall
         {
             client.Close();
         }
-        catch (Exception exception) when (IsExpectedFailure(exception))
+        catch (Exception exception) when (IsConnectionFailure(exception))
         {
             logger.LogWarning(exception,
                 "The acknowledged channel could not close. CorrelationId: {CorrelationId}",
@@ -86,7 +99,7 @@ internal static class RemoteCall
         }
     }
 
-    internal static bool IsExpectedFailure(Exception exception)
+    internal static bool IsConnectionFailure(Exception exception)
     {
         return exception is TimeoutException
             || (exception is CommunicationException && exception is not FaultException);

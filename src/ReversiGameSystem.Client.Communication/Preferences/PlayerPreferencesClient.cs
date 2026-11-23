@@ -18,18 +18,19 @@ internal sealed class PlayerPreferencesClient
         _createClient = createClient ?? throw new ArgumentNullException(nameof(createClient));
     }
 
-    internal async Task<PreferencesStatus> ChangeLanguage(string token, string localeCode)
+    internal async Task<PreferencesStatus> ChangeLanguage(string sessionToken, string localeCode)
     {
         PreferencesStatus status;
         try
         {
             Proxy.PlayerPreferencesServiceClient reader = _createClient();
-            Proxy.PlayerPreferences preferences = await RemoteCall.Execute(reader,
-                () => reader.GetPlayerPreferencesAsync(token), _logger).ConfigureAwait(false);
+            Proxy.PlayerPreferences preferences = await RemoteCall.SendServiceCall(reader,
+                () => reader.GetPlayerPreferencesAsync(sessionToken), _logger)
+                .ConfigureAwait(false);
             preferences.PreferredLocaleCode = localeCode;
             Proxy.PlayerPreferencesServiceClient writer = _createClient();
-            await RemoteCall.Execute(writer,
-                () => writer.UpdatePlayerPreferencesAsync(token, preferences), _logger)
+            await RemoteCall.SendServiceCall(writer,
+                () => writer.UpdatePlayerPreferencesAsync(sessionToken, preferences), _logger)
                 .ConfigureAwait(false);
             status = PreferencesStatus.Success;
         }

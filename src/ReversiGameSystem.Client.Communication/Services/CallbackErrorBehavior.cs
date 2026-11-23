@@ -9,6 +9,8 @@ namespace ReversiGameSystem.Services;
 internal sealed class CallbackErrorBehavior : IEndpointBehavior, IErrorHandler
 {
     private const string CallbackFailureMessage = "An unexpected client callback failure occurred.";
+    private const string CallbackFailureOperation = "CallbackFailureReporting";
+    private static readonly EmergencyFailureLog EmergencyLog = new EmergencyFailureLog();
     internal static event Action<Exception>? FailureReported;
     internal static event Action<Exception>? ConnectionFailureReported;
 
@@ -19,11 +21,11 @@ internal sealed class CallbackErrorBehavior : IEndpointBehavior, IErrorHandler
     }
 
     public void AddBindingParameters(ServiceEndpoint endpoint,
-        BindingParameterCollection parameters)
+        BindingParameterCollection bindingParameters)
     {
-        if (parameters == null)
+        if (bindingParameters == null)
         {
-            throw new ArgumentNullException(nameof(parameters));
+            throw new ArgumentNullException(nameof(bindingParameters));
         }
     }
 
@@ -44,7 +46,7 @@ internal sealed class CallbackErrorBehavior : IEndpointBehavior, IErrorHandler
 
     public void ProvideFault(Exception error, MessageVersion version, ref Message fault)
     {
-        if (RemoteCall.IsExpectedFailure(error))
+        if (RemoteCall.IsConnectionFailure(error))
         {
             return;
         }
@@ -56,7 +58,7 @@ internal sealed class CallbackErrorBehavior : IEndpointBehavior, IErrorHandler
     {
         try
         {
-            if (RemoteCall.IsExpectedFailure(error))
+            if (RemoteCall.IsConnectionFailure(error))
             {
                 ConnectionFailureReported?.Invoke(error);
             }
@@ -67,8 +69,8 @@ internal sealed class CallbackErrorBehavior : IEndpointBehavior, IErrorHandler
         }
         catch (Exception dispatchFailure)
         {
-            Console.Error.WriteLine(FailureDiagnostics.ForLogging(error).Message);
-            Console.Error.WriteLine(FailureDiagnostics.ForLogging(dispatchFailure).Message);
+            EmergencyLog.PersistFailure(error, dispatchFailure,
+                CallbackFailureOperation, Guid.NewGuid().ToString("D"));
         }
         return false;
     }

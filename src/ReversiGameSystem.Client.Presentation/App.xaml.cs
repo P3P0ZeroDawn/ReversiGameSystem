@@ -30,24 +30,20 @@ public partial class App : Application
         DispatcherUnhandledExceptionEventArgs arguments)
     {
         arguments.Handled = true;
-        bool canContinue = false;
         try
         {
-            canContinue = ClientRuntime.Errors.HandleUnhandledFailure(
-                arguments.Exception, DispatcherOperation);
+            ClientRuntime.Errors.ReportFatalFailure(arguments.Exception, DispatcherOperation);
         }
         finally
         {
-            if (!canContinue)
-            {
-                Shutdown(FailureExitCode);
-            }
+            Shutdown(FailureExitCode);
         }
     }
 
     private static void OnCallbackConnectionFailure(Exception exception)
     {
-        ClientRuntime.Errors.RecordFailure(exception, CallbackConnectionOperation, LogLevel.Warning);
+        ClientRuntime.Errors.RecordFailure(
+            exception, CallbackConnectionOperation, LogLevel.Warning);
     }
 
     private void OnCallbackFailure(Exception exception)
@@ -55,13 +51,14 @@ public partial class App : Application
         ReportBackgroundFailure(exception, CallbackOperation);
     }
 
-    private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs arguments)
+    private void OnUnobservedTaskException(object? sender,
+        UnobservedTaskExceptionEventArgs arguments)
     {
         arguments.SetObserved();
         ReportBackgroundFailure(arguments.Exception, BackgroundOperation);
     }
 
-    private void ReportBackgroundFailure(Exception exception, string operation)
+    internal void ReportBackgroundFailure(Exception exception, string operation)
     {
         void ReportFailure()
         {

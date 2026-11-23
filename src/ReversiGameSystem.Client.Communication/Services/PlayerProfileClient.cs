@@ -25,22 +25,22 @@ internal sealed class PlayerProfileClient
     }
 
     internal async Task<ProfileResult<PlayerProfile>> GetPlayerProfile(
-        string token,
+        string sessionToken,
         long? targetAccountId = null)
     {
         ProfileResult<PlayerProfile> result;
         try
         {
-            Proxy.PlayerProfile profile = await Execute(
-                client => client.GetPlayerProfileAsync(token, targetAccountId));
+            Proxy.PlayerProfile profile = await SendProfileOperation(
+                client => client.GetPlayerProfileAsync(sessionToken, targetAccountId));
             result = new ProfileResult<PlayerProfile>(ProfileStatus.Success, MapProfile(profile));
         }
         catch (FaultException<Proxy.ProfileFault> fault)
             when (Enum.IsDefined(typeof(Proxy.ProfileFailure), fault.Detail.Reason))
         {
-            result = new ProfileResult<PlayerProfile>(MapStatus(fault.Detail.Reason), null);
+            result = new ProfileResult<PlayerProfile>(MapProfileStatus(fault.Detail.Reason), null);
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        catch (Exception exception) when (RemoteCall.IsConnectionFailure(exception))
         {
             result = new ProfileResult<PlayerProfile>(ProfileStatus.ServiceUnavailable, null);
         }
@@ -48,36 +48,37 @@ internal sealed class PlayerProfileClient
     }
 
     internal async Task<ProfileResult<ProfileImageContent>> GetProfileImage(
-        string token,
+        string sessionToken,
         long? targetAccountId = null)
     {
         ProfileResult<ProfileImageContent> result;
         try
         {
-            Proxy.ImageContent image = await Execute(
-                client => client.GetProfileImageAsync(token, targetAccountId));
+            Proxy.ImageContent image = await SendProfileOperation(
+                client => client.GetProfileImageAsync(sessionToken, targetAccountId));
             ProfileImageContent content = new ProfileImageContent(image.Content, image.MediaType);
             result = new ProfileResult<ProfileImageContent>(ProfileStatus.Success, content);
         }
         catch (FaultException<Proxy.ProfileFault> fault)
             when (Enum.IsDefined(typeof(Proxy.ProfileFailure), fault.Detail.Reason))
         {
-            result = new ProfileResult<ProfileImageContent>(MapStatus(fault.Detail.Reason), null);
+            result = new ProfileResult<ProfileImageContent>(
+                MapProfileStatus(fault.Detail.Reason), null);
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        catch (Exception exception) when (RemoteCall.IsConnectionFailure(exception))
         {
             result = new ProfileResult<ProfileImageContent>(ProfileStatus.ServiceUnavailable, null);
         }
         return result;
     }
 
-    internal Task<ProfileStatus> ChangeUsername(string token, string username)
+    internal Task<ProfileStatus> ChangeUsername(string sessionToken, string username)
     {
-        return ExecuteStatus(client => client.ChangeUsernameAsync(token, username));
+        return ExecuteStatus(client => client.ChangeUsernameAsync(sessionToken, username));
     }
 
     internal Task<ProfileStatus> UpdateProfileImage(
-        string token,
+        string sessionToken,
         byte[] content,
         string mediaType)
     {
@@ -86,7 +87,7 @@ internal sealed class PlayerProfileClient
             Content = content,
             MediaType = mediaType
         };
-        return ExecuteStatus(client => client.UpdateProfileImageAsync(token, image));
+        return ExecuteStatus(client => client.UpdateProfileImageAsync(sessionToken, image));
     }
 
     private async Task<ProfileStatus> ExecuteStatus(
@@ -95,7 +96,7 @@ internal sealed class PlayerProfileClient
         ProfileStatus status;
         try
         {
-            await Execute(async client =>
+            await SendProfileOperation(async client =>
             {
                 await operation(client);
                 return true;
@@ -105,20 +106,20 @@ internal sealed class PlayerProfileClient
         catch (FaultException<Proxy.ProfileFault> fault)
             when (Enum.IsDefined(typeof(Proxy.ProfileFailure), fault.Detail.Reason))
         {
-            status = MapStatus(fault.Detail.Reason);
+            status = MapProfileStatus(fault.Detail.Reason);
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        catch (Exception exception) when (RemoteCall.IsConnectionFailure(exception))
         {
             status = ProfileStatus.ServiceUnavailable;
         }
         return status;
     }
 
-    private Task<TResult> Execute<TResult>(
+    private Task<TResult> SendProfileOperation<TResult>(
         Func<Proxy.PlayerProfileServiceClient, Task<TResult>> operation)
     {
         Proxy.PlayerProfileServiceClient client = _createClient();
-        return RemoteCall.Execute(client, () => operation(client), _logger);
+        return RemoteCall.SendServiceCall(client, () => operation(client), _logger);
     }
 
     private static PlayerProfile MapProfile(Proxy.PlayerProfile profile)
@@ -136,30 +137,17 @@ internal sealed class PlayerProfileClient
             mappedStatistics);
     }
 
-    private static ProfileStatus MapStatus(Proxy.ProfileFailure failure)
+    private static ProfileStatus MapProfileStatus(Proxy.ProfileFailure failure)
     {
-        ProfileStatus status;
-        switch (failure)
+        ProfileStatus status = failure switch
         {
-            case Proxy.ProfileFailure.InvalidAccountId:
-                status = ProfileStatus.InvalidAccountId;
-                break;
-            case Proxy.ProfileFailure.AccountNotFound:
-                status = ProfileStatus.AccountNotFound;
-                break;
-            case Proxy.ProfileFailure.InvalidUsername:
-                status = ProfileStatus.InvalidUsername;
-                break;
-            case Proxy.ProfileFailure.UsernameUnavailable:
-                status = ProfileStatus.UsernameUnavailable;
-                break;
-            case Proxy.ProfileFailure.InvalidImage:
-                status = ProfileStatus.InvalidImage;
-                break;
-            default:
-                status = ProfileStatus.InactiveAccount;
-                break;
-        }
+            Proxy.ProfileFailure.InvalidAccountId => ProfileStatus.InvalidAccountId,
+            Proxy.ProfileFailure.AccountNotFound => ProfileStatus.AccountNotFound,
+            Proxy.ProfileFailure.InvalidUsername => ProfileStatus.InvalidUsername,
+            Proxy.ProfileFailure.UsernameUnavailable => ProfileStatus.UsernameUnavailable,
+            Proxy.ProfileFailure.InvalidImage => ProfileStatus.InvalidImage,
+            _ => ProfileStatus.InactiveAccount
+        };
         return status;
     }
 }

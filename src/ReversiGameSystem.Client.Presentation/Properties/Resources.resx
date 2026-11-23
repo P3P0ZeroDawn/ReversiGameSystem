@@ -1341,4 +1341,17 @@
   <data name="Client_FatalErrorMessage" xml:space="preserve">
     <value>An unexpected error occurred. The application will close. Reference: {0}.</value>
   </data>
+  <data name="RemoteMatch_InvalidMatchId" xml:space="preserve"><value>The match identifier is invalid.</value></data>
+  <data name="RemoteMatch_InvalidConfiguration" xml:space="preserve"><value>The match configuration is invalid.</value></data>
+  <data name="RemoteMatch_NotFound" xml:space="preserve"><value>The match could not be found.</value></data>
+  <data name="RemoteMatch_NotWaiting" xml:space="preserve"><value>The match is no longer waiting for players.</value></data>
+  <data name="RemoteMatch_NotInProgress" xml:space="preserve"><value>The match is not in progress.</value></data>
+  <data name="RemoteMatch_MissingPlacement" xml:space="preserve"><value>The move information is missing.</value></data>
+  <data name="RemoteMatch_InvalidStateVersion" xml:space="preserve"><value>The move refers to an invalid board version.</value></data>
+  <data name="RemoteMatch_StaleStateVersion" xml:space="preserve"><value>The board has changed. The move was not applied.</value></data>
+  <data name="RemoteMatch_NotPlayersTurn" xml:space="preserve"><value>It is not your turn.</value></data>
+  <data name="RemoteMatch_SpectatingUnavailable" xml:space="preserve"><value>This match is not available for spectators.</value></data>
+  <data name="RemoteMatch_Unauthorized" xml:space="preserve"><value>You are not authorized to perform this match operation.</value></data>
+  <data name="RemoteMatch_InactiveAccount" xml:space="preserve"><value>Your account is inactive.</value></data>
+  <data name="Client_DiagnosticsUnavailableMessage" xml:space="preserve"><value>The diagnostic could not be saved. Reference: {0}.</value></data>
 </root>

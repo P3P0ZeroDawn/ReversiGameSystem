@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using ReversiGameSystem.Localization;
@@ -40,12 +41,13 @@ internal static class LanguageChangeService
         try
         {
             ClientSession session = ClientRuntime.CurrentSession;
-            string? token = session.SessionToken;
-            if (!session.IsGuest && token != null && !string.IsNullOrWhiteSpace(token))
+            string? sessionToken = session.SessionToken;
+            if (!session.IsGuest && sessionToken != null
+                && !string.IsNullOrWhiteSpace(sessionToken))
             {
                 PreferencesStatus status = await ClientRuntime.PreferencesService.ChangeLanguage(
-                    token, selectedCulture);
-                if (token != ClientRuntime.CurrentSession.SessionToken)
+                    sessionToken, selectedCulture);
+                if (sessionToken != ClientRuntime.CurrentSession.SessionToken)
                 {
                     return;
                 }
@@ -65,6 +67,10 @@ internal static class LanguageChangeService
                     ? NotAvailablePrefix : ResourcesErrorPrefix;
                 dialogs.ShowError(languageComboBox, prefix + TitleSuffix, prefix + MessageSuffix);
             }
+        }
+        catch (Exception exception) when (RemoteCall.IsDeclaredFault(exception))
+        {
+            ClientRuntime.Errors.ReportOperationFailure(exception, nameof(LanguageChangeService));
         }
         finally
         {

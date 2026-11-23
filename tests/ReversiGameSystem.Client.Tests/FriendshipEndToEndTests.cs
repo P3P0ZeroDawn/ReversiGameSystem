@@ -63,7 +63,7 @@ internal static class FriendshipEndToEndTests
         SessionClient session, string token)
     {
         // Arrange
-        AssertSingleFriend(observer.GetSnapshot(), "ReviewBeta", true);
+        AssertSingleFriend(observer.ReadFriends(), "ReviewBeta", true);
 
         // Act
         session.CloseSession(token).GetAwaiter().GetResult();
@@ -92,11 +92,11 @@ internal static class FriendshipEndToEndTests
         // Read the local snapshot only: success requires a delivered duplex notification.
         TestAssert.AreEqual(true, SpinWait.SpinUntil(() =>
         {
-            FriendSummary[] friends = observer.GetSnapshot();
+            FriendSummary[] friends = observer.ReadFriends();
             return friends.Length == 1 && friends[0].Username == "ReviewBeta"
                 && friends[0].IsOnline == online;
         }, TimeSpan.FromSeconds(10)));
-        AssertSingleFriend(observer.GetSnapshot(), "ReviewBeta", online);
+        AssertSingleFriend(observer.ReadFriends(), "ReviewBeta", online);
     }
 
     private static void AssertSingleFriend(FriendSummary[] friends, string username, bool online)
@@ -107,14 +107,24 @@ internal static class FriendshipEndToEndTests
         TestAssert.AreEqual(online, friends[0].IsOnline);
     }
 
-    private static SessionClient CreateSessionClient() => new SessionClient(
-        NullLogger<SessionClient>.Instance, () => new Proxy.SessionServiceClient(CreateBinding(),
-            new EndpointAddress("net.tcp://localhost:18091/ReversiReview/Session")));
+    private static SessionClient CreateSessionClient()
+    {
+        const int SessionPort = 18091;
+        Uri endpoint = new UriBuilder(Uri.UriSchemeNetTcp, "localhost", SessionPort,
+            "ReversiReview/Session").Uri;
+        return new SessionClient(NullLogger<SessionClient>.Instance,
+            () => new Proxy.SessionServiceClient(CreateBinding(), new EndpointAddress(endpoint)));
+    }
 
-    private static FriendshipClient CreateFriendshipClient() => new FriendshipClient(
-        NullLogger<FriendshipClient>.Instance, context => new Proxy.FriendshipServiceClient(
-            context, CreateBinding(), new EndpointAddress(
-                "net.tcp://localhost:18094/ReversiReview/Friendship")));
+    private static FriendshipClient CreateFriendshipClient()
+    {
+        const int FriendshipPort = 18094;
+        Uri endpoint = new UriBuilder(Uri.UriSchemeNetTcp, "localhost", FriendshipPort,
+            "ReversiReview/Friendship").Uri;
+        return new FriendshipClient(NullLogger<FriendshipClient>.Instance,
+            context => new Proxy.FriendshipServiceClient(context, CreateBinding(),
+                new EndpointAddress(endpoint)));
+    }
 
     private static AuthenticatedAccountSession Authenticate(
         SessionClient sessions,

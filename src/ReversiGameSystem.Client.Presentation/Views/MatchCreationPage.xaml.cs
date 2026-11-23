@@ -57,7 +57,7 @@ public partial class MatchCreationPage : Page
         else
         {
             _dialogService.ShowError(this, "MatchCreation_PersistenceErrorTitle",
-                RemoteMatchMessages.Key(status, _guestName != null));
+                RemoteMatchMessages.GetMessageResourceKey(status, _guestName != null));
         }
         IsEnabled = true;
     }

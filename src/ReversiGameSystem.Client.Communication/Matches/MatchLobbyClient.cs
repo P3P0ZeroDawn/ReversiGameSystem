@@ -12,7 +12,7 @@ namespace ReversiGameSystem.Services;
 [CallbackBehavior(UseSynchronizationContext = false, ConcurrencyMode = ConcurrencyMode.Multiple)]
 internal sealed class MatchLobbyClient : IDisposable, Proxy.IMatchLobbyServiceCallback
 {
-    private readonly string _token;
+    private readonly string _sessionToken;
     private readonly object _lobbyDataLock = new object();
     private readonly DuplexChannel<Proxy.MatchLobbyServiceClient, Proxy.IMatchLobbyService>
         _channel;
@@ -21,14 +21,15 @@ internal sealed class MatchLobbyClient : IDisposable, Proxy.IMatchLobbyServiceCa
     private AvailableMatch[] _availableMatches = Array.Empty<AvailableMatch>();
     private bool _hasLobbySubscription;
 
-    internal MatchLobbyClient(string token, ILogger<MatchLobbyClient> logger)
-        : this(token, null, logger)
+    internal MatchLobbyClient(string sessionToken, ILogger<MatchLobbyClient> logger)
+        : this(sessionToken, null, logger)
     {
     }
 
-    internal MatchLobbyClient(string token, string? endpoint, ILogger<MatchLobbyClient> logger)
+    internal MatchLobbyClient(string sessionToken, string? endpoint,
+        ILogger<MatchLobbyClient> logger)
     {
-        _token = token;
+        _sessionToken = sessionToken;
         Proxy.MatchLobbyServiceClient CreateClient()
         {
             Proxy.MatchLobbyServiceClient client;
@@ -46,7 +47,10 @@ internal sealed class MatchLobbyClient : IDisposable, Proxy.IMatchLobbyServiceCa
         }
         _channel = new DuplexChannel<Proxy.MatchLobbyServiceClient, Proxy.IMatchLobbyService>(
             CreateClient, logger);
-        _channel.ChannelCreated += () => _hasLobbySubscription = false;
+        _channel.ChannelCreated += () =>
+        {
+            _hasLobbySubscription = false;
+        };
     }
 
     internal event Action<MatchStateSnapshot>? MatchStarted;
@@ -56,7 +60,7 @@ internal sealed class MatchLobbyClient : IDisposable, Proxy.IMatchLobbyServiceCa
     {
         if (!_hasLobbySubscription)
         {
-            await client.OpenLobbyChannelAsync(_token).ConfigureAwait(false);
+            await client.OpenLobbyChannelAsync(_sessionToken).ConfigureAwait(false);
             _hasLobbySubscription = true;
         }
     }
@@ -85,7 +89,7 @@ internal sealed class MatchLobbyClient : IDisposable, Proxy.IMatchLobbyServiceCa
         {
             await OpenLobbyChannel(client).ConfigureAwait(false);
             Proxy.LobbySnapshot lobby = await client.CreateMatchAsync(
-                _token, CreateConfiguration(turnDurationSeconds))
+                _sessionToken, CreateConfiguration(turnDurationSeconds))
                 .ConfigureAwait(false);
             lock (_lobbyDataLock)
             {
@@ -102,7 +106,7 @@ internal sealed class MatchLobbyClient : IDisposable, Proxy.IMatchLobbyServiceCa
         {
             await OpenLobbyChannel(client).ConfigureAwait(false);
             Proxy.LobbySnapshot lobby = await client.InviteToMatchAsync(
-                _token, friendAccountId, CreateConfiguration(turnDurationSeconds))
+                _sessionToken, friendAccountId, CreateConfiguration(turnDurationSeconds))
                 .ConfigureAwait(false);
             lock (_lobbyDataLock)
             {
@@ -118,7 +122,7 @@ internal sealed class MatchLobbyClient : IDisposable, Proxy.IMatchLobbyServiceCa
         async Task UpdateLobby(Proxy.MatchLobbyServiceClient client)
         {
             await OpenLobbyChannel(client).ConfigureAwait(false);
-            Proxy.LobbySnapshot lobby = await client.JoinMatchAsync(_token, matchCode)
+            Proxy.LobbySnapshot lobby = await client.JoinMatchAsync(_sessionToken, matchCode)
                 .ConfigureAwait(false);
             lock (_lobbyDataLock)
             {
@@ -135,7 +139,7 @@ internal sealed class MatchLobbyClient : IDisposable, Proxy.IMatchLobbyServiceCa
         {
             await OpenLobbyChannel(client).ConfigureAwait(false);
             Proxy.LobbySnapshot lobby = await client.ChangeTurnDurationAsync(
-                _token, matchId, turnDurationSeconds)
+                _sessionToken, matchId, turnDurationSeconds)
                 .ConfigureAwait(false);
             lock (_lobbyDataLock)
             {
@@ -150,7 +154,7 @@ internal sealed class MatchLobbyClient : IDisposable, Proxy.IMatchLobbyServiceCa
         async Task LoadMatches(Proxy.MatchLobbyServiceClient client)
         {
             await OpenLobbyChannel(client).ConfigureAwait(false);
-            Proxy.AvailableMatch[] matches = await client.GetAvailableMatchesAsync(_token)
+            Proxy.AvailableMatch[] matches = await client.GetAvailableMatchesAsync(_sessionToken)
                 .ConfigureAwait(false);
             lock (_lobbyDataLock)
             {
@@ -163,7 +167,7 @@ internal sealed class MatchLobbyClient : IDisposable, Proxy.IMatchLobbyServiceCa
     internal Task<MatchStatus> CancelMatch(long matchId, CancellationToken cancellation = default)
     {
         return SendMatchOperation(
-            client => client.CancelMatchAsync(_token, matchId), cancellation);
+            client => client.CancelMatchAsync(_sessionToken, matchId), cancellation);
     }
 
     internal Task<MatchStatus> StartSystemMatch(
@@ -171,7 +175,8 @@ internal sealed class MatchLobbyClient : IDisposable, Proxy.IMatchLobbyServiceCa
     {
         async Task StartMatch(Proxy.MatchLobbyServiceClient client)
         {
-            Proxy.MatchStateSnapshot state = await client.StartSystemMatchAsync(_token, matchId)
+            Proxy.MatchStateSnapshot state = await client.StartSystemMatchAsync(
+                _sessionToken, matchId)
                 .ConfigureAwait(false);
             OnMatchStarted(state);
         }

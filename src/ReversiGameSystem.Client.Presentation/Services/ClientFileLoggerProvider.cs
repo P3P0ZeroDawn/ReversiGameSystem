@@ -11,9 +11,16 @@ internal sealed class ClientFileLoggerProvider : ILoggerProvider
     private readonly string _filePath;
     private readonly object _logFileLock = new object();
     private bool _disposed;
+    private readonly EmergencyFailureLog _emergencyLog;
 
     internal ClientFileLoggerProvider(string filePath)
+        : this(filePath, new EmergencyFailureLog())
     {
+    }
+
+    internal ClientFileLoggerProvider(string filePath, EmergencyFailureLog emergencyLog)
+    {
+        _emergencyLog = emergencyLog ?? throw new ArgumentNullException(nameof(emergencyLog));
         _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
     }
 
@@ -45,8 +52,10 @@ internal sealed class ClientFileLoggerProvider : ILoggerProvider
             catch (Exception failure) when (failure is IOException
                 or UnauthorizedAccessException or SecurityException)
             {
-                Console.Error.WriteLine(entry);
-                Console.Error.WriteLine(FailureDiagnostics.ForLogging(failure).Message);
+                if (!_emergencyLog.PersistEntry(entry, failure))
+                {
+                    throw;
+                }
             }
         }
     }

@@ -44,7 +44,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
     private bool _chatReady;
     private bool _recoveryFailed;
     private bool _muted;
-    private string _statusKey = string.Empty;
+    private string _statusMessageResourceKey = string.Empty;
 
     internal GameViewModel(GameplayClient gameplay, MatchChatClient chat, long matchId,
         bool isGuest, SynchronizationContext presentationContext)
@@ -58,6 +58,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+    internal event Action<Exception>? UnexpectedRecoveryFailure;
     public TurnCountdownViewModel Countdown { get; } = new TurnCountdownViewModel();
     public string MessageText { get; set; } = string.Empty;
     public bool IsReady { get; private set; }
@@ -193,9 +194,9 @@ internal sealed class GameViewModel : INotifyPropertyChanged
                     CultureInfo.GetCultureInfo(localization.CultureName));
                 text = string.Format(localization[PlayerMutedMessageKey], endTime);
             }
-            else if (_statusKey.Length > 0)
+            else if (_statusMessageResourceKey.Length > 0)
             {
-                text = localization[_statusKey];
+                text = localization[_statusMessageResourceKey];
             }
             else if (IsFinished && State.Conclusion?.Reason == RemoteMatchEndReason.Abandonment)
             {
@@ -204,7 +205,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
             return text;
         }
     }
-    public ChatMessage[] Messages
+    public ChatMessage[] MessageHistory
     {
         get
         {
@@ -220,7 +221,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
         }
         _active = true;
         _recoveryFailed = false;
-        _statusKey = string.Empty;
+        _statusMessageResourceKey = string.Empty;
         _gameplay.StateChanged += OnMatchStateChanged;
         _gameplay.ParticipantConnectionChanged += OnParticipantConnectionChanged;
         _gameplay.ConnectionLost += OnConnectionLost;
@@ -242,7 +243,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
         _connectionCheck?.Cancel();
         _recovery?.Cancel();
         _chatReady = false;
-        NotifyChanged();
+        NotifyPropertyChanged();
         await _recoveryTask;
     }
 
@@ -268,14 +269,15 @@ internal sealed class GameViewModel : INotifyPropertyChanged
             }
             else
             {
-                _statusKey = RemoteMatchMessages.Key(status, _isGuest);
+                _statusMessageResourceKey =
+                    RemoteMatchMessages.GetMessageResourceKey(status, _isGuest);
             }
         }
         finally
         {
             _loading = false;
             UpdateClock(DateTime.UtcNow);
-            NotifyChanged();
+            NotifyPropertyChanged();
         }
     }
 
@@ -291,8 +293,9 @@ internal sealed class GameViewModel : INotifyPropertyChanged
             status = await _chat.LoadChatHistory(_matchId, cancellation);
         }
         _chatReady = status == ChatStatus.Success;
-        _statusKey = RemoteMatchMessages.Key(status, _isGuest);
-        NotifyChanged(nameof(Messages));
+        _statusMessageResourceKey =
+                    RemoteMatchMessages.GetMessageResourceKey(status, _isGuest);
+        NotifyPropertyChanged(nameof(MessageHistory));
     }
 
     internal void UpdateClock(DateTime nowUtc)
@@ -305,14 +308,14 @@ internal sealed class GameViewModel : INotifyPropertyChanged
         if (_muted != muted)
         {
             _muted = muted;
-            NotifyChanged(nameof(IsMuted));
-            NotifyChanged(nameof(CanWriteMessage));
-            NotifyChanged(nameof(CanSendMessage));
-            NotifyChanged(nameof(StatusText));
+            NotifyPropertyChanged(nameof(IsMuted));
+            NotifyPropertyChanged(nameof(CanWriteMessage));
+            NotifyPropertyChanged(nameof(CanSendMessage));
+            NotifyPropertyChanged(nameof(StatusText));
         }
     }
 
-    internal async Task CheckConnection()
+    internal async Task CheckMatchConnection()
     {
         if (!_active || !IsReady || _loading || _placing || _sending || _leaving
             || _connectionCheck != null || IsRecovering || _recoveryFailed || IsFinished)
@@ -326,13 +329,13 @@ internal sealed class GameViewModel : INotifyPropertyChanged
             MatchStatus status = await _gameplay.LoadMatchState(_matchId, check.Token);
             if (status == MatchStatus.ServiceUnavailable)
             {
-                StartRecovery(null);
+                StartMatchRecovery(null);
                 await _recoveryTask;
             }
         }
         catch (OperationCanceledException) when (check.IsCancellationRequested)
         {
-            StartRecovery(null);
+            StartMatchRecovery(null);
             await _recoveryTask;
         }
         finally
@@ -341,7 +344,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
         }
     }
 
-    private void StartRecovery(object? state)
+    private void StartMatchRecovery(object? state)
     {
         if (_active && _recoveryTask.IsCompleted && IsReady && !IsFinished && !_recoveryFailed)
         {
@@ -351,13 +354,35 @@ internal sealed class GameViewModel : INotifyPropertyChanged
 
     private async Task RestoreMatchConnection()
     {
+        try
+        {
+            await RecoverMatchConnection();
+        }
+        catch (Exception exception)
+        {
+            _active = false;
+            _chatReady = false;
+            _recoveryFailed = false;
+            _statusMessageResourceKey = string.Empty;
+            Action<Exception>? reportFailure = UnexpectedRecoveryFailure;
+            if (reportFailure == null)
+            {
+                throw;
+            }
+            reportFailure(exception);
+        }
+    }
+
+    private async Task RecoverMatchConnection()
+    {
         using CancellationTokenSource recovery = new CancellationTokenSource(ReconnectionWindow);
         _recovery = recovery;
         _chatReady = false;
-        NotifyChanged();
         bool restored = false;
+        bool completed = false;
         try
         {
+            NotifyPropertyChanged();
             MatchStatus status = MatchStatus.ServiceUnavailable;
             while (status is MatchStatus.ServiceUnavailable or MatchStatus.MatchNotInProgress)
             {
@@ -383,17 +408,22 @@ internal sealed class GameViewModel : INotifyPropertyChanged
             {
                 await LoadChat(recovery.Token);
             }
+            completed = true;
         }
         catch (OperationCanceledException) when (recovery.IsCancellationRequested)
         {
             restored = false;
+            completed = true;
         }
         finally
         {
             _recovery = null;
-            _recoveryFailed = !restored;
-            UpdateClock(DateTime.UtcNow);
-            NotifyChanged();
+            _recoveryFailed = completed && !restored;
+            if (completed)
+            {
+                UpdateClock(DateTime.UtcNow);
+                NotifyPropertyChanged();
+            }
         }
     }
 
@@ -404,7 +434,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
             return MatchStatus.NotPlayersTurn;
         }
         _placing = true;
-        NotifyChanged();
+        NotifyPropertyChanged();
         MatchStatus status;
         try
         {
@@ -419,22 +449,23 @@ internal sealed class GameViewModel : INotifyPropertyChanged
             if (status is MatchStatus.StaleMatchStateVersion or MatchStatus.NotPlayersTurn)
             {
                 await LoadMatch();
-                _statusKey = string.Empty;
+                _statusMessageResourceKey = string.Empty;
             }
             else
             {
-                _statusKey = RemoteMatchMessages.Key(status, _isGuest);
+                _statusMessageResourceKey =
+                    RemoteMatchMessages.GetMessageResourceKey(status, _isGuest);
             }
         }
         finally
         {
             _placing = false;
-            NotifyChanged();
+            NotifyPropertyChanged();
         }
         return status;
     }
 
-    internal async Task<ChatStatus> SendMessage()
+    internal async Task<ChatStatus> SendChatMessage()
     {
         UpdateClock(DateTime.UtcNow);
         ChatStatus status = ChatStatus.Unauthorized;
@@ -456,12 +487,12 @@ internal sealed class GameViewModel : INotifyPropertyChanged
             return ChatStatus.MessageTooLong;
         }
         _sending = true;
-        NotifyChanged();
+        NotifyPropertyChanged();
         try
         {
             status = await _chat.SendChatMessage(_matchId, message, CancellationToken.None);
-            _statusKey = status == ChatStatus.PlayerMuted
-                ? string.Empty : RemoteMatchMessages.Key(status, _isGuest);
+            _statusMessageResourceKey = status == ChatStatus.PlayerMuted
+                ? string.Empty : RemoteMatchMessages.GetMessageResourceKey(status, _isGuest);
             if (status == ChatStatus.Success)
             {
                 MessageText = string.Empty;
@@ -475,7 +506,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
         {
             _sending = false;
             UpdateClock(DateTime.UtcNow);
-            NotifyChanged();
+            NotifyPropertyChanged();
         }
         return status;
     }
@@ -487,7 +518,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
             return MatchStatus.MatchNotInProgress;
         }
         _leaving = true;
-        NotifyChanged(nameof(CanLeave));
+        NotifyPropertyChanged(nameof(CanLeave));
         MatchStatus status;
         try
         {
@@ -496,18 +527,19 @@ internal sealed class GameViewModel : INotifyPropertyChanged
             {
                 await LoadMatch();
             }
-            _statusKey = RemoteMatchMessages.Key(status, _isGuest);
+            _statusMessageResourceKey =
+                    RemoteMatchMessages.GetMessageResourceKey(status, _isGuest);
         }
         finally
         {
             _leaving = false;
-            NotifyChanged(nameof(CanLeave));
-            NotifyChanged(nameof(StatusText));
+            NotifyPropertyChanged(nameof(CanLeave));
+            NotifyPropertyChanged(nameof(StatusText));
         }
         return status;
     }
 
-    internal string PlayerName(int seatNumber)
+    internal string GetPlayerDisplayName(int seatNumber)
     {
         string name = LocalizationManager.Instance[UnavailablePlayerNameKey];
         if (IsReady)
@@ -524,7 +556,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
         return name;
     }
 
-    internal ParticipantConnectionState ParticipantConnection(int seatNumber)
+    internal ParticipantConnectionState ReadParticipantConnection(int seatNumber)
     {
         return _gameplay.ReadParticipantConnection(_matchId, seatNumber);
     }
@@ -560,7 +592,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
 
     private void OnConnectionLost()
     {
-        _presentationContext.Post(StartRecovery, null);
+        _presentationContext.Post(StartMatchRecovery, null);
     }
 
     private void OnCultureChanged(object? sender, PropertyChangedEventArgs arguments)
@@ -577,7 +609,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
         if (_active)
         {
             UpdateClock(DateTime.UtcNow);
-            NotifyChanged();
+            NotifyPropertyChanged();
         }
     }
 
@@ -585,11 +617,11 @@ internal sealed class GameViewModel : INotifyPropertyChanged
     {
         if (_active)
         {
-            NotifyChanged(nameof(Messages));
+            NotifyPropertyChanged(nameof(MessageHistory));
         }
     }
 
-    private void NotifyChanged(string propertyName = "")
+    private void NotifyPropertyChanged(string propertyName = "")
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }

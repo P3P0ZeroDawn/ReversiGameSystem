@@ -43,11 +43,11 @@ internal sealed class AccountClient : IAccountClient
         AccountCreationStatus status;
         try
         {
-            Proxy.AccountRegistrationOutcome outcome = await Execute(
+            Proxy.AccountRegistrationOutcome outcome = await SendAccountOperation(
                 client => client.RegisterAccountAsync(credentials));
-            status = MapStatus(outcome.Status);
+            status = MapRegistrationStatus(outcome.Status);
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        catch (Exception exception) when (RemoteCall.IsConnectionFailure(exception))
         {
             status = AccountCreationStatus.ServiceUnavailable;
         }
@@ -70,46 +70,34 @@ internal sealed class AccountClient : IAccountClient
         return image;
     }
 
-    private static AccountCreationStatus MapStatus(Proxy.AccountRegistrationStatus status)
+    private static AccountCreationStatus MapRegistrationStatus(
+        Proxy.AccountRegistrationStatus status)
     {
-        AccountCreationStatus mappedStatus;
-        switch (status)
+        AccountCreationStatus mappedStatus = status switch
         {
-            case Proxy.AccountRegistrationStatus.Success:
-                mappedStatus = AccountCreationStatus.Success;
-                break;
-            case Proxy.AccountRegistrationStatus.UsernameUnavailable:
-                mappedStatus = AccountCreationStatus.UsernameUnavailable;
-                break;
-            case Proxy.AccountRegistrationStatus.EmailUnavailable:
-                mappedStatus = AccountCreationStatus.EmailUnavailable;
-                break;
-            case Proxy.AccountRegistrationStatus.InvalidUsername:
-                mappedStatus = AccountCreationStatus.InvalidUsername;
-                break;
-            case Proxy.AccountRegistrationStatus.InvalidEmail:
-                mappedStatus = AccountCreationStatus.InvalidEmailFormat;
-                break;
-            case Proxy.AccountRegistrationStatus.InvalidPassword:
-                mappedStatus = AccountCreationStatus.PasswordUnsupportedCharacters;
-                break;
-            case Proxy.AccountRegistrationStatus.InvalidLocale:
-                mappedStatus = AccountCreationStatus.InvalidLocale;
-                break;
-            case Proxy.AccountRegistrationStatus.InvalidProfileImage:
-                mappedStatus = AccountCreationStatus.InvalidProfileImage;
-                break;
-            default:
-                mappedStatus = AccountCreationStatus.PersistenceUnavailable;
-                break;
-        }
+            Proxy.AccountRegistrationStatus.Success => AccountCreationStatus.Success,
+            Proxy.AccountRegistrationStatus.UsernameUnavailable =>
+                AccountCreationStatus.UsernameUnavailable,
+            Proxy.AccountRegistrationStatus.EmailUnavailable =>
+                AccountCreationStatus.EmailUnavailable,
+            Proxy.AccountRegistrationStatus.InvalidUsername =>
+                AccountCreationStatus.InvalidUsername,
+            Proxy.AccountRegistrationStatus.InvalidEmail =>
+                AccountCreationStatus.InvalidEmailFormat,
+            Proxy.AccountRegistrationStatus.InvalidPassword =>
+                AccountCreationStatus.PasswordUnsupportedCharacters,
+            Proxy.AccountRegistrationStatus.InvalidLocale => AccountCreationStatus.InvalidLocale,
+            Proxy.AccountRegistrationStatus.InvalidProfileImage =>
+                AccountCreationStatus.InvalidProfileImage,
+            _ => AccountCreationStatus.PersistenceUnavailable
+        };
         return mappedStatus;
     }
 
-    private Task<TResult> Execute<TResult>(
+    private Task<TResult> SendAccountOperation<TResult>(
         Func<Proxy.AccountAccessServiceClient, Task<TResult>> operation)
     {
         Proxy.AccountAccessServiceClient client = _createClient();
-        return RemoteCall.Execute(client, () => operation(client), _logger);
+        return RemoteCall.SendServiceCall(client, () => operation(client), _logger);
     }
 }

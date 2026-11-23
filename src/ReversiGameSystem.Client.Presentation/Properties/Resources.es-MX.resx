@@ -1341,4 +1341,17 @@
   <data name="Client_FatalErrorMessage" xml:space="preserve">
     <value>Ocurrió un error inesperado. La aplicación se cerrará. Referencia: {0}.</value>
   </data>
+  <data name="RemoteMatch_InvalidMatchId" xml:space="preserve"><value>El identificador de la partida no es válido.</value></data>
+  <data name="RemoteMatch_InvalidConfiguration" xml:space="preserve"><value>La configuración de la partida no es válida.</value></data>
+  <data name="RemoteMatch_NotFound" xml:space="preserve"><value>No se encontró la partida.</value></data>
+  <data name="RemoteMatch_NotWaiting" xml:space="preserve"><value>La partida ya no está esperando jugadores.</value></data>
+  <data name="RemoteMatch_NotInProgress" xml:space="preserve"><value>La partida no está en curso.</value></data>
+  <data name="RemoteMatch_MissingPlacement" xml:space="preserve"><value>Faltan los datos de la jugada.</value></data>
+  <data name="RemoteMatch_InvalidStateVersion" xml:space="preserve"><value>La jugada hace referencia a una versión del tablero no válida.</value></data>
+  <data name="RemoteMatch_StaleStateVersion" xml:space="preserve"><value>El tablero cambió. La jugada no se aplicó.</value></data>
+  <data name="RemoteMatch_NotPlayersTurn" xml:space="preserve"><value>No es tu turno.</value></data>
+  <data name="RemoteMatch_SpectatingUnavailable" xml:space="preserve"><value>Esta partida no está disponible para observadores.</value></data>
+  <data name="RemoteMatch_Unauthorized" xml:space="preserve"><value>No tienes autorización para realizar esta operación de la partida.</value></data>
+  <data name="RemoteMatch_InactiveAccount" xml:space="preserve"><value>Tu cuenta está inactiva.</value></data>
+  <data name="Client_DiagnosticsUnavailableMessage" xml:space="preserve"><value>No se pudo guardar el diagnóstico. Referencia: {0}.</value></data>
 </root>

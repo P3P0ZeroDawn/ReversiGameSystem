@@ -21,6 +21,7 @@ namespace ReversiGameSystem.Views;
 
 public partial class GamePage : Page
 {
+    private const string RecoveryOperation = "GameplayConnectionRecovery";
     private const int ClockRefreshSeconds = 1;
     private const int ConnectionCheckSeconds = 5;
     private const char BlackCell = 'B';
@@ -51,8 +52,6 @@ public partial class GamePage : Page
     private const string GameTitleKey = "Game_Title";
     private const string GameVictoryMessageKey = "Game_VictoryMessage";
     private const string GameVictoryTitleKey = "Game_VictoryTitle";
-    private const string InstructionsLoadingErrorMessageKey = "Instructions_LoadingErrorMessage";
-    private const string InstructionsLoadingErrorTitleKey = "Instructions_LoadingErrorTitle";
     private const string MatchHistoryBackButtonKey = "MatchHistory_BackButton";
     private const string RemoteMatchCloseViewKey = "RemoteMatch_CloseView";
     private const string RemoteMatchMovesUnavailableKey = "RemoteMatch_MovesUnavailable";
@@ -78,6 +77,7 @@ public partial class GamePage : Page
         _guestName = guestName;
         _viewModel = new GameViewModel(gameplay, chat, matchId, guestName != null,
             new DispatcherSynchronizationContext(Dispatcher));
+        _viewModel.UnexpectedRecoveryFailure += OnUnexpectedGameplayFailure;
         InitializeComponent();
         chatMessageTextBox.MaxLength = ChatStore.MaximumMessageLength;
         DataContext = _viewModel;
@@ -111,6 +111,19 @@ public partial class GamePage : Page
         await _viewModel.DeactivateMatch();
     }
 
+    private static void OnUnexpectedGameplayFailure(Exception exception)
+    {
+        if (Application.Current is App application)
+        {
+            application.ReportBackgroundFailure(exception, RecoveryOperation);
+        }
+        else
+        {
+            throw new InvalidOperationException("The client failure boundary is unavailable.",
+                exception);
+        }
+    }
+
     private void OnClockTick(object? sender, EventArgs arguments)
     {
         _viewModel.UpdateClock(DateTime.UtcNow);
@@ -118,7 +131,7 @@ public partial class GamePage : Page
 
     private async void OnConnectionCheckTick(object? sender, EventArgs arguments)
     {
-        await _viewModel.CheckConnection();
+        await _viewModel.CheckMatchConnection();
     }
 
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs arguments)
@@ -132,7 +145,7 @@ public partial class GamePage : Page
             RenderMatch();
             RenderMessages();
         }
-        else if (arguments.PropertyName == nameof(GameViewModel.Messages))
+        else if (arguments.PropertyName == nameof(GameViewModel.MessageHistory))
         {
             RenderMessages();
         }
@@ -147,15 +160,15 @@ public partial class GamePage : Page
         }
         MatchStateSnapshot state = _viewModel.State;
         LocalizationManager localization = LocalizationManager.Instance;
-        creatorNameTextBlock.Text = _viewModel.PlayerName(GameViewModel.CreatorSeat);
-        opponentNameTextBlock.Text = _viewModel.PlayerName(GameViewModel.OpponentSeat);
+        creatorNameTextBlock.Text = _viewModel.GetPlayerDisplayName(GameViewModel.CreatorSeat);
+        opponentNameTextBlock.Text = _viewModel.GetPlayerDisplayName(GameViewModel.OpponentSeat);
         creatorScoreTextBlock.Text = string.Format(
             localization[GameScoreFormatKey], state.BlackPieceCount);
         opponentScoreTextBlock.Text = string.Format(
             localization[GameScoreFormatKey], state.WhitePieceCount);
         turnTextBlock.Text = state.CurrentTurnSeatNumber.HasValue
             ? string.Format(localization[GameCurrentTurnFormatKey],
-                _viewModel.PlayerName(state.CurrentTurnSeatNumber.Value))
+                _viewModel.GetPlayerDisplayName(state.CurrentTurnSeatNumber.Value))
             : localization[GameMatchFinishedStatusKey];
         string[] rows = new string[ReversiBoard.Size];
         for (int row = 0; row < rows.Length; row++)
@@ -202,7 +215,7 @@ public partial class GamePage : Page
         bool isSystem = _viewModel.Information.Participants.Any(
             player => player.SeatNumber == seatNumber && player.IsSystem);
         textBlock.Visibility = isSystem ? Visibility.Hidden : Visibility.Visible;
-        ParticipantConnectionState state = _viewModel.ParticipantConnection(seatNumber);
+        ParticipantConnectionState state = _viewModel.ReadParticipantConnection(seatNumber);
         string resourceKey = GamePresenceUnknownKey;
         Brush foreground = Brushes.Gray;
         if (state == ParticipantConnectionState.Connected)
@@ -225,7 +238,8 @@ public partial class GamePage : Page
         if (IsLoaded && status != MatchStatus.Success && status != MatchStatus.ServiceUnavailable
             && status != MatchStatus.StaleMatchStateVersion && status != MatchStatus.NotPlayersTurn)
         {
-            _dialogs.ShowWarning(this, GameTitleKey, RemoteMatchMessages.Key(status));
+            _dialogs.ShowWarning(this, GameTitleKey,
+                RemoteMatchMessages.GetMessageResourceKey(status));
         }
     }
 
@@ -236,11 +250,11 @@ public partial class GamePage : Page
             return;
         }
         chatMessagesListBox.Items.Clear();
-        foreach (ChatMessage message in _viewModel.Messages)
+        foreach (ChatMessage message in _viewModel.MessageHistory)
         {
             chatMessagesListBox.Items.Add(string.Format(
                 LocalizationManager.Instance[ChatMessageFormatKey],
-                _viewModel.PlayerName(message.SenderSeatNumber), message.Content));
+                _viewModel.GetPlayerDisplayName(message.SenderSeatNumber), message.Content));
         }
         if (chatMessagesListBox.Items.Count == 0)
         {
@@ -260,7 +274,7 @@ public partial class GamePage : Page
 
     private async void OnSendMessageClick(object sender, RoutedEventArgs arguments)
     {
-        await SendMessage();
+        await SendChatMessage();
     }
 
     private async void OnChatMessageKeyDown(object sender, KeyEventArgs arguments)
@@ -268,11 +282,11 @@ public partial class GamePage : Page
         if (arguments.Key == Key.Enter)
         {
             arguments.Handled = true;
-            await SendMessage();
+            await SendChatMessage();
         }
     }
 
-    private async Task SendMessage()
+    private async Task SendChatMessage()
     {
         if (!_viewModel.CanSendMessage)
         {
@@ -282,7 +296,7 @@ public partial class GamePage : Page
         {
             chatMessageTextBox.Focus();
         }
-        ChatStatus status = await _viewModel.SendMessage();
+        ChatStatus status = await _viewModel.SendChatMessage();
         if (!IsLoaded || status == ChatStatus.Success || status == ChatStatus.ServiceUnavailable)
         {
             return;
@@ -296,7 +310,8 @@ public partial class GamePage : Page
         }
         else
         {
-            _dialogs.ShowError(this, GameChatTitleKey, RemoteMatchMessages.Key(status));
+            _dialogs.ShowError(this, GameChatTitleKey,
+                RemoteMatchMessages.GetMessageResourceKey(status));
         }
     }
 
@@ -322,7 +337,8 @@ public partial class GamePage : Page
         }
     }
 
-    private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs arguments)
+    private async void OnLanguageSelectionChanged(
+        object sender, SelectionChangedEventArgs arguments)
     {
         await LanguageChangeService.ConfirmSelection((ComboBox)sender);
     }
@@ -348,7 +364,10 @@ public partial class GamePage : Page
                 ? GameInactivityResultMessageKey : GameVictoryMessageKey;
             title = conclusion.Reason == RemoteMatchEndReason.Inactivity
                 ? GameMatchResultTitleKey : GameVictoryTitleKey;
-            arguments = new object[] { _viewModel.PlayerName(conclusion.WinnerSeatNumber.Value) };
+            arguments = new object[]
+                {
+                    _viewModel.GetPlayerDisplayName(conclusion.WinnerSeatNumber.Value)
+                };
         }
         _dialogs.ShowInformation(this, title, message, arguments);
         NavigateToMenu();
@@ -374,7 +393,7 @@ public partial class GamePage : Page
             confirmKey = GameLeaveMatchButtonKey;
             int opponent = _viewModel.Information.AssignedSeatNumber == GameViewModel.CreatorSeat
                 ? GameViewModel.OpponentSeat : GameViewModel.CreatorSeat;
-            messageArguments = new object[] { _viewModel.PlayerName(opponent) };
+            messageArguments = new object[] { _viewModel.GetPlayerDisplayName(opponent) };
         }
         ConfirmationDialogOptions options = new ConfirmationDialogOptions(
             GameLeaveConfirmationTitleKey, messageKey, confirmKey, GameContinueMatchButtonKey)
@@ -400,7 +419,7 @@ public partial class GamePage : Page
             && status != MatchStatus.MatchNotInProgress)
         {
             _dialogs.ShowError(this, AbandonMatchServerConnectionFailedTitleKey,
-                RemoteMatchMessages.Key(status));
+                RemoteMatchMessages.GetMessageResourceKey(status));
         }
     }
 

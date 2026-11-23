@@ -151,7 +151,7 @@ public partial class WaitingForOpponentPage : Page
         _dialogs.ShowError(
             this,
             ServerConnectionFailedTitleKey,
-            RemoteMatchMessages.Key(failure, _guestName != null));
+            RemoteMatchMessages.GetMessageResourceKey(failure, _guestName != null));
         ReturnToMenu();
     }
 
@@ -186,7 +186,7 @@ public partial class WaitingForOpponentPage : Page
             if (status != MatchStatus.Success && IsLoaded)
             {
                 _dialogs.ShowError(this, ServerConnectionFailedTitleKey,
-                    RemoteMatchMessages.Key(status, _guestName != null));
+                    RemoteMatchMessages.GetMessageResourceKey(status, _guestName != null));
             }
         }
         finally
@@ -224,7 +224,7 @@ public partial class WaitingForOpponentPage : Page
         _dialogs.ShowError(
             this,
             "MatchSettings_PersistenceErrorTitle",
-            RemoteMatchMessages.Key(status, _guestName != null));
+            RemoteMatchMessages.GetMessageResourceKey(status, _guestName != null));
         if (status == MatchStatus.MatchNotWaiting)
         {
             ReturnToMenu();
@@ -242,7 +242,7 @@ public partial class WaitingForOpponentPage : Page
         else
         {
             _dialogs.ShowError(this, "JoinMatch_PersistenceErrorTitle",
-                RemoteMatchMessages.Key(status, _guestName != null));
+                RemoteMatchMessages.GetMessageResourceKey(status, _guestName != null));
         }
         IsEnabled = true;
     }
@@ -254,7 +254,8 @@ public partial class WaitingForOpponentPage : Page
             return;
         }
         _navigated = true;
-        NavigationService?.Navigate(_guestName == null ? new MainMenuPage() : new MainMenuPage(_guestName));
+        NavigationService?.Navigate(_guestName == null
+            ? new MainMenuPage() : new MainMenuPage(_guestName));
     }
     private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs args)
     {

@@ -11,21 +11,23 @@ namespace ReversiGameSystem.Services;
 internal sealed class FriendshipClient : IDisposable
 {
     private const int RequestConcurrencyLimit = 1;
+    private const string CorrelationHeaderName = "CorrelationId";
+    private const string CorrelationHeaderNamespace = "urn:reversi:diagnostics:v1";
     private readonly ILogger<FriendshipClient> _logger;
     private readonly Func<InstanceContext, Proxy.FriendshipServiceClient> _createClient;
     private readonly SemaphoreSlim _requests = new SemaphoreSlim(
         RequestConcurrencyLimit,
         RequestConcurrencyLimit);
-    private readonly object _sync = new object();
+    private readonly object _friendshipChannelLock = new object();
     private readonly FriendshipSnapshot _snapshot = new FriendshipSnapshot();
     private Proxy.FriendshipServiceClient? _client;
-    private string? _token;
+    private string? _sessionToken;
     private int _generation;
     private bool _connected;
     private bool _disposed;
 
     internal FriendshipClient(ILogger<FriendshipClient> logger)
-        : this(logger, context => ServerConnectionFactory.CreateFriendshipClient(context))
+        : this(logger, ServerConnectionFactory.CreateFriendshipClient)
     {
     }
 
@@ -43,34 +45,36 @@ internal sealed class FriendshipClient : IDisposable
     {
         get
         {
-            lock (_sync)
+            lock (_friendshipChannelLock)
             {
                 return _connected && _client?.State == CommunicationState.Opened;
             }
         }
     }
 
-    internal FriendSummary[] GetSnapshot()
+    internal FriendSummary[] ReadFriends()
     {
         return _snapshot.Read();
     }
 
-    internal async Task<FriendshipResult> GetFriends(string token)
+    internal async Task<FriendshipResult> GetFriends(string sessionToken)
     {
-        if (string.IsNullOrWhiteSpace(token))
+        if (string.IsNullOrWhiteSpace(sessionToken))
         {
             return new FriendshipResult(
                 FriendshipStatus.InvalidSession, Array.Empty<FriendSummary>());
         }
+        string correlationId = Guid.NewGuid().ToString("D");
         await _requests.WaitAsync().ConfigureAwait(false);
         try
         {
-            FriendSummary[] friends = await Refresh(token).ConfigureAwait(false);
+            FriendSummary[] friends = await RefreshFriends(sessionToken, correlationId)
+                .ConfigureAwait(false);
             return new FriendshipResult(FriendshipStatus.Success, friends);
         }
         catch (FaultException<Proxy.SessionFault>)
         {
-            lock (_sync)
+            lock (_friendshipChannelLock)
             {
                 ReleaseChannel();
                 _snapshot.Clear();
@@ -78,8 +82,11 @@ internal sealed class FriendshipClient : IDisposable
             return new FriendshipResult(
                 FriendshipStatus.InvalidSession, Array.Empty<FriendSummary>());
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        catch (Exception exception) when (RemoteCall.IsConnectionFailure(exception))
         {
+            _logger.LogWarning(exception,
+                "The friendship presence request failed. CorrelationId: {CorrelationId}",
+                correlationId);
             return new FriendshipResult(
                 FriendshipStatus.ServiceUnavailable, Array.Empty<FriendSummary>());
         }
@@ -89,28 +96,28 @@ internal sealed class FriendshipClient : IDisposable
         }
     }
 
-    private async Task<FriendSummary[]> Refresh(string token)
+    private async Task<FriendSummary[]> RefreshFriends(string sessionToken, string correlationId)
     {
-        string correlationId = Guid.NewGuid().ToString("D");
         try
         {
-            Proxy.FriendshipServiceClient client = PrepareClient(token);
+            Proxy.FriendshipServiceClient client = PrepareClient(sessionToken);
             _snapshot.BeginRefresh();
             if (!IsConnected)
             {
-                await Invoke(client, correlationId, async () =>
+                await StartCorrelatedRequest(client, correlationId, async () =>
                 {
-                    await client.OpenFriendshipChannelAsync(token).ConfigureAwait(false);
+                    await client.OpenFriendshipChannelAsync(sessionToken).ConfigureAwait(false);
                     return true;
                 }).ConfigureAwait(false);
             }
-            Proxy.FriendSummary[] friends = await Invoke(client, correlationId,
-                () => client.GetFriendsAsync(token)).ConfigureAwait(false);
-            lock (_sync)
+            Proxy.FriendSummary[] friends = await StartCorrelatedRequest(client, correlationId,
+                () => client.GetFriendsAsync(sessionToken)).ConfigureAwait(false);
+            lock (_friendshipChannelLock)
             {
                 if (!ReferenceEquals(_client, client) || client.State != CommunicationState.Opened)
                 {
-                    throw new CommunicationException("The friendship channel was lost during refresh.");
+                    throw new CommunicationException(
+                        "The friendship channel was lost during refresh.");
                 }
                 _snapshot.CompleteRefresh(friends);
                 _connected = true;
@@ -118,12 +125,10 @@ internal sealed class FriendshipClient : IDisposable
             FriendsChanged?.Invoke();
             return _snapshot.Read();
         }
-        catch (Exception exception) when (RemoteCall.IsExpectedFailure(exception))
+        catch (Exception exception) when (RemoteCall.IsConnectionFailure(exception))
         {
             _snapshot.CancelRefresh();
-            _logger.LogWarning(exception,
-                "The friendship presence request failed. CorrelationId: {CorrelationId}", correlationId);
-            lock (_sync)
+            lock (_friendshipChannelLock)
             {
                 ReleaseChannel();
             }
@@ -132,13 +137,14 @@ internal sealed class FriendshipClient : IDisposable
         }
     }
 
-    private static Task<TResult> Invoke<TResult>(Proxy.FriendshipServiceClient client,
+    private static Task<TResult> StartCorrelatedRequest<TResult>(
+        Proxy.FriendshipServiceClient client,
         string correlationId, Func<Task<TResult>> operation)
     {
         using (OperationContextScope scope = new OperationContextScope(client.InnerChannel))
         {
             OperationContext.Current.OutgoingMessageHeaders.Add(MessageHeader.CreateHeader(
-                "CorrelationId", "urn:reversi:diagnostics:v1", correlationId));
+                CorrelationHeaderName, CorrelationHeaderNamespace, correlationId));
             return operation();
         }
     }
@@ -153,7 +159,7 @@ internal sealed class FriendshipClient : IDisposable
         _requests.Wait();
         try
         {
-            lock (_sync)
+            lock (_friendshipChannelLock)
             {
                 _disposed |= dispose;
                 ReleaseChannel();
@@ -171,17 +177,17 @@ internal sealed class FriendshipClient : IDisposable
         Close(true);
     }
 
-    private Proxy.FriendshipServiceClient PrepareClient(string token)
+    private Proxy.FriendshipServiceClient PrepareClient(string sessionToken)
     {
-        lock (_sync)
+        lock (_friendshipChannelLock)
         {
             if (_disposed)
             {
                 throw new ObjectDisposedException(nameof(FriendshipClient));
             }
-            if (_token != token || _client?.State != CommunicationState.Opened)
+            if (_sessionToken != sessionToken || _client?.State != CommunicationState.Opened)
             {
-                bool changedSession = _token != token;
+                bool changedSession = _sessionToken != sessionToken;
                 ReleaseChannel();
                 if (changedSession)
                 {
@@ -189,21 +195,21 @@ internal sealed class FriendshipClient : IDisposable
                 }
                 int generation = _generation;
                 FriendshipCallback callback = new FriendshipCallback(
-                    (id, change) => OnChanged(generation, id, change));
+                    (accountId, change) => OnFriendChanged(generation, accountId, change));
                 _client = _createClient(new InstanceContext(callback));
                 _client.Endpoint.EndpointBehaviors.Add(new CallbackErrorBehavior());
                 _client.InnerChannel.Faulted += OnChannelLost;
                 _client.InnerChannel.Closed += OnChannelLost;
-                _token = token;
+                _sessionToken = sessionToken;
             }
             return _client ?? throw new InvalidOperationException(
                 "The friendship channel was not created.");
         }
     }
 
-    private void OnChanged(int generation, long accountId, FriendChange change)
+    private void OnFriendChanged(int generation, long accountId, FriendChange change)
     {
-        lock (_sync)
+        lock (_friendshipChannelLock)
         {
             if (generation != _generation)
             {
@@ -216,7 +222,7 @@ internal sealed class FriendshipClient : IDisposable
 
     private void OnChannelLost(object sender, EventArgs args)
     {
-        lock (_sync)
+        lock (_friendshipChannelLock)
         {
             if (_client == null || !ReferenceEquals(sender, _client.InnerChannel))
             {
@@ -231,7 +237,7 @@ internal sealed class FriendshipClient : IDisposable
     {
         _generation++;
         _connected = false;
-        _token = null;
+        _sessionToken = null;
         if (_client != null)
         {
             _client.InnerChannel.Faulted -= OnChannelLost;
