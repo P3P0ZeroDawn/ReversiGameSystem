@@ -5,7 +5,6 @@ using ReversiGameSystem.Server.Domain.Chat;
 
 namespace ReversiGameSystem.Server.Application.Chat;
 
-/// <summary>Coordinates authorization, validation, moderation, and chat history.</summary>
 public class ChatApplicationService
 {
     private const int MaximumMessagesPerWindow = 2;
@@ -14,11 +13,6 @@ public class ChatApplicationService
     private readonly IChatRepository _chat;
     private readonly IUtcClock _clock;
 
-    /// <summary>Initializes the chat application service.</summary>
-    /// <param name="sessions">The in-memory active session store.</param>
-    /// <param name="chat">The durable chat repository.</param>
-    /// <param name="clock">The source of current UTC time.</param>
-    /// <exception cref="ArgumentNullException">A dependency is absent.</exception>
     public ChatApplicationService(
         SessionStore sessions,
         IChatRepository chat,
@@ -29,10 +23,6 @@ public class ChatApplicationService
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
     }
 
-    /// <summary>Evaluates whether a session may access chat for a match.</summary>
-    /// <param name="sessionToken">The authenticated session token.</param>
-    /// <param name="matchId">The durable match identifier.</param>
-    /// <returns>The expected access status.</returns>
     public ChatStatus EvaluateParticipantAccess(string sessionToken, long matchId)
     {
         SessionResult<AuthenticatedSession> session =
@@ -52,10 +42,6 @@ public class ChatApplicationService
         return status;
     }
 
-    /// <summary>Opens authorized chat access and reports an active account mute.</summary>
-    /// <param name="sessionToken">The authenticated session token.</param>
-    /// <param name="matchId">The durable match identifier.</param>
-    /// <returns>The expected access result.</returns>
     public ChatChannelAccess PrepareChatChannel(string sessionToken, long matchId)
     {
         SessionResult<AuthenticatedSession> session =
@@ -75,11 +61,6 @@ public class ChatApplicationService
             _clock.UtcNow);
     }
 
-    /// <summary>Validates and durably processes one participant message.</summary>
-    /// <param name="sessionToken">The authenticated session token.</param>
-    /// <param name="matchId">The durable match identifier.</param>
-    /// <param name="content">The proposed message content.</param>
-    /// <returns>The expected message result.</returns>
     public ChatMessageSubmission SubmitChatMessage(
         string sessionToken,
         long matchId,
@@ -114,10 +95,6 @@ public class ChatApplicationService
             MessageRateWindow);
     }
 
-    /// <summary>Loads the authorized durable conversation in message order.</summary>
-    /// <param name="sessionToken">The authenticated session token.</param>
-    /// <param name="matchId">The durable match identifier.</param>
-    /// <returns>The expected history result.</returns>
     public ChatHistory LoadChatHistory(string sessionToken, long matchId)
     {
         SessionResult<AuthenticatedSession> session =
@@ -134,11 +111,6 @@ public class ChatApplicationService
         return _chat.LoadMessageHistory(session.Value.AccountId, matchId);
     }
 
-    /// <summary>Checks whether a channel belongs to the muted account and match.</summary>
-    /// <param name="mutedSessionToken">The session that caused the mute.</param>
-    /// <param name="recipientSessionToken">The candidate callback session.</param>
-    /// <param name="matchId">The candidate callback match.</param>
-    /// <returns>True when the callback may receive the mute.</returns>
     public bool CanReceiveMuteNotification(
         string mutedSessionToken,
         string recipientSessionToken,

@@ -16,9 +16,6 @@ using PersistentMatchParticipant = ReversiGameSystem.Server.Persistence.Model.Ma
 
 namespace ReversiGameSystem.Server.Persistence.Matches;
 
-/// <summary>
-/// Persists atomic human lobby transitions using transaction-owned database locks.
-/// </summary>
 public sealed class MatchRepository : IMatchRepository, IGameplayRepository
 {
     private const string SystemParticipantType = "SYSTEM";
@@ -82,7 +79,6 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         return new MatchResult<Match>(started);
     }
 
-    /// <inheritdoc />
     public MatchStatus EvaluateLobbyAccess(long accountId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
@@ -94,13 +90,6 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         return MatchStatus.Success;
     }
 
-    /// <summary>
-    /// Cancels orphaned waiting lobbies before the single authoritative host accepts callers.
-    /// </summary>
-    /// <returns>The number of waiting lobbies closed during startup.</returns>
-    /// <remarks>
-    /// Startup cannot recover the creating sessions, which exist only in server memory.
-    /// </remarks>
     public int CancelAbandonedWaitingMatches()
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
@@ -114,7 +103,6 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         return cancelled;
     }
 
-    /// <summary>Creates the waiting lobby and its creator seat atomically.</summary>
     public MatchResult<Match> CreateMatch(
         AuthenticatedSession player,
         MatchSettings settings,
@@ -151,7 +139,6 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         return new MatchResult<Match>(result);
     }
 
-    /// <inheritdoc />
     public MatchResult<MatchInvitationPreparation> PreparePrivateInvitation(
         AuthenticatedSession player,
         long friendAccountId,
@@ -221,7 +208,6 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         return new MatchResult<MatchInvitationPreparation>(preparation);
     }
 
-    /// <inheritdoc />
     public MatchResult<Match> MarkInvitationDelivered(long accountId, long matchId, DateTime now)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
@@ -279,7 +265,6 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         return new MatchResult<Match>(result);
     }
 
-    /// <summary>Lists joinable waiting lobbies belonging to other players.</summary>
     public MatchResult<Match[]> GetAvailableMatches(long accountId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
@@ -306,7 +291,6 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         return new MatchResult<Match[]>(matches);
     }
 
-    /// <summary>Occupies the second seat and starts the waiting match atomically.</summary>
     public MatchResult<Match> JoinMatch(AuthenticatedSession player, string code, DateTime now)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
@@ -368,7 +352,6 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         return new MatchResult<Match>(result);
     }
 
-    /// <inheritdoc />
     public MatchStatus ValidateGuestJoin(string code)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
@@ -389,7 +372,6 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         return MatchStatus.Unauthorized;
     }
 
-    /// <summary>Loads confirmed match data for an authorized participant.</summary>
     public MatchResult<Match> LoadParticipantMatch(long accountId, long matchId)
     {
         return LoadMatch(accountId, matchId);
@@ -638,7 +620,6 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         return resultCode;
     }
 
-    /// <summary>Changes the duration only while the creator still owns a waiting lobby.</summary>
     public MatchResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
@@ -679,7 +660,6 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         return new MatchResult<Match>(result);
     }
 
-    /// <summary>Cancels a waiting lobby owned by the requesting account.</summary>
     public MatchStatus CancelMatch(long accountId, long matchId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
@@ -751,7 +731,6 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
             });
     }
 
-    /// <inheritdoc />
     public MatchResult<Match[]> LoadMatchHistory(long accountId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
@@ -778,7 +757,6 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         return new MatchResult<Match[]>(results.ToArray());
     }
 
-    /// <inheritdoc />
     public MatchResult<Match> LoadMatchForObservation(long accountId, long matchId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();

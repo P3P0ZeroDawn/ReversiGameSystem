@@ -109,11 +109,6 @@ public sealed class PlayerProfileApplicationService
         return _profiles.ChangeUsername(accountId, normalized);
     }
 
-    /// <summary>Stores and associates a validated image with the caller's profile.</summary>
-    /// <param name="sessionToken">The caller's authenticated session token.</param>
-    /// <param name="image">The proposed image content and media type.</param>
-    /// <returns>The expected modification status.</returns>
-    /// <exception cref="AggregateException">Association and cleanup both failed.</exception>
     public ProfileStatus UpdateImage(
         string sessionToken,
         ProfileImageData? image)

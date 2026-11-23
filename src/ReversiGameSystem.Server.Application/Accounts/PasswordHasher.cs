@@ -4,9 +4,6 @@ using System.Text;
 
 namespace ReversiGameSystem.Server.Application.Accounts;
 
-/// <summary>
-/// Hashes and verifies account passwords using PBKDF2 with SHA-256.
-/// </summary>
 public static class PasswordHasher
 {
     private const string Algorithm = "PBKDF2-SHA256";
@@ -15,12 +12,6 @@ public static class PasswordHasher
     private const int SaltSize = 16;
     private const int HashSize = 32;
 
-    /// <summary>
-    /// Generates a salted PBKDF2-SHA256 hash for the supplied password.
-    /// </summary>
-    /// <param name="password">The plaintext password to hash.</param>
-    /// <returns>The encoded hash containing algorithm, iterations, salt, and digest.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="password"/> is null.</exception>
     public static string Hash(string password)
     {
         if (password == null)
@@ -44,12 +35,6 @@ public static class PasswordHasher
         return encodedHash;
     }
 
-    /// <summary>
-    /// Verifies a plaintext password against a stored PBKDF2-SHA256 hash.
-    /// </summary>
-    /// <param name="password">The candidate plaintext password.</param>
-    /// <param name="encodedHash">The stored encoded password hash.</param>
-    /// <returns><c>true</c> if the password matches the stored hash; otherwise, <c>false</c>.</returns>
     public static bool Verify(string? password, string encodedHash)
     {
         if (password == null || string.IsNullOrWhiteSpace(encodedHash))

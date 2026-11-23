@@ -5,13 +5,11 @@ using ReversiGameSystem.Server.Persistence.Model;
 
 namespace ReversiGameSystem.Server.Persistence.Friendships;
 
-/// <summary>Reads public friendships without tracking private account entities.</summary>
 public sealed class FriendRepository : IFriendshipRepository
 {
     private const string ActiveStatus = "ACTIVE";
     private const string AcceptedStatus = "ACCEPTED";
 
-    /// <inheritdoc />
     public bool IsAccountActive(long accountId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
@@ -19,7 +17,6 @@ public sealed class FriendRepository : IFriendshipRepository
             account.accountId == accountId && account.statusCode == ActiveStatus);
     }
 
-    /// <inheritdoc />
     public FriendAccount[] GetFriends(long accountId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
@@ -47,7 +44,6 @@ public sealed class FriendRepository : IFriendshipRepository
             .ToArray();
     }
 
-    /// <inheritdoc />
     public bool AreFriends(long accountId, long friendAccountId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
@@ -65,7 +61,6 @@ public sealed class FriendRepository : IFriendshipRepository
                 select relationship).Any();
     }
 
-    /// <inheritdoc />
     public long[] ReadConfirmedFriendIds(long accountId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();

@@ -5,16 +5,12 @@ using ReversiGameSystem.Server.Persistence.Model;
 
 namespace ReversiGameSystem.Server.Persistence.Leaderboards;
 
-/// <summary>
-/// Retrieves the persisted player statistics required by the global leaderboard.
-/// </summary>
 public sealed class LeaderboardRepository : ILeaderboardRepository
 {
     private const string ActiveAccountStatusCode = "ACTIVE";
     private const string FinishedMatchStatusCode = "FINISHED";
     private const string WinResultCode = "WIN";
 
-    /// <inheritdoc />
     public IReadOnlyList<LeaderboardPlayer> GetPlayers()
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();

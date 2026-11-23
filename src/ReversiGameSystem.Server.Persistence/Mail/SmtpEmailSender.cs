@@ -7,9 +7,6 @@ using ReversiGameSystem.Server.Application.Common;
 
 namespace ReversiGameSystem.Server.Persistence.Mail;
 
-/// <summary>
-/// Delivers outgoing email messages through the configured SMTP transport.
-/// </summary>
 public sealed class SmtpEmailSender : IEmailSender
 {
     private const int DeliveryTimeoutMilliseconds = 5000;
@@ -18,19 +15,11 @@ public sealed class SmtpEmailSender : IEmailSender
         new SemaphoreSlim(MaximumConcurrentDeliveries);
     private readonly MailSettings _settings;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SmtpEmailSender"/> class.
-    /// </summary>
-    /// <param name="settings">The validated SMTP delivery settings.</param>
-    /// <exception cref="ArgumentNullException">
-    /// <paramref name="settings"/> is null.
-    /// </exception>
     public SmtpEmailSender(MailSettings settings)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
     }
 
-    /// <inheritdoc />
     public void Send(EmailMessage message)
     {
         if (message == null)

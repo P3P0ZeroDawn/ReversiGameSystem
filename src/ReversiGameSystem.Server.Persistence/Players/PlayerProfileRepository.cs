@@ -10,7 +10,6 @@ using ReversiGameSystem.Server.Persistence.Model;
 
 namespace ReversiGameSystem.Server.Persistence.Players;
 
-/// <summary>Loads active public profiles and their finished-match totals.</summary>
 public sealed class PlayerProfileRepository : IPlayerProfileRepository
 {
     private const string ActiveAccountStatusCode = "ACTIVE";
@@ -19,7 +18,6 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
     private const string LossResultCode = "LOSS";
     private const string DrawResultCode = "DRAW";
 
-    /// <inheritdoc />
     public ProfileResult<PlayerProfile> GetProfile(long accountId)
     {
         if (accountId <= 0)
@@ -33,7 +31,6 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
         }
     }
 
-    /// <inheritdoc />
     public ProfileResult<string> GetProfileImageReference(long accountId)
     {
         if (accountId <= 0)
@@ -61,7 +58,6 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
         }
     }
 
-    /// <inheritdoc />
     public bool IsActive(long accountId)
     {
         if (accountId <= 0)
@@ -76,7 +72,6 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
         }
     }
 
-    /// <inheritdoc />
     public ProfileStatus ChangeUsername(
         long accountId,
         string username)
@@ -123,7 +118,6 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
         return updateStatus;
     }
 
-    /// <inheritdoc />
     public ProfileStatus SetProfileImage(
         long accountId,
         string imageReference)

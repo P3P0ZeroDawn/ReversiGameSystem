@@ -10,7 +10,6 @@ using PersistentMatchParticipant = ReversiGameSystem.Server.Persistence.Model.Ma
 
 namespace ReversiGameSystem.Server.Persistence.Matches;
 
-/// <summary>Transaction-scoped database coordination shared by match and chat stores.</summary>
 internal static class MatchDatabase
 {
     private const string ManualMoveSourceCode = "MANUAL";

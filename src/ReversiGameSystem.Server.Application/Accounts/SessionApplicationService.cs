@@ -6,9 +6,6 @@ using ReversiGameSystem.Server.Domain.Accounts;
 
 namespace ReversiGameSystem.Server.Application.Accounts;
 
-/// <summary>
-/// Coordinates verified login, guest access, and session revocation.
-/// </summary>
 public sealed class SessionApplicationService
 {
     private const string ActiveStatusCode = "ACTIVE";
@@ -20,13 +17,6 @@ public sealed class SessionApplicationService
     private readonly VerificationCodeService _verificationCodes;
     private readonly SessionStore _sessions;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SessionApplicationService"/> class.
-    /// </summary>
-    /// <param name="accounts">The authoritative account repository.</param>
-    /// <param name="verificationCodes">The durable verification workflow.</param>
-    /// <param name="sessions">The in-memory active session store.</param>
-    /// <exception cref="ArgumentNullException">A required dependency is absent.</exception>
     public SessionApplicationService(
         IAccountRepository accounts,
         VerificationCodeService verificationCodes,
@@ -38,12 +28,6 @@ public sealed class SessionApplicationService
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
     }
 
-    /// <summary>
-    /// Validates credentials and sends a single-use login verification code.
-    /// </summary>
-    /// <param name="loginIdentifier">The account username or email address.</param>
-    /// <param name="password">The account password.</param>
-    /// <returns>The code expiration instant or a declared failure status.</returns>
     public SessionResult<DateTime> RequestLoginCode(
         string loginIdentifier,
         string password)
@@ -62,12 +46,6 @@ public sealed class SessionApplicationService
         return new SessionResult<DateTime>(expiresAtUtc);
     }
 
-    /// <summary>
-    /// Consumes a pending login code and creates an authenticated session.
-    /// </summary>
-    /// <param name="loginIdentifier">The account username or email address.</param>
-    /// <param name="verificationCode">The verification code delivered to the account owner.</param>
-    /// <returns>The created authenticated session or a declared failure status.</returns>
     public SessionResult<AuthenticatedSession> CompleteLogin(
         string loginIdentifier,
         string verificationCode)
@@ -99,11 +77,6 @@ public sealed class SessionApplicationService
         return CreateSessionAfterVerification(loginIdentifier, initialIdentity);
     }
 
-    /// <summary>
-    /// Validates and reserves a temporary guest identity.
-    /// </summary>
-    /// <param name="displayName">The proposed guest name without the Guest- prefix.</param>
-    /// <returns>The created guest session or a declared failure status.</returns>
     public SessionResult<GuestSession> OpenGuestSession(string displayName)
     {
         string normalizedName = displayName?.Trim() ?? string.Empty;
@@ -124,11 +97,6 @@ public sealed class SessionApplicationService
         return new SessionResult<GuestSession>(guestSession);
     }
 
-    /// <summary>
-    /// Revokes an authenticated or guest session idempotently.
-    /// </summary>
-    /// <param name="sessionToken">The opaque session token.</param>
-    /// <returns>The expected closure status.</returns>
     public SessionStatus CloseSession(string sessionToken)
     {
         if (string.IsNullOrWhiteSpace(sessionToken))

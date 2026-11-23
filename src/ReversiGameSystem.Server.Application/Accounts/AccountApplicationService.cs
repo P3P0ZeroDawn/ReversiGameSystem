@@ -6,9 +6,6 @@ using ReversiGameSystem.Server.Domain.Accounts;
 
 namespace ReversiGameSystem.Server.Application.Accounts;
 
-/// <summary>
-/// Coordinates account registration, password management, and deactivation.
-/// </summary>
 public sealed class AccountApplicationService
 {
     private const string ActiveStatusCode = "ACTIVE";
@@ -19,14 +16,6 @@ public sealed class AccountApplicationService
     private readonly VerificationCodeService _verificationCodes;
     private readonly SessionStore _sessions;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AccountApplicationService"/> class.
-    /// </summary>
-    /// <param name="accounts">The authoritative account repository.</param>
-    /// <param name="images">The profile image repository.</param>
-    /// <param name="verificationCodes">The verification code workflow.</param>
-    /// <param name="sessions">The in-memory active session store.</param>
-    /// <exception cref="ArgumentNullException">A required dependency is absent.</exception>
     public AccountApplicationService(
         IAccountRepository accounts,
         IPlayerImageRepository images,
@@ -40,12 +29,6 @@ public sealed class AccountApplicationService
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
     }
 
-    /// <summary>
-    /// Validates the proposed identity and issues a registration verification code.
-    /// </summary>
-    /// <param name="username">The proposed public username.</param>
-    /// <param name="emailAddress">The account email address.</param>
-    /// <returns>The code expiration instant or a validation/availability failure.</returns>
     public AccountResult<DateTime> RequestRegistrationCode(
         string username,
         string emailAddress)
@@ -78,11 +61,6 @@ public sealed class AccountApplicationService
         return result;
     }
 
-    /// <summary>
-    /// Consumes a registration code and creates a new registered account.
-    /// </summary>
-    /// <param name="registration">The verified registration payload.</param>
-    /// <returns>The created account summary or a declared failure status.</returns>
     public AccountResult<AccountSummary> CompleteRegistration(
         NewAccountRegistration? registration)
     {
@@ -112,13 +90,6 @@ public sealed class AccountApplicationService
         return SaveVerifiedAccount(registration);
     }
 
-    /// <summary>
-    /// Verifies the current password and updates the authenticated account password.
-    /// </summary>
-    /// <param name="sessionToken">The caller's authenticated session token.</param>
-    /// <param name="currentPassword">The current password.</param>
-    /// <param name="newPassword">The proposed new password.</param>
-    /// <returns>The expected operation status.</returns>
     public AccountStatus ChangePassword(
         string sessionToken,
         string currentPassword,
@@ -161,13 +132,6 @@ public sealed class AccountApplicationService
         return updateStatus;
     }
 
-    /// <summary>
-    /// Validates the email format and issues a password reset code when an active account exists.
-    /// </summary>
-    /// <param name="emailAddress">The account email address.</param>
-    /// <returns>
-    /// A plausible code expiration instant without revealing whether the account exists.
-    /// </returns>
     public AccountResult<DateTime> RequestPasswordResetCode(string emailAddress)
     {
         string normalizedEmail = emailAddress?.Trim() ?? string.Empty;
@@ -194,13 +158,6 @@ public sealed class AccountApplicationService
         return hiddenResult;
     }
 
-    /// <summary>
-    /// Consumes a password reset code and updates the active account password.
-    /// </summary>
-    /// <param name="emailAddress">The account email address.</param>
-    /// <param name="verificationCode">The one-use password reset code.</param>
-    /// <param name="newPassword">The proposed new password.</param>
-    /// <returns>The expected operation status.</returns>
     public AccountStatus ResetPassword(
         string emailAddress,
         string verificationCode,
@@ -248,12 +205,6 @@ public sealed class AccountApplicationService
         return updateStatus;
     }
 
-    /// <summary>
-    /// Confirms ownership and deactivates the account when no match is active.
-    /// </summary>
-    /// <param name="sessionToken">The caller's authenticated session token.</param>
-    /// <param name="currentPassword">The current account password.</param>
-    /// <returns>The expected operation status.</returns>
     public AccountStatus DeactivateAccount(string sessionToken, string currentPassword)
     {
         SessionResult<AuthenticatedSession> sessionResult =

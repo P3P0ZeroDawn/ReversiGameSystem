@@ -9,9 +9,6 @@ using ReversiGameSystem.Server.Persistence.Model;
 
 namespace ReversiGameSystem.Server.Persistence.Accounts;
 
-/// <summary>
-/// Persists and queries registered player accounts through Entity Framework.
-/// </summary>
 public sealed class AccountRepository : IAccountRepository
 {
     private const string ActiveStatusCode = "ACTIVE";
@@ -22,17 +19,11 @@ public sealed class AccountRepository : IAccountRepository
     private const string RegistrationLockResource = "account-registration";
     private readonly IUtcClock _clock;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AccountRepository"/> class.
-    /// </summary>
-    /// <param name="clock">The authoritative UTC clock.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="clock"/> is null.</exception>
     public AccountRepository(IUtcClock clock)
     {
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
     }
 
-    /// <inheritdoc />
     public AccountResult<LoginAccount> FindByLogin(string loginIdentifier)
     {
         if (string.IsNullOrWhiteSpace(loginIdentifier))
@@ -52,7 +43,6 @@ public sealed class AccountRepository : IAccountRepository
         }
     }
 
-    /// <inheritdoc />
     public AccountResult<LoginAccount> FindByEmail(string emailAddress)
     {
         if (string.IsNullOrWhiteSpace(emailAddress))
@@ -70,7 +60,6 @@ public sealed class AccountRepository : IAccountRepository
         }
     }
 
-    /// <inheritdoc />
     public AccountResult<LoginAccount> FindById(long accountId)
     {
         if (accountId <= 0)
@@ -88,7 +77,6 @@ public sealed class AccountRepository : IAccountRepository
         }
     }
 
-    /// <inheritdoc />
     public AccountStatus CheckRegistrationAvailability(
         string username,
         string emailAddress)
@@ -110,7 +98,6 @@ public sealed class AccountRepository : IAccountRepository
         }
     }
 
-    /// <inheritdoc />
     public AccountResult<long> CreateAccount(AccountRegistrationData registration)
     {
         if (registration == null)
@@ -133,7 +120,6 @@ public sealed class AccountRepository : IAccountRepository
         }
     }
 
-    /// <inheritdoc />
     public AccountStatus UpdatePasswordHash(long accountId, string newPasswordHash)
     {
         if (string.IsNullOrWhiteSpace(newPasswordHash))
@@ -159,7 +145,6 @@ public sealed class AccountRepository : IAccountRepository
         }
     }
 
-    /// <inheritdoc />
     public AccountStatus DeactivateAccount(long accountId)
     {
         using (ReversiGameSystemEntities context = new ReversiGameSystemEntities())

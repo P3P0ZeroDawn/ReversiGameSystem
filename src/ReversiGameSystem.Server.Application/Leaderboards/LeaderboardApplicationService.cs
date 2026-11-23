@@ -4,29 +4,18 @@ using System.Linq;
 
 namespace ReversiGameSystem.Server.Application.Leaderboards;
 
-/// <summary>
-/// Retrieves and ranks the global leaderboard from persisted player statistics.
-/// </summary>
 public sealed class LeaderboardApplicationService
 {
-    /// <summary>Represents the maximum accepted number of leaderboard entries.</summary>
     public const int MaximumAllowedEntries = 100;
 
     private readonly ILeaderboardRepository _leaderboardRepository;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="LeaderboardApplicationService"/> class.
-    /// </summary>
-    /// <param name="leaderboardRepository">The leaderboard data repository.</param>
     public LeaderboardApplicationService(ILeaderboardRepository leaderboardRepository)
     {
         _leaderboardRepository = leaderboardRepository
             ?? throw new ArgumentNullException(nameof(leaderboardRepository));
     }
 
-    /// <summary>Retrieves, orders, and limits the global leaderboard.</summary>
-    /// <param name="maximumEntries">The maximum number of entries to return.</param>
-    /// <returns>The application result.</returns>
     public LeaderboardResult Get(int maximumEntries)
     {
         if (maximumEntries < 1 || maximumEntries > MaximumAllowedEntries)

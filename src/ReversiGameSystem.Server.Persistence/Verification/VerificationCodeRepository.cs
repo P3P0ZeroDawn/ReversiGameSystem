@@ -8,7 +8,6 @@ using ReversiGameSystem.Server.Persistence.Model;
 
 namespace ReversiGameSystem.Server.Persistence.Verification;
 
-/// <summary>Persists protected challenges through the existing database connection.</summary>
 public sealed class VerificationCodeRepository : IVerificationCodeRepository
 {
     private const string ReplaceCommand = @"
@@ -48,7 +47,6 @@ BEGIN
 END;
 SELECT @result;";
 
-    /// <inheritdoc />
     public void Replace(PendingVerificationCode code)
     {
         if (code == null)
@@ -76,7 +74,6 @@ SELECT @result;";
         }
     }
 
-    /// <inheritdoc />
     public VerificationStatus Consume(VerificationAttempt attempt)
     {
         if (attempt == null)

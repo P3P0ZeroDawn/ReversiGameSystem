@@ -3,9 +3,6 @@ using System.Globalization;
 
 namespace ReversiGameSystem.Server.Domain.Accounts;
 
-/// <summary>
-/// Defines the email address syntax accepted for account registration.
-/// </summary>
 public static class EmailPolicy
 {
     private const int MaximumAddressLength = 254;
@@ -16,11 +13,6 @@ public static class EmailPolicy
     private const int MinimumTopLevelDomainLength = 2;
     private const string AllowedLocalSymbols = "!#$%&'*+-/=?^_`{|}~";
 
-    /// <summary>
-    /// Performs the validate operation.
-    /// </summary>
-    /// <param name="email">The email.</param>
-    /// <returns>The result of the operation.</returns>
     public static EmailValidationError Validate(string email)
     {
         if (email.Length > MaximumAddressLength)
@@ -144,29 +136,11 @@ public static class EmailPolicy
     }
 }
 
-/// <summary>
-/// Defines the supported email validation error values.
-/// </summary>
 public enum EmailValidationError
 {
-    /// <summary>
-    /// Represents none.
-    /// </summary>
     None,
-    /// <summary>
-    /// Represents too long.
-    /// </summary>
     TooLong,
-    /// <summary>
-    /// Represents invalid structure.
-    /// </summary>
     InvalidStructure,
-    /// <summary>
-    /// Represents invalid local part.
-    /// </summary>
     InvalidLocalPart,
-    /// <summary>
-    /// Represents invalid domain.
-    /// </summary>
     InvalidDomain
 }
