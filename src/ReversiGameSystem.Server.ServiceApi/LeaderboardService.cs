@@ -27,11 +27,21 @@ public sealed class LeaderboardService : ILeaderboardService
             ?? throw new ArgumentNullException(nameof(applicationService));
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Returns the top global leaderboard entries up to the requested limit.
+    /// </summary>
+    /// <param name="maximumEntries">The maximum number of leaderboard entries to return.</param>
+    /// <returns>The ordered leaderboard entries.</returns>
+    /// <exception cref="FaultException{LeaderboardFault}">
+    /// A declared leaderboard rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public ContractEntry[] GetLeaderboard(int maximumEntries)
     {
         LeaderboardResult result = _applicationService.Get(maximumEntries);
-        ThrowFailure(result.Status);
+        ThrowFaultIfFailed(result.Status);
 
         IReadOnlyList<ApplicationEntry> entries = result.Entries
             ?? throw new InvalidOperationException(
@@ -40,7 +50,7 @@ public sealed class LeaderboardService : ILeaderboardService
         return entries.Select(MapEntry).ToArray();
     }
 
-    private static void ThrowFailure(LeaderboardStatus status)
+    private static void ThrowFaultIfFailed(LeaderboardStatus status)
     {
         if (status == LeaderboardStatus.Success)
         {

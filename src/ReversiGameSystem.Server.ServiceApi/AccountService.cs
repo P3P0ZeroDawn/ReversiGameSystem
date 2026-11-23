@@ -49,10 +49,7 @@ public sealed class AccountService : IAccountService
         AccountResult<DateTime> result = _applicationService.RequestRegistrationCode(
             username,
             emailAddress);
-        if (result.Status != AccountStatus.Success)
-        {
-            throw CreateFault(result.Status);
-        }
+        ThrowFaultIfFailed(result.Status);
 
         return result.Value;
     }
@@ -75,12 +72,12 @@ public sealed class AccountService : IAccountService
         NewAccountRegistration? registration = MapRegistration(account);
         AccountResult<AccountSummary> result =
             _applicationService.CompleteRegistration(registration);
-        if (result.Status != AccountStatus.Success || result.Value == null)
-        {
-            throw CreateFault(result.Status);
-        }
+        ThrowFaultIfFailed(result.Status);
 
-        AccountReference reference = MapAccountReference(result.Value);
+        AccountSummary summary = result.Value
+            ?? throw new InvalidOperationException(
+                "A successful registration result must contain an account summary.");
+        AccountReference reference = MapAccountReference(summary);
         return reference;
     }
 
@@ -109,10 +106,7 @@ public sealed class AccountService : IAccountService
             sessionToken,
             currentPassword,
             newPassword);
-        if (status != AccountStatus.Success)
-        {
-            throw CreateFault(status);
-        }
+        ThrowFaultIfFailed(status);
     }
 
     /// <summary>
@@ -132,10 +126,7 @@ public sealed class AccountService : IAccountService
     {
         AccountResult<DateTime> result =
             _applicationService.RequestPasswordResetCode(emailAddress);
-        if (result.Status != AccountStatus.Success)
-        {
-            throw CreateFault(result.Status);
-        }
+        ThrowFaultIfFailed(result.Status);
 
         return result.Value;
     }
@@ -162,10 +153,7 @@ public sealed class AccountService : IAccountService
             emailAddress,
             verificationCode,
             newPassword);
-        if (status != AccountStatus.Success)
-        {
-            throw CreateFault(status);
-        }
+        ThrowFaultIfFailed(status);
     }
 
     /// <summary>
@@ -189,22 +177,24 @@ public sealed class AccountService : IAccountService
         AccountStatus status = _applicationService.DeactivateAccount(
             sessionToken,
             currentPassword);
-        if (status != AccountStatus.Success)
-        {
-            throw CreateFault(status);
-        }
+        ThrowFaultIfFailed(status);
     }
 
-    private static Exception CreateFault(AccountStatus status)
+    private static void ThrowFaultIfFailed(AccountStatus status)
     {
+        if (status == AccountStatus.Success)
+        {
+            return;
+        }
+
         if (status == AccountStatus.MissingSessionToken)
         {
-            return ServiceFaultFactory.CreateSessionFault(SessionFailure.MissingSessionToken);
+            throw ServiceFaultFactory.CreateSessionFault(SessionFailure.MissingSessionToken);
         }
 
         if (status == AccountStatus.InvalidSession)
         {
-            return ServiceFaultFactory.CreateSessionFault(SessionFailure.InvalidSession);
+            throw ServiceFaultFactory.CreateSessionFault(SessionFailure.InvalidSession);
         }
 
         AccountFailure failure = status switch
@@ -227,7 +217,15 @@ public sealed class AccountService : IAccountService
                 "Unsupported account status.")
         };
 
-        return ServiceFaultFactory.CreateAccountFault(failure);
+        throw CreateAccountFault(failure);
+    }
+
+    private static FaultException<AccountFault> CreateAccountFault(AccountFailure reason)
+    {
+        return new FaultException<AccountFault>(new AccountFault
+        {
+            Reason = reason
+        }, "The account request was rejected.");
     }
 
     private static NewAccountRegistration? MapRegistration(NewAccount? account)

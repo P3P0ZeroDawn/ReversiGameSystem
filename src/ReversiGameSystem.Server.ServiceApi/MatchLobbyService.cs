@@ -34,14 +34,40 @@ public sealed class MatchLobbyService : IMatchLobbyService
             ?? throw new ArgumentNullException(nameof(callbackSubscriptions));
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Authorizes the caller and opens the duplex callback channel for lobby notifications.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public void OpenLobbyChannel(string sessionToken)
     {
         ThrowFaultIfFailed(_applicationService.EvaluateLobbyAccess(sessionToken));
         _callbackSubscriptions.RegisterForAllMatches(sessionToken);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Creates a new waiting match lobby with the requested configuration.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="configuration">The desired match rules and turn duration.</param>
+    /// <returns>The created waiting lobby snapshot.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public LobbySnapshot CreateMatch(string sessionToken, MatchConfiguration configuration)
     {
         MatchSettings? settings = configuration == null ? null : MapSettings(configuration);
@@ -49,7 +75,25 @@ public sealed class MatchLobbyService : IMatchLobbyService
         return MatchContractMapper.MapLobby(match);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Creates a private match lobby and emails an invitation code to a confirmed friend.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="friendAccountId">The invited friend's account identifier.</param>
+    /// <param name="configuration">The desired match rules and turn duration.</param>
+    /// <returns>The created private lobby snapshot.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{FriendshipFault}">
+    /// A declared friendship rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public LobbySnapshot InviteToMatch(
         string sessionToken,
         long friendAccountId,
@@ -63,14 +107,41 @@ public sealed class MatchLobbyService : IMatchLobbyService
         return MatchContractMapper.MapLobby(match);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Lists public waiting matches available for the caller to join.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <returns>The available waiting matches.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public AvailableMatch[] GetAvailableMatches(string sessionToken)
     {
         Match[] matches = RequireValue(_applicationService.GetAvailableMatches(sessionToken));
         return matches.Select(MapAvailableMatch).ToArray();
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Joins a waiting match by join code and notifies participants that the match has started.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="matchCode">The match join code.</param>
+    /// <returns>The updated lobby snapshot.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public LobbySnapshot JoinMatch(string sessionToken, string matchCode)
     {
         Match match = RequireValue(_applicationService.JoinMatch(sessionToken, matchCode));
@@ -79,7 +150,22 @@ public sealed class MatchLobbyService : IMatchLobbyService
         return MatchContractMapper.MapLobby(match);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Updates the turn duration of a waiting match created by the caller.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="matchId">The persistent match identifier.</param>
+    /// <param name="turnDurationSeconds">The proposed turn duration in seconds.</param>
+    /// <returns>The updated lobby snapshot.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public LobbySnapshot ChangeTurnDuration(
         string sessionToken,
         long matchId,
@@ -92,7 +178,21 @@ public sealed class MatchLobbyService : IMatchLobbyService
         return MatchContractMapper.MapLobby(RequireValue(result));
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Starts a waiting match against the system opponent.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="matchId">The persistent match identifier.</param>
+    /// <returns>The initial match state snapshot.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public MatchStateSnapshot StartSystemMatch(string sessionToken, long matchId)
     {
         Match match = RequireValue(
@@ -100,7 +200,20 @@ public sealed class MatchLobbyService : IMatchLobbyService
         return MatchContractMapper.MapState(match);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Cancels a waiting match created by the caller and notifies subscribed participants.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="matchId">The persistent match identifier.</param>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public void CancelMatch(string sessionToken, long matchId)
     {
         ThrowFaultIfFailed(_applicationService.CancelMatch(sessionToken, matchId));

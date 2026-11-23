@@ -26,7 +26,23 @@ public sealed class PlayerProfileService : IPlayerProfileService
             ?? throw new ArgumentNullException(nameof(applicationService));
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Reads the profile and statistics for the caller or a requested target account.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="targetAccountId">
+    /// Optional target account identifier, or <c>null</c> to read the caller's own profile.
+    /// </param>
+    /// <returns>The requested player profile.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ProfileFault}">
+    /// A declared profile rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public ContractProfile GetPlayerProfile(string sessionToken, long? targetAccountId)
     {
         ProfileResult<ApplicationProfile> result = _applicationService.GetProfile(
@@ -37,7 +53,23 @@ public sealed class PlayerProfileService : IPlayerProfileService
         return MapProfile(RequireValue(result));
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Reads the profile image for the caller or a requested target account.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="targetAccountId">
+    /// Optional target account identifier, or <c>null</c> to read the caller's own image.
+    /// </param>
+    /// <returns>The profile image content, or <c>null</c> when none is stored.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ProfileFault}">
+    /// A declared profile rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public ImageContent? GetProfileImage(string sessionToken, long? targetAccountId)
     {
         GetProfileImageResult result = _applicationService.GetImage(
@@ -56,7 +88,20 @@ public sealed class PlayerProfileService : IPlayerProfileService
         };
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Validates and updates the authenticated caller's public username.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="username">The proposed new username.</param>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ProfileFault}">
+    /// A declared profile rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public void ChangeUsername(string sessionToken, string username)
     {
         ProfileOperationStatus status = _applicationService.ChangeUsername(
@@ -65,7 +110,20 @@ public sealed class PlayerProfileService : IPlayerProfileService
         ThrowFaultIfFailed(status);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Validates and updates the authenticated caller's profile image.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="image">The proposed profile image content.</param>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ProfileFault}">
+    /// A declared profile rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public void UpdateProfileImage(string sessionToken, ImageContent image)
     {
         ProfileImageData? imageData = image == null ? null

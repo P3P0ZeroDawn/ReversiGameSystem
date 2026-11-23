@@ -37,56 +37,91 @@ public sealed class SessionService : ISessionService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Verifies credentials and requests a one-use login verification code.
+    /// </summary>
+    /// <param name="loginIdentifier">The account username or email address.</param>
+    /// <param name="password">The account password.</param>
+    /// <returns>The UTC expiration instant of the verification code.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public DateTime RequestLoginCode(string loginIdentifier, string password)
     {
         SessionResult<DateTime> result = _applicationService.RequestLoginCode(
             loginIdentifier,
             password);
-        if (result.Status != SessionOperationStatus.Success)
-        {
-            throw MapFailure(result.Status);
-        }
+        ThrowFaultIfFailed(result.Status);
 
         return result.Value;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Consumes a login verification code and opens an authenticated session.
+    /// </summary>
+    /// <param name="loginIdentifier">The account username or email address.</param>
+    /// <param name="verificationCode">The one-use verification code.</param>
+    /// <returns>The newly created authenticated session.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public ContractAuthenticatedSession CompleteLogin(
         string loginIdentifier,
         string verificationCode)
     {
         SessionResult<ApplicationAuthenticatedSession> result =
             _applicationService.CompleteLogin(loginIdentifier, verificationCode);
-        if (result.Status != SessionOperationStatus.Success || result.Value == null)
-        {
-            throw MapFailure(result.Status);
-        }
+        ThrowFaultIfFailed(result.Status);
 
-        return MapAuthenticatedSession(result.Value);
+        ApplicationAuthenticatedSession session = result.Value
+            ?? throw new InvalidOperationException(
+                "A successful login result must contain a session.");
+        return MapAuthenticatedSession(session);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Reserves a guest display name and opens a temporary guest session.
+    /// </summary>
+    /// <param name="displayName">The requested guest display name.</param>
+    /// <returns>The newly created guest session.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public ContractGuestSession OpenGuestSession(string displayName)
     {
         SessionResult<ApplicationGuestSession> result =
             _applicationService.OpenGuestSession(displayName);
-        if (result.Status != SessionOperationStatus.Success || result.Value == null)
-        {
-            throw MapFailure(result.Status);
-        }
+        ThrowFaultIfFailed(result.Status);
 
-        return MapGuestSession(result.Value);
+        ApplicationGuestSession session = result.Value
+            ?? throw new InvalidOperationException(
+                "A successful guest session result must contain a session.");
+        return MapGuestSession(session);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Revokes an active authenticated or guest session and notifies session observers.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token to close.</param>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public void CloseSession(string sessionToken)
     {
         SessionOperationStatus status = _applicationService.CloseSession(sessionToken);
-        if (status != SessionOperationStatus.Success)
-        {
-            throw MapFailure(status);
-        }
+        ThrowFaultIfFailed(status);
 
         NotifySessionClosed(sessionToken);
     }
@@ -117,8 +152,13 @@ public sealed class SessionService : ISessionService
         }
     }
 
-    private static FaultException<SessionFault> MapFailure(SessionOperationStatus status)
+    private static void ThrowFaultIfFailed(SessionOperationStatus status)
     {
+        if (status == SessionOperationStatus.Success)
+        {
+            return;
+        }
+
         SessionFailure failure = status switch
         {
             SessionOperationStatus.InvalidCredentials => SessionFailure.InvalidCredentials,
@@ -134,7 +174,7 @@ public sealed class SessionService : ISessionService
                 "Unsupported session operation status.")
         };
 
-        return ServiceFaultFactory.CreateSessionFault(failure);
+        throw ServiceFaultFactory.CreateSessionFault(failure);
     }
 
     private static ContractAuthenticatedSession MapAuthenticatedSession(

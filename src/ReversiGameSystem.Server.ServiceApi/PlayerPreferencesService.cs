@@ -26,7 +26,20 @@ public sealed class PlayerPreferencesService : IPlayerPreferencesService
             ?? throw new ArgumentNullException(nameof(applicationService));
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Reads the authenticated caller's stored player preferences.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <returns>The caller's player preferences.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{PreferencesFault}">
+    /// A declared preferences rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public ContractPreferences GetPlayerPreferences(string sessionToken)
     {
         PreferencesAccess access = _applicationService.GetPreferences(sessionToken);
@@ -41,7 +54,20 @@ public sealed class PlayerPreferencesService : IPlayerPreferencesService
         };
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Validates and persists updated preferences for the authenticated caller.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="preferences">The proposed player preferences.</param>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{PreferencesFault}">
+    /// A declared preferences rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public void UpdatePlayerPreferences(string sessionToken, ContractPreferences preferences)
     {
         ApplicationPreferences? proposed = null;
@@ -59,7 +85,20 @@ public sealed class PlayerPreferencesService : IPlayerPreferencesService
         ThrowFaultIfFailed(status);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Reads the authenticated caller's custom board background image, if present.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <returns>The custom board background image, or <c>null</c> when none is set.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{PreferencesFault}">
+    /// A declared preferences rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public ImageContent? GetBoardBackground(string sessionToken)
     {
         PreferencesAccess access = _applicationService.GetBoardBackground(sessionToken);
@@ -76,7 +115,20 @@ public sealed class PlayerPreferencesService : IPlayerPreferencesService
         return image;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Validates and updates the authenticated caller's custom board background image.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="image">The proposed board background image.</param>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{PreferencesFault}">
+    /// A declared preferences rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public void ChangeBoardBackground(string sessionToken, ImageContent image)
     {
         ProfileImageData? proposed = null;
