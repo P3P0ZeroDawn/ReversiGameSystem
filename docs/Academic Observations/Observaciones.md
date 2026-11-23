@@ -196,3 +196,43 @@ Definir:
 	- Mejora (decisión propia)
 
 - Revisar **Rendimiento**, **Facilidad de prueba** y **Facilidad de modificación** del proyecto
+
+# Revisión del proyecto 7
+
+**Servidor**
+`GameplayServiceAPI`
+- Revisar quien trabaja con las excepciones que se lanzan en el código
+	- Las excepciones como `InvalidOperationValue`
+- Revisar la linea 23 y 24 por código duplicado
+- Revisar lo del los TimeSpan
+	- Revisar la justificación de porque se hace asi y porque no se modifica la configuración de WCF
+
+**Cliente**
+- Revisar el recursos que se nos esta consumiendo el timer
+- Debemos justificar de porque es la mejor opción
+
+El plan de migración del Cliente
+
+**Sonarqube y reporte**
+- Cumplir las métricas
+
+**Pruebas y excepciones**
+- Revisar los casos que se estan probando
+- Revisar los casos que provocan o lanzan una excepción, deben probarse
+- En las excepciones que suceden:
+	- revisar quien debe saber que ocurrio una excepción
+	- si se le propagan excepciones al usuario
+		- Revisar el feedback
+		- Revisar que la excepción que se le lanza, sea realmente algo que debe conocer el usuario
+			- Revisar que no sea de diseño, programación
+- Revisar los logs
+	- Revisar el tipo de hora que se registra en los logs
+
+**Resumen:**
+- Terminar el resto de funcionalidades
+- Justificar y revisar las decisiones de implementación a partir de atributos de calidad y estándares
+	- El manejo de excepciones
+	- La configuración de la comunicación
+	- Como se realiza la persistencia
+- Revisar y probar distintos casos de prueba, incluyendo excepciones
+

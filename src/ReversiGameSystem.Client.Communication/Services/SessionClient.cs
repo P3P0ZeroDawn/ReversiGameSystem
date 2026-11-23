@@ -39,6 +39,7 @@ internal sealed class SessionClient : ISessionClient
             return SessionStatus.Success;
         }
         catch (FaultException<Proxy.SessionFault> fault)
+            when (Enum.IsDefined(typeof(Proxy.SessionFailure), fault.Detail.Reason))
         {
             return MapStatus(fault.Detail.Reason);
         }
@@ -60,6 +61,7 @@ internal sealed class SessionClient : ISessionClient
                 CreateAuthenticatedSession(remoteSession));
         }
         catch (FaultException<Proxy.SessionFault> fault)
+            when (Enum.IsDefined(typeof(Proxy.SessionFailure), fault.Detail.Reason))
         {
             return new SessionResult<AuthenticatedAccountSession>(
                 MapStatus(fault.Detail.Reason));
@@ -80,6 +82,7 @@ internal sealed class SessionClient : ISessionClient
             return new SessionResult<GuestAccountSession>(CreateGuestSession(remoteSession));
         }
         catch (FaultException<Proxy.SessionFault> fault)
+            when (Enum.IsDefined(typeof(Proxy.SessionFailure), fault.Detail.Reason))
         {
             return new SessionResult<GuestAccountSession>(MapStatus(fault.Detail.Reason));
         }
@@ -101,6 +104,7 @@ internal sealed class SessionClient : ISessionClient
             return SessionStatus.Success;
         }
         catch (FaultException<Proxy.SessionFault> fault)
+            when (Enum.IsDefined(typeof(Proxy.SessionFailure), fault.Detail.Reason))
         {
             return MapStatus(fault.Detail.Reason);
         }
@@ -122,6 +126,7 @@ internal sealed class SessionClient : ISessionClient
             return result;
         }
         catch (FaultException<Proxy.SessionFault> fault)
+            when (Enum.IsDefined(typeof(Proxy.SessionFailure), fault.Detail.Reason))
         {
             _logger.LogInformation(
                 "The session request was rejected with {Reason}. CorrelationId: {CorrelationId}",
@@ -129,20 +134,10 @@ internal sealed class SessionClient : ISessionClient
                 correlationId);
             throw;
         }
-        catch (FaultException<Proxy.ServiceFault> fault)
-        {
-            _logger.LogWarning(
-                "The server returned {FailureCode}. ServerCorrelationId: "
-                    + "{ServerCorrelationId}. CorrelationId: {CorrelationId}",
-                fault.Detail.FailureCode,
-                fault.Detail.CorrelationId,
-                correlationId);
-            throw;
-        }
         catch (Exception exception) when (IsCommunicationFailure(exception))
         {
             _logger.LogWarning(
-                FailureDiagnostics.ForLogging(exception),
+                exception,
                 "The session request failed. CorrelationId: {CorrelationId}",
                 correlationId);
             throw;
@@ -245,10 +240,8 @@ internal sealed class SessionClient : ISessionClient
 
     private static bool IsCommunicationFailure(Exception exception)
     {
-        return exception is CommunicationException
-            || exception is TimeoutException
-            || exception is SerializationException
-            || exception is InvalidOperationException;
+        return exception is TimeoutException
+            || (exception is CommunicationException && exception is not FaultException);
     }
 
     private void CloseAcknowledgedChannel(
@@ -263,7 +256,7 @@ internal sealed class SessionClient : ISessionClient
             exception is CommunicationException || exception is TimeoutException)
         {
             _logger.LogWarning(
-                FailureDiagnostics.ForLogging(exception),
+                exception,
                 "The acknowledged session channel could not close. "
                     + "CorrelationId: {CorrelationId}",
                 correlationId);

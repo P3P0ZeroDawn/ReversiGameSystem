@@ -1,14 +1,7 @@
 using System;
-using System.IO;
 using System.Resources;
 
 namespace ReversiGameSystem.Services;
-
-internal enum InstructionsLoadResult
-{
-    Success,
-    ResourcesError
-}
 
 internal sealed class InstructionsContent
 {
@@ -36,17 +29,10 @@ internal sealed class InstructionsService
         _resourceLookup = resourceLookup;
     }
 
-    internal InstructionsLoadResult TryLoadGeneral(out InstructionsContent? content)
+    internal InstructionsContent LoadGeneral()
     {
-        content = null;
-        if (!TryGetResource(InstructionsTitleKey, out string title)
-            || !TryGetResource(InstructionsRulesKey, out string rules))
-        {
-            return InstructionsLoadResult.ResourcesError;
-        }
-
-        content = new InstructionsContent(title, rules);
-        return InstructionsLoadResult.Success;
+        return new InstructionsContent(ReadResource(InstructionsTitleKey),
+            ReadResource(InstructionsRulesKey));
     }
 
     internal InstructionsContent LoadForMatch(string pieceColorName, int turnTimeSeconds)
@@ -56,30 +42,6 @@ internal sealed class InstructionsService
         string contextFormat = ReadResource(MatchContextKey);
         string message = string.Format(contextFormat, pieceColorName, turnTimeSeconds, rules);
         return new InstructionsContent(title, message);
-    }
-
-    internal InstructionsLoadResult TryLoadForMatch(
-        string pieceColorName,
-        int turnTimeSeconds,
-        out InstructionsContent? content)
-    {
-        InstructionsLoadResult status;
-        try
-        {
-            content = LoadForMatch(pieceColorName, turnTimeSeconds);
-            status = InstructionsLoadResult.Success;
-        }
-        catch (Exception exception) when (exception is FormatException
-            or InvalidOperationException
-            or MissingManifestResourceException
-            or MissingSatelliteAssemblyException
-            or IOException
-            or BadImageFormatException)
-        {
-            content = null;
-            status = InstructionsLoadResult.ResourcesError;
-        }
-        return status;
     }
 
     private string ReadResource(string key)
@@ -92,24 +54,4 @@ internal sealed class InstructionsService
         return value;
     }
 
-    private bool TryGetResource(string key, out string value)
-    {
-        bool isFound;
-        try
-        {
-            value = _resourceLookup(key);
-            isFound = !string.IsNullOrWhiteSpace(value);
-        }
-        catch (Exception exception) when (exception is InvalidOperationException
-                                            or MissingManifestResourceException
-                                            or MissingSatelliteAssemblyException
-                                            or IOException
-                                            or BadImageFormatException)
-        {
-            value = string.Empty;
-            isFound = false;
-        }
-
-        return isFound;
-    }
 }

@@ -16,9 +16,6 @@ internal enum AccountInformationReturnTarget
     Friends
 }
 
-/// <summary>
-/// Displays account details and player statistics.
-/// </summary>
 public partial class AccountInformationPage : Page
 {
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
@@ -32,9 +29,6 @@ public partial class AccountInformationPage : Page
     private readonly bool _isOwnProfile;
     private readonly FriendRequestService _friendRequestService;
 
-    /// <summary>
-    /// Initializes the account information page.
-    /// </summary>
     public AccountInformationPage()
         : this(null, AccountInformationReturnTarget.MainMenu, true)
     {
@@ -394,10 +388,10 @@ public partial class AccountInformationPage : Page
         }
     }
 
-    private void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         string previousCulture = LocalizationManager.Instance.CultureName;
-        LanguageChangeService.ConfirmSelection((ComboBox)sender);
+        await LanguageChangeService.ConfirmSelection((ComboBox)sender);
         if (LocalizationManager.Instance.CultureName != previousCulture)
         {
             UpdatePublicProfileText();

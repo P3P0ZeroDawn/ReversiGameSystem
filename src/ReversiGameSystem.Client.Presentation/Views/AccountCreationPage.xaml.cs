@@ -9,9 +9,6 @@ using ReversiGameSystem.Services;
 
 namespace ReversiGameSystem.Views;
 
-/// <summary>
-/// Displays the account creation form.
-/// </summary>
 public partial class AccountCreationPage : Page
 {
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
@@ -19,9 +16,6 @@ public partial class AccountCreationPage : Page
     private readonly AccountCreationViewModel _viewModel;
     private ProfileImageSelection? _pendingProfileImage;
 
-    /// <summary>
-    /// Initializes the account creation page.
-    /// </summary>
     public AccountCreationPage()
         : this(new AccountCreationViewModel(ClientRuntime.AccountService))
     {
@@ -211,8 +205,8 @@ public partial class AccountCreationPage : Page
         NavigationService?.Navigate(new LoginScreenPage());
     }
 
-    private void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        LanguageChangeService.ConfirmSelection((ComboBox)sender);
+        await LanguageChangeService.ConfirmSelection((ComboBox)sender);
     }
 }

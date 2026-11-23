@@ -6,6 +6,10 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--preferences-database")
+        {
+            return RunTests(new Action[] { PreferencesDatabaseTests.Run });
+        }
         if (args.Length == 1 && args[0] == "--match-database")
         {
             return RunTests(new Action[] { ReviewMatchDatabaseTests.Run });
@@ -29,7 +33,8 @@ internal static class Program
         if (args.Length != 0)
         {
             Console.Error.WriteLine("Usage: Server.Tests.exe "
-                + "[--database|--review-accounts|--friendship-host|--match-host|--match-database]");
+                + "[--database|--review-accounts|--friendship-host|--match-host|--match-database"
+                + "|--preferences-database]");
             return 2;
         }
         System.Collections.Generic.List<Action> tests =

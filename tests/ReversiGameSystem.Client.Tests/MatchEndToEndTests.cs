@@ -23,6 +23,8 @@ internal static class MatchEndToEndTests
         try
         {
             beta = Authenticate(sessions, "ReviewBeta", "000002");
+            VerifyLanguagePersistence(alpha.SessionToken);
+            Console.WriteLine("PASS: language persisted through the real preferences proxy.");
             using MatchLobbyClient firstLobby = MatchClientsTests.CreateLobby(alpha.SessionToken);
             using GameplayClient first = MatchClientsTests.CreateGameplay(alpha.SessionToken);
             using MatchChatClient firstChat = MatchClientsTests.CreateChat(alpha.SessionToken);
@@ -92,6 +94,28 @@ internal static class MatchEndToEndTests
             if (beta != null) { sessions.CloseSession(beta.SessionToken).GetAwaiter().GetResult(); }
             sessions.CloseSession(alpha.SessionToken).GetAwaiter().GetResult();
         }
+    }
+
+    private static void VerifyLanguagePersistence(string token)
+    {
+        const string Address = "net.tcp://localhost:18098/ReversiReview/PlayerPreferences";
+        Proxy.PlayerPreferencesServiceClient CreateClient()
+        {
+            return new Proxy.PlayerPreferencesServiceClient(new NetTcpBinding(SecurityMode.None),
+                new EndpointAddress(Address));
+        }
+        PlayerPreferencesClient preferences = new PlayerPreferencesClient(
+            NullLogger<PlayerPreferencesClient>.Instance, CreateClient);
+        using Proxy.PlayerPreferencesServiceClient beforeClient = CreateClient();
+        Proxy.PlayerPreferences before = beforeClient.GetPlayerPreferences(token);
+        TestAssert.AreEqual(PreferencesStatus.Success,
+            preferences.ChangeLanguage(token, "en-US").GetAwaiter().GetResult());
+        using Proxy.PlayerPreferencesServiceClient afterClient = CreateClient();
+        Proxy.PlayerPreferences after = afterClient.GetPlayerPreferences(token);
+        TestAssert.AreEqual("en-US", after.PreferredLocaleCode);
+        TestAssert.AreEqual(before.PieceStyleCode, after.PieceStyleCode);
+        TestAssert.AreEqual(before.TimeZoneId, after.TimeZoneId);
+        TestAssert.AreEqual(before.UseCustomBoardBackground, after.UseCustomBoardBackground);
     }
 
     private static AuthenticatedAccountSession Authenticate(

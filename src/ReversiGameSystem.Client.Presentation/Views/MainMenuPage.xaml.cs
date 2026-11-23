@@ -1,4 +1,5 @@
 using System;
+using System.Resources;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Windows;
@@ -316,24 +317,22 @@ public partial class MainMenuPage : Page
 
     private void OnInstructionsClick(object sender, RoutedEventArgs e)
     {
-        InstructionsLoadResult result = _instructionsService.TryLoadGeneral(
-            out InstructionsContent? content);
-        if (result != InstructionsLoadResult.Success || content == null)
+        try
         {
-            _dialogService.ShowError(
-                this,
-                "Instructions_LoadingErrorTitle",
-                "Instructions_LoadingErrorMessage");
-            return;
+            InstructionsContent content = _instructionsService.LoadGeneral();
+            _dialogService.ShowInformationText(this, content.Title, content.Message);
         }
-
-        _dialogService.ShowInformationText(this, content.Title, content.Message);
+        catch (Exception exception) when (exception is MissingManifestResourceException
+            or MissingSatelliteAssemblyException)
+        {
+            ClientRuntime.Errors.ReportOperationFailure(exception, nameof(InstructionsService));
+        }
     }
 
     private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         string previousCulture = LocalizationManager.Instance.CultureName;
-        LanguageChangeService.ConfirmSelection((ComboBox)sender);
+        await LanguageChangeService.ConfirmSelection((ComboBox)sender);
         if (LocalizationManager.Instance.CultureName != previousCulture)
         {
             UpdateGuestIdentity();

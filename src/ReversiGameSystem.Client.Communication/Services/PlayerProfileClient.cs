@@ -36,6 +36,7 @@ internal sealed class PlayerProfileClient
             result = new ProfileResult<PlayerProfile>(ProfileStatus.Success, MapProfile(profile));
         }
         catch (FaultException<Proxy.ProfileFault> fault)
+            when (Enum.IsDefined(typeof(Proxy.ProfileFailure), fault.Detail.Reason))
         {
             result = new ProfileResult<PlayerProfile>(MapStatus(fault.Detail.Reason), null);
         }
@@ -59,6 +60,7 @@ internal sealed class PlayerProfileClient
             result = new ProfileResult<ProfileImageContent>(ProfileStatus.Success, content);
         }
         catch (FaultException<Proxy.ProfileFault> fault)
+            when (Enum.IsDefined(typeof(Proxy.ProfileFailure), fault.Detail.Reason))
         {
             result = new ProfileResult<ProfileImageContent>(MapStatus(fault.Detail.Reason), null);
         }
@@ -101,6 +103,7 @@ internal sealed class PlayerProfileClient
             status = ProfileStatus.Success;
         }
         catch (FaultException<Proxy.ProfileFault> fault)
+            when (Enum.IsDefined(typeof(Proxy.ProfileFailure), fault.Detail.Reason))
         {
             status = MapStatus(fault.Detail.Reason);
         }

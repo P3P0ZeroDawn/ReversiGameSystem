@@ -6,18 +6,12 @@ using ReversiGameSystem.Services;
 
 namespace ReversiGameSystem.Views;
 
-/// <summary>
-/// Searches active player accounts and sends friendship requests.
-/// </summary>
 public partial class AddFriendsPage : Page
 {
     private readonly DialogService _dialogService =
         new DialogService(LocalizationManager.Instance);
     private readonly FriendRequestService _friendRequestService;
 
-    /// <summary>
-    /// Initializes the add-friends page for the authenticated account.
-    /// </summary>
     public AddFriendsPage()
     {
         InitializeComponent();
@@ -112,10 +106,10 @@ public partial class AddFriendsPage : Page
         NavigationService?.Navigate(new MainMenuPage());
     }
 
-    private void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         string previousCulture = LocalizationManager.Instance.CultureName;
-        LanguageChangeService.ConfirmSelection((ComboBox)sender);
+        await LanguageChangeService.ConfirmSelection((ComboBox)sender);
         if (LocalizationManager.Instance.CultureName != previousCulture)
         {
             LoadCandidates();

@@ -212,10 +212,10 @@ internal static class LegacyTestSuite
         InstructionsServiceTests tests = new InstructionsServiceTests();
         return new Action[]
         {
-            tests.TryLoadGeneral_CompleteResources_ReturnsContent,
-            tests.TryLoadForMatch_CompleteResources_AddsContext,
-            tests.TryLoadGeneral_MissingResource_ReturnsError,
-            tests.TryLoadForMatch_InvalidFormat_ReturnsError,
+            tests.LoadGeneral_CompleteResources_ReturnsContent,
+            tests.LoadForMatch_CompleteResources_AddsContext,
+            tests.LoadGeneral_MissingResource_PropagatesFailure,
+            tests.LoadForMatch_InvalidFormat_PropagatesFailure,
         };
     }
 

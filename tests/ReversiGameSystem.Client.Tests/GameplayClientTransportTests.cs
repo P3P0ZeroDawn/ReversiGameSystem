@@ -82,6 +82,31 @@ internal static class GameplayClientTransportTests
         TestAssert.AreEqual(placement.Column, received.Column);
     }
 
+    internal static void Callback_ProcessingFailure_ReachesErrorBoundary()
+    {
+        using GameplayHost host = new GameplayHost();
+        host.Service.PublishInvalidCallback = true;
+        using GameplayClient client = host.CreateClient();
+        using ManualResetEventSlim reported = new ManualResetEventSlim();
+        Exception? captured = null;
+        void OnFailure(Exception failure)
+        {
+            captured = failure;
+            reported.Set();
+        }
+        CallbackErrorBehavior.FailureReported += OnFailure;
+        try
+        {
+            client.LoadMatchState(MatchId).GetAwaiter().GetResult();
+            TestAssert.AreEqual(true, reported.Wait(TestTimeout));
+            TestAssert.AreEqual(true, captured is ArgumentNullException);
+        }
+        finally
+        {
+            CallbackErrorBehavior.FailureReported -= OnFailure;
+        }
+    }
+
     [ServiceContract(Name = "IGameplayMatchService", Namespace = "urn:reversi:services:v1",
         CallbackContract = typeof(Proxy.IGameplayMatchServiceCallback))]
     internal interface IGameplayTestService
@@ -102,6 +127,7 @@ internal static class GameplayClientTransportTests
     internal sealed class GameplayService : IGameplayTestService, IDisposable
     {
         internal bool IsFinished { get; set; }
+        internal bool PublishInvalidCallback { get; set; }
         internal volatile bool DelayStateRead;
         internal Proxy.PiecePlacement? Placement { get; private set; }
         internal ManualResetEventSlim StateReadStarted { get; } = new ManualResetEventSlim();
@@ -109,6 +135,11 @@ internal static class GameplayClientTransportTests
 
         public void OpenMatchChannel(string sessionToken, long matchId)
         {
+            if (PublishInvalidCallback)
+            {
+                OperationContext.Current.GetCallbackChannel<Proxy.IGameplayMatchServiceCallback>()
+                    .OnMatchStateChanged(new Proxy.MatchStateSnapshot { MatchId = matchId });
+            }
             if (IsFinished)
             {
                 throw new FaultException<Proxy.MatchFault>(new Proxy.MatchFault

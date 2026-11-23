@@ -11,6 +11,7 @@ using ReversiGameSystem.Server.Application.Friendships;
 using ReversiGameSystem.Server.Application.Leaderboards;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Application.Players;
+using ReversiGameSystem.Server.Application.Preferences;
 using ReversiGameSystem.Server.Application.Verification;
 using ReversiGameSystem.Server.Contracts.Callbacks;
 using ReversiGameSystem.Server.Contracts.Friendships;
@@ -23,6 +24,7 @@ using ReversiGameSystem.Server.Persistence.Leaderboards;
 using ReversiGameSystem.Server.Persistence.Mail;
 using ReversiGameSystem.Server.Persistence.Matches;
 using ReversiGameSystem.Server.Persistence.Players;
+using ReversiGameSystem.Server.Persistence.Preferences;
 using ReversiGameSystem.Server.Persistence.Sessions;
 using ReversiGameSystem.Server.Persistence.Verification;
 using ReversiGameSystem.Server.ServiceApi;
@@ -34,6 +36,9 @@ namespace ReversiGameSystem.Server.Host;
 
 internal static class Program
 {
+    private const string ServerDataDirectoryName = "ReversiGameSystem.Server";
+    private const string BoardBackgroundDirectoryName = "board-backgrounds";
+    private const string BoardBackgroundReferencePrefix = "board-backgrounds/";
     private const long MaximumLogFileSizeBytes = 10_485_760;
     private const int RetainedLogFileCount = 7;
     private const int MaximumFriendshipSweepChannels = 64;
@@ -207,6 +212,8 @@ internal static class Program
                                     CreateServiceHost(
                                         CreateLeaderboardService(),
                                         loggerFactory),
+                                    CreateServiceHost(CreatePlayerPreferencesService(sessions),
+                                        loggerFactory),
                                     CreateServiceHost(friendship, loggerFactory),
                                     CreateServiceHost(matchLobbyService, loggerFactory),
                                     CreateServiceHost(gameplayMatchService, loggerFactory),
@@ -312,6 +319,20 @@ internal static class Program
             profiles,
             images);
         return new PlayerProfileService(applicationService);
+    }
+
+    private static PlayerPreferencesService CreatePlayerPreferencesService(
+        ISessionRepository sessions)
+    {
+        string directory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            ServerDataDirectoryName, BoardBackgroundDirectoryName);
+        PreferencesRepository preferences = new PreferencesRepository();
+        ProfileImageRepository backgrounds = new ProfileImageRepository(
+            directory, BoardBackgroundReferencePrefix);
+        PreferencesApplicationService applicationService = new PreferencesApplicationService(
+            sessions, preferences, backgrounds);
+        return new PlayerPreferencesService(applicationService);
     }
 
     private static LeaderboardService CreateLeaderboardService()

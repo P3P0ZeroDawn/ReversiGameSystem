@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Windows;
 using Microsoft.Extensions.Logging;
 
 namespace ReversiGameSystem.Services;
@@ -76,6 +78,29 @@ internal static class ClientRuntime
     private static readonly Lazy<LeaderboardClient> Leaderboard =
         new Lazy<LeaderboardClient>(CreateLeaderboardService);
 
+    private static readonly Lazy<PlayerPreferencesClient> Preferences =
+        new Lazy<PlayerPreferencesClient>(CreatePreferencesService);
+
+    internal static ClientErrorHandler Errors { get; } = new ClientErrorHandler(
+        Logging.Value.CreateLogger<ClientErrorHandler>(), ShowErrorMessage);
+
+    private static void ShowErrorMessage(string title, string message)
+    {
+        MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+    }
+
+    internal static PlayerPreferencesClient PreferencesService
+    {
+        get { return Preferences.Value; }
+    }
+
+    private static PlayerPreferencesClient CreatePreferencesService()
+    {
+        return new PlayerPreferencesClient(
+            Logging.Value.CreateLogger<PlayerPreferencesClient>(),
+            ServerConnectionFactory.CreatePreferencesClient);
+    }
+
     internal static FriendshipClient FriendshipService
     {
         get { return Friendship.Value; }
@@ -118,10 +143,11 @@ internal static class ClientRuntime
 
     private static ILoggerFactory CreateLoggerFactory()
     {
-        return LoggerFactory.Create(
-            builder => builder
-                .SetMinimumLevel(LogLevel.Information)
-                .AddDebug());
+        string path = Path.Combine(Environment.GetFolderPath(
+            Environment.SpecialFolder.LocalApplicationData), "ReversiGameSystem", "logs",
+            "client-" + Guid.NewGuid().ToString("N") + ".log");
+        return LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Information)
+            .AddProvider(new ClientFileLoggerProvider(path)));
     }
 
     private static AccountClient CreateAccountService()

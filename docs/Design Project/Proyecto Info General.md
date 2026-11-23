@@ -749,6 +749,8 @@ El Módulo de persistencia conserva las responsabilidades de almacenamiento. El 
 
 #### Evolución estructural de las iteraciones
 
+La undécima iteración incorpora las preferencias de idioma. El Cliente de preferencias consume el Servicio de preferencias de jugador, que delega en el Módulo de preferencias y su Contrato de persistencia de preferencias. Para una cuenta, el guardado precede a la aplicación visual. Un fallo posterior de recursos puede dejar temporalmente distinto el idioma mostrado y el guardado. Para esta entrega, el alcance es el idioma.
+
 - La primera iteración define las capas de presentación, negocio, datos y servicios. Todavía no descompone esas capas en módulos.
 - La segunda iteración incorpora los módulos de presentación, comunicación, servicios, juego, motor de juego, jugadores, amistades, chat, despacho de correo y persistencia.
 - La tercera iteración refina el Módulo de juego e incorpora el Módulo de estado de juego para conservar el estado activo de las partidas en memoria. También delimita el despacho de correo como una responsabilidad separada de la persistencia.

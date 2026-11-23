@@ -64,12 +64,30 @@ internal static class MatchContractMapper
             (RemoteMatchEndReason)conclusion.Reason,
             conclusion.WinnerSeatNumber);
     }
+    internal static bool CanMapFailure(CommunicationException exception)
+    {
+        bool recognized = exception is FaultException<Proxy.SessionFault> session
+            && Enum.IsDefined(typeof(Proxy.SessionFailure), session.Detail.Reason);
+        if (exception is FaultException<Proxy.MatchFault> match)
+        {
+            recognized = s_matchStatuses.ContainsKey(match.Detail.Reason);
+        }
+        else if (exception is FaultException<Proxy.FriendshipFault> friendship)
+        {
+            recognized = friendship.Detail.Reason is Proxy.FriendshipFailure.AccountUnavailable
+                or Proxy.FriendshipFailure.FriendshipNotFound
+                or Proxy.FriendshipFailure.InvalidAccountId
+                or Proxy.FriendshipFailure.InactiveAccount;
+        }
+        return recognized;
+    }
+
     internal static MatchStatus MapFailure(Exception exception)
     {
-        MatchStatus status = MatchStatus.ServiceUnavailable;
+        MatchStatus status;
         if (exception is FaultException<Proxy.MatchFault> matchFault)
         {
-            status = MapMatchFailure(matchFault.Detail.Reason);
+            status = s_matchStatuses[matchFault.Detail.Reason];
         }
         else if (exception is FaultException<Proxy.SessionFault>)
         {
@@ -77,26 +95,19 @@ internal static class MatchContractMapper
         }
         else if (exception is FaultException<Proxy.FriendshipFault> friendshipFault)
         {
-            status = MapFriendshipFailure(friendshipFault.Detail.Reason);
+            status = friendshipFault.Detail.Reason switch
+            {
+                Proxy.FriendshipFailure.AccountUnavailable => MatchStatus.AccountUnavailable,
+                Proxy.FriendshipFailure.FriendshipNotFound => MatchStatus.FriendshipNotFound,
+                Proxy.FriendshipFailure.InvalidAccountId => MatchStatus.InvalidAccountId,
+                Proxy.FriendshipFailure.InactiveAccount => MatchStatus.InactiveAccount,
+                _ => throw new ArgumentOutOfRangeException(nameof(exception))
+            };
         }
-        return status;
-    }
-    private static MatchStatus MapFriendshipFailure(Proxy.FriendshipFailure reason)
-    {
-        return reason switch
+        else
         {
-            Proxy.FriendshipFailure.AccountUnavailable => MatchStatus.AccountUnavailable,
-            Proxy.FriendshipFailure.FriendshipNotFound => MatchStatus.FriendshipNotFound,
-            Proxy.FriendshipFailure.InvalidAccountId => MatchStatus.InvalidAccountId,
-            _ => MatchStatus.InactiveAccount
-        };
-    }
-    private static MatchStatus MapMatchFailure(Proxy.MatchFailure failure)
-    {
-        MatchStatus status = MatchStatus.InactiveAccount;
-        if (s_matchStatuses.ContainsKey(failure))
-        {
-            status = s_matchStatuses[failure];
+            throw new ArgumentException("The failure has no declared match status.",
+                nameof(exception));
         }
         return status;
     }
