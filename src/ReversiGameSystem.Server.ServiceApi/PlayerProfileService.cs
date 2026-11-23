@@ -107,23 +107,18 @@ public sealed class PlayerProfileService : IPlayerProfileService
 
     private static ProfileFailure MapProfileFailure(ProfileOperationStatus status)
     {
-        switch (status)
+        ProfileFailure failure = status switch
         {
-            case ProfileOperationStatus.InactiveAccount:
-                return ProfileFailure.InactiveAccount;
-            case ProfileOperationStatus.InvalidAccountId:
-                return ProfileFailure.InvalidAccountId;
-            case ProfileOperationStatus.AccountNotFound:
-                return ProfileFailure.AccountNotFound;
-            case ProfileOperationStatus.InvalidUsername:
-                return ProfileFailure.InvalidUsername;
-            case ProfileOperationStatus.UsernameUnavailable:
-                return ProfileFailure.UsernameUnavailable;
-            case ProfileOperationStatus.InvalidImage:
-                return ProfileFailure.InvalidImage;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(status));
-        }
+            ProfileOperationStatus.InactiveAccount => ProfileFailure.InactiveAccount,
+            ProfileOperationStatus.InvalidAccountId => ProfileFailure.InvalidAccountId,
+            ProfileOperationStatus.AccountNotFound => ProfileFailure.AccountNotFound,
+            ProfileOperationStatus.InvalidUsername => ProfileFailure.InvalidUsername,
+            ProfileOperationStatus.UsernameUnavailable => ProfileFailure.UsernameUnavailable,
+            ProfileOperationStatus.InvalidImage => ProfileFailure.InvalidImage,
+            _ => throw new ArgumentOutOfRangeException(nameof(status))
+        };
+
+        return failure;
     }
 
     private static ContractProfile MapProfile(ApplicationProfile profile)

@@ -199,35 +199,25 @@ public sealed class MatchLobbyService : IMatchLobbyService
 
     private static MatchFailure MapMatchFailure(MatchStatus status)
     {
-        switch (status)
+        MatchFailure failure = status switch
         {
-            case MatchStatus.InactiveAccount:
-                return MatchFailure.InactiveAccount;
-            case MatchStatus.InvalidMatchId:
-                return MatchFailure.InvalidMatchId;
-            case MatchStatus.InvalidConfiguration:
-                return MatchFailure.InvalidConfiguration;
-            case MatchStatus.InvalidTurnDuration:
-                return MatchFailure.InvalidTurnDuration;
-            case MatchStatus.MatchNotFound:
-                return MatchFailure.MatchNotFound;
-            case MatchStatus.CannotJoinOwnMatch:
-                return MatchFailure.CannotJoinOwnMatch;
-            case MatchStatus.InvalidMatchCode:
-                return MatchFailure.InvalidMatchCode;
-            case MatchStatus.MatchCodeUnavailable:
-                return MatchFailure.MatchCodeUnavailable;
-            case MatchStatus.MatchNotWaiting:
-                return MatchFailure.MatchNotWaiting;
-            case MatchStatus.MatchNotInProgress:
-                return MatchFailure.MatchNotInProgress;
-            case MatchStatus.Unauthorized:
-                return MatchFailure.Unauthorized;
-            default:
-                throw new ArgumentOutOfRangeException(
-                    nameof(status),
-                    status,
-                    "Unsupported match status.");
-        }
+            MatchStatus.InactiveAccount => MatchFailure.InactiveAccount,
+            MatchStatus.InvalidMatchId => MatchFailure.InvalidMatchId,
+            MatchStatus.InvalidConfiguration => MatchFailure.InvalidConfiguration,
+            MatchStatus.InvalidTurnDuration => MatchFailure.InvalidTurnDuration,
+            MatchStatus.MatchNotFound => MatchFailure.MatchNotFound,
+            MatchStatus.CannotJoinOwnMatch => MatchFailure.CannotJoinOwnMatch,
+            MatchStatus.InvalidMatchCode => MatchFailure.InvalidMatchCode,
+            MatchStatus.MatchCodeUnavailable => MatchFailure.MatchCodeUnavailable,
+            MatchStatus.MatchNotWaiting => MatchFailure.MatchNotWaiting,
+            MatchStatus.MatchNotInProgress => MatchFailure.MatchNotInProgress,
+            MatchStatus.Unauthorized => MatchFailure.Unauthorized,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(status),
+                status,
+                "Unsupported match status.")
+        };
+
+        return failure;
     }
 }
