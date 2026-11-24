@@ -13,34 +13,34 @@ public static class EmailPolicy
     private const int MinimumTopLevelDomainLength = 2;
     private const string AllowedLocalSymbols = "!#$%&'*+-/=?^_`{|}~";
 
-    public static EmailValidationError Validate(string email)
+    public static EmailValidationStatus Validate(string email)
     {
         if (email.Length > MaximumAddressLength)
         {
-            return EmailValidationError.TooLong;
+            return EmailValidationStatus.TooLong;
         }
 
         int atSignIndex = email.IndexOf('@');
         if (atSignIndex < 1 || atSignIndex != email.LastIndexOf('@'))
         {
-            return EmailValidationError.InvalidStructure;
+            return EmailValidationStatus.InvalidStructure;
         }
 
         string localPart = email.Substring(0, atSignIndex);
         if (!IsValidLocalPart(localPart))
         {
-            return EmailValidationError.InvalidLocalPart;
+            return EmailValidationStatus.InvalidLocalPart;
         }
 
         string domain = email.Substring(atSignIndex + 1);
         if (!TryGetValidAsciiDomain(domain, out string asciiDomain))
         {
-            return EmailValidationError.InvalidDomain;
+            return EmailValidationStatus.InvalidDomain;
         }
 
         return localPart.Length + 1 + asciiDomain.Length <= MaximumAddressLength
-            ? EmailValidationError.None
-            : EmailValidationError.TooLong;
+            ? EmailValidationStatus.Success
+            : EmailValidationStatus.TooLong;
     }
 
     private static bool IsValidLocalPart(string localPart)
@@ -136,9 +136,9 @@ public static class EmailPolicy
     }
 }
 
-public enum EmailValidationError
+public enum EmailValidationStatus
 {
-    None,
+    Success,
     TooLong,
     InvalidStructure,
     InvalidLocalPart,

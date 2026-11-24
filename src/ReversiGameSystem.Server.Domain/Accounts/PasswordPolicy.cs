@@ -8,7 +8,7 @@ public static class PasswordPolicy
     public const int MinimumLength = 8;
     public const int MaximumLength = 128;
 
-    public static PasswordValidationError Validate(string password)
+    public static PasswordValidationStatus Validate(string password)
     {
         int characterCount = 0;
         PasswordCharacterClasses characterClasses = PasswordCharacterClasses.None;
@@ -17,7 +17,7 @@ public static class PasswordPolicy
         {
             if (!IsSupportedCodePoint(password, index))
             {
-                return PasswordValidationError.UnsupportedCharacter;
+                return PasswordValidationStatus.UnsupportedCharacter;
             }
 
             characterClasses |= GetCharacterClass(password, index);
@@ -30,39 +30,39 @@ public static class PasswordPolicy
             characterCount++;
             if (characterCount > MaximumLength)
             {
-                return PasswordValidationError.TooLong;
+                return PasswordValidationStatus.TooLong;
             }
         }
 
         if (characterCount < MinimumLength)
         {
-            return PasswordValidationError.TooShort;
+            return PasswordValidationStatus.TooShort;
         }
 
         return ValidateCharacterClasses(characterClasses);
     }
 
-    private static PasswordValidationError ValidateCharacterClasses(
+    private static PasswordValidationStatus ValidateCharacterClasses(
         PasswordCharacterClasses characterClasses)
     {
         if ((characterClasses & PasswordCharacterClasses.UppercaseLetter) == 0)
         {
-            return PasswordValidationError.MissingUppercaseLetter;
+            return PasswordValidationStatus.MissingUppercaseLetter;
         }
 
         if ((characterClasses & PasswordCharacterClasses.LowercaseLetter) == 0)
         {
-            return PasswordValidationError.MissingLowercaseLetter;
+            return PasswordValidationStatus.MissingLowercaseLetter;
         }
 
         if ((characterClasses & PasswordCharacterClasses.Digit) == 0)
         {
-            return PasswordValidationError.MissingDigit;
+            return PasswordValidationStatus.MissingDigit;
         }
 
         return (characterClasses & PasswordCharacterClasses.Symbol) == 0
-            ? PasswordValidationError.MissingSymbol
-            : PasswordValidationError.None;
+            ? PasswordValidationStatus.MissingSymbol
+            : PasswordValidationStatus.Success;
     }
 
     private static PasswordCharacterClasses GetCharacterClass(string password, int index)
@@ -120,9 +120,9 @@ public static class PasswordPolicy
     }
 }
 
-public enum PasswordValidationError
+public enum PasswordValidationStatus
 {
-    None,
+    Success,
     TooShort,
     TooLong,
     UnsupportedCharacter,

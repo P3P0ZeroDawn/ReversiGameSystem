@@ -101,7 +101,7 @@ public sealed class PlayerProfileApplicationService
 
         long accountId = sessionResult.Value.AccountId;
         string normalized = username == null ? string.Empty : username.Trim();
-        if (UsernamePolicy.Validate(normalized) != UsernameValidationError.None)
+        if (UsernamePolicy.Validate(normalized) != UsernameValidationStatus.Success)
         {
             return ProfileStatus.InvalidUsername;
         }

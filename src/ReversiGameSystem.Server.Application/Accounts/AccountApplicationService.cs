@@ -34,13 +34,13 @@ public sealed class AccountApplicationService
         string emailAddress)
     {
         string normalizedUsername = username?.Trim() ?? string.Empty;
-        if (UsernamePolicy.Validate(normalizedUsername) != UsernameValidationError.None)
+        if (UsernamePolicy.Validate(normalizedUsername) != UsernameValidationStatus.Success)
         {
             return new AccountResult<DateTime>(AccountStatus.InvalidUsername);
         }
 
         string normalizedEmail = emailAddress?.Trim() ?? string.Empty;
-        if (EmailPolicy.Validate(normalizedEmail) != EmailValidationError.None)
+        if (EmailPolicy.Validate(normalizedEmail) != EmailValidationStatus.Success)
         {
             return new AccountResult<DateTime>(AccountStatus.InvalidEmailAddress);
         }
@@ -107,7 +107,7 @@ public sealed class AccountApplicationService
         }
 
         string candidateNewPassword = newPassword ?? string.Empty;
-        if (PasswordPolicy.Validate(candidateNewPassword) != PasswordValidationError.None)
+        if (PasswordPolicy.Validate(candidateNewPassword) != PasswordValidationStatus.Success)
         {
             return AccountStatus.InvalidPassword;
         }
@@ -135,7 +135,7 @@ public sealed class AccountApplicationService
     public AccountResult<DateTime> RequestPasswordResetCode(string emailAddress)
     {
         string normalizedEmail = emailAddress?.Trim() ?? string.Empty;
-        if (EmailPolicy.Validate(normalizedEmail) != EmailValidationError.None)
+        if (EmailPolicy.Validate(normalizedEmail) != EmailValidationStatus.Success)
         {
             return new AccountResult<DateTime>(AccountStatus.InvalidEmailAddress);
         }
@@ -164,13 +164,13 @@ public sealed class AccountApplicationService
         string newPassword)
     {
         string normalizedEmail = emailAddress?.Trim() ?? string.Empty;
-        if (EmailPolicy.Validate(normalizedEmail) != EmailValidationError.None)
+        if (EmailPolicy.Validate(normalizedEmail) != EmailValidationStatus.Success)
         {
             return AccountStatus.InvalidEmailAddress;
         }
 
         string candidateNewPassword = newPassword ?? string.Empty;
-        if (PasswordPolicy.Validate(candidateNewPassword) != PasswordValidationError.None)
+        if (PasswordPolicy.Validate(candidateNewPassword) != PasswordValidationStatus.Success)
         {
             return AccountStatus.InvalidPassword;
         }
@@ -289,19 +289,19 @@ public sealed class AccountApplicationService
         NewAccountRegistration registration)
     {
         string username = registration.Username?.Trim() ?? string.Empty;
-        if (UsernamePolicy.Validate(username) != UsernameValidationError.None)
+        if (UsernamePolicy.Validate(username) != UsernameValidationStatus.Success)
         {
             return AccountStatus.InvalidUsername;
         }
 
         string emailAddress = registration.EmailAddress?.Trim() ?? string.Empty;
-        if (EmailPolicy.Validate(emailAddress) != EmailValidationError.None)
+        if (EmailPolicy.Validate(emailAddress) != EmailValidationStatus.Success)
         {
             return AccountStatus.InvalidEmailAddress;
         }
 
         string password = registration.Password ?? string.Empty;
-        if (PasswordPolicy.Validate(password) != PasswordValidationError.None)
+        if (PasswordPolicy.Validate(password) != PasswordValidationStatus.Success)
         {
             return AccountStatus.InvalidPassword;
         }
