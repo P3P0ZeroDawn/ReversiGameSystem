@@ -37,13 +37,26 @@ namespace ReversiGameSystem.Server.Host;
 internal static class Program
 {
     private const string ServerDataDirectoryName = "ReversiGameSystem.Server";
+    private const string ProfileImageDirectoryName = "profile-images";
+    private const string LogDirectoryName = "logs";
+    private const string LogFileNamePattern = "server-.log";
+    private const string VerificationSecretVariable = "REVERSI_VERIFICATION_SECRET";
+    private const string ActiveMatchState = "InProgress";
+    private const string FinishedMatchState = "Finished";
+    private const int MatchPersistenceIntervalSeconds = 1;
+    private const int TurnTimeoutCheckIntervalSeconds = 1;
+    private const int FriendshipSweepIntervalSeconds = 5;
+    private const int LobbyExpiryCheckIntervalSeconds = 5;
+    private const int SessionExpiryCheckIntervalSeconds = 30;
+    private const string UtcTimestampFormat = "yyyy-MM-dd HH:mm:ss.fff 'Z'";
+    private const string UtcTimestampPropertyName = "UtcTimestamp";
     private const string BoardBackgroundDirectoryName = "board-backgrounds";
     private const string BoardBackgroundReferencePrefix = "board-backgrounds/";
     private const long MaximumLogFileSizeBytes = 10_485_760;
     private const int RetainedLogFileCount = 7;
     private const int MaximumFriendshipSweepChannels = 64;
     private const string PersistentLogOutputTemplate =
-        "{UtcTimestamp} [{Level:u3}] "
+        "{" + UtcTimestampPropertyName + "} [{Level:u3}] "
         + "{SourceContext} {Message:lj}{NewLine}{Exception}";
 
     private static int Main()
@@ -54,7 +67,7 @@ internal static class Program
             .MinimumLevel.Information()
             .Enrich.With(new UtcTimestampEnricher())
             .WriteTo.File(
-                Path.Combine(logDirectory, "server-.log"),
+                Path.Combine(logDirectory, LogFileNamePattern),
                 rollingInterval: RollingInterval.Day,
                 fileSizeLimitBytes: MaximumLogFileSizeBytes,
                 rollOnFileSizeLimit: true,
@@ -231,12 +244,12 @@ internal static class Program
                                     new PeriodicTaskRunner(
                                         nameof(GameplayMatchApplicationService
                                             .SynchronizePendingMatches),
-                                        TimeSpan.FromSeconds(1),
+                                        TimeSpan.FromSeconds(MatchPersistenceIntervalSeconds),
                                         gameplayMatchApplicationService.SynchronizePendingMatches,
                                         loggerFactory.CreateLogger<PeriodicTaskRunner>()),
                                     new PeriodicTaskRunner(
                                         nameof(GameplayMatchApplicationService.ProcessTurnTimeouts),
-                                        TimeSpan.FromSeconds(1),
+                                        TimeSpan.FromSeconds(TurnTimeoutCheckIntervalSeconds),
                                         () => ProcessGameplayTimeouts(
                                             gameplayMatchApplicationService,
                                             gameplayPresence,
@@ -244,7 +257,7 @@ internal static class Program
                                         loggerFactory.CreateLogger<PeriodicTaskRunner>()),
                                     new PeriodicTaskRunner(
                                         nameof(FriendshipSubscriptions.SweepChannels),
-                                        TimeSpan.FromSeconds(5),
+                                        TimeSpan.FromSeconds(FriendshipSweepIntervalSeconds),
                                         () => friendshipSubscriptions.SweepChannels(
                                             MaximumFriendshipSweepChannels,
                                             token => friendshipApplicationService
@@ -254,14 +267,14 @@ internal static class Program
                                     new PeriodicTaskRunner(
                                         nameof(MatchApplicationService
                                             .CancelExpiredWaitingSessions),
-                                        TimeSpan.FromSeconds(5),
+                                        TimeSpan.FromSeconds(LobbyExpiryCheckIntervalSeconds),
                                         () => SweepExpiredLobbies(
                                             matchApplicationService,
                                             lobbySubscriptions),
                                         loggerFactory.CreateLogger<PeriodicTaskRunner>()),
                                     new PeriodicTaskRunner(
                                         nameof(SessionStore.RemoveExpiredSessions),
-                                        TimeSpan.FromSeconds(30),
+                                        TimeSpan.FromSeconds(SessionExpiryCheckIntervalSeconds),
                                         sessions.RemoveExpiredSessions,
                                         loggerFactory.CreateLogger<PeriodicTaskRunner>())
                                 };
@@ -284,7 +297,7 @@ internal static class Program
         VerificationCodeService verificationCodes,
         SessionStore sessions)
     {
-        ProfileImageRepository images = new ProfileImageRepository(GetProfileImageDirectory());
+        PlayerImageRepository images = new PlayerImageRepository(GetProfileImageDirectory());
         AccountApplicationService applicationService = new AccountApplicationService(
             accounts,
             images,
@@ -298,7 +311,7 @@ internal static class Program
         IUtcClock clock)
     {
         byte[] secret = Convert.FromBase64String(
-            EnvironmentSettings.ReadRequired("REVERSI_VERIFICATION_SECRET"));
+            EnvironmentSettings.ReadRequired(VerificationSecretVariable));
         VerificationCodeProtector protector;
         try
         {
@@ -319,7 +332,7 @@ internal static class Program
         SessionStore sessions)
     {
         PlayerProfileRepository profiles = new PlayerProfileRepository();
-        ProfileImageRepository images = new ProfileImageRepository(GetProfileImageDirectory());
+        PlayerImageRepository images = new PlayerImageRepository(GetProfileImageDirectory());
         PlayerProfileApplicationService applicationService =
             new PlayerProfileApplicationService(
             sessions,
@@ -335,7 +348,7 @@ internal static class Program
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             ServerDataDirectoryName, BoardBackgroundDirectoryName);
         PreferencesRepository preferences = new PreferencesRepository();
-        ProfileImageRepository backgrounds = new ProfileImageRepository(
+        PlayerImageRepository backgrounds = new PlayerImageRepository(
             directory, BoardBackgroundReferencePrefix);
         PreferencesApplicationService applicationService = new PreferencesApplicationService(
             sessions, preferences, backgrounds);
@@ -354,15 +367,15 @@ internal static class Program
     {
         return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "ReversiGameSystem.Server", "profile-images");
+            ServerDataDirectoryName, ProfileImageDirectoryName);
     }
 
     private static string GetLogDirectory()
     {
         return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "ReversiGameSystem.Server",
-            "logs");
+            ServerDataDirectoryName,
+            LogDirectoryName);
     }
 
     private static ServiceHost CreateServiceHost(
@@ -452,8 +465,8 @@ internal static class Program
             return false;
         }
 
-        return string.Equals(result.Value.State, "InProgress", StringComparison.Ordinal)
-            || string.Equals(result.Value.State, "Finished", StringComparison.Ordinal);
+        return string.Equals(result.Value.State, ActiveMatchState, StringComparison.Ordinal)
+            || string.Equals(result.Value.State, FinishedMatchState, StringComparison.Ordinal);
     }
 
     private static void HandleGameplaySubscriptionRemoved(
@@ -570,10 +583,10 @@ internal static class Program
         public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
         {
             string utcTimestamp = logEvent.Timestamp.UtcDateTime.ToString(
-                "yyyy-MM-dd HH:mm:ss.fff 'Z'",
+                UtcTimestampFormat,
                 CultureInfo.InvariantCulture);
             logEvent.AddPropertyIfAbsent(
-                propertyFactory.CreateProperty("UtcTimestamp", utcTimestamp));
+                propertyFactory.CreateProperty(UtcTimestampPropertyName, utcTimestamp));
         }
     }
 }

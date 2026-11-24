@@ -18,7 +18,7 @@ public sealed class CreateAccountHandlerTests
         {
             CreateResult = new AccountResult<long>(42)
         };
-        ProfileImageRepositoryStub imageStore = new ProfileImageRepositoryStub();
+        PlayerImageRepositoryStub imageStore = new PlayerImageRepositoryStub();
         AccountApplicationService service = CreateService(accountStore, imageStore);
 
         // Act
@@ -48,7 +48,7 @@ public sealed class CreateAccountHandlerTests
     {
         // Arrange
         AccountRepositoryStub accountStore = new AccountRepositoryStub();
-        ProfileImageRepositoryStub imageStore = new ProfileImageRepositoryStub();
+        PlayerImageRepositoryStub imageStore = new PlayerImageRepositoryStub();
         AccountApplicationService service = CreateService(accountStore, imageStore);
 
         // Act
@@ -65,7 +65,7 @@ public sealed class CreateAccountHandlerTests
     {
         // Arrange
         AccountRepositoryStub accountStore = new AccountRepositoryStub();
-        AccountApplicationService service = CreateService(accountStore, new ProfileImageRepositoryStub());
+        AccountApplicationService service = CreateService(accountStore, new PlayerImageRepositoryStub());
 
         // Act & Assert
         TestAssert.AreEqual(
@@ -87,7 +87,7 @@ public sealed class CreateAccountHandlerTests
     {
         // Arrange
         AccountRepositoryStub accountStore = new AccountRepositoryStub();
-        AccountApplicationService service = CreateService(accountStore, new ProfileImageRepositoryStub());
+        AccountApplicationService service = CreateService(accountStore, new PlayerImageRepositoryStub());
 
         // Act
         AccountResult<AccountSummary> result = service.CompleteRegistration(
@@ -111,7 +111,7 @@ public sealed class CreateAccountHandlerTests
         {
             CreateResult = new AccountResult<long>(AccountStatus.UsernameUnavailable)
         };
-        ProfileImageRepositoryStub imageStore = new ProfileImageRepositoryStub();
+        PlayerImageRepositoryStub imageStore = new PlayerImageRepositoryStub();
         AccountApplicationService service = CreateService(accountStore, imageStore);
 
         // Act
@@ -137,7 +137,7 @@ public sealed class CreateAccountHandlerTests
         {
             CreateResult = new AccountResult<long>(AccountStatus.InvalidLocale)
         };
-        AccountApplicationService service = CreateService(accountStore, new ProfileImageRepositoryStub());
+        AccountApplicationService service = CreateService(accountStore, new PlayerImageRepositoryStub());
 
         // Act
         AccountResult<AccountSummary> result = service.CompleteRegistration(

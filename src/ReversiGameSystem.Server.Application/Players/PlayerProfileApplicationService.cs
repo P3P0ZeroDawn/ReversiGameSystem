@@ -6,6 +6,7 @@ namespace ReversiGameSystem.Server.Application.Players;
 
 public sealed class PlayerProfileApplicationService
 {
+    private readonly object _imageReplacementLock = new object();
     private readonly SessionStore _sessions;
     private readonly IPlayerProfileRepository _profiles;
     private readonly IPlayerImageRepository _images;
@@ -71,21 +72,24 @@ public sealed class PlayerProfileApplicationService
         }
 
         long callerAccountId = sessionResult.Value.AccountId;
-        ProfileResult<string> referenceResult = ResolveProfileImageReference(
-            callerAccountId,
-            targetAccountId);
-        if (referenceResult.Value == null)
+        lock (_imageReplacementLock)
         {
-            return new GetProfileImageResult(referenceResult.Status);
-        }
+            ProfileResult<string> referenceResult = ResolveProfileImageReference(
+                callerAccountId,
+                targetAccountId);
+            if (referenceResult.Value == null)
+            {
+                return new GetProfileImageResult(referenceResult.Status);
+            }
 
-        if (string.IsNullOrWhiteSpace(referenceResult.Value))
-        {
-            return new GetProfileImageResult();
-        }
+            if (string.IsNullOrWhiteSpace(referenceResult.Value))
+            {
+                return new GetProfileImageResult();
+            }
 
-        ProfileImageData image = _images.ReadImage(referenceResult.Value);
-        return new GetProfileImageResult(image);
+            ProfileImageData image = _images.ReadImage(referenceResult.Value);
+            return new GetProfileImageResult(image);
+        }
     }
 
     public ProfileOperationStatus ChangeUsername(
@@ -108,12 +112,6 @@ public sealed class PlayerProfileApplicationService
 
         return _profiles.ChangeUsername(accountId, normalized);
     }
-
-    /// <summary>Stores and associates a validated image with the caller's profile.</summary>
-    /// <param name="sessionToken">The caller's authenticated session token.</param>
-    /// <param name="image">The proposed image content and media type.</param>
-    /// <returns>The expected modification status.</returns>
-    /// <exception cref="AggregateException">Association and cleanup both failed.</exception>
     public ProfileOperationStatus UpdateImage(
         string sessionToken,
         ProfileImageData? image)
@@ -131,18 +129,32 @@ public sealed class PlayerProfileApplicationService
             return ProfileOperationStatus.InvalidImage;
         }
 
-        ProfileResult<string> saveResult = _images.SaveImage(image);
-        if (saveResult.Value == null)
+        lock (_imageReplacementLock)
         {
-            return saveResult.Status;
+            ProfileResult<string> current = _profiles.GetProfileImageReference(accountId);
+            if (current.Status != ProfileOperationStatus.Success)
+            {
+                return ProfileOperationStatus.InactiveAccount;
+            }
+            string previousReference = current.Value
+                ?? throw new InvalidOperationException(
+                    "The current image reference is unavailable.");
+            ProfileResult<string> saved = _images.SaveImage(image, PlayerImageKind.Profile);
+            if (saved.Status != ProfileOperationStatus.Success)
+            {
+                return saved.Status;
+            }
+            string newReference = saved.Value
+                ?? throw new InvalidOperationException(
+                    "The stored image reference is unavailable.");
+            return AssociateProfileImage(accountId, newReference, previousReference);
         }
-
-        return AssociateProfileImage(accountId, saveResult.Value);
     }
 
     private ProfileOperationStatus AssociateProfileImage(
         long accountId,
-        string imageReference)
+        string imageReference,
+        string previousReference)
     {
         ProfileOperationStatus updateStatus;
         try
@@ -158,6 +170,11 @@ public sealed class PlayerProfileApplicationService
         if (updateStatus != ProfileOperationStatus.Success)
         {
             _images.DeleteImage(imageReference);
+        }
+        else if (!string.IsNullOrWhiteSpace(previousReference)
+            && previousReference != imageReference)
+        {
+            _images.DeleteImage(previousReference);
         }
 
         return updateStatus;

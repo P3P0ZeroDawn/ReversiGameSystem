@@ -44,6 +44,11 @@ internal static class Program
             new AccountCreationViewModelTests();
         Action[] tests =
         {
+            ImagePreviewTests.CreatePreview_WideImage_CropsCentralSquare,
+            ImagePreviewTests.CreatePreview_TransparentImage_CompositesWhiteWithoutUpscaling,
+            ImagePreviewTests.CreatePreview_LargeImage_PreservesPurposeResolution,
+            ImagePreviewTests.Decode_ReturnedProfile_Preserves256Pixels,
+            ImagePreviewTests.CreatePreview_OversizedDimensions_RejectsImage,
             RemoteCallTests.SendServiceCall_Timeout_PreservesCauseAndAddsCorrelation,
             RemoteCallTests.SendServiceCall_ConnectionFailure_PreservesCauseAndAddsCorrelation,
             RemoteCallTests.SendServiceCall_ProgrammingFailure_PropagatesOriginalException,

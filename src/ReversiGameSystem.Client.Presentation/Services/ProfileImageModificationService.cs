@@ -6,16 +6,16 @@ using ReversiGameSystem.Validation;
 
 namespace ReversiGameSystem.Services;
 
-internal sealed class ProfileImageModificationService
+internal static class ProfileImageModificationService
 {
-    internal async Task<ProfileStatus> Save(string sessionToken, string imagePath)
+    internal static async Task<ProfileStatus> ChangeProfileImage(string sessionToken, string imagePath)
     {
-        ProfileImageContent image = await Task.Run(() => ReadUpload(imagePath));
+        ProfileImageContent image = await Task.Run(() => ReadImageFile(imagePath));
         return await ClientRuntime.ProfileService.UpdateProfileImage(
             sessionToken, image.Content, image.MediaType);
     }
 
-    internal static ProfileImageContent ReadUpload(string imagePath)
+    internal static ProfileImageContent ReadImageFile(string imagePath)
     {
         FileInfo file = new FileInfo(imagePath);
         if (!file.Exists || file.Length > ProfilePicturePolicy.MaximumFileBytes)
@@ -29,7 +29,7 @@ internal sealed class ProfileImageModificationService
         return new ProfileImageContent(File.ReadAllBytes(imagePath), mediaType);
     }
 
-    internal static BitmapSource? Decode(ProfileImageContent? content)
+    internal static BitmapSource? CreateProfilePreview(ProfileImageContent? content)
     {
         if (content == null)
         {
@@ -42,14 +42,25 @@ internal sealed class ProfileImageModificationService
         }
         using (MemoryStream stream = new MemoryStream(content.Content, false))
         {
-            BitmapImage image = new BitmapImage();
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.StreamSource = stream;
-            image.DecodePixelWidth = 128;
-            image.EndInit();
-            image.Freeze();
-            return image;
+            BitmapDecoder decoder = BitmapDecoder.Create(
+                stream, BitmapCreateOptions.None, BitmapCacheOption.OnDemand);
+            if (!(decoder is PngBitmapDecoder || decoder is JpegBitmapDecoder)
+                || decoder.Frames.Count == 0)
+            {
+                throw new InvalidOperationException("The service returned an unsupported image.");
+            }
+
+            BitmapFrame frame = decoder.Frames[0];
+            if (frame.PixelWidth < 1 || frame.PixelHeight < 1
+                || frame.PixelWidth > ProfilePicturePolicy.MaximumDimension
+                || frame.PixelHeight > ProfilePicturePolicy.MaximumDimension)
+            {
+                throw new InvalidOperationException(
+                    "The service returned invalid image dimensions.");
+            }
+
+            return ProfilePicturePolicy.CreateSquarePreview(
+                frame, ProfilePicturePolicy.ProfilePreviewSize);
         }
     }
 }

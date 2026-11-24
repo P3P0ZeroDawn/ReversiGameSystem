@@ -15,7 +15,7 @@ internal static class LegacyTestSuite
         tests.AddRange(CreatePasswordPolicyTests());
         tests.AddRange(CreatePersistenceModelTests());
         tests.AddRange(CreatePlayerProfileApplicationServiceTests());
-        tests.AddRange(CreateProfileImageStoreIntegrationTests());
+        tests.AddRange(CreatePlayerImageRepositoryTests());
         tests.AddRange(CreateUsernamePolicyTests());
         return tests.ToArray();
     }
@@ -146,13 +146,17 @@ internal static class LegacyTestSuite
         };
     }
 
-    private static Action[] CreateProfileImageStoreIntegrationTests()
+    private static Action[] CreatePlayerImageRepositoryTests()
     {
-        ProfileImageStoreIntegrationTests tests = new ProfileImageStoreIntegrationTests();
         return new Action[]
         {
-            tests.SaveAndDelete_ValidImage_UsesRelativeUri,
-            tests.SaveImage_ValidAndInvalidImages_ReturnsExpectedOutcome,
+            PlayerImageRepositoryTests.SaveImage_WideTransparentImage_CropsCenterAndCompositesWhite,
+            PlayerImageRepositoryTests.SaveImage_Background_ResizesAndDoesNotUpscale,
+            PlayerImageRepositoryTests.ReadImage_LegacyFormats_PreservesMediaType,
+            PlayerImageRepositoryTests.DeleteImage_TraversalReference_RejectsAndPreservesFile,
+            PlayerImageRepositoryTests.SaveImage_DetailedBackgroundAboveSoftTarget_AcceptsImage,
+            PlayerImageRepositoryTests.SaveAndDelete_ValidImage_UsesRelativeUri,
+            PlayerImageRepositoryTests.SaveImage_ValidAndInvalidImages_ReturnsExpectedOutcome,
         };
     }
 

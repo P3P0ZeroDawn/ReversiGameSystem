@@ -1,3 +1,4 @@
+using ReversiGameSystem.Server.Domain.Accounts;
 using System;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Players;
@@ -28,7 +29,7 @@ internal sealed class ProfileBoundaryContext
     internal SessionStore Sessions { get; } = new SessionStore(new TestUtcClock());
     internal PlayerProfileRepositoryStub Profiles { get; } =
         new PlayerProfileRepositoryStub();
-    internal ProfileImageRepositoryStub Images { get; } = new ProfileImageRepositoryStub();
+    internal PlayerImageRepositoryStub Images { get; } = new PlayerImageRepositoryStub();
     internal PlayerProfileService Service
     {
         get
@@ -43,8 +44,10 @@ internal sealed class ProfileBoundaryContext
     }
 }
 
-internal sealed class ProfileImageRepositoryStub : IPlayerImageRepository
+internal sealed class PlayerImageRepositoryStub : IPlayerImageRepository
 {
+    internal Exception? CleanupFailure { get; set; }
+    internal PlayerImageKind LastKind { get; private set; }
     internal bool FailRead { get; set; }
     internal bool RejectSave { get; set; }
     internal bool ReadCalled { get; private set; }
@@ -58,8 +61,9 @@ internal sealed class ProfileImageRepositoryStub : IPlayerImageRepository
         }
         return new ProfileImageData(new byte[] { 1, 2 }, "image/png");
     }
-    public ProfileResult<string> SaveImage(ProfileImageData image)
+    public ProfileResult<string> SaveImage(ProfileImageData image, PlayerImageKind kind)
     {
+        LastKind = kind;
         if (RejectSave)
         {
             return new ProfileResult<string>(ProfileOperationStatus.InvalidImage);
@@ -69,6 +73,10 @@ internal sealed class ProfileImageRepositoryStub : IPlayerImageRepository
     }
     public void DeleteImage(string imageReference)
     {
+        if (CleanupFailure != null)
+        {
+            throw CleanupFailure;
+        }
         Deleted = imageReference;
     }
 }

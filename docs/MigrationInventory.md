@@ -7,15 +7,21 @@ de cambios permanece en Git y no se repite aquí.
 
 El guardado del idioma y su recuperación al iniciar sesión están comprobados manualmente.
 
-1. Revisar el manejo de excepciones del cliente recién implementado antes de migrar más servicios.
-2. Al finalizar las migraciones, inventariar las pruebas existentes, completar las faltantes y
+1. Revisar el diseño del manejo de excepciones y validar la siguiente migración del cliente:
+   preferencias completas según el catálogo, comenzando por el idioma ya persistido.
+2. Justificar matemáticamente todos los temporizadores y plazos del cliente y del servidor frente
+   a las configuraciones efectivas de WCF. Inventariar intervalos, timeouts, duración de operaciones,
+   concurrencia y origen de cada plazo; explicitar supuestos de latencia y márgenes. Contrastar el
+   cálculo con pruebas y modificar o recalcular los valores que no cumplan el comportamiento acordado.
+3. Al finalizar las migraciones, inventariar las pruebas existentes, completar las faltantes y
    revisar su cumplimiento del estándar y su ejecución individual en Visual Studio.
 
 La verificación debe cubrir gameplay/MVVM, rival automático e inactividad, reconexión de 30 segundos,
 chat (muteo y límite de mensajes), idioma persistente, cierre de sesión, clasificación de excepciones
 y registros sin datos sensibles. Incluir fallos durante la reconexión y al escribir los logs.
 
-El resto de preferencias es secundario. La comprobación con Hamachi sigue pendiente.
+La ampliación a todas las preferencias queda pendiente de validar el diseño antes de implementar.
+La comprobación con Hamachi sigue pendiente.
 
 ## Criterio de finalización
 

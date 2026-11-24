@@ -1,3 +1,4 @@
+using ReversiGameSystem.Server.Domain.Accounts;
 using System;
 using System.ServiceModel;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -369,7 +370,7 @@ public sealed class PlayerBoundaryTests
         public ProfileImageData ReadImage(string imageReference) =>
             throw new NotSupportedException();
 
-        public ProfileResult<string> SaveImage(ProfileImageData image)
+        public ProfileResult<string> SaveImage(ProfileImageData image, PlayerImageKind kind)
         {
             LastImage = image;
             return new ProfileResult<string>("img/42.png");
