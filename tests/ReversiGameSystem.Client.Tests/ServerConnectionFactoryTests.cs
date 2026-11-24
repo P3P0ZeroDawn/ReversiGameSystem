@@ -3,10 +3,12 @@ using System.ServiceModel;
 using Microsoft.Extensions.Logging.Abstractions;
 using Proxy = ReversiGameSystem.ServerProxy;
 using ReversiGameSystem.Services;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class ServerConnectionFactoryTests
+[TestClass]
+public sealed class ServerConnectionFactoryTests
 {
     internal static Action[] CreateTests()
     {
@@ -21,7 +23,8 @@ internal sealed class ServerConnectionFactoryTests
         };
     }
 
-    internal void GetServerHost_VariableAbsent_ReturnsLocalhost()
+    [TestMethod]
+    public void GetServerHost_VariableAbsent_ReturnsLocalhost()
     {
         // Arrange
         string? previousValue = Environment.GetEnvironmentVariable(
@@ -36,7 +39,7 @@ internal sealed class ServerConnectionFactoryTests
             string host = ServerConnectionFactory.GetServerHost();
 
             // Assert
-            TestAssert.AreEqual(ServerConnectionFactory.DefaultHost, host);
+            Assert.AreEqual(ServerConnectionFactory.DefaultHost, host);
         }
         finally
         {
@@ -46,7 +49,8 @@ internal sealed class ServerConnectionFactoryTests
         }
     }
 
-    internal void GetServerHost_EnvironmentVariableProvided_ReturnsConfiguredHost()
+    [TestMethod]
+    public void GetServerHost_EnvironmentVariableProvided_ReturnsConfiguredHost()
     {
         // Arrange
         string? previousValue = Environment.GetEnvironmentVariable(
@@ -62,7 +66,7 @@ internal sealed class ServerConnectionFactoryTests
             string host = ServerConnectionFactory.GetServerHost();
 
             // Assert
-            TestAssert.AreEqual(configuredHost, host);
+            Assert.AreEqual(configuredHost, host);
         }
         finally
         {
@@ -72,7 +76,8 @@ internal sealed class ServerConnectionFactoryTests
         }
     }
 
-    internal void CreateEndpointAddress_ValidHost_RewritesAddressPreservingPortAndPath()
+    [TestMethod]
+    public void CreateEndpointAddress_ValidHost_RewritesAddressPreservingPortAndPath()
     {
         // Arrange
         string? previousValue = Environment.GetEnvironmentVariable(
@@ -89,7 +94,7 @@ internal sealed class ServerConnectionFactoryTests
                 ServerConnectionFactory.CreateEndpointAddress("SessionEndpoint");
 
             // Assert
-            TestAssert.AreEqual(
+            Assert.AreEqual(
                 "net.tcp://192.168.1.50:8091/ReversiGameSystem/Session",
                 endpointAddress.Uri.AbsoluteUri);
         }
@@ -101,7 +106,8 @@ internal sealed class ServerConnectionFactoryTests
         }
     }
 
-    internal void CreateMatchClients_CustomHost_PreservesConfiguredPortsAndPaths()
+    [TestMethod]
+    public void CreateMatchClients_CustomHost_PreservesConfiguredPortsAndPaths()
     {
         string? previousValue = Environment.GetEnvironmentVariable(
             ServerConnectionFactory.ServerHostVariable);
@@ -124,13 +130,13 @@ internal sealed class ServerConnectionFactoryTests
                 ServerConnectionFactory.CreateGameplayClient(new InstanceContext(gameplayCallback));
             using Proxy.MatchChatServiceClient chat = ServerConnectionFactory.CreateChatClient(
                 new InstanceContext(chatCallback));
-            TestAssert.AreEqual(
+            Assert.AreEqual(
                 "net.tcp://10.0.0.5:8095/ReversiGameSystem/MatchLobby",
                 lobby.Endpoint.Address.Uri.AbsoluteUri);
-            TestAssert.AreEqual(
+            Assert.AreEqual(
                 "net.tcp://10.0.0.5:8096/ReversiGameSystem/GameplayMatch",
                 gameplay.Endpoint.Address.Uri.AbsoluteUri);
-            TestAssert.AreEqual(
+            Assert.AreEqual(
                 "net.tcp://10.0.0.5:8097/ReversiGameSystem/MatchChat",
                 chat.Endpoint.Address.Uri.AbsoluteUri);
         }
@@ -142,7 +148,8 @@ internal sealed class ServerConnectionFactoryTests
         }
     }
 
-    internal void GetServerHost_WhitespaceOrInvalidHost_ThrowsInvalidOperationException()
+    [TestMethod]
+    public void GetServerHost_WhitespaceOrInvalidHost_ThrowsInvalidOperationException()
     {
         // Arrange
         string? previousValue = Environment.GetEnvironmentVariable(
@@ -154,7 +161,7 @@ internal sealed class ServerConnectionFactoryTests
                 "   ");
 
             // Act & Assert
-            TestAssert.Throws<InvalidOperationException>(
+            Assert.Throws<InvalidOperationException>(
                 () => ServerConnectionFactory.GetServerHost());
         }
         finally

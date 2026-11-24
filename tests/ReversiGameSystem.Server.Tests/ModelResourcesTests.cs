@@ -25,7 +25,7 @@ public sealed class ModelResourcesTests
         // Assert
         foreach (string name in required)
         {
-            TestAssert.IsTrue(resources.Contains(name),
+            Assert.IsTrue(resources.Contains(name),
                 "The persistence model must be available in the compiled assembly: " + name);
         }
     }

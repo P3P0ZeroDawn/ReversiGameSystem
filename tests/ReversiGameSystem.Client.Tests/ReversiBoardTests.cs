@@ -4,12 +4,15 @@ using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Statistics;
 using ReversiGameSystem.Validation;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class ReversiBoardTests
+[TestClass]
+public sealed class ReversiBoardTests
 {
-    internal void CreateInitial_HasStandardFourCenterDiscs()
+    [TestMethod]
+    public void CreateInitial_HasStandardFourCenterDiscs()
     {
         // Arrange
 
@@ -17,13 +20,14 @@ internal sealed class ReversiBoardTests
         ReversiBoard board = ReversiBoard.CreateInitial();
 
         // Assert
-        TestAssert.AreEqual(DiscColor.White, board[3, 3]);
-        TestAssert.AreEqual(DiscColor.Black, board[3, 4]);
-        TestAssert.AreEqual(DiscColor.Black, board[4, 3]);
-        TestAssert.AreEqual(DiscColor.White, board[4, 4]);
+        Assert.AreEqual(DiscColor.White, board[3, 3]);
+        Assert.AreEqual(DiscColor.Black, board[3, 4]);
+        Assert.AreEqual(DiscColor.Black, board[4, 3]);
+        Assert.AreEqual(DiscColor.White, board[4, 4]);
     }
 
-    internal void CreateInitial_HasTwoDiscsOfEachColor()
+    [TestMethod]
+    public void CreateInitial_HasTwoDiscsOfEachColor()
     {
         // Arrange
 
@@ -31,12 +35,13 @@ internal sealed class ReversiBoardTests
         ReversiBoard board = ReversiBoard.CreateInitial();
 
         // Assert
-        TestAssert.AreEqual(2, board.Count(DiscColor.Black));
-        TestAssert.AreEqual(2, board.Count(DiscColor.White));
-        TestAssert.AreEqual(60, board.Count(DiscColor.Empty));
+        Assert.AreEqual(2, board.Count(DiscColor.Black));
+        Assert.AreEqual(2, board.Count(DiscColor.White));
+        Assert.AreEqual(60, board.Count(DiscColor.Empty));
     }
 
-    internal void GetValidMoves_InitialBlackTurn_ReturnsFourPositions()
+    [TestMethod]
+    public void GetValidMoves_InitialBlackTurn_ReturnsFourPositions()
     {
         // Arrange
         ReversiBoard board = ReversiBoard.CreateInitial();
@@ -45,14 +50,15 @@ internal sealed class ReversiBoardTests
         IReadOnlyList<BoardPosition> moves = board.GetValidMoves(DiscColor.Black);
 
         // Assert
-        TestAssert.AreEqual(4, moves.Count);
-        TestAssert.AreEqual(true, Contains(moves, new BoardPosition(2, 3)));
-        TestAssert.AreEqual(true, Contains(moves, new BoardPosition(3, 2)));
-        TestAssert.AreEqual(true, Contains(moves, new BoardPosition(4, 5)));
-        TestAssert.AreEqual(true, Contains(moves, new BoardPosition(5, 4)));
+        Assert.AreEqual(4, moves.Count);
+        Assert.AreEqual(true, Contains(moves, new BoardPosition(2, 3)));
+        Assert.AreEqual(true, Contains(moves, new BoardPosition(3, 2)));
+        Assert.AreEqual(true, Contains(moves, new BoardPosition(4, 5)));
+        Assert.AreEqual(true, Contains(moves, new BoardPosition(5, 4)));
     }
 
-    internal void TryApplyMove_ValidMove_FlipsBracketedPiece()
+    [TestMethod]
+    public void TryApplyMove_ValidMove_FlipsBracketedPiece()
     {
         // Arrange
         ReversiBoard board = ReversiBoard.CreateInitial();
@@ -64,16 +70,17 @@ internal sealed class ReversiBoardTests
             out ReversiBoard? updatedBoard);
 
         // Assert
-        TestAssert.AreEqual(true, applied);
-        TestAssert.AreEqual(true, updatedBoard != null);
+        Assert.AreEqual(true, applied);
+        Assert.AreEqual(true, updatedBoard != null);
         ReversiBoard actualBoard = TestAssert.IsNotNull(updatedBoard);
-        TestAssert.AreEqual(4, actualBoard.Count(DiscColor.Black));
-        TestAssert.AreEqual(1, actualBoard.Count(DiscColor.White));
-        TestAssert.AreEqual(2, board.Count(DiscColor.Black));
-        TestAssert.AreEqual(2, board.Count(DiscColor.White));
+        Assert.AreEqual(4, actualBoard.Count(DiscColor.Black));
+        Assert.AreEqual(1, actualBoard.Count(DiscColor.White));
+        Assert.AreEqual(2, board.Count(DiscColor.Black));
+        Assert.AreEqual(2, board.Count(DiscColor.White));
     }
 
-    internal void TryApplyMove_MultipleDirections_FlipsEveryLine()
+    [TestMethod]
+    public void TryApplyMove_MultipleDirections_FlipsEveryLine()
     {
         // Arrange
         ReversiBoard board = ReversiBoard.FromRows(
@@ -87,14 +94,15 @@ internal sealed class ReversiBoardTests
             out ReversiBoard? updatedBoard);
 
         // Assert
-        TestAssert.AreEqual(true, applied);
-        TestAssert.AreEqual(true, updatedBoard != null);
+        Assert.AreEqual(true, applied);
+        Assert.AreEqual(true, updatedBoard != null);
         ReversiBoard actualBoard = TestAssert.IsNotNull(updatedBoard);
-        TestAssert.AreEqual(17, actualBoard.Count(DiscColor.Black));
-        TestAssert.AreEqual(0, actualBoard.Count(DiscColor.White));
+        Assert.AreEqual(17, actualBoard.Count(DiscColor.Black));
+        Assert.AreEqual(0, actualBoard.Count(DiscColor.White));
     }
 
-    internal void FromRows_ValidSnapshot_ParsesEveryCell()
+    [TestMethod]
+    public void FromRows_ValidSnapshot_ParsesEveryCell()
     {
         // Arrange
 
@@ -104,12 +112,13 @@ internal sealed class ReversiBoardTests
             "........", "........", "........", ".......B");
 
         // Assert
-        TestAssert.AreEqual(2, board.Count(DiscColor.Black));
-        TestAssert.AreEqual(1, board.Count(DiscColor.White));
-        TestAssert.AreEqual(61, board.Count(DiscColor.Empty));
+        Assert.AreEqual(2, board.Count(DiscColor.Black));
+        Assert.AreEqual(1, board.Count(DiscColor.White));
+        Assert.AreEqual(61, board.Count(DiscColor.Empty));
     }
 
-    internal void FromRows_InvalidCell_ThrowsArgumentException()
+    [TestMethod]
+    public void FromRows_InvalidCell_ThrowsArgumentException()
     {
         // Arrange
 
@@ -127,7 +136,7 @@ internal sealed class ReversiBoardTests
         }
 
         // Assert
-        TestAssert.AreEqual(true, threw);
+        Assert.AreEqual(true, threw);
     }
 
     private static bool Contains(

@@ -4,12 +4,15 @@ using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Statistics;
 using ReversiGameSystem.Validation;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class TurnTimePolicyTests
+[TestClass]
+public sealed class TurnTimePolicyTests
 {
-    internal void TryParse_DefaultValue_ReturnsTrue()
+    [TestMethod]
+    public void TryParse_DefaultValue_ReturnsTrue()
     {
         // Arrange
 
@@ -17,40 +20,43 @@ internal sealed class TurnTimePolicyTests
         bool valid = TurnTimePolicy.TryParse("40", out int seconds);
 
         // Assert
-        TestAssert.AreEqual(true, valid);
-        TestAssert.AreEqual(40, seconds);
+        Assert.AreEqual(true, valid);
+        Assert.AreEqual(40, seconds);
     }
 
-    internal void TryParse_MinimumAndMaximum_ReturnTrue()
+    [TestMethod]
+    public void TryParse_MinimumAndMaximum_ReturnTrue()
     {
         // Arrange
 
         // Act
 
         // Assert
-        TestAssert.AreEqual(true, TurnTimePolicy.TryParse("10", out _));
-        TestAssert.AreEqual(true, TurnTimePolicy.TryParse("120", out _));
+        Assert.AreEqual(true, TurnTimePolicy.TryParse("10", out _));
+        Assert.AreEqual(true, TurnTimePolicy.TryParse("120", out _));
     }
 
-    internal void TryParse_OutsideRange_ReturnsFalse()
+    [TestMethod]
+    public void TryParse_OutsideRange_ReturnsFalse()
     {
         // Arrange
 
         // Act
 
         // Assert
-        TestAssert.AreEqual(false, TurnTimePolicy.TryParse("9", out _));
-        TestAssert.AreEqual(false, TurnTimePolicy.TryParse("121", out _));
+        Assert.AreEqual(false, TurnTimePolicy.TryParse("9", out _));
+        Assert.AreEqual(false, TurnTimePolicy.TryParse("121", out _));
     }
 
-    internal void TryParse_NonInteger_ReturnsFalse()
+    [TestMethod]
+    public void TryParse_NonInteger_ReturnsFalse()
     {
         // Arrange
 
         // Act
 
         // Assert
-        TestAssert.AreEqual(false, TurnTimePolicy.TryParse("40.5", out _));
-        TestAssert.AreEqual(false, TurnTimePolicy.TryParse("forty", out _));
+        Assert.AreEqual(false, TurnTimePolicy.TryParse("40.5", out _));
+        Assert.AreEqual(false, TurnTimePolicy.TryParse("forty", out _));
     }
 }

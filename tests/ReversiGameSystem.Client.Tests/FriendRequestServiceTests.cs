@@ -4,12 +4,15 @@ using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Statistics;
 using ReversiGameSystem.Validation;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class FriendRequestServiceTests
+[TestClass]
+public sealed class FriendRequestServiceTests
 {
-    internal void Search_Query_ExcludesRequesterAndInactiveAccounts()
+    [TestMethod]
+    public void Search_Query_ExcludesRequesterAndInactiveAccounts()
     {
         // Arrange
         FriendRequestService service = CreateService();
@@ -20,12 +23,13 @@ internal sealed class FriendRequestServiceTests
             out IReadOnlyList<FriendCandidate> candidates);
 
         // Assert
-        TestAssert.AreEqual(FriendSearchResult.Success, result);
-        TestAssert.AreEqual(1, candidates.Count);
-        TestAssert.AreEqual("Ana", candidates[0].Username);
+        Assert.AreEqual(FriendSearchResult.Success, result);
+        Assert.AreEqual(1, candidates.Count);
+        Assert.AreEqual("Ana", candidates[0].Username);
     }
 
-    internal void Send_SameAccount_ReturnsCannotAddYourself()
+    [TestMethod]
+    public void Send_SameAccount_ReturnsCannotAddYourself()
     {
         // Arrange
         FriendRequestService service = CreateService();
@@ -34,10 +38,11 @@ internal sealed class FriendRequestServiceTests
         FriendRequestResult result = service.Send("pedro");
 
         // Assert
-        TestAssert.AreEqual(FriendRequestResult.CannotAddYourself, result);
+        Assert.AreEqual(FriendRequestResult.CannotAddYourself, result);
     }
 
-    internal void Send_ExistingFriend_ReturnsFriendshipAlreadyExists()
+    [TestMethod]
+    public void Send_ExistingFriend_ReturnsFriendshipAlreadyExists()
     {
         // Arrange
         FriendRequestService service = CreateService();
@@ -46,10 +51,11 @@ internal sealed class FriendRequestServiceTests
         FriendRequestResult result = service.Send("EmiPan");
 
         // Assert
-        TestAssert.AreEqual(FriendRequestResult.FriendshipAlreadyExists, result);
+        Assert.AreEqual(FriendRequestResult.FriendshipAlreadyExists, result);
     }
 
-    internal void Send_PendingPair_ReturnsAlreadyPending()
+    [TestMethod]
+    public void Send_PendingPair_ReturnsAlreadyPending()
     {
         // Arrange
         FriendRequestService service = CreateService();
@@ -58,10 +64,11 @@ internal sealed class FriendRequestServiceTests
         FriendRequestResult result = service.Send("Emilio");
 
         // Assert
-        TestAssert.AreEqual(FriendRequestResult.FriendRequestAlreadyPending, result);
+        Assert.AreEqual(FriendRequestResult.FriendRequestAlreadyPending, result);
     }
 
-    internal void Send_ActiveAccount_CreatesExactlyOnePendingRequest()
+    [TestMethod]
+    public void Send_ActiveAccount_CreatesExactlyOnePendingRequest()
     {
         // Arrange
         FriendRequestService service = CreateService();
@@ -71,13 +78,14 @@ internal sealed class FriendRequestServiceTests
         FriendRequestResult secondResult = service.Send("Ana");
 
         // Assert
-        TestAssert.AreEqual(FriendRequestResult.Success, firstResult);
-        TestAssert.AreEqual(
+        Assert.AreEqual(FriendRequestResult.Success, firstResult);
+        Assert.AreEqual(
             FriendRequestResult.FriendRequestAlreadyPending,
             secondResult);
     }
 
-    internal void Send_InactiveAccount_ReturnsAccountNotAvailable()
+    [TestMethod]
+    public void Send_InactiveAccount_ReturnsAccountNotAvailable()
     {
         // Arrange
         FriendRequestService service = CreateService();
@@ -86,7 +94,7 @@ internal sealed class FriendRequestServiceTests
         FriendRequestResult result = service.Send("Luis");
 
         // Assert
-        TestAssert.AreEqual(FriendRequestResult.AccountNotAvailable, result);
+        Assert.AreEqual(FriendRequestResult.AccountNotAvailable, result);
     }
 
     private static FriendRequestService CreateService()

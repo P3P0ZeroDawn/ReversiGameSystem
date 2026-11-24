@@ -4,12 +4,15 @@ using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Statistics;
 using ReversiGameSystem.Validation;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class MovementHistoryServiceTests
+[TestClass]
+public sealed class MovementHistoryServiceTests
 {
-    internal void TryGetMovements_UnorderedRecords_SortsBySequence()
+    [TestMethod]
+    public void TryGetMovements_UnorderedRecords_SortsBySequence()
     {
         // Arrange
         DateTime recordedAt = new DateTime(2026, 9, 18, 12, 0, 0, DateTimeKind.Utc);
@@ -26,17 +29,18 @@ internal sealed class MovementHistoryServiceTests
             out IReadOnlyList<RecordedMove> movements);
 
         // Assert
-        TestAssert.AreEqual(MovementHistoryRetrievalResult.Success, result);
-        TestAssert.AreEqual(2, movements.Count);
-        TestAssert.AreEqual(1, movements[0].Number);
-        TestAssert.AreEqual(2, movements[1].Number);
-        TestAssert.AreEqual(recordedAt, movements[0].RecordedAtUtc);
-        TestAssert.AreEqual(1, movements[0].AffectedPieces);
-        TestAssert.AreEqual(MatchMoveOrigin.Manual, movements[0].Origin);
-        TestAssert.AreEqual(MatchMoveOrigin.Timeout, movements[1].Origin);
+        Assert.AreEqual(MovementHistoryRetrievalResult.Success, result);
+        Assert.AreEqual(2, movements.Count);
+        Assert.AreEqual(1, movements[0].Number);
+        Assert.AreEqual(2, movements[1].Number);
+        Assert.AreEqual(recordedAt, movements[0].RecordedAtUtc);
+        Assert.AreEqual(1, movements[0].AffectedPieces);
+        Assert.AreEqual(MatchMoveOrigin.Manual, movements[0].Origin);
+        Assert.AreEqual(MatchMoveOrigin.Timeout, movements[1].Origin);
     }
 
-    internal void TryGetMovements_NoRecords_ReturnsEmpty()
+    [TestMethod]
+    public void TryGetMovements_NoRecords_ReturnsEmpty()
     {
         // Arrange
         MatchInformation match = CreateMatch(Array.Empty<RecordedMove>());
@@ -48,11 +52,12 @@ internal sealed class MovementHistoryServiceTests
             out IReadOnlyList<RecordedMove> movements);
 
         // Assert
-        TestAssert.AreEqual(MovementHistoryRetrievalResult.Success, result);
-        TestAssert.AreEqual(0, movements.Count);
+        Assert.AreEqual(MovementHistoryRetrievalResult.Success, result);
+        Assert.AreEqual(0, movements.Count);
     }
 
-    internal void TryGetMovements_MissingMatch_ReturnsRetrievalError()
+    [TestMethod]
+    public void TryGetMovements_MissingMatch_ReturnsRetrievalError()
     {
         // Arrange
         MovementHistoryService service = new MovementHistoryService(
@@ -64,8 +69,8 @@ internal sealed class MovementHistoryServiceTests
             out IReadOnlyList<RecordedMove> movements);
 
         // Assert
-        TestAssert.AreEqual(MovementHistoryRetrievalResult.RetrievalError, result);
-        TestAssert.AreEqual(0, movements.Count);
+        Assert.AreEqual(MovementHistoryRetrievalResult.RetrievalError, result);
+        Assert.AreEqual(0, movements.Count);
     }
 
     private static MatchInformation CreateMatch(IReadOnlyList<RecordedMove> movements)

@@ -4,12 +4,15 @@ using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Statistics;
 using ReversiGameSystem.Validation;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class FriendsServiceTests
+[TestClass]
+public sealed class FriendsServiceTests
 {
-    internal void TryGetFriends_MixedRelationships_FiltersAndSorts()
+    [TestMethod]
+    public void TryGetFriends_MixedRelationships_FiltersAndSorts()
     {
         // Arrange
         FriendshipStore store = new FriendshipStore(
@@ -34,13 +37,14 @@ internal sealed class FriendsServiceTests
             out IReadOnlyList<FriendCandidate> friends);
 
         // Assert
-        TestAssert.AreEqual(FriendsRetrievalResult.Success, result);
-        TestAssert.AreEqual(2, friends.Count);
-        TestAssert.AreEqual("Ana", friends[0].Username);
-        TestAssert.AreEqual("Zoe", friends[1].Username);
+        Assert.AreEqual(FriendsRetrievalResult.Success, result);
+        Assert.AreEqual(2, friends.Count);
+        Assert.AreEqual("Ana", friends[0].Username);
+        Assert.AreEqual("Zoe", friends[1].Username);
     }
 
-    internal void TryGetFriends_ReversedRelationship_ReturnsFriend()
+    [TestMethod]
+    public void TryGetFriends_ReversedRelationship_ReturnsFriend()
     {
         // Arrange
         FriendshipStore store = new FriendshipStore(
@@ -57,12 +61,13 @@ internal sealed class FriendsServiceTests
             out IReadOnlyList<FriendCandidate> friends);
 
         // Assert
-        TestAssert.AreEqual(FriendsRetrievalResult.Success, result);
-        TestAssert.AreEqual(1, friends.Count);
-        TestAssert.AreEqual("Ana", friends[0].Username);
+        Assert.AreEqual(FriendsRetrievalResult.Success, result);
+        Assert.AreEqual(1, friends.Count);
+        Assert.AreEqual("Ana", friends[0].Username);
     }
 
-    internal void TryGetFriends_NoRelationships_ReturnsEmpty()
+    [TestMethod]
+    public void TryGetFriends_NoRelationships_ReturnsEmpty()
     {
         // Arrange
         FriendshipStore store = new FriendshipStore(
@@ -78,7 +83,7 @@ internal sealed class FriendsServiceTests
             out IReadOnlyList<FriendCandidate> friends);
 
         // Assert
-        TestAssert.AreEqual(FriendsRetrievalResult.Success, result);
-        TestAssert.AreEqual(0, friends.Count);
+        Assert.AreEqual(FriendsRetrievalResult.Success, result);
+        Assert.AreEqual(0, friends.Count);
     }
 }

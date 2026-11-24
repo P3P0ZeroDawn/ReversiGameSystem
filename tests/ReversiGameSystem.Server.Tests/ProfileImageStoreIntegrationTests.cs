@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Players;
 using ReversiGameSystem.Server.Persistence.Accounts;
@@ -7,9 +8,11 @@ using ReversiGameSystem.Server.Persistence.Players;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class ProfileImageStoreIntegrationTests
+[TestClass]
+public sealed class ProfileImageStoreIntegrationTests
 {
-    internal void SaveAndDelete_ValidImage_UsesRelativeUri()
+    [TestMethod]
+    public void SaveAndDelete_ValidImage_UsesRelativeUri()
     {
         // Arrange
         string root = Path.Combine(
@@ -29,13 +32,13 @@ internal sealed class ProfileImageStoreIntegrationTests
                 new ProfileImageData(imageContent, "image/png"));
 
             // Assert
-            TestAssert.AreEqual(ProfileStatus.Success, result.Status);
-            TestAssert.AreEqual(true, result.Value?.StartsWith("profile-images/"));
-            TestAssert.AreEqual(1, Directory.GetFiles(root).Length);
+            Assert.AreEqual(ProfileStatus.Success, result.Status);
+            Assert.AreEqual(true, result.Value?.StartsWith("profile-images/"));
+            Assert.AreEqual(1, Directory.GetFiles(root).Length);
 
             string imageUri = TestAssert.IsNotNull(result.Value);
             store.DeleteImage(imageUri);
-            TestAssert.AreEqual(0, Directory.GetFiles(root).Length);
+            Assert.AreEqual(0, Directory.GetFiles(root).Length);
         }
         finally
         {
@@ -46,7 +49,8 @@ internal sealed class ProfileImageStoreIntegrationTests
         }
     }
 
-    internal void SaveImage_ValidAndInvalidImages_ReturnsExpectedOutcome()
+    [TestMethod]
+    public void SaveImage_ValidAndInvalidImages_ReturnsExpectedOutcome()
     {
         // Arrange
         string root = Path.Combine(
@@ -68,15 +72,15 @@ internal sealed class ProfileImageStoreIntegrationTests
                 new ProfileImageData(new byte[] { 1, 2 }, "image/png"));
 
             // Assert
-            TestAssert.AreEqual(ProfileStatus.Success, saved.Status);
+            Assert.AreEqual(ProfileStatus.Success, saved.Status);
             string savedReference = TestAssert.IsNotNull(saved.Value);
-            TestAssert.AreEqual(true, savedReference.StartsWith("profile-images/"));
-            TestAssert.AreEqual(ProfileStatus.InvalidImage, rejected.Status);
-            TestAssert.AreEqual<string?>(null, rejected.Value);
-            TestAssert.AreEqual(1, Directory.GetFiles(root).Length);
+            Assert.AreEqual(true, savedReference.StartsWith("profile-images/"));
+            Assert.AreEqual(ProfileStatus.InvalidImage, rejected.Status);
+            Assert.AreEqual<string?>(null, rejected.Value);
+            Assert.AreEqual(1, Directory.GetFiles(root).Length);
 
             repository.DeleteImage(savedReference);
-            TestAssert.AreEqual(0, Directory.GetFiles(root).Length);
+            Assert.AreEqual(0, Directory.GetFiles(root).Length);
         }
         finally
         {

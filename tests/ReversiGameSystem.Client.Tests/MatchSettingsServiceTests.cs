@@ -4,14 +4,17 @@ using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Statistics;
 using ReversiGameSystem.Validation;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class MatchSettingsServiceTests
+[TestClass]
+public sealed class MatchSettingsServiceTests
 {
     private readonly MatchSettingsService _service = new MatchSettingsService();
 
-    internal void ChangeTurnTime_WaitingCreator_UpdatesOnlyTime()
+    [TestMethod]
+    public void ChangeTurnTime_WaitingCreator_UpdatesOnlyTime()
     {
         // Arrange
         MatchSession session = CreateSession();
@@ -22,14 +25,15 @@ internal sealed class MatchSettingsServiceTests
             _service.ChangeTurnTime(session, "Pedro", 60);
 
         // Assert
-        TestAssert.AreEqual(MatchSettingsModificationResult.Success, result);
-        TestAssert.AreEqual(60, session.TurnTimeSeconds);
-        TestAssert.AreEqual("ABC123", session.Code);
-        TestAssert.AreEqual(MatchState.Waiting, session.State);
-        TestAssert.AreEqual(true, ReferenceEquals(originalBoard, session.Board));
+        Assert.AreEqual(MatchSettingsModificationResult.Success, result);
+        Assert.AreEqual(60, session.TurnTimeSeconds);
+        Assert.AreEqual("ABC123", session.Code);
+        Assert.AreEqual(MatchState.Waiting, session.State);
+        Assert.AreEqual(true, ReferenceEquals(originalBoard, session.Board));
     }
 
-    internal void ChangeTurnTime_StartedMatch_PreservesTime()
+    [TestMethod]
+    public void ChangeTurnTime_StartedMatch_PreservesTime()
     {
         // Arrange
         MatchSession session = CreateSession();
@@ -40,11 +44,12 @@ internal sealed class MatchSettingsServiceTests
             _service.ChangeTurnTime(session, "Pedro", 60);
 
         // Assert
-        TestAssert.AreEqual(MatchSettingsModificationResult.AlreadyStarted, result);
-        TestAssert.AreEqual(40, session.TurnTimeSeconds);
+        Assert.AreEqual(MatchSettingsModificationResult.AlreadyStarted, result);
+        Assert.AreEqual(40, session.TurnTimeSeconds);
     }
 
-    internal void ChangeTurnTime_DifferentPlayer_PreservesTime()
+    [TestMethod]
+    public void ChangeTurnTime_DifferentPlayer_PreservesTime()
     {
         // Arrange
         MatchSession session = CreateSession();
@@ -54,11 +59,12 @@ internal sealed class MatchSettingsServiceTests
             _service.ChangeTurnTime(session, "Cesar", 60);
 
         // Assert
-        TestAssert.AreEqual(MatchSettingsModificationResult.Unauthorized, result);
-        TestAssert.AreEqual(40, session.TurnTimeSeconds);
+        Assert.AreEqual(MatchSettingsModificationResult.Unauthorized, result);
+        Assert.AreEqual(40, session.TurnTimeSeconds);
     }
 
-    internal void ChangeTurnTime_InvalidValue_PreservesTime()
+    [TestMethod]
+    public void ChangeTurnTime_InvalidValue_PreservesTime()
     {
         // Arrange
         MatchSession session = CreateSession();
@@ -68,8 +74,8 @@ internal sealed class MatchSettingsServiceTests
             _service.ChangeTurnTime(session, "Pedro", 121);
 
         // Assert
-        TestAssert.AreEqual(MatchSettingsModificationResult.InvalidTurnTime, result);
-        TestAssert.AreEqual(40, session.TurnTimeSeconds);
+        Assert.AreEqual(MatchSettingsModificationResult.InvalidTurnTime, result);
+        Assert.AreEqual(40, session.TurnTimeSeconds);
     }
 
     private static MatchSession CreateSession()

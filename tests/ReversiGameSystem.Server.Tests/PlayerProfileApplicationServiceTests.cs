@@ -29,16 +29,16 @@ public sealed class PlayerProfileApplicationServiceTests
         ProfileResult<PlayerProfile> result = applicationService.GetProfile("session-token", null);
 
         // Assert
-        TestAssert.AreEqual(ProfileStatus.Success, result.Status);
-        TestAssert.AreEqual(1, profiles.AccountIds.Count);
-        TestAssert.AreEqual(42L, profiles.AccountIds[0]);
-        TestAssert.AreEqual("PlayerOne", result.Value?.Username);
-        TestAssert.AreEqual("profile-images/player.png", result.Value?.ProfileImageUri);
-        TestAssert.AreEqual(12, result.Value?.MatchesPlayed);
-        TestAssert.AreEqual(7, result.Value?.Wins);
-        TestAssert.AreEqual(3, result.Value?.Losses);
-        TestAssert.AreEqual(2, result.Value?.Draws);
-        TestAssert.AreEqual(7d / 12d, result.Value?.WinRate);
+        Assert.AreEqual(ProfileStatus.Success, result.Status);
+        Assert.AreEqual(1, profiles.AccountIds.Count);
+        Assert.AreEqual(42L, profiles.AccountIds[0]);
+        Assert.AreEqual("PlayerOne", result.Value?.Username);
+        Assert.AreEqual("profile-images/player.png", result.Value?.ProfileImageUri);
+        Assert.AreEqual(12, result.Value?.MatchesPlayed);
+        Assert.AreEqual(7, result.Value?.Wins);
+        Assert.AreEqual(3, result.Value?.Losses);
+        Assert.AreEqual(2, result.Value?.Draws);
+        Assert.AreEqual(7d / 12d, result.Value?.WinRate);
     }
 
     [TestMethod]
@@ -56,12 +56,12 @@ public sealed class PlayerProfileApplicationServiceTests
         ProfileResult<PlayerProfile> result = applicationService.GetProfile("session-token", 99);
 
         // Assert
-        TestAssert.AreEqual(ProfileStatus.Success, result.Status);
-        TestAssert.AreEqual(2, profiles.AccountIds.Count);
-        TestAssert.AreEqual(42L, profiles.AccountIds[0]);
-        TestAssert.AreEqual(99L, profiles.AccountIds[1]);
-        TestAssert.AreEqual("OtherPlayer", result.Value?.Username);
-        TestAssert.AreEqual(0d, result.Value?.WinRate);
+        Assert.AreEqual(ProfileStatus.Success, result.Status);
+        Assert.AreEqual(2, profiles.AccountIds.Count);
+        Assert.AreEqual(42L, profiles.AccountIds[0]);
+        Assert.AreEqual(99L, profiles.AccountIds[1]);
+        Assert.AreEqual("OtherPlayer", result.Value?.Username);
+        Assert.AreEqual(0d, result.Value?.WinRate);
     }
 
     [TestMethod]
@@ -77,8 +77,8 @@ public sealed class PlayerProfileApplicationServiceTests
         ProfileResult<PlayerProfile> result = applicationService.GetProfile(string.Empty, null);
 
         // Assert
-        TestAssert.AreEqual(ProfileStatus.MissingSessionToken, result.Status);
-        TestAssert.AreEqual(0, profiles.AccountIds.Count);
+        Assert.AreEqual(ProfileStatus.MissingSessionToken, result.Status);
+        Assert.AreEqual(0, profiles.AccountIds.Count);
     }
 
     [TestMethod]
@@ -94,8 +94,8 @@ public sealed class PlayerProfileApplicationServiceTests
         ProfileResult<PlayerProfile> result = applicationService.GetProfile("session-token", 0);
 
         // Assert
-        TestAssert.AreEqual(ProfileStatus.InvalidAccountId, result.Status);
-        TestAssert.AreEqual(0, profiles.AccountIds.Count);
+        Assert.AreEqual(ProfileStatus.InvalidAccountId, result.Status);
+        Assert.AreEqual(0, profiles.AccountIds.Count);
     }
 
     [TestMethod]
@@ -111,8 +111,8 @@ public sealed class PlayerProfileApplicationServiceTests
         ProfileResult<PlayerProfile> result = applicationService.GetProfile("unknown-token", 0);
 
         // Assert
-        TestAssert.AreEqual(ProfileStatus.InvalidSession, result.Status);
-        TestAssert.AreEqual(0, profiles.AccountIds.Count);
+        Assert.AreEqual(ProfileStatus.InvalidSession, result.Status);
+        Assert.AreEqual(0, profiles.AccountIds.Count);
     }
 
     [TestMethod]
@@ -130,8 +130,8 @@ public sealed class PlayerProfileApplicationServiceTests
             null);
 
         // Assert
-        TestAssert.AreEqual(ProfileStatus.InvalidSession, result.Status);
-        TestAssert.AreEqual(0, profiles.AccountIds.Count);
+        Assert.AreEqual(ProfileStatus.InvalidSession, result.Status);
+        Assert.AreEqual(0, profiles.AccountIds.Count);
     }
 
     [TestMethod]
@@ -147,9 +147,9 @@ public sealed class PlayerProfileApplicationServiceTests
         ProfileResult<PlayerProfile> result = applicationService.GetProfile("session-token", 99);
 
         // Assert
-        TestAssert.AreEqual(ProfileStatus.InactiveAccount, result.Status);
-        TestAssert.AreEqual(1, profiles.AccountIds.Count);
-        TestAssert.AreEqual(42L, profiles.AccountIds[0]);
+        Assert.AreEqual(ProfileStatus.InactiveAccount, result.Status);
+        Assert.AreEqual(1, profiles.AccountIds.Count);
+        Assert.AreEqual(42L, profiles.AccountIds[0]);
     }
 
     [TestMethod]
@@ -166,8 +166,8 @@ public sealed class PlayerProfileApplicationServiceTests
         ProfileResult<PlayerProfile> result = applicationService.GetProfile("session-token", 99);
 
         // Assert
-        TestAssert.AreEqual(ProfileStatus.AccountNotFound, result.Status);
-        TestAssert.AreEqual(2, profiles.AccountIds.Count);
+        Assert.AreEqual(ProfileStatus.AccountNotFound, result.Status);
+        Assert.AreEqual(2, profiles.AccountIds.Count);
     }
 
     [TestMethod]
@@ -179,7 +179,7 @@ public sealed class PlayerProfileApplicationServiceTests
             new PlayerProfileRepositoryStub { ThrowOnGet = true });
 
         // Act & Assert
-        TestAssert.Throws<InvalidOperationException>(() =>
+        Assert.Throws<InvalidOperationException>(() =>
             applicationService.GetProfile("session-token", null));
     }
 
@@ -198,11 +198,11 @@ public sealed class PlayerProfileApplicationServiceTests
         GetProfileImageResult result = applicationService.GetImage("session-token", null);
 
         // Assert
-        TestAssert.AreEqual(ProfileStatus.Success, result.Status);
-        TestAssert.AreEqual<ProfileImageData?>(null, result.Image);
-        TestAssert.AreEqual(0, profiles.GetProfileCalls);
-        TestAssert.AreEqual(1, profiles.GetImageReferenceCalls);
-        TestAssert.AreEqual(false, images.ReadCalled);
+        Assert.AreEqual(ProfileStatus.Success, result.Status);
+        Assert.AreEqual<ProfileImageData?>(null, result.Image);
+        Assert.AreEqual(0, profiles.GetProfileCalls);
+        Assert.AreEqual(1, profiles.GetImageReferenceCalls);
+        Assert.AreEqual(false, images.ReadCalled);
     }
 
     [TestMethod]
@@ -227,12 +227,12 @@ public sealed class PlayerProfileApplicationServiceTests
         GetProfileImageResult result = applicationService.GetImage("session-token", 99);
 
         // Assert
-        TestAssert.AreEqual(ProfileStatus.Success, result.Status);
+        Assert.AreEqual(ProfileStatus.Success, result.Status);
         ProfileImageData image = TestAssert.IsNotNull(result.Image);
-        TestAssert.AreEqual("image/png", image.MediaType);
-        TestAssert.AreEqual(0, profiles.GetProfileCalls);
-        TestAssert.AreEqual(1, profiles.GetImageReferenceCalls);
-        TestAssert.AreEqual(true, images.ReadCalled);
+        Assert.AreEqual("image/png", image.MediaType);
+        Assert.AreEqual(0, profiles.GetProfileCalls);
+        Assert.AreEqual(1, profiles.GetImageReferenceCalls);
+        Assert.AreEqual(true, images.ReadCalled);
     }
 
     [TestMethod]
@@ -250,9 +250,9 @@ public sealed class PlayerProfileApplicationServiceTests
             "  NewPlayer  ");
 
         // Assert
-        TestAssert.AreEqual(ProfileStatus.Success, status);
-        TestAssert.AreEqual<long?>(42, profiles.ChangedAccountId);
-        TestAssert.AreEqual("NewPlayer", profiles.ChangedUsername);
+        Assert.AreEqual(ProfileStatus.Success, status);
+        Assert.AreEqual<long?>(42, profiles.ChangedAccountId);
+        Assert.AreEqual("NewPlayer", profiles.ChangedUsername);
     }
 
     [TestMethod]
@@ -268,8 +268,8 @@ public sealed class PlayerProfileApplicationServiceTests
         ProfileStatus status = applicationService.ChangeUsername("session-token", "a");
 
         // Assert
-        TestAssert.AreEqual(ProfileStatus.InvalidUsername, status);
-        TestAssert.AreEqual<long?>(null, profiles.ChangedAccountId);
+        Assert.AreEqual(ProfileStatus.InvalidUsername, status);
+        Assert.AreEqual<long?>(null, profiles.ChangedAccountId);
     }
 
     [TestMethod]
@@ -288,7 +288,7 @@ public sealed class PlayerProfileApplicationServiceTests
             "OtherPlayer");
 
         // Assert
-        TestAssert.AreEqual(ProfileStatus.UsernameUnavailable, status);
+        Assert.AreEqual(ProfileStatus.UsernameUnavailable, status);
     }
 
     [TestMethod]
@@ -309,8 +309,8 @@ public sealed class PlayerProfileApplicationServiceTests
             new ProfileImageData(new byte[] { 1 }, "image/png"));
 
         // Assert
-        TestAssert.AreEqual(ProfileStatus.InactiveAccount, status);
-        TestAssert.AreEqual("new-image", images.Deleted);
+        Assert.AreEqual(ProfileStatus.InactiveAccount, status);
+        Assert.AreEqual("new-image", images.Deleted);
     }
 
     [TestMethod]
@@ -326,11 +326,11 @@ public sealed class PlayerProfileApplicationServiceTests
             images);
 
         // Act & Assert
-        TestAssert.Throws<InvalidOperationException>(() =>
+        Assert.Throws<InvalidOperationException>(() =>
             applicationService.UpdateImage(
                 "session-token",
                 new ProfileImageData(new byte[] { 1 }, "image/png")));
-        TestAssert.AreEqual("new-image", images.Deleted);
+        Assert.AreEqual("new-image", images.Deleted);
     }
 
     private static SessionStore CreateSessionStore(AuthenticatedSession? session = null)

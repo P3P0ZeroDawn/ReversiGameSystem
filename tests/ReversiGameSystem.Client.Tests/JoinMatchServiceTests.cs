@@ -4,12 +4,15 @@ using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Statistics;
 using ReversiGameSystem.Validation;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class JoinMatchServiceTests
+[TestClass]
+public sealed class JoinMatchServiceTests
 {
-    internal void TryJoinByCode_InvalidCode_DoesNotCreateSession()
+    [TestMethod]
+    public void TryJoinByCode_InvalidCode_DoesNotCreateSession()
     {
         // Arrange
         JoinMatchService service = new JoinMatchService("Pedro", null);
@@ -18,11 +21,12 @@ internal sealed class JoinMatchServiceTests
         JoinMatchResult result = service.TryJoinByCode("bad", out MatchSession? session);
 
         // Assert
-        TestAssert.AreEqual(JoinMatchResult.InvalidMatchCode, result);
-        TestAssert.AreEqual<MatchSession?>(null, session);
+        Assert.AreEqual(JoinMatchResult.InvalidMatchCode, result);
+        Assert.AreEqual<MatchSession?>(null, session);
     }
 
-    internal void TryJoinById_UnavailableMatch_DoesNotCreateSession()
+    [TestMethod]
+    public void TryJoinById_UnavailableMatch_DoesNotCreateSession()
     {
         // Arrange
         JoinMatchService service = new JoinMatchService("Pedro", null);
@@ -31,11 +35,12 @@ internal sealed class JoinMatchServiceTests
         JoinMatchResult result = service.TryJoinById("full-1", out MatchSession? session);
 
         // Assert
-        TestAssert.AreEqual(JoinMatchResult.NoLongerAvailable, result);
-        TestAssert.AreEqual<MatchSession?>(null, session);
+        Assert.AreEqual(JoinMatchResult.NoLongerAvailable, result);
+        Assert.AreEqual<MatchSession?>(null, session);
     }
 
-    internal void TryJoinById_OwnMatch_DoesNotCreateSession()
+    [TestMethod]
+    public void TryJoinById_OwnMatch_DoesNotCreateSession()
     {
         // Arrange
         JoinMatchService service = new JoinMatchService("Pedro", null);
@@ -44,11 +49,12 @@ internal sealed class JoinMatchServiceTests
         JoinMatchResult result = service.TryJoinById("own-1", out MatchSession? session);
 
         // Assert
-        TestAssert.AreEqual(JoinMatchResult.CannotJoinOwnMatch, result);
-        TestAssert.AreEqual<MatchSession?>(null, session);
+        Assert.AreEqual(JoinMatchResult.CannotJoinOwnMatch, result);
+        Assert.AreEqual<MatchSession?>(null, session);
     }
 
-    internal void TryJoinById_AvailableMatch_StartsSession()
+    [TestMethod]
+    public void TryJoinById_AvailableMatch_StartsSession()
     {
         // Arrange
         JoinMatchService service = new JoinMatchService("Pedro", null);
@@ -57,19 +63,20 @@ internal sealed class JoinMatchServiceTests
         JoinMatchResult result = service.TryJoinById("waiting-1", out MatchSession? session);
 
         // Assert
-        TestAssert.AreEqual(JoinMatchResult.Success, result);
-        TestAssert.AreEqual(true, session != null);
+        Assert.AreEqual(JoinMatchResult.Success, result);
+        Assert.AreEqual(true, session != null);
         MatchSession actualSession = TestAssert.IsNotNull(session);
-        TestAssert.AreEqual(MatchState.InProgress, actualSession.State);
-        TestAssert.AreEqual("Ana", actualSession.CreatorName);
-        TestAssert.AreEqual("Pedro", actualSession.OpponentName);
-        TestAssert.AreEqual("Pedro", actualSession.LocalPlayerName);
-        TestAssert.AreEqual(DiscColor.White, actualSession.LocalPlayerColor);
-        TestAssert.AreEqual(2, actualSession.Board.Count(DiscColor.Black));
-        TestAssert.AreEqual(2, actualSession.Board.Count(DiscColor.White));
+        Assert.AreEqual(MatchState.InProgress, actualSession.State);
+        Assert.AreEqual("Ana", actualSession.CreatorName);
+        Assert.AreEqual("Pedro", actualSession.OpponentName);
+        Assert.AreEqual("Pedro", actualSession.LocalPlayerName);
+        Assert.AreEqual(DiscColor.White, actualSession.LocalPlayerColor);
+        Assert.AreEqual(2, actualSession.Board.Count(DiscColor.Black));
+        Assert.AreEqual(2, actualSession.Board.Count(DiscColor.White));
     }
 
-    internal void TryJoinByCode_AvailableMatch_PreservesGuestSession()
+    [TestMethod]
+    public void TryJoinByCode_AvailableMatch_PreservesGuestSession()
     {
         // Arrange
         JoinMatchService service = new JoinMatchService("Invitado", "Invitado");
@@ -79,12 +86,12 @@ internal sealed class JoinMatchServiceTests
         JoinMatchResult secondAttempt = service.TryJoinByCode("LU5N7P", out _);
 
         // Assert
-        TestAssert.AreEqual(JoinMatchResult.Success, result);
-        TestAssert.AreEqual(true, session != null);
+        Assert.AreEqual(JoinMatchResult.Success, result);
+        Assert.AreEqual(true, session != null);
         MatchSession actualSession = TestAssert.IsNotNull(session);
-        TestAssert.AreEqual("Invitado", actualSession.GuestName);
-        TestAssert.AreEqual("Invitado", actualSession.LocalPlayerName);
-        TestAssert.AreEqual(MatchState.InProgress, actualSession.State);
-        TestAssert.AreEqual(JoinMatchResult.MatchCodeNotAvailable, secondAttempt);
+        Assert.AreEqual("Invitado", actualSession.GuestName);
+        Assert.AreEqual("Invitado", actualSession.LocalPlayerName);
+        Assert.AreEqual(MatchState.InProgress, actualSession.State);
+        Assert.AreEqual(JoinMatchResult.MatchCodeNotAvailable, secondAttempt);
     }
 }

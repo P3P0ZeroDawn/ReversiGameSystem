@@ -24,10 +24,10 @@ public sealed class LobbyAuthorizationTests
             context.Player.SessionToken);
 
         // Assert
-        TestAssert.AreEqual(context.Player.AccountId, context.Store.AuthorizedAccountId);
-        TestAssert.AreEqual(MatchStatus.Success, status);
-        TestAssert.AreEqual(1, context.Store.AuthorizationCalls);
-        TestAssert.AreEqual(0, context.Store.AvailableCalls);
+        Assert.AreEqual(context.Player.AccountId, context.Store.AuthorizedAccountId);
+        Assert.AreEqual(MatchStatus.Success, status);
+        Assert.AreEqual(1, context.Store.AuthorizationCalls);
+        Assert.AreEqual(0, context.Store.AvailableCalls);
     }
 
     [TestMethod]
@@ -42,9 +42,9 @@ public sealed class LobbyAuthorizationTests
             context.Player.SessionToken);
 
         // Assert
-        TestAssert.AreEqual(0, context.Store.AuthorizationCalls);
-        TestAssert.AreEqual(0, context.Store.AvailableCalls);
-        TestAssert.AreEqual(MatchStatus.InvalidSession, status);
+        Assert.AreEqual(0, context.Store.AuthorizationCalls);
+        Assert.AreEqual(0, context.Store.AvailableCalls);
+        Assert.AreEqual(MatchStatus.InvalidSession, status);
     }
 
     [TestMethod]
@@ -59,9 +59,9 @@ public sealed class LobbyAuthorizationTests
             context.Player.SessionToken);
 
         // Assert
-        TestAssert.AreEqual(0, context.Store.AuthorizationCalls);
-        TestAssert.AreEqual(0, context.Store.AvailableCalls);
-        TestAssert.AreEqual(MatchStatus.InvalidSession, status);
+        Assert.AreEqual(0, context.Store.AuthorizationCalls);
+        Assert.AreEqual(0, context.Store.AvailableCalls);
+        Assert.AreEqual(MatchStatus.InvalidSession, status);
     }
 
     [TestMethod]
@@ -77,13 +77,13 @@ public sealed class LobbyAuthorizationTests
         MatchLobbyService service = new MatchLobbyService(context.Handler, subscriptions);
 
         // Act
-        FaultException<MatchFault> failure = TestAssert.Throws<FaultException<MatchFault>>(
+        FaultException<MatchFault> failure = Assert.Throws<FaultException<MatchFault>>(
             () => service.OpenLobbyChannel(context.Player.SessionToken));
 
         // Assert
-        TestAssert.AreEqual(MatchFailure.InactiveAccount, failure.Detail.Reason);
-        TestAssert.AreEqual(1, context.Store.AuthorizationCalls);
-        TestAssert.AreEqual(0, context.Store.AvailableCalls);
+        Assert.AreEqual(MatchFailure.InactiveAccount, failure.Detail.Reason);
+        Assert.AreEqual(1, context.Store.AuthorizationCalls);
+        Assert.AreEqual(0, context.Store.AvailableCalls);
     }
 
     [TestMethod]
@@ -98,13 +98,13 @@ public sealed class LobbyAuthorizationTests
         MatchLobbyService service = new MatchLobbyService(context.Handler, subscriptions);
 
         // Act
-        FaultException<SessionFault> failure = TestAssert.Throws<FaultException<SessionFault>>(
+        FaultException<SessionFault> failure = Assert.Throws<FaultException<SessionFault>>(
             () => service.OpenLobbyChannel(string.Empty));
 
         // Assert
-        TestAssert.AreEqual(SessionFailure.MissingSessionToken, failure.Detail.Reason);
-        TestAssert.AreEqual(0, context.Store.AuthorizationCalls);
-        TestAssert.AreEqual(0, context.Store.AvailableCalls);
+        Assert.AreEqual(SessionFailure.MissingSessionToken, failure.Detail.Reason);
+        Assert.AreEqual(0, context.Store.AuthorizationCalls);
+        Assert.AreEqual(0, context.Store.AvailableCalls);
     }
 
     private sealed class AuthorizationContext

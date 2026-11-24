@@ -22,12 +22,12 @@ public sealed class VerificationEmailSenderTests
             // Act
             MailSettings settings = MailSettings.Load();
             // Assert
-            TestAssert.AreEqual(587, settings.Port);
-            TestAssert.AreEqual(false, settings.EncryptOnConnect);
+            Assert.AreEqual(587, settings.Port);
+            Assert.AreEqual(false, settings.EncryptOnConnect);
             Environment.SetEnvironmentVariable("REVERSI_MAIL_SECURITY", "None");
             ExpectInvalidConfiguration();
             Environment.SetEnvironmentVariable("REVERSI_MAIL_SECURITY", "Tls");
-            TestAssert.AreEqual(true, MailSettings.Load().EncryptOnConnect);
+            Assert.AreEqual(true, MailSettings.Load().EncryptOnConnect);
             Environment.SetEnvironmentVariable("REVERSI_MAIL_PORT", "65536");
             ExpectInvalidConfiguration();
         });
@@ -64,10 +64,10 @@ public sealed class VerificationEmailSenderTests
                 }
                 elapsed.Stop();
                 // Assert
-                TestAssert.IsTrue(failed, "A stalled SMTP connection must fail delivery.");
-                TestAssert.IsTrue(connection.IsCompleted,
+                Assert.IsTrue(failed, "A stalled SMTP connection must fail delivery.");
+                Assert.IsTrue(connection.IsCompleted,
                     "The local server must have accepted the connection.");
-                TestAssert.IsTrue(elapsed.Elapsed >= TimeSpan.FromSeconds(4)
+                Assert.IsTrue(elapsed.Elapsed >= TimeSpan.FromSeconds(4)
                     && elapsed.Elapsed < TimeSpan.FromSeconds(7),
                     "The five-second deadline allows two seconds of scheduling tolerance.");
             });

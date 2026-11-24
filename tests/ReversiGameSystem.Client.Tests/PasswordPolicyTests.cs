@@ -4,12 +4,15 @@ using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Statistics;
 using ReversiGameSystem.Validation;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class PasswordPolicyTests
+[TestClass]
+public sealed class PasswordPolicyTests
 {
-    internal void Validate_SevenCharacters_ReturnsTooShort()
+    [TestMethod]
+    public void Validate_SevenCharacters_ReturnsTooShort()
     {
         // Arrange
         string password = "Aa1234!";
@@ -18,10 +21,11 @@ internal sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.TooShort, actual);
+        Assert.AreEqual(PasswordValidationError.TooShort, actual);
     }
 
-    internal void Validate_EightCharacters_ReturnsNone()
+    [TestMethod]
+    public void Validate_EightCharacters_ReturnsNone()
     {
         // Arrange
         string password = "Aa12345!";
@@ -30,10 +34,11 @@ internal sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.None, actual);
+        Assert.AreEqual(PasswordValidationError.None, actual);
     }
 
-    internal void Validate_AsteriskAsSymbol_ReturnsNone()
+    [TestMethod]
+    public void Validate_AsteriskAsSymbol_ReturnsNone()
     {
         // Arrange
         string password = "Aa12345*";
@@ -42,10 +47,11 @@ internal sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.None, actual);
+        Assert.AreEqual(PasswordValidationError.None, actual);
     }
 
-    internal void Validate_UnicodeLettersAndDigits_ReturnsNone()
+    [TestMethod]
+    public void Validate_UnicodeLettersAndDigits_ReturnsNone()
     {
         // Arrange
         string password = "Áb١٢٣٤٥!";
@@ -54,10 +60,11 @@ internal sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.None, actual);
+        Assert.AreEqual(PasswordValidationError.None, actual);
     }
 
-    internal void Validate_OneHundredTwentyEightCharacters_ReturnsNone()
+    [TestMethod]
+    public void Validate_OneHundredTwentyEightCharacters_ReturnsNone()
     {
         // Arrange
         string password = "Aa1!" + new string('x', 124);
@@ -66,10 +73,11 @@ internal sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.None, actual);
+        Assert.AreEqual(PasswordValidationError.None, actual);
     }
 
-    internal void Validate_OneHundredTwentyNineCharacters_ReturnsTooLong()
+    [TestMethod]
+    public void Validate_OneHundredTwentyNineCharacters_ReturnsTooLong()
     {
         // Arrange
         string password = "Aa1!" + new string('x', 125);
@@ -78,10 +86,11 @@ internal sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.TooLong, actual);
+        Assert.AreEqual(PasswordValidationError.TooLong, actual);
     }
 
-    internal void Validate_SupplementarySymbols_CountsCodePoints()
+    [TestMethod]
+    public void Validate_SupplementarySymbols_CountsCodePoints()
     {
         // Arrange
         string password = "Aa12345😀";
@@ -90,10 +99,11 @@ internal sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.None, actual);
+        Assert.AreEqual(PasswordValidationError.None, actual);
     }
 
-    internal void Validate_WithoutUppercase_ReturnsMissingUppercaseLetter()
+    [TestMethod]
+    public void Validate_WithoutUppercase_ReturnsMissingUppercaseLetter()
     {
         // Arrange
         string password = "lower123!";
@@ -102,10 +112,11 @@ internal sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.MissingUppercaseLetter, actual);
+        Assert.AreEqual(PasswordValidationError.MissingUppercaseLetter, actual);
     }
 
-    internal void Validate_WithoutLowercase_ReturnsMissingLowercaseLetter()
+    [TestMethod]
+    public void Validate_WithoutLowercase_ReturnsMissingLowercaseLetter()
     {
         // Arrange
         string password = "UPPER123!";
@@ -114,10 +125,11 @@ internal sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.MissingLowercaseLetter, actual);
+        Assert.AreEqual(PasswordValidationError.MissingLowercaseLetter, actual);
     }
 
-    internal void Validate_WithoutDigit_ReturnsMissingDigit()
+    [TestMethod]
+    public void Validate_WithoutDigit_ReturnsMissingDigit()
     {
         // Arrange
         string password = "Uppercase!";
@@ -126,10 +138,11 @@ internal sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.MissingDigit, actual);
+        Assert.AreEqual(PasswordValidationError.MissingDigit, actual);
     }
 
-    internal void Validate_WithoutSymbol_ReturnsMissingSymbol()
+    [TestMethod]
+    public void Validate_WithoutSymbol_ReturnsMissingSymbol()
     {
         // Arrange
         string password = "Upper123";
@@ -138,10 +151,11 @@ internal sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.MissingSymbol, actual);
+        Assert.AreEqual(PasswordValidationError.MissingSymbol, actual);
     }
 
-    internal void Validate_SpaceWithoutSymbol_ReturnsMissingSymbol()
+    [TestMethod]
+    public void Validate_SpaceWithoutSymbol_ReturnsMissingSymbol()
     {
         // Arrange
         string password = "Aa12345 ";
@@ -150,10 +164,11 @@ internal sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.MissingSymbol, actual);
+        Assert.AreEqual(PasswordValidationError.MissingSymbol, actual);
     }
 
-    internal void Validate_ControlCharacter_ReturnsUnsupportedCharacter()
+    [TestMethod]
+    public void Validate_ControlCharacter_ReturnsUnsupportedCharacter()
     {
         // Arrange
         string password = "Aa1234!\n";
@@ -162,10 +177,11 @@ internal sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
+        Assert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
     }
 
-    internal void Validate_InvisibleFormatCharacter_ReturnsUnsupportedCharacter()
+    [TestMethod]
+    public void Validate_InvisibleFormatCharacter_ReturnsUnsupportedCharacter()
     {
         // Arrange
         string password = "Aa1234!\u200B";
@@ -174,10 +190,11 @@ internal sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
+        Assert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
     }
 
-    internal void Validate_LineSeparator_ReturnsUnsupportedCharacter()
+    [TestMethod]
+    public void Validate_LineSeparator_ReturnsUnsupportedCharacter()
     {
         // Arrange
         string password = "Aa1234!\u2028";
@@ -186,10 +203,11 @@ internal sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
+        Assert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
     }
 
-    internal void Validate_UnpairedSurrogate_ReturnsUnsupportedCharacter()
+    [TestMethod]
+    public void Validate_UnpairedSurrogate_ReturnsUnsupportedCharacter()
     {
         // Arrange
         string password = "Aa1234!\uD800";
@@ -198,6 +216,6 @@ internal sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
+        Assert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
     }
 }

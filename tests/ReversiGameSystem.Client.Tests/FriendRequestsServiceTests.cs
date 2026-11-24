@@ -4,12 +4,15 @@ using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Statistics;
 using ReversiGameSystem.Validation;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class FriendRequestsServiceTests
+[TestClass]
+public sealed class FriendRequestsServiceTests
 {
-    internal void TryGetPending_MixedRequests_FiltersAndSorts()
+    [TestMethod]
+    public void TryGetPending_MixedRequests_FiltersAndSorts()
     {
         // Arrange
         DateTime olderDate = new DateTime(
@@ -48,14 +51,15 @@ internal sealed class FriendRequestsServiceTests
             out IReadOnlyList<FriendshipRequest> requests);
 
         // Assert
-        TestAssert.AreEqual(FriendRequestsRetrievalResult.Success, result);
-        TestAssert.AreEqual(2, requests.Count);
-        TestAssert.AreEqual("newer", requests[0].Id);
-        TestAssert.AreEqual("Luis", requests[0].SenderUsername);
-        TestAssert.AreEqual("older", requests[1].Id);
+        Assert.AreEqual(FriendRequestsRetrievalResult.Success, result);
+        Assert.AreEqual(2, requests.Count);
+        Assert.AreEqual("newer", requests[0].Id);
+        Assert.AreEqual("Luis", requests[0].SenderUsername);
+        Assert.AreEqual("older", requests[1].Id);
     }
 
-    internal void TryGetPending_NoReceivedRequests_ReturnsEmpty()
+    [TestMethod]
+    public void TryGetPending_NoReceivedRequests_ReturnsEmpty()
     {
         // Arrange
         FriendshipStore store = new FriendshipStore(
@@ -79,7 +83,7 @@ internal sealed class FriendRequestsServiceTests
             out IReadOnlyList<FriendshipRequest> requests);
 
         // Assert
-        TestAssert.AreEqual(FriendRequestsRetrievalResult.Success, result);
-        TestAssert.AreEqual(0, requests.Count);
+        Assert.AreEqual(FriendRequestsRetrievalResult.Success, result);
+        Assert.AreEqual(0, requests.Count);
     }
 }

@@ -20,12 +20,12 @@ public sealed class FailureDiagnosticsTests
         string diagnostic = FailureDiagnostics.Describe(failure);
 
         // Assert
-        TestAssert.IsTrue(diagnostic.Contains(typeof(InvalidOperationException).FullName),
+        Assert.IsTrue(diagnostic.Contains(typeof(InvalidOperationException).FullName),
             "The outer failure type must remain available.");
-        TestAssert.IsTrue(diagnostic.Contains(typeof(TimeoutException).FullName),
+        Assert.IsTrue(diagnostic.Contains(typeof(TimeoutException).FullName),
             "The underlying failure type must remain available.");
-        TestAssert.IsTrue(diagnostic.Contains("HResult="), "The status must remain available.");
-        TestAssert.IsTrue(!diagnostic.Contains("private-"),
+        Assert.IsTrue(diagnostic.Contains("HResult="), "The status must remain available.");
+        Assert.IsTrue(!diagnostic.Contains("private-"),
             "Provider messages and private diagnostic data must not be copied.");
     }
 }

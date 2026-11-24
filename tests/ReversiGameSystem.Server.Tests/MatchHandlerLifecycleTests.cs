@@ -20,15 +20,15 @@ public sealed class MatchApplicationServiceLifecycleTests
         _ = handler.CreateMatch(player.SessionToken, new MatchSettings()).Value;
 
         // Act
-        TestAssert.Throws<InvalidOperationException>(
+        Assert.Throws<InvalidOperationException>(
             () => handler.CancelWaitingForSession(player.SessionToken));
         store.FailCancel = false;
         long[] cancelled = handler.CancelExpiredWaitingSessions();
 
         // Assert
-        TestAssert.AreEqual(1, cancelled.Length);
-        TestAssert.AreEqual(7L, cancelled[0]);
-        TestAssert.AreEqual(0, handler.CancelExpiredWaitingSessions().Length);
+        Assert.AreEqual(1, cancelled.Length);
+        Assert.AreEqual(7L, cancelled[0]);
+        Assert.AreEqual(0, handler.CancelExpiredWaitingSessions().Length);
     }
 
     [TestMethod]
@@ -43,14 +43,14 @@ public sealed class MatchApplicationServiceLifecycleTests
         context.Sessions.RevokeSession(player.SessionToken);
 
         // Act
-        TestAssert.Throws<InvalidOperationException>(() => handler.CancelWaitingForSession(player.SessionToken));
+        Assert.Throws<InvalidOperationException>(() => handler.CancelWaitingForSession(player.SessionToken));
         store.FailCancel = false;
         long[] cancelled = handler.CancelWaitingForSession(player.SessionToken);
 
         // Assert
-        TestAssert.AreEqual(1, cancelled.Length);
-        TestAssert.AreEqual(7L, cancelled[0]);
-        TestAssert.AreEqual(0, handler.CancelWaitingForSession(player.SessionToken).Length);
+        Assert.AreEqual(1, cancelled.Length);
+        Assert.AreEqual(7L, cancelled[0]);
+        Assert.AreEqual(0, handler.CancelWaitingForSession(player.SessionToken).Length);
     }
 
     [TestMethod]
@@ -67,9 +67,9 @@ public sealed class MatchApplicationServiceLifecycleTests
         long[] cancelled = handler.CancelWaitingForSession(player.SessionToken);
 
         // Assert
-        TestAssert.AreEqual(0, cancelled.Length);
-        TestAssert.AreEqual(0, handler.CancelWaitingForSession(player.SessionToken).Length);
-        TestAssert.AreEqual(1, store.CancelAttempts);
+        Assert.AreEqual(0, cancelled.Length);
+        Assert.AreEqual(0, handler.CancelWaitingForSession(player.SessionToken).Length);
+        Assert.AreEqual(1, store.CancelAttempts);
     }
 
     [TestMethod]
@@ -88,8 +88,8 @@ public sealed class MatchApplicationServiceLifecycleTests
             new MatchSettings());
 
         // Assert
-        TestAssert.AreEqual(0, store.CreateAttempts);
-        TestAssert.AreEqual(MatchStatus.InvalidSession, result.Status);
+        Assert.AreEqual(0, store.CreateAttempts);
+        Assert.AreEqual(MatchStatus.InvalidSession, result.Status);
     }
 
     [TestMethod]
@@ -103,11 +103,11 @@ public sealed class MatchApplicationServiceLifecycleTests
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
 
         // Act
-        TestAssert.Throws<InvalidOperationException>(() =>
+        Assert.Throws<InvalidOperationException>(() =>
             handler.InviteToMatch(player.SessionToken, 100, new MatchSettings()));
 
         // Assert
-        TestAssert.AreEqual(1, store.CancelAttempts);
+        Assert.AreEqual(1, store.CancelAttempts);
     }
 
     [TestMethod]
@@ -128,7 +128,7 @@ public sealed class MatchApplicationServiceLifecycleTests
             new MatchSettings());
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Unauthorized, result.Status);
+        Assert.AreEqual(MatchStatus.Unauthorized, result.Status);
     }
 
     private static AuthenticatedSession CreatePlayer(SessionTestContext context)

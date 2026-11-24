@@ -1,39 +1,45 @@
 using System;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class SessionModelsTests
+[TestClass]
+public sealed class SessionModelsTests
 {
-    internal void SuccessfulResult_PreservesSession()
+    [TestMethod]
+    public void SuccessfulResult_PreservesSession()
     {
         AuthenticatedAccountSession session = CreateSession();
 
         SessionResult<AuthenticatedAccountSession> result =
             new SessionResult<AuthenticatedAccountSession>(session);
 
-        TestAssert.AreEqual(SessionStatus.Success, result.Status);
-        TestAssert.AreEqual(session, result.Value);
+        Assert.AreEqual(SessionStatus.Success, result.Status);
+        Assert.AreEqual(session, result.Value);
     }
 
-    internal void FailureResult_DoesNotContainSession()
+    [TestMethod]
+    public void FailureResult_DoesNotContainSession()
     {
         SessionResult<AuthenticatedAccountSession> result =
             new SessionResult<AuthenticatedAccountSession>(
                 SessionStatus.InvalidCredentials);
 
-        TestAssert.AreEqual(SessionStatus.InvalidCredentials, result.Status);
-        TestAssert.AreEqual<AuthenticatedAccountSession?>(null, result.Value);
+        Assert.AreEqual(SessionStatus.InvalidCredentials, result.Status);
+        Assert.AreEqual<AuthenticatedAccountSession?>(null, result.Value);
     }
 
-    internal void SuccessStatusWithoutValue_IsRejected()
+    [TestMethod]
+    public void SuccessStatusWithoutValue_IsRejected()
     {
-        TestAssert.Throws<ArgumentOutOfRangeException>(() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
             new SessionResult<AuthenticatedAccountSession>(SessionStatus.Success));
     }
 
-    internal void SessionMessages_SupportedCultures_AreAvailable()
+    [TestMethod]
+    public void SessionMessages_SupportedCultures_AreAvailable()
     {
         foreach (string culture in new[] { "en-US", "es-MX" })
         {
@@ -46,16 +52,16 @@ internal sealed class SessionModelsTests
                 "LoginScreen_VerificationCodeDialogMessage"
             })
             {
-                TestAssert.AreEqual(
+                Assert.AreEqual(
                     false,
                     string.IsNullOrWhiteSpace(LocalizationManager.Instance[key]));
             }
 
-            TestAssert.AreEqual(
+            Assert.AreEqual(
                 false,
                 LocalizationManager.Instance[
                     "LoginScreen_VerificationCodeDialogMessage"].Contains("{0}"));
-            TestAssert.AreEqual("Guest-Player", GuestNameFormatter.Format("Guest-Player"));
+            Assert.AreEqual("Guest-Player", GuestNameFormatter.Format("Guest-Player"));
         }
     }
 

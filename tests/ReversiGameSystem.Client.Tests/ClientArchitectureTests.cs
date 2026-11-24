@@ -2,24 +2,27 @@ using System;
 using System.Reflection;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Validation;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal static class ClientArchitectureTests
+[TestClass]
+public sealed class ClientArchitectureTests
 {
-    internal static void Assemblies_RuntimeReferences_ExcludeServerAndPersistence()
+    [TestMethod]
+    public void Assemblies_RuntimeReferences_ExcludeServerAndPersistence()
     {
         Assembly presentation = typeof(MainWindow).Assembly;
         Assembly communication = typeof(ServerConnectionFactory).Assembly;
         Assembly validation = typeof(EmailPolicy).Assembly;
 
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             "ReversiGameSystem.Client.Presentation",
             presentation.GetName().Name);
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             "ReversiGameSystem.Client.Communication",
             communication.GetName().Name);
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             "ReversiGameSystem.Client.Validation",
             validation.GetName().Name);
 

@@ -4,12 +4,15 @@ using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Statistics;
 using ReversiGameSystem.Validation;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class AbandonMatchServiceTests
+[TestClass]
+public sealed class AbandonMatchServiceTests
 {
-    internal void TryAbandon_ActiveMatch_RecordsCompleteResult()
+    [TestMethod]
+    public void TryAbandon_ActiveMatch_RecordsCompleteResult()
     {
         // Arrange
         MatchSession session = CreateSystemMatch();
@@ -28,21 +31,22 @@ internal sealed class AbandonMatchServiceTests
         AbandonMatchResult result = service.TryAbandon(session, DiscColor.Black);
 
         // Assert
-        TestAssert.AreEqual(AbandonMatchResult.Success, result);
-        TestAssert.AreEqual(MatchState.Finished, session.State);
-        TestAssert.AreEqual("System", session.WinnerName);
-        TestAssert.AreEqual<DiscColor?>(DiscColor.Black, session.AbandonedByColor);
-        TestAssert.AreEqual("Pedro", session.AbandonedByName);
-        TestAssert.AreEqual<MatchEndReason?>(
+        Assert.AreEqual(AbandonMatchResult.Success, result);
+        Assert.AreEqual(MatchState.Finished, session.State);
+        Assert.AreEqual("System", session.WinnerName);
+        Assert.AreEqual<DiscColor?>(DiscColor.Black, session.AbandonedByColor);
+        Assert.AreEqual("Pedro", session.AbandonedByName);
+        Assert.AreEqual<MatchEndReason?>(
             MatchEndReason.Abandonment,
             session.EndReason);
-        TestAssert.AreEqual(true, session.FinishedAtUtc.HasValue);
-        TestAssert.AreEqual(1, session.Moves.Count);
-        TestAssert.AreEqual(true, ReferenceEquals(recordedMove, session.Moves[0]));
-        TestAssert.AreEqual(true, ReferenceEquals(boardBeforeAbandonment, session.Board));
+        Assert.AreEqual(true, session.FinishedAtUtc.HasValue);
+        Assert.AreEqual(1, session.Moves.Count);
+        Assert.AreEqual(true, ReferenceEquals(recordedMove, session.Moves[0]));
+        Assert.AreEqual(true, ReferenceEquals(boardBeforeAbandonment, session.Board));
     }
 
-    internal void TryAbandon_JoinedPlayer_AwardsCreatorVictory()
+    [TestMethod]
+    public void TryAbandon_JoinedPlayer_AwardsCreatorVictory()
     {
         // Arrange
         MatchSession session = new MatchSession(
@@ -58,13 +62,14 @@ internal sealed class AbandonMatchServiceTests
         AbandonMatchResult result = service.TryAbandon(session, DiscColor.White);
 
         // Assert
-        TestAssert.AreEqual(AbandonMatchResult.Success, result);
-        TestAssert.AreEqual("Ana", session.WinnerName);
-        TestAssert.AreEqual("Pedro", session.AbandonedByName);
-        TestAssert.AreEqual<DiscColor?>(DiscColor.White, session.AbandonedByColor);
+        Assert.AreEqual(AbandonMatchResult.Success, result);
+        Assert.AreEqual("Ana", session.WinnerName);
+        Assert.AreEqual("Pedro", session.AbandonedByName);
+        Assert.AreEqual<DiscColor?>(DiscColor.White, session.AbandonedByColor);
     }
 
-    internal void TryAbandon_FinishedMatch_PreservesExistingResult()
+    [TestMethod]
+    public void TryAbandon_FinishedMatch_PreservesExistingResult()
     {
         // Arrange
         MatchSession session = CreateSystemMatch();
@@ -76,14 +81,14 @@ internal sealed class AbandonMatchServiceTests
         AbandonMatchResult result = service.TryAbandon(session, DiscColor.Black);
 
         // Assert
-        TestAssert.AreEqual(AbandonMatchResult.MatchAlreadyFinished, result);
-        TestAssert.AreEqual("Pedro", session.WinnerName);
-        TestAssert.AreEqual<MatchEndReason?>(
+        Assert.AreEqual(AbandonMatchResult.MatchAlreadyFinished, result);
+        Assert.AreEqual("Pedro", session.WinnerName);
+        Assert.AreEqual<MatchEndReason?>(
             MatchEndReason.BoardCompleted,
             session.EndReason);
-        TestAssert.AreEqual(originalFinishedAt, session.FinishedAtUtc);
-        TestAssert.AreEqual<DiscColor?>(null, session.AbandonedByColor);
-        TestAssert.AreEqual<string?>(null, session.AbandonedByName);
+        Assert.AreEqual(originalFinishedAt, session.FinishedAtUtc);
+        Assert.AreEqual<DiscColor?>(null, session.AbandonedByColor);
+        Assert.AreEqual<string?>(null, session.AbandonedByName);
     }
 
     private static MatchSession CreateSystemMatch()

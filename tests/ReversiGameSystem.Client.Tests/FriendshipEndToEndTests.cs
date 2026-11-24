@@ -4,13 +4,17 @@ using System.Threading;
 using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Services;
 using Proxy = ReversiGameSystem.ServerProxy;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
 /// <summary>Checks generated consumers against the disposable real net.tcp host.</summary>
-internal static class FriendshipEndToEndTests
+[TestClass]
+[TestCategory("LiveIntegration")]
+public sealed class FriendshipEndToEndTests
 {
-    internal static void Presence_RealAccounts_ReceivesLoginAndSessionClosureCallbacks()
+    [TestMethod]
+    public void Presence_RealAccounts_ReceivesLoginAndSessionClosureCallbacks()
     {
         // Arrange
         SessionClient firstSession = CreateSessionClient();
@@ -33,8 +37,8 @@ internal static class FriendshipEndToEndTests
             // Assert
             AssertSingleFriend(betaFriends, "ReviewAlpha", true);
             WaitForPresence(first, true);
-            TestAssert.AreEqual(true, first.IsConnected);
-            TestAssert.AreEqual(true, second.IsConnected);
+            Assert.AreEqual(true, first.IsConnected);
+            Assert.AreEqual(true, second.IsConnected);
             CloseSession_ActiveFriend_PublishesOffline(first, secondSession, beta.SessionToken);
             InvalidToken_RealBoundary_RejectsSession();
         }
@@ -70,7 +74,7 @@ internal static class FriendshipEndToEndTests
 
         // Assert
         WaitForPresence(observer, false);
-        TestAssert.AreEqual(true, observer.IsConnected);
+        Assert.AreEqual(true, observer.IsConnected);
     }
 
     private static void InvalidToken_RealBoundary_RejectsSession()
@@ -83,14 +87,14 @@ internal static class FriendshipEndToEndTests
             .GetAwaiter().GetResult();
 
         // Assert
-        TestAssert.AreEqual(FriendshipStatus.InvalidSession, result.Status);
-        TestAssert.AreEqual(false, invalid.IsConnected);
+        Assert.AreEqual(FriendshipStatus.InvalidSession, result.Status);
+        Assert.AreEqual(false, invalid.IsConnected);
     }
 
     private static void WaitForPresence(FriendshipClient observer, bool online)
     {
         // Read the local snapshot only: success requires a delivered duplex notification.
-        TestAssert.AreEqual(true, SpinWait.SpinUntil(() =>
+        Assert.AreEqual(true, SpinWait.SpinUntil(() =>
         {
             FriendSummary[] friends = observer.ReadFriends();
             return friends.Length == 1 && friends[0].Username == "ReviewBeta"
@@ -101,10 +105,10 @@ internal static class FriendshipEndToEndTests
 
     private static void AssertSingleFriend(FriendSummary[] friends, string username, bool online)
     {
-        TestAssert.AreEqual(1, friends.Length);
-        TestAssert.AreEqual(username, friends[0].Username);
-        TestAssert.AreEqual(true, friends[0].AccountId > 0);
-        TestAssert.AreEqual(online, friends[0].IsOnline);
+        Assert.AreEqual(1, friends.Length);
+        Assert.AreEqual(username, friends[0].Username);
+        Assert.AreEqual(true, friends[0].AccountId > 0);
+        Assert.AreEqual(online, friends[0].IsOnline);
     }
 
     private static SessionClient CreateSessionClient()
@@ -134,7 +138,7 @@ internal static class FriendshipEndToEndTests
         SessionResult<AuthenticatedAccountSession> result = sessions.CompleteLogin(
             login,
             verificationCode).GetAwaiter().GetResult();
-        TestAssert.AreEqual(SessionStatus.Success, result.Status);
+        Assert.AreEqual(SessionStatus.Success, result.Status);
         return TestAssert.IsNotNull(result.Value);
     }
 

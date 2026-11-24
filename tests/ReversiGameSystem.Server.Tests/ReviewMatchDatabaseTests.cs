@@ -11,6 +11,8 @@ using ReversiGameSystem.Server.Persistence.Accounts;
 using ReversiGameSystem.Server.Persistence.Chat;
 using ReversiGameSystem.Server.Persistence.Matches;
 
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
 namespace ReversiGameSystem.Server.Tests;
 
 internal static class ReviewMatchDatabaseTests
@@ -38,25 +40,25 @@ internal static class ReviewMatchDatabaseTests
             ?? throw new InvalidOperationException("Match expected.");
 
         // Act / Assert: a rejected operation must leave the waiting match unchanged.
-        TestAssert.AreEqual(0, (matches.GetAvailableMatches(alpha).Value
+        Assert.AreEqual(0, (matches.GetAvailableMatches(alpha).Value
             ?? throw new InvalidOperationException("Matches expected.")).Length);
-        TestAssert.AreEqual(waiting.Id, (matches.GetAvailableMatches(beta).Value
+        Assert.AreEqual(waiting.Id, (matches.GetAvailableMatches(beta).Value
             ?? throw new InvalidOperationException("Matches expected.")).Single().Id);
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             MatchStatus.CannotJoinOwnMatch,
             matches.JoinMatch(alpha, waiting.Code!).Status);
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             ChatStatus.MatchNotInProgress,
             chat.LoadChatHistory(alpha, waiting.Id).Status);
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             ChatStatus.Unauthorized,
             chat.LoadChatHistory(beta, waiting.Id).Status);
         Join_ConcurrentRequests_RegistersOneSecondSeat(matches, beta, waiting);
-        TestAssert.AreEqual("InProgress", (matches.GetParticipantMatch(alpha, waiting.Id).Value
+        Assert.AreEqual("InProgress", (matches.GetParticipantMatch(alpha, waiting.Id).Value
             ?? throw new InvalidOperationException("Match expected.")).State);
-        TestAssert.AreEqual(2, (matches.GetParticipantMatch(beta, waiting.Id).Value
+        Assert.AreEqual(2, (matches.GetParticipantMatch(beta, waiting.Id).Value
             ?? throw new InvalidOperationException("Match expected.")).Participants.Length);
-        TestAssert.AreEqual(0, (matches.GetAvailableMatches(beta).Value
+        Assert.AreEqual(0, (matches.GetAvailableMatches(beta).Value
             ?? throw new InvalidOperationException("Matches expected.")).Length);
         Send_ConcurrentRequests_EnforcesAccountLimit(chat, chatClock, alpha, waiting.Id);
         Moderate_RepeatedMessages_CommitsAccountMute(chat, alpha, waiting.Id);
@@ -65,38 +67,38 @@ internal static class ReviewMatchDatabaseTests
         Restart_AbandonedWaitingMatch_InvalidatesCode(matches, alpha, beta);
         Join_InactiveCreator_RejectsWithoutOccupyingSecondSeat(matches, alpha, beta);
         sessions.CloseSession(alpha);
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             MatchStatus.InvalidSession,
             matches.GetAvailableMatches(alpha).Status);
         Match systemLobby = matches.CreateMatch(beta, new MatchSettings()).Value
             ?? throw new InvalidOperationException("A system lobby was expected.");
         Match systemMatch = matches.StartSystemMatch(beta, systemLobby.Id).Value
             ?? throw new InvalidOperationException("A system match was expected.");
-        TestAssert.AreEqual(false, systemMatch.CountsTowardStatistics);
-        TestAssert.AreEqual(ChatStatus.Unauthorized,
+        Assert.AreEqual(false, systemMatch.CountsTowardStatistics);
+        Assert.AreEqual(ChatStatus.Unauthorized,
             chat.LoadChatHistory(beta, systemMatch.Id).Status);
         MatchParticipant systemParticipant = systemMatch.Participants
             .Single(player => player.SeatNumber == 2);
-        TestAssert.AreEqual(0L, systemParticipant.AccountId);
-        TestAssert.AreEqual(true, systemParticipant.IsSystem);
+        Assert.AreEqual(0L, systemParticipant.AccountId);
+        Assert.AreEqual(true, systemParticipant.IsSystem);
         systemMatch.Board = ReversiEngine.CreateInitialBoard();
         systemMatch.CurrentTurnSeatNumber = 1;
         systemMatch.TurnStartedAtUtc = DateTime.UtcNow;
         MatchPlacement placement = new MatchPlacement(systemMatch.Id, 0, 2, 3);
-        TestAssert.AreEqual(MatchStatus.Success,
+        Assert.AreEqual(MatchStatus.Success,
             GameplayMatchRules.ApplyPlayerMove(systemMatch, placement, DateTime.UtcNow));
         DateTime systemTurnStart = systemMatch.TurnStartedAtUtc.Value;
-        TestAssert.AreEqual(false,
+        Assert.AreEqual(false,
             GameplayMatchRules.ApplySystemMoveIfReady(systemMatch, systemTurnStart.AddSeconds(4)));
-        TestAssert.AreEqual(true,
+        Assert.AreEqual(true,
             GameplayMatchRules.ApplySystemMoveIfReady(systemMatch, systemTurnStart.AddSeconds(5)));
-        TestAssert.AreEqual<int?>(1, systemMatch.CurrentTurnSeatNumber);
-        TestAssert.AreEqual(systemTurnStart.AddSeconds(5), systemMatch.TurnStartedAtUtc.Value);
-        TestAssert.AreEqual(0, systemMatch.Participants[1].ConsecutiveTimeoutCount);
+        Assert.AreEqual<int?>(1, systemMatch.CurrentTurnSeatNumber);
+        Assert.AreEqual(systemTurnStart.AddSeconds(5), systemMatch.TurnStartedAtUtc.Value);
+        Assert.AreEqual(0, systemMatch.Participants[1].ConsecutiveTimeoutCount);
         MatchMove systemMove = systemMatch.LastMove
             ?? throw new InvalidOperationException("A system move was expected.");
-        TestAssert.AreEqual("System", systemMove.Origin);
-        TestAssert.AreEqual(true, new MatchRepository().SynchronizeMatch(systemMatch));
+        Assert.AreEqual("System", systemMove.Origin);
+        Assert.AreEqual(true, new MatchRepository().SynchronizeMatch(systemMatch));
         Console.WriteLine("Passed real match SQL checks: atomic join, chat ordering, "
             + "moderation, authorization, cancellation and session revocation.");
     }
@@ -113,7 +115,7 @@ internal static class ReviewMatchDatabaseTests
         Task.WaitAll(joins);
 
         // Assert
-        TestAssert.AreEqual(1, joins.Count(task => task.Result));
+        Assert.AreEqual(1, joins.Count(task => task.Result));
     }
 
     private static void Send_ConcurrentRequests_EnforcesAccountLimit(
@@ -129,14 +131,14 @@ internal static class ReviewMatchDatabaseTests
         Task.WaitAll(sends);
 
         // Assert
-        TestAssert.AreEqual(2, sends.Count(task => task.Result.Status == ChatStatus.Success));
-        TestAssert.AreEqual(1, sends.Count(task => task.Result.Status == ChatStatus.RateLimitExceeded));
+        Assert.AreEqual(2, sends.Count(task => task.Result.Status == ChatStatus.Success));
+        Assert.AreEqual(1, sends.Count(task => task.Result.Status == ChatStatus.RateLimitExceeded));
         clock.Advance(TimeSpan.FromSeconds(1));
-        TestAssert.AreEqual(ChatStatus.Success,
+        Assert.AreEqual(ChatStatus.Success,
             chat.SubmitChatMessage(token, id, "Next message").Status);
         ChatMessage[] history = chat.LoadChatHistory(token, id).Messages;
-        TestAssert.AreEqual(3, history.Length);
-        TestAssert.IsTrue(history.Select(entry => entry.MessageNumber)
+        Assert.AreEqual(3, history.Length);
+        Assert.IsTrue(history.Select(entry => entry.MessageNumber)
             .SequenceEqual(Enumerable.Range(1, 3)), "Accepted messages must keep their order.");
     }
 
@@ -144,10 +146,10 @@ internal static class ReviewMatchDatabaseTests
         ChatApplicationService chat, string token, long id)
     {
         // Arrange
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             ChatStatus.EmptyMessage,
             chat.SubmitChatMessage(token, id, " ").Status);
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             ChatStatus.MessageTooLong,
             chat.SubmitChatMessage(
                 token,
@@ -161,7 +163,7 @@ internal static class ReviewMatchDatabaseTests
                 token,
                 id,
                 "BLOCKEDWORD!");
-            TestAssert.AreEqual(
+            Assert.AreEqual(
                 attempt < 2
                     ? ChatStatus.MessageBlocked
                     : ChatStatus.PlayerMuted,
@@ -171,11 +173,11 @@ internal static class ReviewMatchDatabaseTests
             token,
             id,
             "Otherwise acceptable");
-        TestAssert.AreEqual(ChatStatus.PlayerMuted, muted.Status);
-        TestAssert.IsTrue(
+        Assert.AreEqual(ChatStatus.PlayerMuted, muted.Status);
+        Assert.IsTrue(
             muted.Mute is not null,
             "A muted result must contain its durable sanction.");
-        TestAssert.AreEqual(3, chat.LoadChatHistory(token, id).Messages.Length);
+        Assert.AreEqual(3, chat.LoadChatHistory(token, id).Messages.Length);
     }
 
     private static void Cancel_RepeatedRequest_InvalidatesCode(
@@ -186,19 +188,19 @@ internal static class ReviewMatchDatabaseTests
             ?? throw new InvalidOperationException("Match expected.");
 
         // Act
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             MatchStatus.Success,
             matches.CancelMatch(creator, waiting.Id));
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             MatchStatus.Success,
             matches.CancelMatch(creator, waiting.Id));
 
         // Assert
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             "Cancelled",
             (matches.GetParticipantMatch(creator, waiting.Id).Value
                 ?? throw new InvalidOperationException("Match expected.")).State);
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             MatchStatus.MatchCodeUnavailable,
             matches.JoinMatch(other, waiting.Code!).Status);
     }
@@ -212,15 +214,15 @@ internal static class ReviewMatchDatabaseTests
         MatchRepository restartedStore = new MatchRepository();
 
         // Act
-        TestAssert.AreEqual(1, restartedStore.CancelAbandonedWaitingMatches());
+        Assert.AreEqual(1, restartedStore.CancelAbandonedWaitingMatches());
 
         // Assert
-        TestAssert.AreEqual(0, restartedStore.CancelAbandonedWaitingMatches());
-        TestAssert.AreEqual(
+        Assert.AreEqual(0, restartedStore.CancelAbandonedWaitingMatches());
+        Assert.AreEqual(
             "Cancelled",
             (matches.GetParticipantMatch(creator, abandoned.Id).Value
                 ?? throw new InvalidOperationException("Match expected.")).State);
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             MatchStatus.MatchCodeUnavailable,
             matches.JoinMatch(other, abandoned.Code!).Status);
     }
@@ -235,9 +237,9 @@ internal static class ReviewMatchDatabaseTests
         try
         {
             // Act / Assert
-            TestAssert.AreEqual(0, (matches.GetAvailableMatches(other).Value
+            Assert.AreEqual(0, (matches.GetAvailableMatches(other).Value
                 ?? throw new InvalidOperationException("Matches expected.")).Length);
-            TestAssert.AreEqual(
+            Assert.AreEqual(
                 MatchStatus.InactiveAccount,
                 matches.JoinMatch(other, waiting.Code!).Status);
         }
@@ -245,11 +247,11 @@ internal static class ReviewMatchDatabaseTests
         {
             SetCreatorStatus("ACTIVE");
         }
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             1,
             (matches.GetParticipantMatch(creator, waiting.Id).Value
                 ?? throw new InvalidOperationException("Match expected.")).Participants.Length);
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             MatchStatus.Success,
             matches.CancelMatch(creator, waiting.Id));
     }
@@ -262,7 +264,7 @@ internal static class ReviewMatchDatabaseTests
         using SqlCommand command = connection.CreateCommand();
         command.CommandText = "UPDATE dbo.Account SET statusCode=@status WHERE username=N'ReviewAlpha'";
         command.Parameters.AddWithValue("@status", status);
-        TestAssert.AreEqual(1, command.ExecuteNonQuery());
+        Assert.AreEqual(1, command.ExecuteNonQuery());
     }
 
     private static void Gameplay_RealMovePersistence_UpdatesBoardAndHistory(
@@ -288,7 +290,7 @@ internal static class ReviewMatchDatabaseTests
         match.LastMove = move;
         match.CurrentTurnSeatNumber = 2;
         match.TurnStartedAtUtc = move.PlayedAtUtc;
-        TestAssert.IsTrue(
+        Assert.IsTrue(
             repository.SynchronizeMatch(match),
             "Expected the manual move snapshot to be synchronized.");
 
@@ -310,17 +312,17 @@ internal static class ReviewMatchDatabaseTests
         match.TurnStartedAtUtc = timeoutMove.PlayedAtUtc;
         match.Participants.Single(participant => participant.SeatNumber == 2)
             .ConsecutiveTimeoutCount = 1;
-        TestAssert.IsTrue(
+        Assert.IsTrue(
             repository.SynchronizeMatch(match),
             "Expected the timeout move snapshot to be synchronized.");
 
         Match loaded = repository.LoadParticipantMatch(accountId, matchId).Value
             ?? throw new InvalidOperationException("Match expected.");
-        TestAssert.AreEqual(2, loaded.Moves.Count);
-        TestAssert.AreEqual(1, loaded.CurrentTurnSeatNumber);
-        TestAssert.AreEqual(1, loaded.LastMove?.FlippedPieceCount);
-        TestAssert.AreEqual("Timeout", loaded.LastMove?.Origin);
-        TestAssert.AreEqual(ReversiEngine.White, loaded.Board[(2 * ReversiEngine.BoardSize) + 2]);
+        Assert.AreEqual(2, loaded.Moves.Count);
+        Assert.AreEqual(1, loaded.CurrentTurnSeatNumber);
+        Assert.AreEqual(1, loaded.LastMove?.FlippedPieceCount);
+        Assert.AreEqual("Timeout", loaded.LastMove?.Origin);
+        Assert.AreEqual(ReversiEngine.White, loaded.Board[(2 * ReversiEngine.BoardSize) + 2]);
 
         match.State = "Finished";
         match.EndReason = "ABANDONMENT";
@@ -329,16 +331,16 @@ internal static class ReviewMatchDatabaseTests
         match.EndedAtUtc = DateTime.UtcNow;
         match.CurrentTurnSeatNumber = null;
         match.TurnStartedAtUtc = null;
-        TestAssert.IsTrue(
+        Assert.IsTrue(
             repository.SynchronizeMatch(match),
             "Expected the finished match snapshot to be synchronized.");
-        TestAssert.IsTrue(
+        Assert.IsTrue(
             repository.SynchronizeMatch(match),
             "Expected repeated synchronization to remain idempotent.");
 
         MatchResult<Match[]> history = repository.LoadMatchHistory(accountId);
-        TestAssert.AreEqual(MatchStatus.Success, history.Status);
-        TestAssert.IsTrue(
+        Assert.AreEqual(MatchStatus.Success, history.Status);
+        Assert.IsTrue(
             history.Value != null && history.Value.Any(m =>
                 m.Id == matchId
                 && m.State == "Finished"

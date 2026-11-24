@@ -10,25 +10,25 @@ internal static class Program
         {
             return Run(new Action[]
             {
-                MatchScreenTests.ExistingGamePage_RealMatch_RendersPlayersBoardAndChat
+                new MatchScreenTests().ExistingGamePage_RealMatch_RendersPlayersBoardAndChat
             });
         }
         if (args.Length == 1 && args[0] == "--match-end-to-end")
         {
-            return Run(new Action[] { MatchEndToEndTests.TwoPlayers_RealServer_StartsConfirmedBoardAndExchangesChat });
+            return Run(new Action[] { new MatchEndToEndTests().TwoPlayers_RealServer_StartsConfirmedBoardAndExchangesChat });
         }
         if (args.Length == 1 && args[0] == "--friendship-end-to-end")
         {
             return Run(new Action[]
             {
-                FriendshipEndToEndTests.Presence_RealAccounts_ReceivesLoginAndSessionClosureCallbacks
+                new FriendshipEndToEndTests().Presence_RealAccounts_ReceivesLoginAndSessionClosureCallbacks
             });
         }
         if (args.Length == 1 && args[0] == "--session-integration")
         {
             return Run(new Action[]
             {
-                SessionConnectionTests.GuestLifecycle_ThroughGeneratedProxy
+                new SessionConnectionTests().GuestLifecycle_ThroughGeneratedProxy
             });
         }
         if (args.Length != 0)
@@ -42,75 +42,90 @@ internal static class Program
             new ServerConnectionFactoryTests();
         AccountCreationViewModelTests accountCreationTests =
             new AccountCreationViewModelTests();
+        RemoteCallTests remoteCallTests = new RemoteCallTests();
+        RemoteMatchMessagesTests remoteMatchMessagesTests = new RemoteMatchMessagesTests();
+        LobbySettingsTests lobbySettingsTests = new LobbySettingsTests();
+        ClientErrorHandlerTests clientErrorHandlerTests = new ClientErrorHandlerTests();
+        PlayerPreferencesClientTests playerPreferencesClientTests = new PlayerPreferencesClientTests();
+        GameViewModelRecoveryTests gameViewModelRecoveryTests = new GameViewModelRecoveryTests();
+        GameViewModelTests gameViewModelTests = new GameViewModelTests();
+        GameplayClientTransportTests gameplayClientTransportTests = new GameplayClientTransportTests();
+        MatchClientsTests matchClientsTests = new MatchClientsTests();
+        ClientArchitectureTests clientArchitectureTests = new ClientArchitectureTests();
+        FailureDiagnosticsTests failureDiagnosticsTests = new FailureDiagnosticsTests();
+        FriendshipSnapshotTests friendshipSnapshotTests = new FriendshipSnapshotTests();
+        FriendshipLocalizationTests friendshipLocalizationTests = new FriendshipLocalizationTests();
+        FriendshipConnectionTests friendshipConnectionTests = new FriendshipConnectionTests();
+        MatchInvitationClientTests matchInvitationClientTests = new MatchInvitationClientTests();
         Action[] tests =
         {
-            RemoteCallTests.SendServiceCall_Timeout_PreservesCauseAndAddsCorrelation,
-            RemoteCallTests.SendServiceCall_ConnectionFailure_PreservesCauseAndAddsCorrelation,
-            RemoteCallTests.SendServiceCall_ProgrammingFailure_PropagatesOriginalException,
-            RemoteMatchMessagesTests.MatchStatuses_SupportedCultures_HaveLocalizedMessages,
-            RemoteMatchMessagesTests.ChatStatuses_SupportedCultures_HaveLocalizedMessages,
-            RemoteMatchMessagesTests.MatchNotFound_ResolvesSpecificMessage,
-            RemoteMatchMessagesTests.UnknownMatchStatus_ThrowsInsteadOfInventingRejection,
-            RemoteMatchMessagesTests.UnknownChatStatus_ThrowsInsteadOfInventingRejection,
+            remoteCallTests.SendServiceCall_Timeout_PreservesCauseAndAddsCorrelation,
+            remoteCallTests.SendServiceCall_ConnectionFailure_PreservesCauseAndAddsCorrelation,
+            remoteCallTests.SendServiceCall_ProgrammingFailure_PropagatesOriginalException,
+            remoteMatchMessagesTests.MatchStatuses_SupportedCultures_HaveLocalizedMessages,
+            remoteMatchMessagesTests.ChatStatuses_SupportedCultures_HaveLocalizedMessages,
+            remoteMatchMessagesTests.MatchNotFound_ResolvesSpecificMessage,
+            remoteMatchMessagesTests.UnknownMatchStatus_ThrowsInsteadOfInventingRejection,
+            remoteMatchMessagesTests.UnknownChatStatus_ThrowsInsteadOfInventingRejection,
             accountCreationTests.CreateAccount_MissingInformation_DoesNotCallServer,
             accountCreationTests.CreateAccount_ValidInput_NormalizesAndCallsServer,
             accountCreationTests.CreateAccount_ConcurrentSubmission_ReturnsSubmissionInProgress,
-            LobbySettingsTests.ChangeTurnDuration_UnreachableServer_ReturnsServiceUnavailable,
-            LobbySettingsTests.RemoteMatchMessages_InvalidTurnDuration_ResolvesExpectedResourceKey,
-            LobbySettingsTests.LocalizationResources_MatchSettingsKeys_ExistInSupportedCultures,
-            ClientErrorHandlerTests.Callback_ConnectionFailure_RecordsCauseWithoutFatalNotification,
-            ClientErrorHandlerTests.Callback_ProgrammingFailure_ReachesFatalBoundary,
-            ClientErrorHandlerTests.ReportFatalFailure_ProgrammingError_DisplaysFatalMessage,
-            ClientErrorHandlerTests.ReportFatalFailure_UnhandledDeclaredFault_DisplaysFatalMessage,
-            ClientErrorHandlerTests.IsConnectionFailure_UnknownFault_DoesNotTreatAsDisconnection,
-            ClientErrorHandlerTests.IsConnectionFailure_ProgrammingError_DoesNotTreatAsDisconnection,
-            ClientErrorHandlerTests.CanMapFailure_UnknownMatchCode_DoesNotInventStatus,
-            ClientErrorHandlerTests.FileLogger_AggregateFailure_PreservesCausesWithoutSecrets,
-            ClientErrorHandlerTests.RecordFailure_PrimaryLoggerFails_PersistsBothCausesAndCorrelation,
-            ClientErrorHandlerTests.FileLogger_PrimaryFileUnavailable_PersistsOriginalEventInBackup,
-            ClientErrorHandlerTests.RecordFailure_AllMediaUnavailable_ReportsUnavailableDiagnostics,
-            PlayerPreferencesClientTests.ChangeLanguage_ExistingPreferences_PreservesOtherSettings,
-            PlayerPreferencesClientTests.ChangeLanguage_InvalidLocale_ReturnsDeclaredStatus,
-            PlayerPreferencesClientTests.ChangeLanguage_RejectedWrite_DoesNotRetry,
-            PlayerPreferencesClientTests.ChangeLanguage_UnknownFault_PropagatesFailure,
-            PlayerPreferencesClientTests.ChangeLanguage_ServiceFault_PreservesServerCorrelation,
-            PlayerPreferencesClientTests.ChangeLanguage_InvalidClientConfiguration_PropagatesFailure,
-            PlayerPreferencesClientTests.CreatePreferencesClient_CustomHost_UsesPreferencesEndpoint,
-            GameViewModelRecoveryTests.ConnectionLost_UnexpectedRecoveryFault_ReportsBeforeViewDeactivation,
-            GameViewModelTests.UpdateClock_ActiveMute_MarksPlayerMuted,
-            GameViewModelTests.UpdateClock_ExpiredMute_ClearsMute,
-            GameViewModelTests.SendChatMessage_MutedPlayer_ReturnsPlayerMuted,
-            GameplayClientTransportTests.Callback_ProcessingFailure_ReachesErrorBoundary,
-            GameplayClientTransportTests.RestoreMatchConnection_FinishedMatch_LoadsFinalState,
-            GameplayClientTransportTests.LoadMatchState_CancelledRequest_CanRestoreChannel,
-            GameplayClientTransportTests.PlacePiece_ConfirmedVersion_PreservesPlacementAtRemoteBoundary,
-            MatchClientsTests.Callbacks_StaleVersionsAndDuplicateMessages_PreserveConfirmedState,
-            MatchClientsTests.Callbacks_ConclusionSnapshot_PreservesWinnerAndAbandonmentReason,
-            MatchClientsTests.Faults_SupportedCultures_ResolveLocalizedRecoveryAndRejectionMessages,
-            ClientArchitectureTests.Assemblies_RuntimeReferences_ExcludeServerAndPersistence,
-            FailureDiagnosticsTests.ForLogging_ThrownFailure_PreservesOnlySafeDiagnostics,
-            FriendshipSnapshotTests.Refresh_ConcurrentConnection_PreservesLatestPresence,
-            FriendshipSnapshotTests.Refresh_ConcurrentRemoval_DoesNotRestoreFriend,
-            FriendshipSnapshotTests.Notifications_LastChangeWins_AndReadsAreIsolated,
-            FriendshipLocalizationTests.Presence_SupportedCultures_ContainStatusAndRecoveryMessages,
-            FriendshipConnectionTests.GeneratedProxy_ReceivesPresenceAndPropagatesTypedSessionFault,
-            FriendshipConnectionTests.Keepalive_CloseWhileRefreshPending_DoesNotReopenChannel,
+            lobbySettingsTests.ChangeTurnDuration_UnreachableServer_ReturnsServiceUnavailable,
+            lobbySettingsTests.RemoteMatchMessages_InvalidTurnDuration_ResolvesExpectedResourceKey,
+            lobbySettingsTests.LocalizationResources_MatchSettingsKeys_ExistInSupportedCultures,
+            clientErrorHandlerTests.Callback_ConnectionFailure_RecordsCauseWithoutFatalNotification,
+            clientErrorHandlerTests.Callback_ProgrammingFailure_ReachesFatalBoundary,
+            clientErrorHandlerTests.ReportFatalFailure_ProgrammingError_DisplaysFatalMessage,
+            clientErrorHandlerTests.ReportFatalFailure_UnhandledDeclaredFault_DisplaysFatalMessage,
+            clientErrorHandlerTests.IsConnectionFailure_UnknownFault_DoesNotTreatAsDisconnection,
+            clientErrorHandlerTests.IsConnectionFailure_ProgrammingError_DoesNotTreatAsDisconnection,
+            clientErrorHandlerTests.CanMapFailure_UnknownMatchCode_DoesNotInventStatus,
+            clientErrorHandlerTests.FileLogger_AggregateFailure_PreservesCausesWithoutSecrets,
+            clientErrorHandlerTests.RecordFailure_PrimaryLoggerFails_PersistsBothCausesAndCorrelation,
+            clientErrorHandlerTests.FileLogger_PrimaryFileUnavailable_PersistsOriginalEventInBackup,
+            clientErrorHandlerTests.RecordFailure_AllMediaUnavailable_ReportsUnavailableDiagnostics,
+            playerPreferencesClientTests.ChangeLanguage_ExistingPreferences_PreservesOtherSettings,
+            playerPreferencesClientTests.ChangeLanguage_InvalidLocale_ReturnsDeclaredStatus,
+            playerPreferencesClientTests.ChangeLanguage_RejectedWrite_DoesNotRetry,
+            playerPreferencesClientTests.ChangeLanguage_UnknownFault_PropagatesFailure,
+            playerPreferencesClientTests.ChangeLanguage_ServiceFault_PreservesServerCorrelation,
+            playerPreferencesClientTests.ChangeLanguage_InvalidClientConfiguration_PropagatesFailure,
+            playerPreferencesClientTests.CreatePreferencesClient_CustomHost_UsesPreferencesEndpoint,
+            gameViewModelRecoveryTests.ConnectionLost_UnexpectedRecoveryFault_ReportsBeforeViewDeactivation,
+            gameViewModelTests.UpdateClock_ActiveMute_MarksPlayerMuted,
+            gameViewModelTests.UpdateClock_ExpiredMute_ClearsMute,
+            gameViewModelTests.SendChatMessage_MutedPlayer_ReturnsPlayerMuted,
+            gameplayClientTransportTests.Callback_ProcessingFailure_ReachesErrorBoundary,
+            gameplayClientTransportTests.RestoreMatchConnection_FinishedMatch_LoadsFinalState,
+            gameplayClientTransportTests.LoadMatchState_CancelledRequest_CanRestoreChannel,
+            gameplayClientTransportTests.PlacePiece_ConfirmedVersion_PreservesPlacementAtRemoteBoundary,
+            matchClientsTests.Callbacks_StaleVersionsAndDuplicateMessages_PreserveConfirmedState,
+            matchClientsTests.Callbacks_ConclusionSnapshot_PreservesWinnerAndAbandonmentReason,
+            matchClientsTests.Faults_SupportedCultures_ResolveLocalizedRecoveryAndRejectionMessages,
+            clientArchitectureTests.Assemblies_RuntimeReferences_ExcludeServerAndPersistence,
+            failureDiagnosticsTests.ForLogging_ThrownFailure_PreservesOnlySafeDiagnostics,
+            friendshipSnapshotTests.Refresh_ConcurrentConnection_PreservesLatestPresence,
+            friendshipSnapshotTests.Refresh_ConcurrentRemoval_DoesNotRestoreFriend,
+            friendshipSnapshotTests.Notifications_LastChangeWins_AndReadsAreIsolated,
+            friendshipLocalizationTests.Presence_SupportedCultures_ContainStatusAndRecoveryMessages,
+            friendshipConnectionTests.GeneratedProxy_ReceivesPresenceAndPropagatesTypedSessionFault,
+            friendshipConnectionTests.Keepalive_CloseWhileRefreshPending_DoesNotReopenChannel,
             sessionModelsTests.SuccessfulResult_PreservesSession,
             sessionModelsTests.FailureResult_DoesNotContainSession,
             sessionModelsTests.SuccessStatusWithoutValue_IsRejected,
             sessionModelsTests.SessionMessages_SupportedCultures_AreAvailable,
-            MatchInvitationClientTests.RemoteMatchMessages_FriendshipFaultAccountUnavailable_ResolvesExpectedResourceKey,
-            MatchInvitationClientTests.RemoteMatchMessages_FriendshipFaultFriendshipNotFound_ResolvesExpectedResourceKey,
-            MatchInvitationClientTests.RemoteMatchMessages_FriendshipFaultInvalidAccountId_ResolvesExpectedResourceKey,
-            MatchInvitationClientTests.RemoteMatchMessages_FriendshipFaultInactiveAccount_ResolvesExpectedResourceKey,
-            MatchInvitationClientTests.RemoteMatchMessages_MatchFaultUnauthorized_ResolvesExpectedResourceKey,
-            MatchInvitationClientTests.RemoteMatchMessages_MatchFaultInactiveAccount_ResolvesExpectedResourceKey,
-            MatchInvitationClientTests.RemoteMatchMessages_MatchFaultMatchNotWaiting_ResolvesExpectedResourceKey,
-            MatchInvitationClientTests.RemoteMatchMessages_ServiceUnavailable_ResolvesConnectionFailedKey,
-            MatchInvitationClientTests.LocalizationResources_InvitationKeys_ArePresentInAllSupportedCultures,
-            MatchInvitationClientTests.TurnTimePolicy_ValidRange_ParsesConfiguredSeconds,
-            MatchInvitationClientTests.TurnTimePolicy_OutOfRangeOrNonNumeric_RejectsInput,
-            MatchInvitationClientTests.MatchLobbyClient_InviteToMatch_CommunicationException_AbortsWithoutAutoRetry,
+            matchInvitationClientTests.RemoteMatchMessages_FriendshipFaultAccountUnavailable_ResolvesExpectedResourceKey,
+            matchInvitationClientTests.RemoteMatchMessages_FriendshipFaultFriendshipNotFound_ResolvesExpectedResourceKey,
+            matchInvitationClientTests.RemoteMatchMessages_FriendshipFaultInvalidAccountId_ResolvesExpectedResourceKey,
+            matchInvitationClientTests.RemoteMatchMessages_FriendshipFaultInactiveAccount_ResolvesExpectedResourceKey,
+            matchInvitationClientTests.RemoteMatchMessages_MatchFaultUnauthorized_ResolvesExpectedResourceKey,
+            matchInvitationClientTests.RemoteMatchMessages_MatchFaultInactiveAccount_ResolvesExpectedResourceKey,
+            matchInvitationClientTests.RemoteMatchMessages_MatchFaultMatchNotWaiting_ResolvesExpectedResourceKey,
+            matchInvitationClientTests.RemoteMatchMessages_ServiceUnavailable_ResolvesConnectionFailedKey,
+            matchInvitationClientTests.LocalizationResources_InvitationKeys_ArePresentInAllSupportedCultures,
+            matchInvitationClientTests.TurnTimePolicy_ValidRange_ParsesConfiguredSeconds,
+            matchInvitationClientTests.TurnTimePolicy_OutOfRangeOrNonNumeric_RejectsInput,
+            matchInvitationClientTests.MatchLobbyClient_InviteToMatch_CommunicationException_AbortsWithoutAutoRetry,
             connectionFactoryTests.GetServerHost_VariableAbsent_ReturnsLocalhost,
             connectionFactoryTests.GetServerHost_EnvironmentVariableProvided_ReturnsConfiguredHost,
             connectionFactoryTests.CreateEndpointAddress_ValidHost_RewritesAddressPreservingPortAndPath,

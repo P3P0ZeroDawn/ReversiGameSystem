@@ -4,12 +4,15 @@ using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Statistics;
 using ReversiGameSystem.Validation;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class FriendRemovalServiceTests
+[TestClass]
+public sealed class FriendRemovalServiceTests
 {
-    internal void Remove_ExistingFriendship_RemovesOnlyRelationship()
+    [TestMethod]
+    public void Remove_ExistingFriendship_RemovesOnlyRelationship()
     {
         // Arrange
         FriendshipStore store = CreateStore(
@@ -22,13 +25,14 @@ internal sealed class FriendRemovalServiceTests
         FriendRequestResult newRequestResult = store.TryCreateRequest("Pedro", "Ana");
 
         // Assert
-        TestAssert.AreEqual(FriendRemovalResult.Success, result);
-        TestAssert.AreEqual(FriendRemovalResult.NotFound, repeatedResult);
-        TestAssert.AreEqual(FriendRequestResult.Success, newRequestResult);
-        TestAssert.AreEqual(0, store.GetFriends("Pedro").Count);
+        Assert.AreEqual(FriendRemovalResult.Success, result);
+        Assert.AreEqual(FriendRemovalResult.NotFound, repeatedResult);
+        Assert.AreEqual(FriendRequestResult.Success, newRequestResult);
+        Assert.AreEqual(0, store.GetFriends("Pedro").Count);
     }
 
-    internal void Remove_MissingFriendship_PreservesExistingFriendship()
+    [TestMethod]
+    public void Remove_MissingFriendship_PreservesExistingFriendship()
     {
         // Arrange
         FriendshipStore store = CreateStore(
@@ -39,12 +43,13 @@ internal sealed class FriendRemovalServiceTests
         FriendRemovalResult result = service.Remove("Luis");
 
         // Assert
-        TestAssert.AreEqual(FriendRemovalResult.NotFound, result);
-        TestAssert.AreEqual(1, store.GetFriends("Pedro").Count);
-        TestAssert.AreEqual("Ana", store.GetFriends("Pedro")[0].Username);
+        Assert.AreEqual(FriendRemovalResult.NotFound, result);
+        Assert.AreEqual(1, store.GetFriends("Pedro").Count);
+        Assert.AreEqual("Ana", store.GetFriends("Pedro")[0].Username);
     }
 
-    internal void Remove_ThirdPartyFriendship_DoesNotModifyRelationship()
+    [TestMethod]
+    public void Remove_ThirdPartyFriendship_DoesNotModifyRelationship()
     {
         // Arrange
         FriendshipStore store = CreateStore(
@@ -55,9 +60,9 @@ internal sealed class FriendRemovalServiceTests
         FriendRemovalResult result = service.Remove("Ana");
 
         // Assert
-        TestAssert.AreEqual(FriendRemovalResult.NotFound, result);
-        TestAssert.AreEqual(1, store.GetFriends("Ana").Count);
-        TestAssert.AreEqual("Luis", store.GetFriends("Ana")[0].Username);
+        Assert.AreEqual(FriendRemovalResult.NotFound, result);
+        Assert.AreEqual(1, store.GetFriends("Ana").Count);
+        Assert.AreEqual("Luis", store.GetFriends("Ana")[0].Username);
     }
 
     private static FriendshipStore CreateStore(string relationship)

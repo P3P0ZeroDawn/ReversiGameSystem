@@ -4,12 +4,15 @@ using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Statistics;
 using ReversiGameSystem.Validation;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class PlayerStatisticsTests
+[TestClass]
+public sealed class PlayerStatisticsTests
 {
-    internal void FromCompletedMatches_Empty_ReturnsZeros()
+    [TestMethod]
+    public void FromCompletedMatches_Empty_ReturnsZeros()
     {
         // Arrange
         CompletedMatchOutcome[] outcomes = Array.Empty<CompletedMatchOutcome>();
@@ -18,14 +21,15 @@ internal sealed class PlayerStatisticsTests
         PlayerStatistics actual = PlayerStatistics.FromCompletedMatches(outcomes);
 
         // Assert
-        TestAssert.AreEqual(0, actual.MatchesPlayed);
-        TestAssert.AreEqual(0, actual.Wins);
-        TestAssert.AreEqual(0, actual.Losses);
-        TestAssert.AreEqual(0, actual.Draws);
-        TestAssert.AreEqual(0d, actual.WinRate);
+        Assert.AreEqual(0, actual.MatchesPlayed);
+        Assert.AreEqual(0, actual.Wins);
+        Assert.AreEqual(0, actual.Losses);
+        Assert.AreEqual(0, actual.Draws);
+        Assert.AreEqual(0d, actual.WinRate);
     }
 
-    internal void FromCompletedMatches_MixedResults_CountsEveryOutcome()
+    [TestMethod]
+    public void FromCompletedMatches_MixedResults_CountsEveryOutcome()
     {
         // Arrange
         CompletedMatchOutcome[] outcomes =
@@ -40,14 +44,15 @@ internal sealed class PlayerStatisticsTests
         PlayerStatistics actual = PlayerStatistics.FromCompletedMatches(outcomes);
 
         // Assert
-        TestAssert.AreEqual(4, actual.MatchesPlayed);
-        TestAssert.AreEqual(2, actual.Wins);
-        TestAssert.AreEqual(1, actual.Losses);
-        TestAssert.AreEqual(1, actual.Draws);
-        TestAssert.AreEqual(0.5d, actual.WinRate);
+        Assert.AreEqual(4, actual.MatchesPlayed);
+        Assert.AreEqual(2, actual.Wins);
+        Assert.AreEqual(1, actual.Losses);
+        Assert.AreEqual(1, actual.Draws);
+        Assert.AreEqual(0.5d, actual.WinRate);
     }
 
-    internal void FromCompletedMatches_NoWins_ReturnsZeroWinRate()
+    [TestMethod]
+    public void FromCompletedMatches_NoWins_ReturnsZeroWinRate()
     {
         // Arrange
         CompletedMatchOutcome[] outcomes =
@@ -60,7 +65,7 @@ internal sealed class PlayerStatisticsTests
         PlayerStatistics actual = PlayerStatistics.FromCompletedMatches(outcomes);
 
         // Assert
-        TestAssert.AreEqual(2, actual.MatchesPlayed);
-        TestAssert.AreEqual(0d, actual.WinRate);
+        Assert.AreEqual(2, actual.MatchesPlayed);
+        Assert.AreEqual(0d, actual.WinRate);
     }
 }

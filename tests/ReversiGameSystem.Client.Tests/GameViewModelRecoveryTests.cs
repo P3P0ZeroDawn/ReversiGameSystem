@@ -8,17 +8,20 @@ using ReversiGameSystem.Features.Gameplay;
 using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
 using Proxy = ReversiGameSystem.ServerProxy;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal static class GameViewModelRecoveryTests
+[TestClass]
+public sealed class GameViewModelRecoveryTests
 {
     private const long MatchId = 19;
     private const long StateVersion = 1;
     private const string ServerCorrelation = "recovery-server-reference";
     private static readonly TimeSpan FailureTimeout = TimeSpan.FromSeconds(5);
 
-    internal static void ConnectionLost_UnexpectedRecoveryFault_ReportsBeforeViewDeactivation()
+    [TestMethod]
+    public void ConnectionLost_UnexpectedRecoveryFault_ReportsBeforeViewDeactivation()
     {
         RecoveryService service = new RecoveryService();
         TcpListener listener = new TcpListener(IPAddress.Loopback, 0);
@@ -51,14 +54,14 @@ internal static class GameViewModelRecoveryTests
 
             gameplay.LoadMatchState(MatchId, CancellationToken.None).GetAwaiter().GetResult();
 
-            TestAssert.AreEqual(true, reported.Wait(FailureTimeout));
-            TestAssert.AreEqual(true, failure is FaultException<Proxy.ServiceFault>);
+            Assert.AreEqual(true, reported.Wait(FailureTimeout));
+            Assert.AreEqual(true, failure is FaultException<Proxy.ServiceFault>);
             FaultException<Proxy.ServiceFault> serviceFault =
                 (FaultException<Proxy.ServiceFault>)(failure
                     ?? throw new InvalidOperationException("The failure was not reported."));
-            TestAssert.AreEqual(ServerCorrelation, serviceFault.Detail.CorrelationId);
-            TestAssert.AreEqual(false, model.RecoveryFailed);
-            TestAssert.AreEqual(false, model.CanSendMessage);
+            Assert.AreEqual(ServerCorrelation, serviceFault.Detail.CorrelationId);
+            Assert.AreEqual(false, model.RecoveryFailed);
+            Assert.AreEqual(false, model.CanSendMessage);
         }
         finally
         {

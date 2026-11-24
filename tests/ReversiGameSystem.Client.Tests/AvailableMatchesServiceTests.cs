@@ -4,12 +4,15 @@ using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Statistics;
 using ReversiGameSystem.Validation;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class AvailableMatchesServiceTests
+[TestClass]
+public sealed class AvailableMatchesServiceTests
 {
-    internal void FilterJoinable_MixedMatches_ReturnsOnlyOpenHumanMatches()
+    [TestMethod]
+    public void FilterJoinable_MixedMatches_ReturnsOnlyOpenHumanMatches()
     {
         // Arrange
         AvailableMatch[] matches =
@@ -31,7 +34,7 @@ internal sealed class AvailableMatchesServiceTests
             AvailableMatchesService.FilterJoinable(matches, "Pedro");
 
         // Assert
-        TestAssert.AreEqual(1, actual.Count);
-        TestAssert.AreEqual("open", actual[0].Id);
+        Assert.AreEqual(1, actual.Count);
+        Assert.AreEqual("open", actual[0].Id);
     }
 }

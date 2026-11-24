@@ -15,12 +15,16 @@ using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Views;
 using Proxy = ReversiGameSystem.ServerProxy;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal static class MatchScreenTests
+[TestClass]
+[TestCategory("LiveIntegration")]
+public sealed class MatchScreenTests
 {
-    internal static void ExistingGamePage_RealMatch_RendersPlayersBoardAndChat()
+    [TestMethod]
+    public void ExistingGamePage_RealMatch_RendersPlayersBoardAndChat()
     {
         Exception? failure = null;
         Thread ui = new Thread(() =>
@@ -75,7 +79,7 @@ internal static class MatchScreenTests
         try
         {
             MatchStatus creation = firstLobby.CreateMatch(40).GetAwaiter().GetResult();
-            TestAssert.AreEqual(MatchStatus.Success, creation);
+            Assert.AreEqual(MatchStatus.Success, creation);
             LobbySnapshot waiting = firstLobby.ReadCurrentLobby();
             secondLobby.JoinMatch(waiting.MatchCode).GetAwaiter().GetResult();
             second.LoadMatchState(waiting.MatchId).GetAwaiter().GetResult();
@@ -92,21 +96,21 @@ internal static class MatchScreenTests
             Button send = Control<Button>(page, "sendMessageButton");
             ListBox messages = Control<ListBox>(page, "chatMessagesListBox");
             PumpUntil(() => send.IsEnabled);
-            TestAssert.AreEqual("ReviewAlpha", Control<TextBlock>(page, "creatorNameTextBlock").Text);
-            TestAssert.AreEqual("ReviewBeta", Control<TextBlock>(page, "opponentNameTextBlock").Text);
+            Assert.AreEqual("ReviewAlpha", Control<TextBlock>(page, "creatorNameTextBlock").Text);
+            Assert.AreEqual("ReviewBeta", Control<TextBlock>(page, "opponentNameTextBlock").Text);
             PumpUntil(() => Control<TextBlock>(page, "creatorConnectionTextBlock").Text
                 == LocalizationManager.Instance["Game_PresenceConnected"]
                 && Control<TextBlock>(page, "opponentConnectionTextBlock").Text
                 == LocalizationManager.Instance["Game_PresenceConnected"]);
             ReversiBoardControl board = Control<ReversiBoardControl>(page, "gameBoardControl");
-            TestAssert.AreEqual(4, Control<Grid>(board, "piecesGrid").Children.Count);
+            Assert.AreEqual(4, Control<Grid>(board, "piecesGrid").Children.Count);
             foreach (Image piece in Control<Grid>(board, "piecesGrid").Children)
             {
-                TestAssert.AreEqual(true, ((BitmapSource)piece.Source).PixelWidth > 0);
+                Assert.AreEqual(true, ((BitmapSource)piece.Source).PixelWidth > 0);
             }
             Grid interaction = Control<Grid>(board, "interactionGrid");
-            TestAssert.AreEqual(true, interaction.IsHitTestVisible);
-            TestAssert.AreEqual(4, interaction.Children.Cast<Border>()
+            Assert.AreEqual(true, interaction.IsHitTestVisible);
+            Assert.AreEqual(4, interaction.Children.Cast<Border>()
                 .Count(square => square.Child != null));
 
             MatchStateSnapshot confirmedState = first.ReadMatchState(waiting.MatchId);
@@ -119,7 +123,7 @@ internal static class MatchScreenTests
             });
             PumpUntil(() => placementRequest.IsCompleted);
             MatchStatus placement = placementRequest.GetAwaiter().GetResult();
-            TestAssert.AreEqual(MatchStatus.Success, placement);
+            Assert.AreEqual(MatchStatus.Success, placement);
             PumpUntil(() => Control<Grid>(board, "piecesGrid").Children.Count == 5);
 
             // Act: send through the existing composer, then receive the other player's callback.
@@ -148,9 +152,9 @@ internal static class MatchScreenTests
                 LocalizationManager.Instance.CultureName = culture;
                 page.UpdateLayout();
                 PumpUntil(() => messages.Items.Count == 2);
-                TestAssert.AreEqual(string.Format(LocalizationManager.Instance["Game_ScoreFormat"], 4),
+                Assert.AreEqual(string.Format(LocalizationManager.Instance["Game_ScoreFormat"], 4),
                     Control<TextBlock>(page, "creatorScoreTextBlock").Text);
-                TestAssert.AreEqual(true, messages.Items.Cast<object>().Any(item =>
+                Assert.AreEqual(true, messages.Items.Cast<object>().Any(item =>
                     item.ToString().Contains("Reply from the second player")));
                 SavePreview(page, culture);
             }
@@ -173,11 +177,11 @@ internal static class MatchScreenTests
         FrameworkElement previousPage = (FrameworkElement)((Frame)window.Content).Content;
         window.Content = null;
         PumpUntil(() => !previousPage.IsLoaded);
-        TestAssert.AreEqual(MatchStatus.Success,
+        Assert.AreEqual(MatchStatus.Success,
             gameplay.ForfeitMatch(lobby.ReadCurrentLobby().MatchId).GetAwaiter().GetResult());
-        TestAssert.AreEqual(MatchStatus.Success, lobby.CreateMatch(40).GetAwaiter().GetResult());
+        Assert.AreEqual(MatchStatus.Success, lobby.CreateMatch(40).GetAwaiter().GetResult());
         long matchId = lobby.ReadCurrentLobby().MatchId;
-        TestAssert.AreEqual(MatchStatus.Success,
+        Assert.AreEqual(MatchStatus.Success,
             lobby.StartSystemMatch(matchId).GetAwaiter().GetResult());
         GamePage page = new GamePage(gameplay, chat, matchId, null);
         window.Content = new Frame { Content = page };
@@ -195,12 +199,12 @@ internal static class MatchScreenTests
             LocalizationManager.Instance.CultureName = culture;
             string systemName = culture == "en-US" ? "System" : "Sistema";
             PumpUntil(() => Control<TextBlock>(page, "opponentNameTextBlock").Text == systemName);
-            TestAssert.AreEqual(string.Format(
+            Assert.AreEqual(string.Format(
                 LocalizationManager.Instance["Game_CurrentTurnFormat"], systemName),
                 Control<TextBlock>(page, "turnTextBlock").Text);
-            TestAssert.AreEqual(Visibility.Hidden,
+            Assert.AreEqual(Visibility.Hidden,
                 Control<FrameworkElement>(page, "chatPanel").Visibility);
-            TestAssert.AreEqual(Visibility.Hidden,
+            Assert.AreEqual(Visibility.Hidden,
                 Control<TextBlock>(page, "opponentConnectionTextBlock").Visibility);
         }
     }
@@ -213,7 +217,7 @@ internal static class MatchScreenTests
         SessionResult<AuthenticatedAccountSession> result = sessions.CompleteLogin(
             login,
             verificationCode).GetAwaiter().GetResult();
-        TestAssert.AreEqual(SessionStatus.Success, result.Status);
+        Assert.AreEqual(SessionStatus.Success, result.Status);
         return TestAssert.IsNotNull(result.Value);
     }
 

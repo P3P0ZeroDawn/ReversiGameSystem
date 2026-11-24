@@ -4,12 +4,15 @@ using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Statistics;
 using ReversiGameSystem.Validation;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class MatchInformationServiceTests
+[TestClass]
+public sealed class MatchInformationServiceTests
 {
-    internal void TryGetHistory_MixedRecords_FiltersAndSorts()
+    [TestMethod]
+    public void TryGetHistory_MixedRecords_FiltersAndSorts()
     {
         // Arrange
         DateTime referenceTime = new DateTime(2026, 9, 18, 12, 0, 0, DateTimeKind.Utc);
@@ -26,13 +29,14 @@ internal sealed class MatchInformationServiceTests
             out IReadOnlyList<MatchInformation> history);
 
         // Assert
-        TestAssert.AreEqual(MatchInformationRetrievalResult.Success, result);
-        TestAssert.AreEqual(2, history.Count);
-        TestAssert.AreEqual("newer", history[0].Id);
-        TestAssert.AreEqual("older", history[1].Id);
+        Assert.AreEqual(MatchInformationRetrievalResult.Success, result);
+        Assert.AreEqual(2, history.Count);
+        Assert.AreEqual("newer", history[0].Id);
+        Assert.AreEqual("older", history[1].Id);
     }
 
-    internal void TryGetHistory_NoPlayerMatches_ReturnsEmpty()
+    [TestMethod]
+    public void TryGetHistory_NoPlayerMatches_ReturnsEmpty()
     {
         // Arrange
         MatchInformation[] records =
@@ -46,11 +50,12 @@ internal sealed class MatchInformationServiceTests
             out IReadOnlyList<MatchInformation> history);
 
         // Assert
-        TestAssert.AreEqual(MatchInformationRetrievalResult.Success, result);
-        TestAssert.AreEqual(0, history.Count);
+        Assert.AreEqual(MatchInformationRetrievalResult.Success, result);
+        Assert.AreEqual(0, history.Count);
     }
 
-    internal void TryGetHistory_Record_PreservesSummaryFields()
+    [TestMethod]
+    public void TryGetHistory_Record_PreservesSummaryFields()
     {
         // Arrange
         DateTime recordedAt = new DateTime(2026, 9, 17, 20, 30, 0, DateTimeKind.Utc);
@@ -68,12 +73,12 @@ internal sealed class MatchInformationServiceTests
         service.TryGetHistory(out IReadOnlyList<MatchInformation> history);
 
         // Assert
-        TestAssert.AreEqual(recordedAt, history[0].RecordedAtUtc);
-        TestAssert.AreEqual<MatchEndReason?>(
+        Assert.AreEqual(recordedAt, history[0].RecordedAtUtc);
+        Assert.AreEqual<MatchEndReason?>(
             MatchEndReason.Abandonment,
             history[0].EndReason);
-        TestAssert.AreEqual(4, history[0].LatestBoard.Count(DiscColor.Black));
-        TestAssert.AreEqual(1, history[0].LatestBoard.Count(DiscColor.White));
+        Assert.AreEqual(4, history[0].LatestBoard.Count(DiscColor.Black));
+        Assert.AreEqual(1, history[0].LatestBoard.Count(DiscColor.White));
     }
 
     private static MatchInformation CreateRecord(

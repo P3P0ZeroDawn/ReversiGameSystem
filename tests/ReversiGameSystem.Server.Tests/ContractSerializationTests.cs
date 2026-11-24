@@ -25,11 +25,11 @@ public sealed class ContractSerializationTests
         AuthenticatedSession session = RoundTrip(original);
 
         // Assert
-        TestAssert.AreEqual(42L, session.Account.AccountId);
-        TestAssert.AreEqual("player_one", session.Account.Username);
-        TestAssert.AreEqual("session-token", session.SessionToken);
-        TestAssert.AreEqual("en-US", session.PreferredLocaleCode);
-        TestAssert.AreEqual(original.ExpiresAtUtc, session.ExpiresAtUtc);
+        Assert.AreEqual(42L, session.Account.AccountId);
+        Assert.AreEqual("player_one", session.Account.Username);
+        Assert.AreEqual("session-token", session.SessionToken);
+        Assert.AreEqual("en-US", session.PreferredLocaleCode);
+        Assert.AreEqual(original.ExpiresAtUtc, session.ExpiresAtUtc);
     }
 
     [TestMethod]
@@ -42,12 +42,12 @@ public sealed class ContractSerializationTests
         AccountRegistrationCredentials result = RoundTrip(credentials);
 
         // Assert
-        TestAssert.AreEqual(credentials.Username, result.Username);
-        TestAssert.AreEqual(credentials.EmailAddress, result.EmailAddress);
-        TestAssert.AreEqual(credentials.PreferredLocaleCode, result.PreferredLocaleCode);
+        Assert.AreEqual(credentials.Username, result.Username);
+        Assert.AreEqual(credentials.EmailAddress, result.EmailAddress);
+        Assert.AreEqual(credentials.PreferredLocaleCode, result.PreferredLocaleCode);
         ProfileImageContent image = TestAssert.IsNotNull(result.ProfileImage);
-        TestAssert.AreEqual("image/png", image.MediaType);
-        TestAssert.AreEqual(3, image.Content.Length);
+        Assert.AreEqual("image/png", image.MediaType);
+        Assert.AreEqual(3, image.Content.Length);
     }
 
     [TestMethod]
@@ -60,11 +60,11 @@ public sealed class ContractSerializationTests
         PlayerProfile result = RoundTrip(profile);
 
         // Assert
-        TestAssert.AreEqual(42L, result.Account.AccountId);
-        TestAssert.AreEqual(true, result.HasProfileImage);
-        TestAssert.AreEqual(10, result.Statistics.MatchesPlayed);
-        TestAssert.AreEqual(6, result.Statistics.Wins);
-        TestAssert.AreEqual(0.6, result.Statistics.WinRate);
+        Assert.AreEqual(42L, result.Account.AccountId);
+        Assert.AreEqual(true, result.HasProfileImage);
+        Assert.AreEqual(10, result.Statistics.MatchesPlayed);
+        Assert.AreEqual(6, result.Statistics.Wins);
+        Assert.AreEqual(0.6, result.Statistics.WinRate);
     }
 
     [TestMethod]
@@ -77,10 +77,10 @@ public sealed class ContractSerializationTests
         LeaderboardEntry[] result = RoundTrip(standings);
 
         // Assert
-        TestAssert.AreEqual(1, result.Length);
-        TestAssert.AreEqual(1, result[0].Position);
-        TestAssert.AreEqual("player_one", result[0].Account.Username);
-        TestAssert.AreEqual(6, result[0].Wins);
+        Assert.AreEqual(1, result.Length);
+        Assert.AreEqual(1, result[0].Position);
+        Assert.AreEqual("player_one", result[0].Account.Username);
+        Assert.AreEqual(6, result[0].Wins);
     }
 
     [TestMethod]
@@ -98,9 +98,9 @@ public sealed class ContractSerializationTests
         ServiceFault result = RoundTrip(fault);
 
         // Assert
-        TestAssert.AreEqual(fault.FailureCode, result.FailureCode);
-        TestAssert.AreEqual(fault.CorrelationId, result.CorrelationId);
-        TestAssert.AreEqual(fault.IsTransient, result.IsTransient);
+        Assert.AreEqual(fault.FailureCode, result.FailureCode);
+        Assert.AreEqual(fault.CorrelationId, result.CorrelationId);
+        Assert.AreEqual(fault.IsTransient, result.IsTransient);
     }
 
     private static AuthenticatedSession CreateAuthenticatedSession()

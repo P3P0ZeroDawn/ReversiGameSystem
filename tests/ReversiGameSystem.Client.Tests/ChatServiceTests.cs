@@ -4,12 +4,15 @@ using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Statistics;
 using ReversiGameSystem.Validation;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class ChatServiceTests
+[TestClass]
+public sealed class ChatServiceTests
 {
-    internal void Send_EmptyMessage_DoesNotStoreMessage()
+    [TestMethod]
+    public void Send_EmptyMessage_DoesNotStoreMessage()
     {
         // Arrange
         ChatStore store = new ChatStore();
@@ -19,12 +22,13 @@ internal sealed class ChatServiceTests
         ChatSendResult result = service.Send("   ", out ChatMessage? message, out _);
 
         // Assert
-        TestAssert.AreEqual(ChatSendResult.EmptyMessage, result);
-        TestAssert.AreEqual(true, message == null);
-        TestAssert.AreEqual(0, GetMessages(service).Count);
+        Assert.AreEqual(ChatSendResult.EmptyMessage, result);
+        Assert.AreEqual(true, message == null);
+        Assert.AreEqual(0, GetMessages(service).Count);
     }
 
-    internal void Send_ValidMessage_TrimsAndStoresMessage()
+    [TestMethod]
+    public void Send_ValidMessage_TrimsAndStoresMessage()
     {
         // Arrange
         DateTime now = new DateTime(
@@ -45,16 +49,17 @@ internal sealed class ChatServiceTests
             out _);
 
         // Assert
-        TestAssert.AreEqual(ChatSendResult.Success, result);
-        TestAssert.AreEqual(true, message != null);
+        Assert.AreEqual(ChatSendResult.Success, result);
+        Assert.AreEqual(true, message != null);
         ChatMessage actualMessage = TestAssert.IsNotNull(message);
-        TestAssert.AreEqual("Pedro", actualMessage.SenderUsername);
-        TestAssert.AreEqual("Good move!", actualMessage.Content);
-        TestAssert.AreEqual(now, actualMessage.SentAtUtc);
-        TestAssert.AreEqual(1, GetMessages(service).Count);
+        Assert.AreEqual("Pedro", actualMessage.SenderUsername);
+        Assert.AreEqual("Good move!", actualMessage.Content);
+        Assert.AreEqual(now, actualMessage.SentAtUtc);
+        Assert.AreEqual(1, GetMessages(service).Count);
     }
 
-    internal void Send_MessageAboveLimit_DoesNotStoreMessage()
+    [TestMethod]
+    public void Send_MessageAboveLimit_DoesNotStoreMessage()
     {
         // Arrange
         ChatStore store = new ChatStore();
@@ -65,11 +70,12 @@ internal sealed class ChatServiceTests
         ChatSendResult result = service.Send(content, out _, out _);
 
         // Assert
-        TestAssert.AreEqual(ChatSendResult.MessageTooLong, result);
-        TestAssert.AreEqual(0, GetMessages(service).Count);
+        Assert.AreEqual(ChatSendResult.MessageTooLong, result);
+        Assert.AreEqual(0, GetMessages(service).Count);
     }
 
-    internal void Send_InactiveConversation_ReturnsUnauthorized()
+    [TestMethod]
+    public void Send_InactiveConversation_ReturnsUnauthorized()
     {
         // Arrange
         MatchSession session = new MatchSession("WAIT01", 40, "Pedro", null);
@@ -81,12 +87,13 @@ internal sealed class ChatServiceTests
             out IReadOnlyList<ChatMessage> messages);
 
         // Assert
-        TestAssert.AreEqual(ChatSendResult.Unauthorized, result);
-        TestAssert.AreEqual(ChatReadResult.Unauthorized, readResult);
-        TestAssert.AreEqual(0, messages.Count);
+        Assert.AreEqual(ChatSendResult.Unauthorized, result);
+        Assert.AreEqual(ChatReadResult.Unauthorized, readResult);
+        Assert.AreEqual(0, messages.Count);
     }
 
-    internal void Send_GuestSession_ReturnsUnauthorized()
+    [TestMethod]
+    public void Send_GuestSession_ReturnsUnauthorized()
     {
         // Arrange
         MatchSession session = new MatchSession(
@@ -103,12 +110,13 @@ internal sealed class ChatServiceTests
             out IReadOnlyList<ChatMessage> messages);
 
         // Assert
-        TestAssert.AreEqual(ChatSendResult.Unauthorized, result);
-        TestAssert.AreEqual(ChatReadResult.Unauthorized, readResult);
-        TestAssert.AreEqual(0, messages.Count);
+        Assert.AreEqual(ChatSendResult.Unauthorized, result);
+        Assert.AreEqual(ChatReadResult.Unauthorized, readResult);
+        Assert.AreEqual(0, messages.Count);
     }
 
-    internal void Send_ProhibitedSpanishContent_RecordsInfringement()
+    [TestMethod]
+    public void Send_ProhibitedSpanishContent_RecordsInfringement()
     {
         // Arrange
         ChatStore store = new ChatStore();
@@ -121,13 +129,14 @@ internal sealed class ChatServiceTests
             out _);
 
         // Assert
-        TestAssert.AreEqual(ChatSendResult.MessageBlocked, result);
-        TestAssert.AreEqual(true, message == null);
-        TestAssert.AreEqual(1, store.GetInfringementCount("Pedro"));
-        TestAssert.AreEqual(0, GetMessages(service).Count);
+        Assert.AreEqual(ChatSendResult.MessageBlocked, result);
+        Assert.AreEqual(true, message == null);
+        Assert.AreEqual(1, store.GetInfringementCount("Pedro"));
+        Assert.AreEqual(0, GetMessages(service).Count);
     }
 
-    internal void Send_ProhibitedSubstringInsideWord_AllowsMessage()
+    [TestMethod]
+    public void Send_ProhibitedSubstringInsideWord_AllowsMessage()
     {
         // Arrange
         ChatStore store = new ChatStore();
@@ -140,12 +149,13 @@ internal sealed class ChatServiceTests
             out _);
 
         // Assert
-        TestAssert.AreEqual(ChatSendResult.Success, result);
-        TestAssert.AreEqual(true, message != null);
-        TestAssert.AreEqual(0, store.GetInfringementCount("Pedro"));
+        Assert.AreEqual(ChatSendResult.Success, result);
+        Assert.AreEqual(true, message != null);
+        Assert.AreEqual(0, store.GetInfringementCount("Pedro"));
     }
 
-    internal void Send_ThirdRecentInfringement_AppliesMute()
+    [TestMethod]
+    public void Send_ThirdRecentInfringement_AppliesMute()
     {
         // Arrange
         DateTime now = new DateTime(
@@ -168,17 +178,18 @@ internal sealed class ChatServiceTests
             out DateTime? muteEndsAtUtc);
 
         // Assert
-        TestAssert.AreEqual(ChatSendResult.MessageBlocked, first);
-        TestAssert.AreEqual(ChatSendResult.MessageBlocked, second);
-        TestAssert.AreEqual(ChatSendResult.PlayerMuted, third);
-        TestAssert.AreEqual(
+        Assert.AreEqual(ChatSendResult.MessageBlocked, first);
+        Assert.AreEqual(ChatSendResult.MessageBlocked, second);
+        Assert.AreEqual(ChatSendResult.PlayerMuted, third);
+        Assert.AreEqual(
             now.Add(ChatStore.MuteDuration),
             TestAssert.HasValue(muteEndsAtUtc));
-        TestAssert.AreEqual(3, store.GetInfringementCount("Pedro"));
-        TestAssert.AreEqual(0, GetMessages(service).Count);
+        Assert.AreEqual(3, store.GetInfringementCount("Pedro"));
+        Assert.AreEqual(0, GetMessages(service).Count);
     }
 
-    internal void Send_AfterMuteExpires_StoresSafeMessage()
+    [TestMethod]
+    public void Send_AfterMuteExpires_StoresSafeMessage()
     {
         // Arrange
         DateTime now = new DateTime(
@@ -204,10 +215,10 @@ internal sealed class ChatServiceTests
             out _);
 
         // Assert
-        TestAssert.AreEqual(ChatSendResult.PlayerMuted, mutedResult);
-        TestAssert.AreEqual(ChatSendResult.Success, successResult);
-        TestAssert.AreEqual(true, message != null);
-        TestAssert.AreEqual(1, GetMessages(service).Count);
+        Assert.AreEqual(ChatSendResult.PlayerMuted, mutedResult);
+        Assert.AreEqual(ChatSendResult.Success, successResult);
+        Assert.AreEqual(true, message != null);
+        Assert.AreEqual(1, GetMessages(service).Count);
     }
 
     private static MatchSession CreateActiveSession()
@@ -221,7 +232,7 @@ internal sealed class ChatServiceTests
     {
         ChatReadResult result = service.TryGetMessages(
             out IReadOnlyList<ChatMessage> messages);
-        TestAssert.AreEqual(ChatReadResult.Success, result);
+        Assert.AreEqual(ChatReadResult.Success, result);
         return messages;
     }
 }

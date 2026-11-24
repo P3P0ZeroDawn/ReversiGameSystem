@@ -32,15 +32,15 @@ public sealed class CreateAccountHandlerTests
                 new ProfileImageData(PngSignature(), "image/png")));
 
         // Assert
-        TestAssert.AreEqual(AccountStatus.Success, result.Status);
-        TestAssert.AreEqual<long?>(42, result.Value?.AccountId);
-        TestAssert.AreEqual("PlayerOne", accountStore.Registration?.Username);
-        TestAssert.AreEqual("player@example.com", accountStore.Registration?.EmailAddress);
-        TestAssert.IsTrue(
+        Assert.AreEqual(AccountStatus.Success, result.Status);
+        Assert.AreEqual<long?>(42, result.Value?.AccountId);
+        Assert.AreEqual("PlayerOne", accountStore.Registration?.Username);
+        Assert.AreEqual("player@example.com", accountStore.Registration?.EmailAddress);
+        Assert.IsTrue(
             PasswordHasher.Verify("Áb12345!", accountStore.Registration!.PasswordHash),
             "Stored PBKDF2 hash must verify the normalized password.");
-        TestAssert.AreEqual("en-US", accountStore.Registration?.PreferredLocaleCode);
-        TestAssert.AreEqual("new-image", accountStore.Registration?.ProfileImageUri);
+        Assert.AreEqual("en-US", accountStore.Registration?.PreferredLocaleCode);
+        Assert.AreEqual("new-image", accountStore.Registration?.ProfileImageUri);
     }
 
     [TestMethod]
@@ -56,8 +56,8 @@ public sealed class CreateAccountHandlerTests
             new NewAccountRegistration("000001", "", "player@example.com", "Password1!", "en-US", null));
 
         // Assert
-        TestAssert.AreEqual(AccountStatus.InvalidUsername, result.Status);
-        TestAssert.AreEqual<AccountRegistrationData?>(null, accountStore.Registration);
+        Assert.AreEqual(AccountStatus.InvalidUsername, result.Status);
+        Assert.AreEqual<AccountRegistrationData?>(null, accountStore.Registration);
     }
 
     [TestMethod]
@@ -68,15 +68,15 @@ public sealed class CreateAccountHandlerTests
         AccountApplicationService service = CreateService(accountStore, new ProfileImageRepositoryStub());
 
         // Act & Assert
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             AccountStatus.InvalidUsername,
             service.CompleteRegistration(
                 new NewAccountRegistration("000001", "ab", "player@example.com", "Password1!", "en-US", null)).Status);
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             AccountStatus.InvalidEmailAddress,
             service.CompleteRegistration(
                 new NewAccountRegistration("000001", "PlayerOne", "invalid", "Password1!", "en-US", null)).Status);
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             AccountStatus.InvalidPassword,
             service.CompleteRegistration(
                 new NewAccountRegistration("000001", "PlayerOne", "player@example.com", "weak", "en-US", null)).Status);
@@ -100,7 +100,7 @@ public sealed class CreateAccountHandlerTests
                 new ProfileImageData(new byte[] { 1, 2, 3 }, "image/png")));
 
         // Assert
-        TestAssert.AreEqual(AccountStatus.InvalidImage, result.Status);
+        Assert.AreEqual(AccountStatus.InvalidImage, result.Status);
     }
 
     [TestMethod]
@@ -125,8 +125,8 @@ public sealed class CreateAccountHandlerTests
                 new ProfileImageData(PngSignature(), "image/png")));
 
         // Assert
-        TestAssert.AreEqual(AccountStatus.UsernameUnavailable, result.Status);
-        TestAssert.AreEqual("new-image", imageStore.Deleted);
+        Assert.AreEqual(AccountStatus.UsernameUnavailable, result.Status);
+        Assert.AreEqual("new-image", imageStore.Deleted);
     }
 
     [TestMethod]
@@ -150,7 +150,7 @@ public sealed class CreateAccountHandlerTests
                 null));
 
         // Assert
-        TestAssert.AreEqual(AccountStatus.InvalidLocale, result.Status);
+        Assert.AreEqual(AccountStatus.InvalidLocale, result.Status);
     }
 
     [TestMethod]
@@ -161,12 +161,12 @@ public sealed class CreateAccountHandlerTests
         string secondHash = PasswordHasher.Hash("Password1!");
 
         // Assert
-        TestAssert.IsTrue(
+        Assert.IsTrue(
             firstHash.StartsWith("PBKDF2-SHA256$100000$", StringComparison.Ordinal),
             "Hash must use PBKDF2-SHA256 with 100000 iterations.");
-        TestAssert.IsTrue(firstHash != secondHash, "Salts must produce distinct hashes.");
-        TestAssert.AreEqual(true, PasswordHasher.Verify("Password1!", firstHash));
-        TestAssert.AreEqual(false, PasswordHasher.Verify("Wrong1!", firstHash));
+        Assert.IsTrue(firstHash != secondHash, "Salts must produce distinct hashes.");
+        Assert.AreEqual(true, PasswordHasher.Verify("Password1!", firstHash));
+        Assert.AreEqual(false, PasswordHasher.Verify("Wrong1!", firstHash));
     }
 
     private static AccountApplicationService CreateService(

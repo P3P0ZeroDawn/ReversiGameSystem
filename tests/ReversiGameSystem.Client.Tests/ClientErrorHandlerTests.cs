@@ -6,12 +6,15 @@ using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Localization;
 using Proxy = ReversiGameSystem.ServerProxy;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal static class ClientErrorHandlerTests
+[TestClass]
+public sealed class ClientErrorHandlerTests
 {
-    internal static void ReportFatalFailure_ProgrammingError_DisplaysFatalMessage()
+    [TestMethod]
+    public void ReportFatalFailure_ProgrammingError_DisplaysFatalMessage()
     {
         string displayedTitle = string.Empty;
         ClientErrorHandler handler = new ClientErrorHandler(
@@ -20,10 +23,11 @@ internal static class ClientErrorHandlerTests
         handler.ReportFatalFailure(
             new InvalidOperationException("Unexpected state"), "TestOperation");
 
-        TestAssert.AreEqual(LocalizationManager.Instance["Client_FatalErrorTitle"], displayedTitle);
+        Assert.AreEqual(LocalizationManager.Instance["Client_FatalErrorTitle"], displayedTitle);
     }
 
-    internal static void ReportFatalFailure_UnhandledDeclaredFault_DisplaysFatalMessage()
+    [TestMethod]
+    public void ReportFatalFailure_UnhandledDeclaredFault_DisplaysFatalMessage()
     {
         string displayedTitle = string.Empty;
         ClientErrorHandler handler = new ClientErrorHandler(
@@ -33,29 +37,33 @@ internal static class ClientErrorHandlerTests
 
         handler.ReportFatalFailure(fault, "TestOperation");
 
-        TestAssert.AreEqual(LocalizationManager.Instance["Client_FatalErrorTitle"], displayedTitle);
+        Assert.AreEqual(LocalizationManager.Instance["Client_FatalErrorTitle"], displayedTitle);
     }
 
-    internal static void IsConnectionFailure_UnknownFault_DoesNotTreatAsDisconnection()
+    [TestMethod]
+    public void IsConnectionFailure_UnknownFault_DoesNotTreatAsDisconnection()
     {
         bool expected = RemoteCall.IsConnectionFailure(new FaultException("Unknown fault"));
-        TestAssert.AreEqual(false, expected);
+        Assert.AreEqual(false, expected);
     }
 
-    internal static void IsConnectionFailure_ProgrammingError_DoesNotTreatAsDisconnection()
+    [TestMethod]
+    public void IsConnectionFailure_ProgrammingError_DoesNotTreatAsDisconnection()
     {
         bool expected = RemoteCall.IsConnectionFailure(new InvalidOperationException());
-        TestAssert.AreEqual(false, expected);
+        Assert.AreEqual(false, expected);
     }
 
-    internal static void CanMapFailure_UnknownMatchCode_DoesNotInventStatus()
+    [TestMethod]
+    public void CanMapFailure_UnknownMatchCode_DoesNotInventStatus()
     {
         FaultException<Proxy.MatchFault> fault = new FaultException<Proxy.MatchFault>(
             new Proxy.MatchFault { Reason = (Proxy.MatchFailure)int.MaxValue });
-        TestAssert.AreEqual(false, MatchContractMapper.CanMapFailure(fault));
+        Assert.AreEqual(false, MatchContractMapper.CanMapFailure(fault));
     }
 
-    internal static void Callback_ConnectionFailure_RecordsCauseWithoutFatalNotification()
+    [TestMethod]
+    public void Callback_ConnectionFailure_RecordsCauseWithoutFatalNotification()
     {
         CommunicationException failure = new CommunicationException("The channel closed.");
         Exception? reported = null;
@@ -73,8 +81,8 @@ internal static class ClientErrorHandlerTests
         try
         {
             new CallbackErrorBehavior().HandleError(failure);
-            TestAssert.AreEqual(true, ReferenceEquals(failure, reported));
-            TestAssert.AreEqual(false, fatalReported);
+            Assert.AreEqual(true, ReferenceEquals(failure, reported));
+            Assert.AreEqual(false, fatalReported);
         }
         finally
         {
@@ -83,7 +91,8 @@ internal static class ClientErrorHandlerTests
         }
     }
 
-    internal static void Callback_ProgrammingFailure_ReachesFatalBoundary()
+    [TestMethod]
+    public void Callback_ProgrammingFailure_ReachesFatalBoundary()
     {
         InvalidOperationException failure = new InvalidOperationException("Callback state failed.");
         Exception? reported = null;
@@ -95,7 +104,7 @@ internal static class ClientErrorHandlerTests
         try
         {
             new CallbackErrorBehavior().HandleError(failure);
-            TestAssert.AreEqual(true, ReferenceEquals(failure, reported));
+            Assert.AreEqual(true, ReferenceEquals(failure, reported));
         }
         finally
         {
@@ -103,7 +112,8 @@ internal static class ClientErrorHandlerTests
         }
     }
 
-    internal static void FileLogger_AggregateFailure_PreservesCausesWithoutSecrets()
+    [TestMethod]
+    public void FileLogger_AggregateFailure_PreservesCausesWithoutSecrets()
     {
         string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".log");
         try
@@ -115,16 +125,17 @@ internal static class ClientErrorHandlerTests
                 new IOException("private-cleanup-value"));
             logger.LogError(failure, "A test operation failed.");
             string output = File.ReadAllText(path);
-            TestAssert.AreEqual(true, output.Contains(typeof(InvalidOperationException).FullName));
-            TestAssert.AreEqual(true, output.Contains(typeof(IOException).FullName));
-            TestAssert.AreEqual(false, output.Contains("private-"));
+            Assert.AreEqual(true, output.Contains(typeof(InvalidOperationException).FullName));
+            Assert.AreEqual(true, output.Contains(typeof(IOException).FullName));
+            Assert.AreEqual(false, output.Contains("private-"));
         }
         finally
         {
             File.Delete(path);
         }
     }
-    internal static void RecordFailure_PrimaryLoggerFails_PersistsBothCausesAndCorrelation()
+    [TestMethod]
+    public void RecordFailure_PrimaryLoggerFails_PersistsBothCausesAndCorrelation()
     {
         string directory = Path.Combine(Path.GetTempPath(), "Reversi-fallback-"
             + Guid.NewGuid().ToString("N"));
@@ -138,13 +149,13 @@ internal static class ClientErrorHandlerTests
             string correlation = handler.RecordFailure(failure, "RecoveryTest", LogLevel.Critical);
 
             string output = File.ReadAllText(emergency.LastWrittenPath);
-            TestAssert.AreEqual(true, output.Contains(correlation));
-            TestAssert.AreEqual(true, output.Contains("server-test-reference"));
-            TestAssert.AreEqual(true, output.Contains("RecoveryTest"));
-            TestAssert.AreEqual(true, output.Contains(typeof(IOException).FullName));
-            TestAssert.AreEqual(true, output.Contains(typeof(FaultException<Proxy.ServiceFault>)
+            Assert.AreEqual(true, output.Contains(correlation));
+            Assert.AreEqual(true, output.Contains("server-test-reference"));
+            Assert.AreEqual(true, output.Contains("RecoveryTest"));
+            Assert.AreEqual(true, output.Contains(typeof(IOException).FullName));
+            Assert.AreEqual(true, output.Contains(typeof(FaultException<Proxy.ServiceFault>)
                 .FullName));
-            TestAssert.AreEqual(false, output.Contains("private-logger-value"));
+            Assert.AreEqual(false, output.Contains("private-logger-value"));
         }
         finally
         {
@@ -159,7 +170,8 @@ internal static class ClientErrorHandlerTests
         }
     }
 
-    internal static void FileLogger_PrimaryFileUnavailable_PersistsOriginalEventInBackup()
+    [TestMethod]
+    public void FileLogger_PrimaryFileUnavailable_PersistsOriginalEventInBackup()
     {
         string directory = Path.Combine(Path.GetTempPath(), "Reversi-file-fallback-"
             + Guid.NewGuid().ToString("N"));
@@ -175,12 +187,12 @@ internal static class ClientErrorHandlerTests
                 "CorrelationId: fallback-reference");
 
             string output = File.ReadAllText(emergency.LastWrittenPath);
-            TestAssert.AreEqual(true, output.Contains("fallback-reference"));
-            TestAssert.AreEqual(true, output.Contains("FallbackOperation"));
-            TestAssert.AreEqual(true, output.Contains(typeof(InvalidOperationException).FullName));
-            TestAssert.AreEqual(true, output.Contains(
+            Assert.AreEqual(true, output.Contains("fallback-reference"));
+            Assert.AreEqual(true, output.Contains("FallbackOperation"));
+            Assert.AreEqual(true, output.Contains(typeof(InvalidOperationException).FullName));
+            Assert.AreEqual(true, output.Contains(
                 typeof(UnauthorizedAccessException).FullName));
-            TestAssert.AreEqual(false, output.Contains("private-original-value"));
+            Assert.AreEqual(false, output.Contains("private-original-value"));
         }
         finally
         {
@@ -192,7 +204,8 @@ internal static class ClientErrorHandlerTests
         }
     }
 
-    internal static void RecordFailure_AllMediaUnavailable_ReportsUnavailableDiagnostics()
+    [TestMethod]
+    public void RecordFailure_AllMediaUnavailable_ReportsUnavailableDiagnostics()
     {
         string blocker = Path.Combine(Path.GetTempPath(), "Reversi-blocked-"
             + Guid.NewGuid().ToString("N"));
@@ -210,8 +223,8 @@ internal static class ClientErrorHandlerTests
             handler.RecordFailure(new InvalidOperationException("private-original-value"),
                 "UnavailableDiagnosticsTest", LogLevel.Critical);
 
-            TestAssert.AreEqual(true, handler.DiagnosticsUnavailable);
-            TestAssert.AreEqual(string.Empty, emergency.LastWrittenPath);
+            Assert.AreEqual(true, handler.DiagnosticsUnavailable);
+            Assert.AreEqual(string.Empty, emergency.LastWrittenPath);
         }
         finally
         {

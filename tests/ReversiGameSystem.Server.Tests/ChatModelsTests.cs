@@ -15,11 +15,11 @@ public sealed class ChatModelsTests
 
         // Act
         ArgumentOutOfRangeException exception =
-            TestAssert.Throws<ArgumentOutOfRangeException>(
+            Assert.Throws<ArgumentOutOfRangeException>(
                 () => new ChatChannelAccess(status));
 
         // Assert
-        TestAssert.AreEqual(nameof(status), exception.ParamName);
+        Assert.AreEqual(nameof(status), exception.ParamName);
     }
 
     [TestMethod]
@@ -30,11 +30,11 @@ public sealed class ChatModelsTests
 
         // Act
         ArgumentOutOfRangeException exception =
-            TestAssert.Throws<ArgumentOutOfRangeException>(
+            Assert.Throws<ArgumentOutOfRangeException>(
                 () => new ChatMessageSubmission(status));
 
         // Assert
-        TestAssert.AreEqual(nameof(status), exception.ParamName);
+        Assert.AreEqual(nameof(status), exception.ParamName);
     }
 
     [TestMethod]
@@ -45,11 +45,11 @@ public sealed class ChatModelsTests
 
         // Act
         ArgumentOutOfRangeException exception =
-            TestAssert.Throws<ArgumentOutOfRangeException>(
+            Assert.Throws<ArgumentOutOfRangeException>(
                 () => new ChatMessageSubmission(status));
 
         // Assert
-        TestAssert.AreEqual(nameof(status), exception.ParamName);
+        Assert.AreEqual(nameof(status), exception.ParamName);
     }
 
     [TestMethod]
@@ -60,10 +60,10 @@ public sealed class ChatModelsTests
 
         // Act
         ArgumentOutOfRangeException exception =
-            TestAssert.Throws<ArgumentOutOfRangeException>(
+            Assert.Throws<ArgumentOutOfRangeException>(
                 () => new ChatHistory(status));
 
         // Assert
-        TestAssert.AreEqual(nameof(status), exception.ParamName);
+        Assert.AreEqual(nameof(status), exception.ParamName);
     }
 }

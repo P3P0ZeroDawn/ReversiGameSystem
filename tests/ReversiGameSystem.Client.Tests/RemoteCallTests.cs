@@ -4,14 +4,17 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Services;
 using Proxy = ReversiGameSystem.ServerProxy;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal static class RemoteCallTests
+[TestClass]
+public sealed class RemoteCallTests
 {
     private const string UnusedEndpoint = "net.tcp://localhost:1/UnusedPreferences";
 
-    internal static void SendServiceCall_Timeout_PreservesCauseAndAddsCorrelation()
+    [TestMethod]
+    public void SendServiceCall_Timeout_PreservesCauseAndAddsCorrelation()
     {
         TimeoutException originalFailure = new TimeoutException("Timeout test.");
         void SendRequest()
@@ -19,13 +22,14 @@ internal static class RemoteCallTests
             SendFailingRequest(originalFailure);
         }
 
-        TimeoutException reportedFailure = TestAssert.Throws<TimeoutException>(SendRequest);
+        TimeoutException reportedFailure = Assert.Throws<TimeoutException>(SendRequest);
 
-        TestAssert.AreEqual(true, ReferenceEquals(originalFailure, reportedFailure.InnerException));
-        TestAssert.AreEqual(true, reportedFailure.Message.Contains("CorrelationId:"));
+        Assert.AreEqual(true, ReferenceEquals(originalFailure, reportedFailure.InnerException));
+        Assert.AreEqual(true, reportedFailure.Message.Contains("CorrelationId:"));
     }
 
-    internal static void SendServiceCall_ConnectionFailure_PreservesCauseAndAddsCorrelation()
+    [TestMethod]
+    public void SendServiceCall_ConnectionFailure_PreservesCauseAndAddsCorrelation()
     {
         CommunicationException originalFailure = new CommunicationException("Connection test.");
         void SendRequest()
@@ -34,13 +38,14 @@ internal static class RemoteCallTests
         }
 
         CommunicationException reportedFailure =
-            TestAssert.Throws<CommunicationException>(SendRequest);
+            Assert.Throws<CommunicationException>(SendRequest);
 
-        TestAssert.AreEqual(true, ReferenceEquals(originalFailure, reportedFailure.InnerException));
-        TestAssert.AreEqual(true, reportedFailure.Message.Contains("CorrelationId:"));
+        Assert.AreEqual(true, ReferenceEquals(originalFailure, reportedFailure.InnerException));
+        Assert.AreEqual(true, reportedFailure.Message.Contains("CorrelationId:"));
     }
 
-    internal static void SendServiceCall_ProgrammingFailure_PropagatesOriginalException()
+    [TestMethod]
+    public void SendServiceCall_ProgrammingFailure_PropagatesOriginalException()
     {
         InvalidOperationException originalFailure = new InvalidOperationException("State test.");
         void SendRequest()
@@ -49,9 +54,9 @@ internal static class RemoteCallTests
         }
 
         InvalidOperationException reportedFailure =
-            TestAssert.Throws<InvalidOperationException>(SendRequest);
+            Assert.Throws<InvalidOperationException>(SendRequest);
 
-        TestAssert.AreEqual(true, ReferenceEquals(originalFailure, reportedFailure));
+        Assert.AreEqual(true, ReferenceEquals(originalFailure, reportedFailure));
     }
 
     private static void SendFailingRequest(Exception failure)

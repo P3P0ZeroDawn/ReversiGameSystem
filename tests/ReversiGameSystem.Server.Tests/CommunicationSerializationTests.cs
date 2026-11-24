@@ -44,14 +44,14 @@ public sealed class CommunicationSerializationTests
         NewAccount result = ContractSerializationTests.RoundTrip(account);
 
         // Assert
-        TestAssert.AreEqual(account.VerificationCode, result.VerificationCode);
-        TestAssert.AreEqual(account.Username, result.Username);
-        TestAssert.AreEqual(account.EmailAddress, result.EmailAddress);
-        TestAssert.AreEqual(account.Password, result.Password);
-        TestAssert.AreEqual(account.PreferredLocaleCode, result.PreferredLocaleCode);
+        Assert.AreEqual(account.VerificationCode, result.VerificationCode);
+        Assert.AreEqual(account.Username, result.Username);
+        Assert.AreEqual(account.EmailAddress, result.EmailAddress);
+        Assert.AreEqual(account.Password, result.Password);
+        Assert.AreEqual(account.PreferredLocaleCode, result.PreferredLocaleCode);
         ImageContent image = TestAssert.IsNotNull(result.ProfileImage);
-        TestAssert.AreEqual("image/png", image.MediaType);
-        TestAssert.IsTrue(account.ProfileImage.Content.SequenceEqual(image.Content),
+        Assert.AreEqual("image/png", image.MediaType);
+        Assert.IsTrue(account.ProfileImage.Content.SequenceEqual(image.Content),
             "Image bytes changed during transport.");
     }
 
@@ -65,7 +65,7 @@ public sealed class CommunicationSerializationTests
         NewAccount result = ContractSerializationTests.RoundTrip(account);
 
         // Assert
-        TestAssert.AreEqual<ImageContent?>(null, result.ProfileImage);
+        Assert.AreEqual<ImageContent?>(null, result.ProfileImage);
     }
 
     [TestMethod]
@@ -84,10 +84,10 @@ public sealed class CommunicationSerializationTests
         PlayerPreferences result = ContractSerializationTests.RoundTrip(preferences);
 
         // Assert
-        TestAssert.AreEqual<string?>(null, result.TimeZoneId);
-        TestAssert.AreEqual("es-MX", result.PreferredLocaleCode);
-        TestAssert.AreEqual("PROFILE_PICTURES", result.PieceStyleCode);
-        TestAssert.AreEqual(true, result.UseCustomBoardBackground);
+        Assert.AreEqual<string?>(null, result.TimeZoneId);
+        Assert.AreEqual("es-MX", result.PreferredLocaleCode);
+        Assert.AreEqual("PROFILE_PICTURES", result.PieceStyleCode);
+        Assert.AreEqual(true, result.UseCustomBoardBackground);
     }
 
     [TestMethod]
@@ -105,10 +105,10 @@ public sealed class CommunicationSerializationTests
         GuestSession result = ContractSerializationTests.RoundTrip(session);
 
         // Assert
-        TestAssert.AreEqual(session.SessionToken, result.SessionToken);
-        TestAssert.AreEqual(session.DisplayName, result.DisplayName);
-        TestAssert.AreEqual(TimestampUtc, result.ExpiresAtUtc);
-        TestAssert.AreEqual(DateTimeKind.Utc, result.ExpiresAtUtc.Kind);
+        Assert.AreEqual(session.SessionToken, result.SessionToken);
+        Assert.AreEqual(session.DisplayName, result.DisplayName);
+        Assert.AreEqual(TimestampUtc, result.ExpiresAtUtc);
+        Assert.AreEqual(DateTimeKind.Utc, result.ExpiresAtUtc.Kind);
     }
 
     [TestMethod]
@@ -127,12 +127,12 @@ public sealed class CommunicationSerializationTests
         FriendRequest result = ContractSerializationTests.RoundTrip(request);
 
         // Assert
-        TestAssert.AreEqual(request.RequestId, result.RequestId);
-        TestAssert.AreEqual(42L, result.Sender.AccountId);
-        TestAssert.AreEqual("sender", result.Sender.Username);
-        TestAssert.AreEqual(43L, result.Recipient.AccountId);
-        TestAssert.AreEqual("recipient", result.Recipient.Username);
-        TestAssert.AreEqual(TimestampUtc, result.CreatedAtUtc);
+        Assert.AreEqual(request.RequestId, result.RequestId);
+        Assert.AreEqual(42L, result.Sender.AccountId);
+        Assert.AreEqual("sender", result.Sender.Username);
+        Assert.AreEqual(43L, result.Recipient.AccountId);
+        Assert.AreEqual("recipient", result.Recipient.Username);
+        Assert.AreEqual(TimestampUtc, result.CreatedAtUtc);
     }
 
     [TestMethod]
@@ -152,11 +152,11 @@ public sealed class CommunicationSerializationTests
         MatchChatEntry result = ContractSerializationTests.RoundTrip(message);
 
         // Assert
-        TestAssert.AreEqual(7L, result.MatchId);
-        TestAssert.AreEqual(12, result.MessageNumber);
-        TestAssert.AreEqual(2, result.SenderSeatNumber);
-        TestAssert.AreEqual(message.Content, result.Content);
-        TestAssert.AreEqual(TimestampUtc, result.SentAtUtc);
+        Assert.AreEqual(7L, result.MatchId);
+        Assert.AreEqual(12, result.MessageNumber);
+        Assert.AreEqual(2, result.SenderSeatNumber);
+        Assert.AreEqual(message.Content, result.Content);
+        Assert.AreEqual(TimestampUtc, result.SentAtUtc);
     }
 
     [TestMethod]
@@ -173,10 +173,10 @@ public sealed class CommunicationSerializationTests
         ChatFault[] result = ContractSerializationTests.RoundTrip(faults);
 
         // Assert
-        TestAssert.AreEqual(ChatFailure.PlayerMuted, result[0].Reason);
-        TestAssert.AreEqual<DateTime?>(TimestampUtc, result[0].MuteEndsAtUtc);
-        TestAssert.AreEqual(ChatFailure.MessageBlocked, result[1].Reason);
-        TestAssert.AreEqual<DateTime?>(null, result[1].MuteEndsAtUtc);
+        Assert.AreEqual(ChatFailure.PlayerMuted, result[0].Reason);
+        Assert.AreEqual<DateTime?>(TimestampUtc, result[0].MuteEndsAtUtc);
+        Assert.AreEqual(ChatFailure.MessageBlocked, result[1].Reason);
+        Assert.AreEqual<DateTime?>(null, result[1].MuteEndsAtUtc);
     }
 
     [TestMethod]
@@ -195,10 +195,10 @@ public sealed class CommunicationSerializationTests
         ChatMuteNotification result = ContractSerializationTests.RoundTrip(mute);
 
         // Assert
-        TestAssert.AreEqual(7L, result.MatchId);
-        TestAssert.AreEqual(mute.ReasonCode, result.ReasonCode);
-        TestAssert.AreEqual(mute.StartsAtUtc, result.StartsAtUtc);
-        TestAssert.AreEqual(mute.EndsAtUtc, result.EndsAtUtc);
+        Assert.AreEqual(7L, result.MatchId);
+        Assert.AreEqual(mute.ReasonCode, result.ReasonCode);
+        Assert.AreEqual(mute.StartsAtUtc, result.StartsAtUtc);
+        Assert.AreEqual(mute.EndsAtUtc, result.EndsAtUtc);
     }
 
     [TestMethod]
@@ -218,7 +218,7 @@ public sealed class CommunicationSerializationTests
         // Assert
         foreach (KeyValuePair<object, object?> reason in reasons)
         {
-            TestAssert.AreEqual(reason.Key, reason.Value);
+            Assert.AreEqual(reason.Key, reason.Value);
         }
     }
 

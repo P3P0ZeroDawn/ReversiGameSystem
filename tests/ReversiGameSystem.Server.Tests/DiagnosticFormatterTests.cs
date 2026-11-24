@@ -35,19 +35,19 @@ public sealed class DiagnosticFormatterTests
         string output = logger.Output.ToString();
 
         // Assert
-        TestAssert.IsTrue(ReferenceEquals(failure, logger.Exception),
+        Assert.IsTrue(ReferenceEquals(failure, logger.Exception),
             "The logging provider must receive the original exception object.");
-        TestAssert.IsTrue(output.Contains("Error: DiagnosticTests[0]"),
+        Assert.IsTrue(output.Contains("Error: DiagnosticTests[0]"),
             "The severity and category must remain available.");
-        TestAssert.IsTrue(output.Contains("LoadProfile") && output.Contains("diagnostic-correlation"),
+        Assert.IsTrue(output.Contains("LoadProfile") && output.Contains("diagnostic-correlation"),
             "The operation and correlation must remain available.");
-        TestAssert.IsTrue(output.Contains(typeof(InvalidOperationException).FullName)
+        Assert.IsTrue(output.Contains(typeof(InvalidOperationException).FullName)
             && output.Contains(typeof(TimeoutException).FullName),
             "The exception chain types must remain available.");
-        TestAssert.IsTrue(output.Contains("HResult=" + failure.HResult)
+        Assert.IsTrue(output.Contains("HResult=" + failure.HResult)
             && output.Contains(nameof(CaptureFailure)),
             "The original status and stack location must remain available.");
-        TestAssert.IsTrue(!output.Contains("private-"),
+        Assert.IsTrue(!output.Contains("private-"),
             "Provider messages and exception data must never reach console output.");
     }
 
@@ -68,12 +68,12 @@ public sealed class DiagnosticFormatterTests
         string output = logger.Output.ToString();
 
         // Assert
-        TestAssert.IsTrue(output.Contains("Information: DiagnosticTests[0]"),
+        Assert.IsTrue(output.Contains("Information: DiagnosticTests[0]"),
             "Normal information entries must retain their level and category.");
-        TestAssert.IsTrue(output.Contains("CorrelationId=scope-correlation")
+        Assert.IsTrue(output.Contains("CorrelationId=scope-correlation")
             && output.Contains("The server is listening."),
             "Scope context and normal messages must remain available.");
-        TestAssert.AreEqual<Exception?>(null, logger.Exception);
+        Assert.AreEqual<Exception?>(null, logger.Exception);
     }
 
     private static Exception CaptureFailure()
@@ -118,13 +118,13 @@ public sealed class DiagnosticFormatterTests
 
         // Assert
         string rendered = output.ToString();
-        TestAssert.IsTrue(rendered.Contains("Error: ProviderIntegration[0]")
+        Assert.IsTrue(rendered.Contains("Error: ProviderIntegration[0]")
             && rendered.Contains("provider-correlation"),
             "The configured console provider must select the safe formatter and flush output.");
-        TestAssert.IsTrue(rendered.Contains(typeof(InvalidOperationException).FullName)
+        Assert.IsTrue(rendered.Contains(typeof(InvalidOperationException).FullName)
             && rendered.Contains(nameof(CaptureFailure)),
             "The real console provider must retain safe exception diagnostics.");
-        TestAssert.IsTrue(!rendered.Contains("private-"),
+        Assert.IsTrue(!rendered.Contains("private-"),
             "The real console provider must suppress private provider messages and data.");
     }
 

@@ -29,10 +29,10 @@ public sealed class GameplayMatchRulesTests
             ? GameplayMatchRules.ApplySystemMoveIfReady(match, expiredTurn)
             : GameplayMatchRules.ApplyTimeoutIfExpired(match, expiredTurn);
 
-        TestAssert.AreEqual(true, applied);
-        TestAssert.AreEqual(1, match.Moves.Count);
+        Assert.AreEqual(true, applied);
+        Assert.AreEqual(1, match.Moves.Count);
         MatchMove move = match.Moves[0];
-        TestAssert.AreEqual(true, ReversiEngine.IsLegalMove(
+        Assert.AreEqual(true, ReversiEngine.IsLegalMove(
             originalBoard, move.Row, move.Column, ReversiEngine.Black));
     }
 
@@ -50,8 +50,8 @@ public sealed class GameplayMatchRulesTests
             match,
             BaseUtc.Add(GameplayMatchRules.SystemMoveDelay));
 
-        TestAssert.AreEqual(isSystem, applied);
-        TestAssert.AreEqual(isSystem ? 1 : 0, match.Moves.Count);
+        Assert.AreEqual(isSystem, applied);
+        Assert.AreEqual(isSystem ? 1 : 0, match.Moves.Count);
     }
 
     [TestMethod]
@@ -64,12 +64,12 @@ public sealed class GameplayMatchRulesTests
         GameplayMatchRules.InitializeStartedMatch(match, BaseUtc);
 
         // Assert
-        TestAssert.AreEqual(0L, match.MatchStateVersion);
-        TestAssert.AreEqual<int?>(ReversiEngine.Black, match.CurrentTurnSeatNumber);
-        TestAssert.AreEqual(BaseUtc, match.TurnStartedAtUtc);
-        TestAssert.AreEqual(ReversiEngine.CellCount, match.Board.Length);
-        TestAssert.AreEqual(ReversiEngine.White, match.Board[(3 * 8) + 3]);
-        TestAssert.AreEqual(ReversiEngine.Black, match.Board[(3 * 8) + 4]);
+        Assert.AreEqual(0L, match.MatchStateVersion);
+        Assert.AreEqual<int?>(ReversiEngine.Black, match.CurrentTurnSeatNumber);
+        Assert.AreEqual(BaseUtc, match.TurnStartedAtUtc);
+        Assert.AreEqual(ReversiEngine.CellCount, match.Board.Length);
+        Assert.AreEqual(ReversiEngine.White, match.Board[(3 * 8) + 3]);
+        Assert.AreEqual(ReversiEngine.Black, match.Board[(3 * 8) + 4]);
     }
 
     [TestMethod]
@@ -87,7 +87,7 @@ public sealed class GameplayMatchRulesTests
             placement);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.MatchNotInProgress, result.Status);
+        Assert.AreEqual(MatchStatus.MatchNotInProgress, result.Status);
     }
 
     [TestMethod]
@@ -105,8 +105,8 @@ public sealed class GameplayMatchRulesTests
             placement);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Success, result.Status);
-        TestAssert.AreEqual(1, result.Value?.SeatNumber);
+        Assert.AreEqual(MatchStatus.Success, result.Status);
+        Assert.AreEqual(1, result.Value?.SeatNumber);
     }
 
     [TestMethod]
@@ -126,14 +126,14 @@ public sealed class GameplayMatchRulesTests
             BaseUtc.AddSeconds(5));
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Success, status);
-        TestAssert.AreEqual(1L, match.MatchStateVersion);
-        TestAssert.AreEqual(0, blackPlayer.ConsecutiveTimeoutCount);
-        TestAssert.AreEqual<int?>(ReversiEngine.White, match.CurrentTurnSeatNumber);
-        TestAssert.AreEqual(1, match.Moves.Count);
-        TestAssert.AreEqual(0L, beforeMoveSnapshot.MatchStateVersion);
-        TestAssert.AreEqual(0, beforeMoveSnapshot.Moves.Count);
-        TestAssert.AreEqual(ReversiEngine.Empty, beforeMoveSnapshot.Board[(2 * 8) + 3]);
+        Assert.AreEqual(MatchStatus.Success, status);
+        Assert.AreEqual(1L, match.MatchStateVersion);
+        Assert.AreEqual(0, blackPlayer.ConsecutiveTimeoutCount);
+        Assert.AreEqual<int?>(ReversiEngine.White, match.CurrentTurnSeatNumber);
+        Assert.AreEqual(1, match.Moves.Count);
+        Assert.AreEqual(0L, beforeMoveSnapshot.MatchStateVersion);
+        Assert.AreEqual(0, beforeMoveSnapshot.Moves.Count);
+        Assert.AreEqual(ReversiEngine.Empty, beforeMoveSnapshot.Board[(2 * 8) + 3]);
     }
 
     [TestMethod]
@@ -151,12 +151,12 @@ public sealed class GameplayMatchRulesTests
             BaseUtc.AddSeconds(41));
 
         // Assert
-        TestAssert.IsTrue(changed, "Expired turn should produce a transition.");
-        TestAssert.AreEqual("Finished", match.State);
-        TestAssert.AreEqual("INACTIVITY", match.EndReason);
-        TestAssert.AreEqual(5L, match.MatchStateVersion);
-        TestAssert.AreEqual<int?>(2, match.WinnerSeatNumber);
-        TestAssert.AreEqual<int?>(1, match.AbandoningSeatNumber);
+        Assert.IsTrue(changed, "Expired turn should produce a transition.");
+        Assert.AreEqual("Finished", match.State);
+        Assert.AreEqual("INACTIVITY", match.EndReason);
+        Assert.AreEqual(5L, match.MatchStateVersion);
+        Assert.AreEqual<int?>(2, match.WinnerSeatNumber);
+        Assert.AreEqual<int?>(1, match.AbandoningSeatNumber);
     }
 
     [TestMethod]
@@ -177,8 +177,8 @@ public sealed class GameplayMatchRulesTests
             BaseUtc.AddSeconds(12));
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.MatchFinished, second);
-        TestAssert.AreEqual(1L, match.MatchStateVersion);
+        Assert.AreEqual(MatchStatus.MatchFinished, second);
+        Assert.AreEqual(1L, match.MatchStateVersion);
     }
 
     [TestMethod]
@@ -202,11 +202,11 @@ public sealed class GameplayMatchRulesTests
         match.Moves.Clear();
 
         // Assert
-        TestAssert.AreEqual(ReversiEngine.Black, snapshot.Board[(2 * 8) + 3]);
-        TestAssert.AreEqual(1, snapshot.Moves.Count);
-        TestAssert.AreEqual(2, snapshot.Moves[0].Row);
-        TestAssert.AreEqual(0, snapshot.Participants[0].ConsecutiveTimeoutCount);
-        TestAssert.AreEqual(true, snapshot.Participants[1].IsSystem);
+        Assert.AreEqual(ReversiEngine.Black, snapshot.Board[(2 * 8) + 3]);
+        Assert.AreEqual(1, snapshot.Moves.Count);
+        Assert.AreEqual(2, snapshot.Moves[0].Row);
+        Assert.AreEqual(0, snapshot.Participants[0].ConsecutiveTimeoutCount);
+        Assert.AreEqual(true, snapshot.Participants[1].IsSystem);
     }
 
     private static Match CreateInProgressMatch(int turnDurationSeconds)

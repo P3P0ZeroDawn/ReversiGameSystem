@@ -17,7 +17,7 @@ public sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.TooShort, actual);
+        Assert.AreEqual(PasswordValidationError.TooShort, actual);
     }
 
     [TestMethod]
@@ -30,7 +30,7 @@ public sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.None, actual);
+        Assert.AreEqual(PasswordValidationError.None, actual);
     }
 
     [TestMethod]
@@ -43,7 +43,7 @@ public sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.None, actual);
+        Assert.AreEqual(PasswordValidationError.None, actual);
     }
 
     [TestMethod]
@@ -56,7 +56,7 @@ public sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.None, actual);
+        Assert.AreEqual(PasswordValidationError.None, actual);
     }
 
     [TestMethod]
@@ -69,7 +69,7 @@ public sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.None, actual);
+        Assert.AreEqual(PasswordValidationError.None, actual);
     }
 
     [TestMethod]
@@ -82,7 +82,7 @@ public sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.TooLong, actual);
+        Assert.AreEqual(PasswordValidationError.TooLong, actual);
     }
 
     [TestMethod]
@@ -95,7 +95,7 @@ public sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.None, actual);
+        Assert.AreEqual(PasswordValidationError.None, actual);
     }
 
     [TestMethod]
@@ -108,7 +108,7 @@ public sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.MissingUppercaseLetter, actual);
+        Assert.AreEqual(PasswordValidationError.MissingUppercaseLetter, actual);
     }
 
     [TestMethod]
@@ -121,7 +121,7 @@ public sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.MissingLowercaseLetter, actual);
+        Assert.AreEqual(PasswordValidationError.MissingLowercaseLetter, actual);
     }
 
     [TestMethod]
@@ -134,7 +134,7 @@ public sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.MissingDigit, actual);
+        Assert.AreEqual(PasswordValidationError.MissingDigit, actual);
     }
 
     [TestMethod]
@@ -147,7 +147,7 @@ public sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.MissingSymbol, actual);
+        Assert.AreEqual(PasswordValidationError.MissingSymbol, actual);
     }
 
     [TestMethod]
@@ -160,7 +160,7 @@ public sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.MissingSymbol, actual);
+        Assert.AreEqual(PasswordValidationError.MissingSymbol, actual);
     }
 
     [TestMethod]
@@ -173,7 +173,7 @@ public sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
+        Assert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
     }
 
     [TestMethod]
@@ -186,7 +186,7 @@ public sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
+        Assert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
     }
 
     [TestMethod]
@@ -199,7 +199,7 @@ public sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
+        Assert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
     }
 
     [TestMethod]
@@ -212,6 +212,6 @@ public sealed class PasswordPolicyTests
         PasswordValidationError actual = PasswordPolicy.Validate(password);
 
         // Assert
-        TestAssert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
+        Assert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
     }
 }

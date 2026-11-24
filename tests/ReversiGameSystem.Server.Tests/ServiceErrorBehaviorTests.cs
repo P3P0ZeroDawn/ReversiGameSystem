@@ -20,18 +20,18 @@ public sealed class ServiceErrorBehaviorTests
         RecordingErrorLogger logger = new RecordingErrorLogger();
 
         FaultException<ServiceFault> fault =
-            TestAssert.Throws<FaultException<ServiceFault>>(() =>
+            Assert.Throws<FaultException<ServiceFault>>(() =>
                 Invoke(logger, null, channel => channel.FailUnexpectedly()));
 
-        TestAssert.AreEqual("UNEXPECTED_SERVICE_FAILURE", fault.Detail.FailureCode);
-        TestAssert.IsTrue(Guid.TryParse(fault.Detail.CorrelationId, out Guid unused),
+        Assert.AreEqual("UNEXPECTED_SERVICE_FAILURE", fault.Detail.FailureCode);
+        Assert.IsTrue(Guid.TryParse(fault.Detail.CorrelationId, out Guid unused),
             "The generated correlation identifier must be a GUID.");
-        TestAssert.AreEqual(1, logger.ErrorCount);
-        TestAssert.IsTrue(logger.Message.Contains(fault.Detail.CorrelationId),
+        Assert.AreEqual(1, logger.ErrorCount);
+        Assert.IsTrue(logger.Message.Contains(fault.Detail.CorrelationId),
             "The fault and diagnostic entry must use the same correlation identifier.");
-        TestAssert.IsTrue(logger.Exception is InvalidOperationException,
+        Assert.IsTrue(logger.Exception is InvalidOperationException,
             "The logger must receive the original technical exception.");
-        TestAssert.IsTrue(!fault.ToString().Contains("private-provider-message"),
+        Assert.IsTrue(!fault.ToString().Contains("private-provider-message"),
             "The remote fault must not expose the provider message.");
     }
 
@@ -42,11 +42,11 @@ public sealed class ServiceErrorBehaviorTests
         string correlationId = Guid.NewGuid().ToString("D");
 
         FaultException<ServiceFault> fault =
-            TestAssert.Throws<FaultException<ServiceFault>>(() =>
+            Assert.Throws<FaultException<ServiceFault>>(() =>
                 Invoke(logger, correlationId, channel => channel.FailUnexpectedly()));
 
-        TestAssert.AreEqual(correlationId, fault.Detail.CorrelationId);
-        TestAssert.IsTrue(logger.Message.Contains(correlationId),
+        Assert.AreEqual(correlationId, fault.Detail.CorrelationId);
+        Assert.IsTrue(logger.Message.Contains(correlationId),
             "The incoming correlation identifier must be preserved in diagnostics.");
     }
 
@@ -57,12 +57,12 @@ public sealed class ServiceErrorBehaviorTests
         string correlationId = Guid.NewGuid().ToString("D");
 
         FaultException<ServiceFault> fault =
-            TestAssert.Throws<FaultException<ServiceFault>>(() =>
+            Assert.Throws<FaultException<ServiceFault>>(() =>
                 Invoke(logger, null, channel =>
                     channel.FailAfterCreatingCorrelation(correlationId)));
 
-        TestAssert.AreEqual(correlationId, fault.Detail.CorrelationId);
-        TestAssert.IsTrue(logger.Message.Contains(correlationId),
+        Assert.AreEqual(correlationId, fault.Detail.CorrelationId);
+        Assert.IsTrue(logger.Message.Contains(correlationId),
             "The previously created correlation identifier must be reused.");
     }
 
@@ -72,12 +72,12 @@ public sealed class ServiceErrorBehaviorTests
         RecordingErrorLogger logger = new RecordingErrorLogger();
 
         FaultException<ServiceFault> fault =
-            TestAssert.Throws<FaultException<ServiceFault>>(() =>
+            Assert.Throws<FaultException<ServiceFault>>(() =>
                 Invoke(logger, null, channel => channel.ThrowUndeclaredFault()));
 
-        TestAssert.AreEqual("UNEXPECTED_SERVICE_FAILURE", fault.Detail.FailureCode);
-        TestAssert.AreEqual(1, logger.ErrorCount);
-        TestAssert.IsTrue(!fault.ToString().Contains("private-provider-message"),
+        Assert.AreEqual("UNEXPECTED_SERVICE_FAILURE", fault.Detail.FailureCode);
+        Assert.AreEqual(1, logger.ErrorCount);
+        Assert.IsTrue(!fault.ToString().Contains("private-provider-message"),
             "An undeclared fault must not bypass sanitization.");
     }
 
@@ -94,11 +94,11 @@ public sealed class ServiceErrorBehaviorTests
         {
             Console.SetError(fallbackOutput);
             FaultException<ServiceFault> fault =
-                TestAssert.Throws<FaultException<ServiceFault>>(() =>
+                Assert.Throws<FaultException<ServiceFault>>(() =>
                     Invoke(logger, null, channel => channel.FailUnexpectedly()));
 
-            TestAssert.AreEqual("UNEXPECTED_SERVICE_FAILURE", fault.Detail.FailureCode);
-            TestAssert.IsTrue(!fallbackOutput.ToString().Contains("private-"),
+            Assert.AreEqual("UNEXPECTED_SERVICE_FAILURE", fault.Detail.FailureCode);
+            Assert.IsTrue(!fallbackOutput.ToString().Contains("private-"),
                 "Fallback diagnostics must not expose provider messages.");
         }
         finally
@@ -113,13 +113,13 @@ public sealed class ServiceErrorBehaviorTests
         RecordingErrorLogger logger = new RecordingErrorLogger();
 
         FaultException<LeaderboardFault> fault =
-            TestAssert.Throws<FaultException<LeaderboardFault>>(() =>
+            Assert.Throws<FaultException<LeaderboardFault>>(() =>
                 Invoke(logger, null, channel => channel.RejectAsBusinessFault()));
 
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             LeaderboardFailure.InvalidMaximumEntries,
             fault.Detail.Reason);
-        TestAssert.AreEqual(0, logger.ErrorCount);
+        Assert.AreEqual(0, logger.ErrorCount);
     }
 
     private static void Invoke(
