@@ -82,10 +82,6 @@ public sealed class GameplayMatchApplicationService
         return transitionResult;
     }
 
-    /// <summary>
-    /// Evaluates expired turns in memory without blocking on SQL.
-    /// </summary>
-    /// <returns>Isolated snapshots of matches that transitioned.</returns>
     public Match[] ProcessTurnTimeouts()
     {
         DateTime now = _clock.UtcNow;
@@ -104,9 +100,6 @@ public sealed class GameplayMatchApplicationService
         return updatedSnapshots.ToArray();
     }
 
-    /// <summary>
-    /// Retries pending snapshot writes, backing off for five seconds after any persistence failure.
-    /// </summary>
     public void SynchronizePendingMatches()
     {
         DateTime now = _clock.UtcNow;
@@ -615,12 +608,12 @@ public sealed class GameplayMatchApplicationService
     {
         SessionResult<AuthenticatedSession> session =
             _sessions.FindAuthenticated(sessionToken);
-        if (session.Status == SessionOperationStatus.MissingSessionToken)
+        if (session.Status == SessionStatus.MissingSessionToken)
         {
             return new MatchResult<AuthenticatedSession>(MatchStatus.MissingSessionToken);
         }
 
-        if (session.Status != SessionOperationStatus.Success || session.Value == null)
+        if (session.Status != SessionStatus.Success || session.Value == null)
         {
             return new MatchResult<AuthenticatedSession>(MatchStatus.InvalidSession);
         }

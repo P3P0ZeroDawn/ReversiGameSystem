@@ -52,13 +52,13 @@ public sealed class PlayerBoundaryTests
             }));
 
         // Assert
-        TestAssert.AreEqual("PlayerOne", stub.LastRegistration?.Username);
-        TestAssert.AreEqual("player@example.com", stub.LastRegistration?.EmailAddress);
-        TestAssert.AreEqual("en-US", stub.LastRegistration?.PreferredLocaleCode);
-        TestAssert.AreEqual("image/png", stub.LastImage?.MediaType);
-        TestAssert.AreEqual((byte)80, stub.LastImage?.Content[1]);
-        TestAssert.AreEqual(42L, result.AccountId);
-        TestAssert.AreEqual("PlayerOne", result.Username);
+        Assert.AreEqual("PlayerOne", stub.LastRegistration?.Username);
+        Assert.AreEqual("player@example.com", stub.LastRegistration?.EmailAddress);
+        Assert.AreEqual("en-US", stub.LastRegistration?.PreferredLocaleCode);
+        Assert.AreEqual("image/png", stub.LastImage?.MediaType);
+        Assert.AreEqual((byte)80, stub.LastImage?.Content[1]);
+        Assert.AreEqual(42L, result.AccountId);
+        Assert.AreEqual("PlayerOne", result.Username);
     }
 
     [TestMethod]
@@ -68,11 +68,11 @@ public sealed class PlayerBoundaryTests
         ReversiGameSystem.Server.Contracts.Players.PlayerProfile result =
             Invoke<IPlayerProfileService, ReversiGameSystem.Server.Contracts.Players.PlayerProfile>(
                 context.Service, channel => channel.GetPlayerProfile("session-token", null));
-        TestAssert.AreEqual(42L, result.Account.AccountId);
-        TestAssert.AreEqual("PlayerOne", result.Account.Username);
-        TestAssert.AreEqual(6, result.Statistics.MatchesPlayed);
-        TestAssert.AreEqual(3, result.Statistics.Wins);
-        TestAssert.AreEqual(0.5d, result.Statistics.WinRate);
+        Assert.AreEqual(42L, result.Account.AccountId);
+        Assert.AreEqual("PlayerOne", result.Account.Username);
+        Assert.AreEqual(6, result.Statistics.MatchesPlayed);
+        Assert.AreEqual(3, result.Statistics.Wins);
+        Assert.AreEqual(0.5d, result.Statistics.WinRate);
     }
 
     [TestMethod]
@@ -89,22 +89,22 @@ public sealed class PlayerBoundaryTests
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         context.Profiles.Profiles.Clear();
-        FaultException<ProfileFault> fault = TestAssert.Throws<FaultException<ProfileFault>>(() =>
+        FaultException<ProfileFault> fault = Assert.Throws<FaultException<ProfileFault>>(() =>
             Invoke<IPlayerProfileService, object>(context.Service,
                 channel => channel.GetPlayerProfile("session-token", 99)));
-        TestAssert.AreEqual(ProfileFailure.InactiveAccount, fault.Detail.Reason);
-        TestAssert.AreEqual(1, context.Profiles.AccountIds.Count);
-        TestAssert.AreEqual(42L, context.Profiles.AccountIds[0]);
+        Assert.AreEqual(ProfileFailure.InactiveAccount, fault.Detail.Reason);
+        Assert.AreEqual(1, context.Profiles.AccountIds.Count);
+        Assert.AreEqual(42L, context.Profiles.AccountIds[0]);
     }
 
     [TestMethod]
     public void GetProfile_InvalidTargetThroughWcf_ReturnsTypedFault()
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
-        FaultException<ProfileFault> fault = TestAssert.Throws<FaultException<ProfileFault>>(() =>
+        FaultException<ProfileFault> fault = Assert.Throws<FaultException<ProfileFault>>(() =>
             Invoke<IPlayerProfileService, object>(context.Service,
                 channel => channel.GetPlayerProfile("session-token", 0)));
-        TestAssert.AreEqual(ProfileFailure.InvalidAccountId, fault.Detail.Reason);
+        Assert.AreEqual(ProfileFailure.InvalidAccountId, fault.Detail.Reason);
     }
 
     [TestMethod]
@@ -112,11 +112,11 @@ public sealed class PlayerBoundaryTests
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
 
-        FaultException<ProfileFault> fault = TestAssert.Throws<FaultException<ProfileFault>>(() =>
+        FaultException<ProfileFault> fault = Assert.Throws<FaultException<ProfileFault>>(() =>
             Invoke<IPlayerProfileService, object>(context.Service,
                 channel => channel.GetPlayerProfile("session-token", 99)));
 
-        TestAssert.AreEqual(ProfileFailure.AccountNotFound, fault.Detail.Reason);
+        Assert.AreEqual(ProfileFailure.AccountNotFound, fault.Detail.Reason);
     }
 
     [TestMethod]
@@ -125,13 +125,13 @@ public sealed class PlayerBoundaryTests
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         context.Profiles.ThrowOnGet = true;
 
-        FaultException<ServiceFault> fault = TestAssert.Throws<FaultException<ServiceFault>>(() =>
+        FaultException<ServiceFault> fault = Assert.Throws<FaultException<ServiceFault>>(() =>
             Invoke<IPlayerProfileService, object>(context.Service,
                 channel => channel.GetPlayerProfile("session-token", null)));
 
-        TestAssert.AreEqual("PROFILE_OPERATION_FAILURE", fault.Detail.FailureCode);
-        TestAssert.AreEqual(true, !string.IsNullOrWhiteSpace(fault.Detail.CorrelationId));
-        TestAssert.IsTrue(!fault.ToString().Contains("private-provider-message"),
+        Assert.AreEqual("PROFILE_OPERATION_FAILURE", fault.Detail.FailureCode);
+        Assert.AreEqual(true, !string.IsNullOrWhiteSpace(fault.Detail.CorrelationId));
+        Assert.IsTrue(!fault.ToString().Contains("private-provider-message"),
             "The profile fault must not expose the repository message.");
     }
 
@@ -141,8 +141,8 @@ public sealed class PlayerBoundaryTests
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         ImageContent? result = Invoke<IPlayerProfileService, ImageContent?>(context.Service,
             channel => channel.GetProfileImage("session-token", null));
-        TestAssert.AreEqual<ImageContent?>(null, result);
-        TestAssert.AreEqual(false, context.Images.ReadCalled);
+        Assert.AreEqual<ImageContent?>(null, result);
+        Assert.AreEqual(false, context.Images.ReadCalled);
     }
 
     [TestMethod]
@@ -162,9 +162,9 @@ public sealed class PlayerBoundaryTests
             channel => channel.GetProfileImage("session-token", null));
 
         ImageContent image = TestAssert.IsNotNull(result);
-        TestAssert.AreEqual("image/png", image.MediaType);
-        TestAssert.AreEqual((byte)2, image.Content[1]);
-        TestAssert.AreEqual(true, context.Images.ReadCalled);
+        Assert.AreEqual("image/png", image.MediaType);
+        Assert.AreEqual((byte)2, image.Content[1]);
+        Assert.AreEqual(true, context.Images.ReadCalled);
     }
 
     [TestMethod]
@@ -179,12 +179,12 @@ public sealed class PlayerBoundaryTests
             2,
             1);
         context.Images.FailRead = true;
-        FaultException<ServiceFault> fault = TestAssert.Throws<FaultException<ServiceFault>>(() =>
+        FaultException<ServiceFault> fault = Assert.Throws<FaultException<ServiceFault>>(() =>
             Invoke<IPlayerProfileService, ImageContent?>(context.Service,
                 channel => channel.GetProfileImage("session-token", null)));
-        TestAssert.AreEqual("PROFILE_OPERATION_FAILURE", fault.Detail.FailureCode);
-        TestAssert.AreEqual(true, !string.IsNullOrWhiteSpace(fault.Detail.CorrelationId));
-        TestAssert.AreEqual(false, fault.ToString().Contains("private-provider-message"));
+        Assert.AreEqual("PROFILE_OPERATION_FAILURE", fault.Detail.FailureCode);
+        Assert.AreEqual(true, !string.IsNullOrWhiteSpace(fault.Detail.CorrelationId));
+        Assert.AreEqual(false, fault.ToString().Contains("private-provider-message"));
     }
 
     [TestMethod]
@@ -196,8 +196,8 @@ public sealed class PlayerBoundaryTests
             channel.ChangeUsername("session-token", "  NewPlayer  ");
             return true;
         });
-        TestAssert.AreEqual<long?>(42, context.Profiles.ChangedAccountId);
-        TestAssert.AreEqual("NewPlayer", context.Profiles.ChangedUsername);
+        Assert.AreEqual<long?>(42, context.Profiles.ChangedAccountId);
+        Assert.AreEqual("NewPlayer", context.Profiles.ChangedUsername);
     }
 
     [TestMethod]
@@ -205,16 +205,16 @@ public sealed class PlayerBoundaryTests
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         context.Profiles.ChangeUsernameStatus =
-            ProfileOperationStatus.UsernameUnavailable;
+            ProfileStatus.UsernameUnavailable;
 
-        FaultException<ProfileFault> fault = TestAssert.Throws<FaultException<ProfileFault>>(
+        FaultException<ProfileFault> fault = Assert.Throws<FaultException<ProfileFault>>(
             () => Invoke<IPlayerProfileService, bool>(context.Service, channel =>
             {
                 channel.ChangeUsername("session-token", "OtherPlayer");
                 return true;
             }));
 
-        TestAssert.AreEqual(ProfileFailure.UsernameUnavailable, fault.Detail.Reason);
+        Assert.AreEqual(ProfileFailure.UsernameUnavailable, fault.Detail.Reason);
     }
 
     [TestMethod]
@@ -223,7 +223,7 @@ public sealed class PlayerBoundaryTests
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         context.Images.RejectSave = true;
 
-        FaultException<ProfileFault> fault = TestAssert.Throws<FaultException<ProfileFault>>(
+        FaultException<ProfileFault> fault = Assert.Throws<FaultException<ProfileFault>>(
             () => Invoke<IPlayerProfileService, bool>(context.Service, channel =>
             {
                 channel.UpdateProfileImage("session-token", new ImageContent
@@ -234,7 +234,7 @@ public sealed class PlayerBoundaryTests
                 return true;
             }));
 
-        TestAssert.AreEqual(ProfileFailure.InvalidImage, fault.Detail.Reason);
+        Assert.AreEqual(ProfileFailure.InvalidImage, fault.Detail.Reason);
     }
 
     [TestMethod]
@@ -242,15 +242,15 @@ public sealed class PlayerBoundaryTests
     {
         ProfileBoundaryContext context = new ProfileBoundaryContext();
         context.Profiles.ThrowOnSetImage = true;
-        TestAssert.Throws<FaultException<ServiceFault>>(() =>
+        Assert.Throws<FaultException<ServiceFault>>(() =>
             Invoke<IPlayerProfileService, bool>(context.Service, channel =>
             {
                 channel.UpdateProfileImage("session-token", new ImageContent
                 { MediaType = "image/png", Content = new byte[] { 1, 2 } });
                 return true;
             }));
-        TestAssert.AreEqual("new-image", context.Images.Deleted);
-        TestAssert.AreEqual<long?>(42, context.Profiles.ImageAccountId);
+        Assert.AreEqual("new-image", context.Images.Deleted);
+        Assert.AreEqual<long?>(42, context.Profiles.ImageAccountId);
     }
 
     [TestMethod]
@@ -268,12 +268,12 @@ public sealed class PlayerBoundaryTests
         ReversiGameSystem.Server.Contracts.Leaderboards.LeaderboardEntry[] result =
             Invoke<ILeaderboardService, ReversiGameSystem.Server.Contracts.Leaderboards.LeaderboardEntry[]>(
                 service, channel => channel.GetLeaderboard(10));
-        TestAssert.AreEqual(1, result.Length);
-        TestAssert.AreEqual(1, result[0].Position);
-        TestAssert.AreEqual(42L, result[0].Account.AccountId);
-        TestAssert.AreEqual(true, result[0].HasProfileImage);
-        TestAssert.AreEqual(0.5d, result[0].WinRate);
-        TestAssert.AreEqual(true, repository.WasCalled);
+        Assert.AreEqual(1, result.Length);
+        Assert.AreEqual(1, result[0].Position);
+        Assert.AreEqual(42L, result[0].Account.AccountId);
+        Assert.AreEqual(true, result[0].HasProfileImage);
+        Assert.AreEqual(0.5d, result[0].WinRate);
+        Assert.AreEqual(true, repository.WasCalled);
     }
 
     [TestMethod]
@@ -281,9 +281,9 @@ public sealed class PlayerBoundaryTests
     {
         LeaderboardService service = new LeaderboardService(
             new LeaderboardApplicationService(new LeaderboardRepositoryStub()));
-        FaultException<LeaderboardFault> fault = TestAssert.Throws<FaultException<LeaderboardFault>>(() =>
+        FaultException<LeaderboardFault> fault = Assert.Throws<FaultException<LeaderboardFault>>(() =>
             Invoke<ILeaderboardService, object>(service, channel => channel.GetLeaderboard(0)));
-        TestAssert.AreEqual(LeaderboardFailure.InvalidMaximumEntries, fault.Detail.Reason);
+        Assert.AreEqual(LeaderboardFailure.InvalidMaximumEntries, fault.Detail.Reason);
     }
 
     [TestMethod]
@@ -291,18 +291,18 @@ public sealed class PlayerBoundaryTests
     {
         LeaderboardService service = new LeaderboardService(new LeaderboardApplicationService(
             new LeaderboardRepositoryStub { ThrowOnGet = true }));
-        FaultException<ServiceFault> fault = TestAssert.Throws<FaultException<ServiceFault>>(() =>
+        FaultException<ServiceFault> fault = Assert.Throws<FaultException<ServiceFault>>(() =>
             Invoke<ILeaderboardService, object>(service, channel => channel.GetLeaderboard(10)));
-        TestAssert.AreEqual("LEADERBOARD_OPERATION_FAILURE", fault.Detail.FailureCode);
-        TestAssert.AreEqual(true, !string.IsNullOrWhiteSpace(fault.Detail.CorrelationId));
+        Assert.AreEqual("LEADERBOARD_OPERATION_FAILURE", fault.Detail.FailureCode);
+        Assert.AreEqual(true, !string.IsNullOrWhiteSpace(fault.Detail.CorrelationId));
     }
 
     private static void AssertSessionFault(ProfileBoundaryContext context, string token, SessionFailure expected)
     {
-        FaultException<SessionFault> fault = TestAssert.Throws<FaultException<SessionFault>>(() =>
+        FaultException<SessionFault> fault = Assert.Throws<FaultException<SessionFault>>(() =>
             Invoke<IPlayerProfileService, object>(context.Service,
                 channel => channel.GetPlayerProfile(token, null)));
-        TestAssert.AreEqual(expected, fault.Detail.Reason);
+        Assert.AreEqual(expected, fault.Detail.Reason);
     }
 
     private static TResult Invoke<TContract, TResult>(object service, Func<TContract, TResult> action)

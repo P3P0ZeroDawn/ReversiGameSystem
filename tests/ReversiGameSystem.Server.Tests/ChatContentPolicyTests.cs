@@ -16,7 +16,7 @@ public sealed class ChatContentPolicyTests
         bool matches = ChatContentPolicy.Matches(content, "palabra prohibida");
 
         // Assert
-        TestAssert.IsTrue(matches, "Moderation must normalize diacritics, case, and separators.");
+        Assert.IsTrue(matches, "Moderation must normalize diacritics, case, and separators.");
     }
 
     [TestMethod]
@@ -29,7 +29,7 @@ public sealed class ChatContentPolicyTests
         bool matches = ChatContentPolicy.Matches(content, "blockedword");
 
         // Assert
-        TestAssert.IsTrue(!matches, "A substring must not count as a complete prohibited word.");
+        Assert.IsTrue(!matches, "A substring must not count as a complete prohibited word.");
     }
 
     [TestMethod]
@@ -42,6 +42,6 @@ public sealed class ChatContentPolicyTests
         bool matches = ChatContentPolicy.Matches(content, " , ! ");
 
         // Assert
-        TestAssert.IsTrue(!matches, "An empty normalized pattern cannot prohibit every message.");
+        Assert.IsTrue(!matches, "An empty normalized pattern cannot prohibit every message.");
     }
 }

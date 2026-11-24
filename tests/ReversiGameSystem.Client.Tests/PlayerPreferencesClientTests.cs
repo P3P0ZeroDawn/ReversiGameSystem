@@ -5,10 +5,12 @@ using System.ServiceModel;
 using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Services;
 using Proxy = ReversiGameSystem.ServerProxy;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal static class PlayerPreferencesClientTests
+[TestClass]
+public sealed class PlayerPreferencesClientTests
 {
     private const string ServiceNamespace = "urn:reversi:services:v1";
     private const string ContractNamespace = "urn:reversi:contracts:v1";
@@ -20,7 +22,8 @@ internal static class PlayerPreferencesClientTests
     private const string SavedPieceStyle = "STANDARD";
     private const string ServerCorrelation = "preferences-test-correlation";
 
-    internal static void ChangeLanguage_ExistingPreferences_PreservesOtherSettings()
+    [TestMethod]
+    public void ChangeLanguage_ExistingPreferences_PreservesOtherSettings()
     {
         using PreferencesHost host = new PreferencesHost();
         PlayerPreferencesClient client = host.CreateClient();
@@ -28,14 +31,15 @@ internal static class PlayerPreferencesClientTests
         PreferencesStatus status = client.ChangeLanguage(SessionToken, RequestedLocale)
             .GetAwaiter().GetResult();
 
-        TestAssert.AreEqual(PreferencesStatus.Success, status);
-        TestAssert.AreEqual(RequestedLocale, host.Service.Preferences.PreferredLocaleCode);
-        TestAssert.AreEqual(SavedTimeZone, host.Service.Preferences.TimeZoneId);
-        TestAssert.AreEqual(SavedPieceStyle, host.Service.Preferences.PieceStyleCode);
-        TestAssert.AreEqual(true, host.Service.Preferences.UseCustomBoardBackground);
+        Assert.AreEqual(PreferencesStatus.Success, status);
+        Assert.AreEqual(RequestedLocale, host.Service.Preferences.PreferredLocaleCode);
+        Assert.AreEqual(SavedTimeZone, host.Service.Preferences.TimeZoneId);
+        Assert.AreEqual(SavedPieceStyle, host.Service.Preferences.PieceStyleCode);
+        Assert.AreEqual(true, host.Service.Preferences.UseCustomBoardBackground);
     }
 
-    internal static void ChangeLanguage_InvalidLocale_ReturnsDeclaredStatus()
+    [TestMethod]
+    public void ChangeLanguage_InvalidLocale_ReturnsDeclaredStatus()
     {
         using PreferencesHost host = new PreferencesHost();
         host.Service.RejectLocale = true;
@@ -44,10 +48,11 @@ internal static class PlayerPreferencesClientTests
         PreferencesStatus status = client.ChangeLanguage(SessionToken, RequestedLocale)
             .GetAwaiter().GetResult();
 
-        TestAssert.AreEqual(PreferencesStatus.InvalidLocale, status);
+        Assert.AreEqual(PreferencesStatus.InvalidLocale, status);
     }
 
-    internal static void ChangeLanguage_RejectedWrite_DoesNotRetry()
+    [TestMethod]
+    public void ChangeLanguage_RejectedWrite_DoesNotRetry()
     {
         using PreferencesHost host = new PreferencesHost();
         host.Service.RejectLocale = true;
@@ -55,32 +60,35 @@ internal static class PlayerPreferencesClientTests
 
         client.ChangeLanguage(SessionToken, RequestedLocale).GetAwaiter().GetResult();
 
-        TestAssert.AreEqual(1, host.Service.WriteAttempts);
+        Assert.AreEqual(1, host.Service.WriteAttempts);
     }
 
-    internal static void ChangeLanguage_UnknownFault_PropagatesFailure()
+    [TestMethod]
+    public void ChangeLanguage_UnknownFault_PropagatesFailure()
     {
         using PreferencesHost host = new PreferencesHost();
         host.Service.ThrowUnknownFault = true;
         PlayerPreferencesClient client = host.CreateClient();
 
-        TestAssert.Throws<FaultException>(() =>
+        Assert.Throws<FaultException>(() =>
             client.ChangeLanguage(SessionToken, RequestedLocale).GetAwaiter().GetResult());
     }
 
-    internal static void ChangeLanguage_ServiceFault_PreservesServerCorrelation()
+    [TestMethod]
+    public void ChangeLanguage_ServiceFault_PreservesServerCorrelation()
     {
         using PreferencesHost host = new PreferencesHost();
         host.Service.ThrowServiceFault = true;
         PlayerPreferencesClient client = host.CreateClient();
 
         FaultException<Proxy.ServiceFault> fault =
-            TestAssert.Throws<FaultException<Proxy.ServiceFault>>(() => client.ChangeLanguage(SessionToken, RequestedLocale).GetAwaiter().GetResult());
+            Assert.Throws<FaultException<Proxy.ServiceFault>>(() => client.ChangeLanguage(SessionToken, RequestedLocale).GetAwaiter().GetResult());
 
-        TestAssert.AreEqual(ServerCorrelation, fault.Detail.CorrelationId);
+        Assert.AreEqual(ServerCorrelation, fault.Detail.CorrelationId);
     }
 
-    internal static void ChangeLanguage_InvalidClientConfiguration_PropagatesFailure()
+    [TestMethod]
+    public void ChangeLanguage_InvalidClientConfiguration_PropagatesFailure()
     {
         Proxy.PlayerPreferencesServiceClient CreateInvalidClient()
         {
@@ -89,11 +97,12 @@ internal static class PlayerPreferencesClientTests
         PlayerPreferencesClient client = new PlayerPreferencesClient(
             NullLogger<PlayerPreferencesClient>.Instance, CreateInvalidClient);
 
-        TestAssert.Throws<InvalidOperationException>(() =>
+        Assert.Throws<InvalidOperationException>(() =>
             client.ChangeLanguage(SessionToken, RequestedLocale).GetAwaiter().GetResult());
     }
 
-    internal static void CreatePreferencesClient_CustomHost_UsesPreferencesEndpoint()
+    [TestMethod]
+    public void CreatePreferencesClient_CustomHost_UsesPreferencesEndpoint()
     {
         const string TestHost = "10.0.0.8";
         const string ExpectedAddress =
@@ -107,7 +116,7 @@ internal static class PlayerPreferencesClientTests
             using Proxy.PlayerPreferencesServiceClient client =
                 ServerConnectionFactory.CreatePreferencesClient();
 
-            TestAssert.AreEqual(ExpectedAddress, client.Endpoint.Address.Uri.AbsoluteUri);
+            Assert.AreEqual(ExpectedAddress, client.Endpoint.Address.Uri.AbsoluteUri);
         }
         finally
         {

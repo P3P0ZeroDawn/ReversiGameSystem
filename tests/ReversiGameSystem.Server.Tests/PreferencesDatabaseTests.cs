@@ -16,6 +16,8 @@ using ReversiGameSystem.Server.Persistence.Preferences;
 using ReversiGameSystem.Server.ServiceApi;
 using ContractPreferences = ReversiGameSystem.Server.Contracts.Players.PlayerPreferences;
 
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
 namespace ReversiGameSystem.Server.Tests;
 
 internal static class PreferencesDatabaseTests
@@ -67,7 +69,7 @@ internal static class PreferencesDatabaseTests
 
         PreferencesRepository repository = new PreferencesRepository();
         PlayerPreferences preferences = repository.ReadPreferences(alpha.AccountId).Preferences;
-        TestAssert.AreEqual(true, preferences.UseCustomBoardBackground);
+        Assert.AreEqual(true, preferences.UseCustomBoardBackground);
         string directory = Path.Combine(Path.GetTempPath(), "ReversiPreferences-" + Guid.NewGuid());
         Directory.CreateDirectory(directory);
         try
@@ -82,38 +84,38 @@ internal static class PreferencesDatabaseTests
             preferences.TimeZoneId = "UTC";
             preferences.PieceStyleCode = "PROFILE_PICTURES";
             preferences.UseCustomBoardBackground = false;
-            TestAssert.AreEqual(PreferencesStatus.Success,
+            Assert.AreEqual(PreferencesStatus.Success,
                 application.UpdatePreferences(alpha.SessionToken, preferences));
             PlayerPreferences stored = repository.ReadPreferences(alpha.AccountId).Preferences;
-            TestAssert.AreEqual(ExistingReference, stored.BoardBackgroundReference);
-            TestAssert.AreEqual(false, stored.UseCustomBoardBackground);
-            TestAssert.AreEqual("en-US", new AccountRepository(new TestUtcClock())
+            Assert.AreEqual(ExistingReference, stored.BoardBackgroundReference);
+            Assert.AreEqual(false, stored.UseCustomBoardBackground);
+            Assert.AreEqual("en-US", new AccountRepository(new TestUtcClock())
                 .FindByLogin("ReviewAlpha").Value?.PreferredLocaleCode);
 
             ProfileImageData image = CreateImage();
-            TestAssert.AreEqual(PreferencesStatus.Success,
+            Assert.AreEqual(PreferencesStatus.Success,
                 application.ChangeBoardBackground(alpha.SessionToken, image));
             stored = repository.ReadPreferences(alpha.AccountId).Preferences;
-            TestAssert.AreEqual(false, File.Exists(Path.Combine(directory,
+            Assert.AreEqual(false, File.Exists(Path.Combine(directory,
                 Path.GetFileName(ExistingReference))));
-            TestAssert.AreEqual(true, stored.UseCustomBoardBackground);
-            TestAssert.AreEqual(true,
+            Assert.AreEqual(true, stored.UseCustomBoardBackground);
+            Assert.AreEqual(true,
                 stored.BoardBackgroundReference.StartsWith(
                     "board-backgrounds/", StringComparison.Ordinal));
             stored.UseCustomBoardBackground = false;
-            TestAssert.AreEqual(PreferencesStatus.Success,
+            Assert.AreEqual(PreferencesStatus.Success,
                 application.UpdatePreferences(alpha.SessionToken, stored));
             PreferencesAccess background = application.GetBoardBackground(alpha.SessionToken);
-            TestAssert.AreEqual(true, background.BackgroundImage != null);
-            TestAssert.AreEqual(false, background.Preferences.UseCustomBoardBackground);
-            TestAssert.AreEqual(stored.BoardBackgroundReference,
+            Assert.AreEqual(true, background.BackgroundImage != null);
+            Assert.AreEqual(false, background.Preferences.UseCustomBoardBackground);
+            Assert.AreEqual(stored.BoardBackgroundReference,
                 background.Preferences.BoardBackgroundReference);
             VerifyRemoteBoundary(application, repository, alpha);
-            TestAssert.AreEqual(1, Directory.GetFiles(directory).Length);
-            TestAssert.AreEqual("image/jpeg",
+            Assert.AreEqual(1, Directory.GetFiles(directory).Length);
+            Assert.AreEqual("image/jpeg",
                 TestAssert.IsNotNull(application.GetBoardBackground(
                     alpha.SessionToken).BackgroundImage).MediaType);
-            TestAssert.AreEqual(PreferencesStatus.InactiveAccount,
+            Assert.AreEqual(PreferencesStatus.InactiveAccount,
                 repository.ReadPreferences(long.MaxValue).Status);
             Console.WriteLine(
                 "Passed preferences migration, SQL persistence, background and WCF checks.");
@@ -152,11 +154,11 @@ internal static class PreferencesDatabaseTests
             preferences.PreferredLocaleCode = "es-MX";
             client.UpdatePlayerPreferences(session.SessionToken, preferences);
             PlayerPreferences stored = repository.ReadPreferences(session.AccountId).Preferences;
-            TestAssert.AreEqual("es-MX", stored.PreferredLocaleCode);
-            TestAssert.AreEqual("UTC", stored.TimeZoneId);
-            TestAssert.AreEqual("PROFILE_PICTURES", stored.PieceStyleCode);
-            TestAssert.AreEqual(false, stored.UseCustomBoardBackground);
-            TestAssert.AreEqual(true, client.GetBoardBackground(session.SessionToken) != null);
+            Assert.AreEqual("es-MX", stored.PreferredLocaleCode);
+            Assert.AreEqual("UTC", stored.TimeZoneId);
+            Assert.AreEqual("PROFILE_PICTURES", stored.PieceStyleCode);
+            Assert.AreEqual(false, stored.UseCustomBoardBackground);
+            Assert.AreEqual(true, client.GetBoardBackground(session.SessionToken) != null);
             channel.Close();
             factory.Close();
             host.Close();

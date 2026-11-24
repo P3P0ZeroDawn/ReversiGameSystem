@@ -5,9 +5,6 @@ using ReversiGameSystem.Server.Application.Common;
 
 namespace ReversiGameSystem.Server.Application.Accounts;
 
-/// <summary>
-/// Stores active authenticated and guest sessions in server process memory.
-/// </summary>
 public sealed class SessionStore
 {
     private static readonly TimeSpan DefaultLifetime = TimeSpan.FromHours(8);
@@ -19,31 +16,13 @@ public sealed class SessionStore
     private readonly IUtcClock _clock;
     private readonly TimeSpan _sessionLifetime;
 
-    /// <summary>
-    /// Occurs after an active session is revoked or removed due to expiration.
-    /// </summary>
     public event Action<string>? SessionRevoked;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SessionStore"/> class
-    /// with the default 8-hour lifetime.
-    /// </summary>
-    /// <param name="clock">The authoritative UTC clock.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="clock"/> is null.</exception>
     public SessionStore(IUtcClock clock)
         : this(clock, DefaultLifetime)
     {
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SessionStore"/> class.
-    /// </summary>
-    /// <param name="clock">The authoritative UTC clock.</param>
-    /// <param name="sessionLifetime">The lifetime applied to new sessions.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="clock"/> is null.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">
-    /// <paramref name="sessionLifetime"/> is not positive.
-    /// </exception>
     public SessionStore(IUtcClock clock, TimeSpan sessionLifetime)
     {
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
@@ -57,22 +36,12 @@ public sealed class SessionStore
         _sessionLifetime = sessionLifetime;
     }
 
-    /// <summary>
-    /// Calculates the UTC expiration instant for a new session created now.
-    /// </summary>
-    /// <returns>The UTC expiration instant.</returns>
     public DateTime CalculateExpirationUtc()
     {
         DateTime expiresAtUtc = _clock.UtcNow.Add(_sessionLifetime);
         return expiresAtUtc;
     }
 
-    /// <summary>
-    /// Stores a new authenticated session when its token does not already exist.
-    /// </summary>
-    /// <param name="session">The authenticated session to store.</param>
-    /// <returns><c>true</c> if stored; <c>false</c> if the token collided.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
     public bool TryAddAuthenticated(AuthenticatedSession session)
     {
         if (session == null)
@@ -84,12 +53,6 @@ public sealed class SessionStore
         return added;
     }
 
-    /// <summary>
-    /// Atomically reserves a guest display name and stores the guest session.
-    /// </summary>
-    /// <param name="session">The guest session to store.</param>
-    /// <returns><c>true</c> if reserved; <c>false</c> if the display name is in use.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
     public bool TryReserveGuest(GuestSession session)
     {
         if (session == null)
@@ -111,27 +74,19 @@ public sealed class SessionStore
         return reserved;
     }
 
-    /// <summary>
-    /// Finds an active authenticated session by token.
-    /// </summary>
-    /// <param name="sessionToken">The opaque session token.</param>
-    /// <returns>
-    /// The active session, <see cref="SessionOperationStatus.MissingSessionToken"/>,
-    /// or <see cref="SessionOperationStatus.InvalidSession"/>.
-    /// </returns>
     public SessionResult<AuthenticatedSession> FindAuthenticated(
         string sessionToken)
     {
         if (string.IsNullOrWhiteSpace(sessionToken))
         {
             return new SessionResult<AuthenticatedSession>(
-                SessionOperationStatus.MissingSessionToken);
+                SessionStatus.MissingSessionToken);
         }
 
         if (!_authenticated.TryGetValue(sessionToken, out AuthenticatedSession? active))
         {
             return new SessionResult<AuthenticatedSession>(
-                SessionOperationStatus.InvalidSession);
+                SessionStatus.InvalidSession);
         }
 
         if (active.ExpiresAtUtc <= _clock.UtcNow)
@@ -142,17 +97,12 @@ public sealed class SessionStore
             }
 
             return new SessionResult<AuthenticatedSession>(
-                SessionOperationStatus.InvalidSession);
+                SessionStatus.InvalidSession);
         }
 
         return new SessionResult<AuthenticatedSession>(active);
     }
 
-    /// <summary>
-    /// Checks whether a guest session token exists and has not expired.
-    /// </summary>
-    /// <param name="sessionToken">The opaque session token.</param>
-    /// <returns><c>true</c> if the guest session is active; otherwise, <c>false</c>.</returns>
     public bool IsGuestActive(string sessionToken)
     {
         if (string.IsNullOrWhiteSpace(sessionToken))
@@ -169,10 +119,6 @@ public sealed class SessionStore
         }
     }
 
-    /// <summary>
-    /// Revokes any active authenticated or guest session matching the token.
-    /// </summary>
-    /// <param name="sessionToken">The opaque session token.</param>
     public void RevokeSession(string sessionToken)
     {
         if (string.IsNullOrWhiteSpace(sessionToken))
@@ -195,10 +141,6 @@ public sealed class SessionStore
         }
     }
 
-    /// <summary>
-    /// Revokes all active authenticated sessions belonging to an account.
-    /// </summary>
-    /// <param name="accountId">The persistent account identifier.</param>
     public void RevokeAccountSessions(long accountId)
     {
         if (accountId <= 0)
@@ -219,9 +161,6 @@ public sealed class SessionStore
         RaiseSessionRevoked(revokedTokens);
     }
 
-    /// <summary>
-    /// Removes all expired authenticated and guest sessions from memory.
-    /// </summary>
     public void RemoveExpiredSessions()
     {
         DateTime nowUtc = _clock.UtcNow;

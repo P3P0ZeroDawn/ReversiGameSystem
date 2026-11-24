@@ -8,16 +8,19 @@ using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
 using Proxy = ReversiGameSystem.ServerProxy;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal static class GameplayClientTransportTests
+[TestClass]
+public sealed class GameplayClientTransportTests
 {
     private const long MatchId = 73;
     private const long StateVersion = 9;
     private static readonly TimeSpan TestTimeout = TimeSpan.FromSeconds(5);
 
-    internal static void RestoreMatchConnection_FinishedMatch_LoadsFinalState()
+    [TestMethod]
+    public void RestoreMatchConnection_FinishedMatch_LoadsFinalState()
     {
         using GameplayHost host = new GameplayHost();
         host.Service.IsFinished = true;
@@ -26,11 +29,12 @@ internal static class GameplayClientTransportTests
         MatchStatus status = client.RestoreMatchConnection(MatchId, CancellationToken.None)
             .GetAwaiter().GetResult();
 
-        TestAssert.AreEqual(MatchStatus.Success, status);
-        TestAssert.AreEqual(ConfirmedMatchState.Finished, client.ReadMatchState(MatchId).State);
+        Assert.AreEqual(MatchStatus.Success, status);
+        Assert.AreEqual(ConfirmedMatchState.Finished, client.ReadMatchState(MatchId).State);
     }
 
-    internal static void LoadMatchState_CancelledRequest_CanRestoreChannel()
+    [TestMethod]
+    public void LoadMatchState_CancelledRequest_CanRestoreChannel()
     {
         using GameplayHost host = new GameplayHost();
         host.Service.DelayStateRead = true;
@@ -40,7 +44,7 @@ internal static class GameplayClientTransportTests
         bool cancelled = false;
         try
         {
-            TestAssert.AreEqual(true, host.Service.StateReadStarted.Wait(TestTimeout));
+            Assert.AreEqual(true, host.Service.StateReadStarted.Wait(TestTimeout));
             cancellation.Cancel();
             loading.GetAwaiter().GetResult();
         }
@@ -54,13 +58,14 @@ internal static class GameplayClientTransportTests
             host.Service.ContinueStateRead.Set();
         }
 
-        TestAssert.AreEqual(true, cancelled);
-        TestAssert.AreEqual(MatchStatus.Success,
+        Assert.AreEqual(true, cancelled);
+        Assert.AreEqual(MatchStatus.Success,
             client.RestoreMatchConnection(MatchId, CancellationToken.None)
                 .GetAwaiter().GetResult());
     }
 
-    internal static void PlacePiece_ConfirmedVersion_PreservesPlacementAtRemoteBoundary()
+    [TestMethod]
+    public void PlacePiece_ConfirmedVersion_PreservesPlacementAtRemoteBoundary()
     {
         using GameplayHost host = new GameplayHost();
         using GameplayClient client = host.CreateClient();
@@ -74,15 +79,16 @@ internal static class GameplayClientTransportTests
 
         MatchStatus status = client.PlacePiece(placement).GetAwaiter().GetResult();
 
-        TestAssert.AreEqual(MatchStatus.Success, status);
+        Assert.AreEqual(MatchStatus.Success, status);
         Proxy.PiecePlacement received = host.Service.Placement
             ?? throw new InvalidOperationException("The service did not receive the placement.");
-        TestAssert.AreEqual(placement.ExpectedVersion, received.ExpectedMatchStateVersion);
-        TestAssert.AreEqual(placement.Row, received.Row);
-        TestAssert.AreEqual(placement.Column, received.Column);
+        Assert.AreEqual(placement.ExpectedVersion, received.ExpectedMatchStateVersion);
+        Assert.AreEqual(placement.Row, received.Row);
+        Assert.AreEqual(placement.Column, received.Column);
     }
 
-    internal static void Callback_ProcessingFailure_ReachesErrorBoundary()
+    [TestMethod]
+    public void Callback_ProcessingFailure_ReachesErrorBoundary()
     {
         using GameplayHost host = new GameplayHost();
         host.Service.PublishInvalidCallback = true;
@@ -98,8 +104,8 @@ internal static class GameplayClientTransportTests
         try
         {
             client.LoadMatchState(MatchId).GetAwaiter().GetResult();
-            TestAssert.AreEqual(true, reported.Wait(TestTimeout));
-            TestAssert.AreEqual(true, captured is ArgumentNullException);
+            Assert.AreEqual(true, reported.Wait(TestTimeout));
+            Assert.AreEqual(true, captured is ArgumentNullException);
         }
         finally
         {

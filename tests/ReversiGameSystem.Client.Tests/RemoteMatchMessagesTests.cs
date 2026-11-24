@@ -4,12 +4,15 @@ using System.Resources;
 using ReversiGameSystem.Chat;
 using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal static class RemoteMatchMessagesTests
+[TestClass]
+public sealed class RemoteMatchMessagesTests
 {
-    internal static void MatchStatuses_SupportedCultures_HaveLocalizedMessages()
+    [TestMethod]
+    public void MatchStatuses_SupportedCultures_HaveLocalizedMessages()
     {
         foreach (MatchStatus status in Enum.GetValues(typeof(MatchStatus)))
         {
@@ -18,7 +21,8 @@ internal static class RemoteMatchMessagesTests
         }
     }
 
-    internal static void ChatStatuses_SupportedCultures_HaveLocalizedMessages()
+    [TestMethod]
+    public void ChatStatuses_SupportedCultures_HaveLocalizedMessages()
     {
         foreach (ChatStatus status in Enum.GetValues(typeof(ChatStatus)))
         {
@@ -27,20 +31,23 @@ internal static class RemoteMatchMessagesTests
         }
     }
 
-    internal static void MatchNotFound_ResolvesSpecificMessage()
+    [TestMethod]
+    public void MatchNotFound_ResolvesSpecificMessage()
     {
-        TestAssert.AreEqual("RemoteMatch_NotFound",
+        Assert.AreEqual("RemoteMatch_NotFound",
             RemoteMatchMessages.GetMessageResourceKey(MatchStatus.MatchNotFound));
     }
 
-    internal static void UnknownMatchStatus_ThrowsInsteadOfInventingRejection()
+    [TestMethod]
+    public void UnknownMatchStatus_ThrowsInsteadOfInventingRejection()
     {
-        TestAssert.Throws<ArgumentOutOfRangeException>(GetUnknownMatchMessage);
+        Assert.Throws<ArgumentOutOfRangeException>(GetUnknownMatchMessage);
     }
 
-    internal static void UnknownChatStatus_ThrowsInsteadOfInventingRejection()
+    [TestMethod]
+    public void UnknownChatStatus_ThrowsInsteadOfInventingRejection()
     {
-        TestAssert.Throws<ArgumentOutOfRangeException>(GetUnknownChatMessage);
+        Assert.Throws<ArgumentOutOfRangeException>(GetUnknownChatMessage);
     }
 
     private static void GetUnknownMatchMessage()
@@ -57,7 +64,7 @@ internal static class RemoteMatchMessagesTests
     {
         if (success)
         {
-            TestAssert.AreEqual(string.Empty, resourceKey);
+            Assert.AreEqual(string.Empty, resourceKey);
             return;
         }
         foreach (string cultureName in new[] { "en-US", "es-MX" })
@@ -65,7 +72,7 @@ internal static class RemoteMatchMessagesTests
             string? message = new ResourceManager("ReversiGameSystem.Properties.Resources",
                 typeof(App).Assembly).GetString(resourceKey,
                 CultureInfo.GetCultureInfo(cultureName));
-            TestAssert.AreEqual(false, string.IsNullOrWhiteSpace(message));
+            Assert.AreEqual(false, string.IsNullOrWhiteSpace(message));
         }
     }
 }

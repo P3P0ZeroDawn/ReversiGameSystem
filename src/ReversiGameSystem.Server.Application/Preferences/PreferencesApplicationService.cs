@@ -29,7 +29,7 @@ public sealed class PreferencesApplicationService
         SessionResult<AuthenticatedSession> access =
             _sessions.FindAuthenticated(sessionToken);
         PreferencesAccess preferences;
-        if (access.Status != SessionOperationStatus.Success || access.Value == null)
+        if (access.Status != SessionStatus.Success || access.Value == null)
         {
             preferences = new PreferencesAccess(MapSessionStatus(access.Status));
         }
@@ -44,7 +44,7 @@ public sealed class PreferencesApplicationService
     {
         SessionResult<AuthenticatedSession> access =
             _sessions.FindAuthenticated(sessionToken);
-        if (access.Status != SessionOperationStatus.Success || access.Value == null)
+        if (access.Status != SessionStatus.Success || access.Value == null)
         {
             return MapSessionStatus(access.Status);
         }
@@ -84,7 +84,7 @@ public sealed class PreferencesApplicationService
     {
         SessionResult<AuthenticatedSession> session =
             _sessions.FindAuthenticated(sessionToken);
-        if (session.Status != SessionOperationStatus.Success || session.Value == null)
+        if (session.Status != SessionStatus.Success || session.Value == null)
         {
             return MapSessionStatus(session.Status);
         }
@@ -103,7 +103,7 @@ public sealed class PreferencesApplicationService
             string previousReference = access.Preferences.BoardBackgroundReference;
             ProfileResult<string> stored = _images.SaveImage(
                 image, PlayerImageKind.BoardBackground);
-            if (stored.Status == ProfileOperationStatus.InvalidImage)
+            if (stored.Status == ProfileStatus.InvalidImage)
             {
                 return PreferencesStatus.InvalidImage;
             }
@@ -140,13 +140,13 @@ public sealed class PreferencesApplicationService
         }
     }
 
-    private static PreferencesStatus MapSessionStatus(SessionOperationStatus status)
+    private static PreferencesStatus MapSessionStatus(SessionStatus status)
     {
         PreferencesStatus mapped = status switch
         {
-            SessionOperationStatus.MissingSessionToken => PreferencesStatus.MissingSessionToken,
-            SessionOperationStatus.InvalidSession => PreferencesStatus.InvalidSession,
-            SessionOperationStatus.InactiveAccount => PreferencesStatus.InactiveAccount,
+            SessionStatus.MissingSessionToken => PreferencesStatus.MissingSessionToken,
+            SessionStatus.InvalidSession => PreferencesStatus.InvalidSession,
+            SessionStatus.InactiveAccount => PreferencesStatus.InactiveAccount,
             _ => throw new ArgumentOutOfRangeException(nameof(status))
         };
         return mapped;

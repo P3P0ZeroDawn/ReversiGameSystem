@@ -17,7 +17,7 @@ public sealed class UsernamePolicyTests
         UsernameValidationError actual = UsernamePolicy.Validate(username);
 
         // Assert
-        TestAssert.AreEqual(UsernameValidationError.None, actual);
+        Assert.AreEqual(UsernameValidationError.None, actual);
     }
 
     [TestMethod]
@@ -30,7 +30,7 @@ public sealed class UsernamePolicyTests
         UsernameValidationError actual = UsernamePolicy.Validate(username);
 
         // Assert
-        TestAssert.AreEqual(UsernameValidationError.None, actual);
+        Assert.AreEqual(UsernameValidationError.None, actual);
     }
 
     [TestMethod]
@@ -43,7 +43,7 @@ public sealed class UsernamePolicyTests
         UsernameValidationError actual = UsernamePolicy.Validate(username);
 
         // Assert
-        TestAssert.AreEqual(UsernameValidationError.Missing, actual);
+        Assert.AreEqual(UsernameValidationError.Missing, actual);
     }
 
     [TestMethod]
@@ -56,7 +56,7 @@ public sealed class UsernamePolicyTests
         UsernameValidationError actual = UsernamePolicy.Validate(username);
 
         // Assert
-        TestAssert.AreEqual(UsernameValidationError.InvalidLength, actual);
+        Assert.AreEqual(UsernameValidationError.InvalidLength, actual);
     }
 
     [TestMethod]
@@ -69,7 +69,7 @@ public sealed class UsernamePolicyTests
         UsernameValidationError actual = UsernamePolicy.Validate(username);
 
         // Assert
-        TestAssert.AreEqual(UsernameValidationError.InvalidLength, actual);
+        Assert.AreEqual(UsernameValidationError.InvalidLength, actual);
     }
 
     [TestMethod]
@@ -82,7 +82,7 @@ public sealed class UsernamePolicyTests
         UsernameValidationError actual = UsernamePolicy.Validate(username);
 
         // Assert
-        TestAssert.AreEqual(UsernameValidationError.InvalidCharacters, actual);
+        Assert.AreEqual(UsernameValidationError.InvalidCharacters, actual);
     }
 
     [TestMethod]
@@ -95,6 +95,6 @@ public sealed class UsernamePolicyTests
         UsernameValidationError actual = UsernamePolicy.Validate(username);
 
         // Assert
-        TestAssert.AreEqual(UsernameValidationError.InvalidCharacters, actual);
+        Assert.AreEqual(UsernameValidationError.InvalidCharacters, actual);
     }
 }

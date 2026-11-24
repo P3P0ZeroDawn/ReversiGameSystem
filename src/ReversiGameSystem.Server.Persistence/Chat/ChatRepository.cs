@@ -14,7 +14,6 @@ using PersistentChatMute = ReversiGameSystem.Server.Persistence.Model.ChatMute;
 
 namespace ReversiGameSystem.Server.Persistence.Chat;
 
-/// <summary>Persists authorized messages and moderation outcomes.</summary>
 public class ChatRepository : IChatRepository
 {
     private const string ActiveAccountStatusCode = "ACTIVE";
@@ -29,14 +28,12 @@ public class ChatRepository : IChatRepository
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
     }
 
-    /// <inheritdoc />
     public ChatStatus EvaluateParticipantAccess(long accountId, long matchId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         return EvaluateAccessStatus(context, accountId, matchId);
     }
 
-    /// <inheritdoc />
     public ChatChannelAccess LoadChannelAccess(
         long accountId,
         long matchId,
@@ -57,7 +54,6 @@ public class ChatRepository : IChatRepository
         return result;
     }
 
-    /// <inheritdoc />
     public ChatHistory LoadMessageHistory(long accountId, long matchId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
@@ -82,7 +78,6 @@ public class ChatRepository : IChatRepository
         return result;
     }
 
-    /// <inheritdoc />
     public ChatMessageSubmission ProcessMessageSubmission(
         long accountId,
         long matchId,

@@ -25,17 +25,17 @@ public sealed class MatchSerializationTests
 
         // Assert
         AssertBoard(state.Board, result.Board);
-        TestAssert.AreEqual(7L, result.MatchId);
-        TestAssert.AreEqual(4L, result.MatchStateVersion);
-        TestAssert.AreEqual(MatchState.InProgress, result.State);
-        TestAssert.AreEqual<int?>(2, result.CurrentTurnSeatNumber);
-        TestAssert.AreEqual<DateTime?>(RecordedAtUtc, result.TurnStartedAtUtc);
-        TestAssert.AreEqual(DateTimeKind.Utc, result.TurnStartedAtUtc.GetValueOrDefault().Kind);
-        TestAssert.AreEqual<int?>(1, result.SkippedSeatNumber);
-        TestAssert.AreEqual<MoveRecord?>(null, result.LastMove);
-        TestAssert.AreEqual<MatchConclusion?>(null, result.Conclusion);
-        TestAssert.AreEqual(4, result.BlackPieceCount);
-        TestAssert.AreEqual(3, result.WhitePieceCount);
+        Assert.AreEqual(7L, result.MatchId);
+        Assert.AreEqual(4L, result.MatchStateVersion);
+        Assert.AreEqual(MatchState.InProgress, result.State);
+        Assert.AreEqual<int?>(2, result.CurrentTurnSeatNumber);
+        Assert.AreEqual<DateTime?>(RecordedAtUtc, result.TurnStartedAtUtc);
+        Assert.AreEqual(DateTimeKind.Utc, result.TurnStartedAtUtc.GetValueOrDefault().Kind);
+        Assert.AreEqual<int?>(1, result.SkippedSeatNumber);
+        Assert.AreEqual<MoveRecord?>(null, result.LastMove);
+        Assert.AreEqual<MatchConclusion?>(null, result.Conclusion);
+        Assert.AreEqual(4, result.BlackPieceCount);
+        Assert.AreEqual(3, result.WhitePieceCount);
     }
 
     [TestMethod]
@@ -54,18 +54,18 @@ public sealed class MatchSerializationTests
         MatchStateSnapshot result = ContractSerializationTests.RoundTrip(state);
 
         // Assert
-        TestAssert.AreEqual(MatchState.Finished, result.State);
-        TestAssert.AreEqual<int?>(null, result.CurrentTurnSeatNumber);
-        TestAssert.AreEqual<DateTime?>(null, result.TurnStartedAtUtc);
-        TestAssert.AreEqual<int?>(null, result.SkippedSeatNumber);
+        Assert.AreEqual(MatchState.Finished, result.State);
+        Assert.AreEqual<int?>(null, result.CurrentTurnSeatNumber);
+        Assert.AreEqual<DateTime?>(null, result.TurnStartedAtUtc);
+        Assert.AreEqual<int?>(null, result.SkippedSeatNumber);
         MatchConclusion conclusion = TestAssert.IsNotNull(result.Conclusion);
-        TestAssert.AreEqual(MatchEndReason.NoLegalMoves, conclusion.Reason);
-        TestAssert.AreEqual<int?>(null, conclusion.WinnerSeatNumber);
-        TestAssert.AreEqual<int?>(null, conclusion.AbandoningSeatNumber);
-        TestAssert.AreEqual(7L, conclusion.MatchId);
-        TestAssert.AreEqual(4L, conclusion.MatchStateVersion);
-        TestAssert.AreEqual(RecordedAtUtc, conclusion.EndedAtUtc);
-        TestAssert.AreEqual(MoveOrigin.Timeout, TestAssert.IsNotNull(result.LastMove).Origin);
+        Assert.AreEqual(MatchEndReason.NoLegalMoves, conclusion.Reason);
+        Assert.AreEqual<int?>(null, conclusion.WinnerSeatNumber);
+        Assert.AreEqual<int?>(null, conclusion.AbandoningSeatNumber);
+        Assert.AreEqual(7L, conclusion.MatchId);
+        Assert.AreEqual(4L, conclusion.MatchStateVersion);
+        Assert.AreEqual(RecordedAtUtc, conclusion.EndedAtUtc);
+        Assert.AreEqual(MoveOrigin.Timeout, TestAssert.IsNotNull(result.LastMove).Origin);
     }
 
     [TestMethod]
@@ -84,14 +84,14 @@ public sealed class MatchSerializationTests
         MatchInformation result = ContractSerializationTests.RoundTrip(information);
 
         // Assert
-        TestAssert.AreEqual<int?>(null, result.AssignedSeatNumber);
-        TestAssert.AreEqual(30, result.TurnDurationSeconds);
-        TestAssert.AreEqual(2, result.Participants.Length);
-        TestAssert.AreEqual(ParticipantKind.Registered, result.Participants[0].Kind);
-        TestAssert.AreEqual<long?>(42, result.Participants[0].AccountId);
-        TestAssert.AreEqual(ParticipantKind.Guest, result.Participants[1].Kind);
-        TestAssert.AreEqual<long?>(null, result.Participants[1].AccountId);
-        TestAssert.AreEqual("Guest-two", result.Participants[1].DisplayName);
+        Assert.AreEqual<int?>(null, result.AssignedSeatNumber);
+        Assert.AreEqual(30, result.TurnDurationSeconds);
+        Assert.AreEqual(2, result.Participants.Length);
+        Assert.AreEqual(ParticipantKind.Registered, result.Participants[0].Kind);
+        Assert.AreEqual<long?>(42, result.Participants[0].AccountId);
+        Assert.AreEqual(ParticipantKind.Guest, result.Participants[1].Kind);
+        Assert.AreEqual<long?>(null, result.Participants[1].AccountId);
+        Assert.AreEqual("Guest-two", result.Participants[1].DisplayName);
     }
 
     [TestMethod]
@@ -118,19 +118,19 @@ public sealed class MatchSerializationTests
         MatchDetails result = ContractSerializationTests.RoundTrip(details);
 
         // Assert
-        TestAssert.AreEqual(2, result.BoardFrames.Length);
+        Assert.AreEqual(2, result.BoardFrames.Length);
         AssertBoard(initialBoard, result.BoardFrames[0]);
         AssertBoard(nextBoard, result.BoardFrames[1]);
-        TestAssert.AreEqual(1, result.Moves.Length);
+        Assert.AreEqual(1, result.Moves.Length);
         MoveRecord move = result.Moves[0];
-        TestAssert.AreEqual(1, move.MoveNumber);
-        TestAssert.AreEqual(1, move.SeatNumber);
-        TestAssert.AreEqual(2, move.Row);
-        TestAssert.AreEqual(3, move.Column);
-        TestAssert.AreEqual(1, move.FlippedPieceCount);
-        TestAssert.AreEqual(RecordedAtUtc, move.PlayedAtUtc);
-        TestAssert.AreEqual(MoveOrigin.Timeout, move.Origin);
-        TestAssert.AreEqual<MatchConclusion?>(null, result.Conclusion);
+        Assert.AreEqual(1, move.MoveNumber);
+        Assert.AreEqual(1, move.SeatNumber);
+        Assert.AreEqual(2, move.Row);
+        Assert.AreEqual(3, move.Column);
+        Assert.AreEqual(1, move.FlippedPieceCount);
+        Assert.AreEqual(RecordedAtUtc, move.PlayedAtUtc);
+        Assert.AreEqual(MoveOrigin.Timeout, move.Origin);
+        Assert.AreEqual<MatchConclusion?>(null, result.Conclusion);
     }
 
     [TestMethod]
@@ -148,12 +148,12 @@ public sealed class MatchSerializationTests
         MatchSummary[] result = ContractSerializationTests.RoundTrip(history);
 
         // Assert
-        TestAssert.AreEqual(MatchState.InProgress, result[0].State);
-        TestAssert.AreEqual<MatchConclusion?>(null, result[0].Conclusion);
-        TestAssert.AreEqual(MatchState.Finished, result[1].State);
-        TestAssert.AreEqual(RecordedAtUtc, TestAssert.IsNotNull(result[1].Conclusion).EndedAtUtc);
-        TestAssert.AreEqual(1, result[0].AssignedSeatNumber);
-        TestAssert.AreEqual(RecordedAtUtc, result[0].RecordedAtUtc);
+        Assert.AreEqual(MatchState.InProgress, result[0].State);
+        Assert.AreEqual<MatchConclusion?>(null, result[0].Conclusion);
+        Assert.AreEqual(MatchState.Finished, result[1].State);
+        Assert.AreEqual(RecordedAtUtc, TestAssert.IsNotNull(result[1].Conclusion).EndedAtUtc);
+        Assert.AreEqual(1, result[0].AssignedSeatNumber);
+        Assert.AreEqual(RecordedAtUtc, result[0].RecordedAtUtc);
     }
 
     [TestMethod]
@@ -175,9 +175,9 @@ public sealed class MatchSerializationTests
         MatchDetails result = ContractSerializationTests.RoundTrip(details);
 
         // Assert
-        TestAssert.AreEqual(0, TestAssert.IsNotNull(result.Moves).Length);
-        TestAssert.AreEqual(1, result.BoardFrames.Length);
-        TestAssert.AreEqual(64, result.BoardFrames[0].Length);
+        Assert.AreEqual(0, TestAssert.IsNotNull(result.Moves).Length);
+        Assert.AreEqual(1, result.BoardFrames.Length);
+        Assert.AreEqual(64, result.BoardFrames[0].Length);
     }
 
     private static MatchStateSnapshot CreateActiveState()
@@ -267,7 +267,7 @@ public sealed class MatchSerializationTests
 
     private static void AssertBoard(BoardCellState[] expected, BoardCellState[] actual)
     {
-        TestAssert.AreEqual(64, actual.Length);
-        TestAssert.IsTrue(expected.SequenceEqual(actual), "Board cells changed during transport.");
+        Assert.AreEqual(64, actual.Length);
+        Assert.IsTrue(expected.SequenceEqual(actual), "Board cells changed during transport.");
     }
 }

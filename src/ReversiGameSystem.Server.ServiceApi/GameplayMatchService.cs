@@ -43,7 +43,20 @@ public sealed class GameplayMatchService : IGameplayMatchService
             ?? throw new ArgumentNullException(nameof(callbackSubscriptions));
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Authorizes the participant and opens the duplex callback channel for active gameplay.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="matchId">The persistent match identifier.</param>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public void OpenMatchChannel(string sessionToken, long matchId)
     {
         Match match = RequireAuthorizedMatch(sessionToken, matchId);
@@ -66,7 +79,21 @@ public sealed class GameplayMatchService : IGameplayMatchService
         PublishPresence(matchId, snapshot);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Returns static participant, seat, and turn-duration information for an authorized match.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="matchId">The persistent match identifier.</param>
+    /// <returns>The match metadata and assigned seat number.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public MatchInformation GetMatchInformation(string sessionToken, long matchId)
     {
         Match match = RequireAuthorizedMatch(sessionToken, matchId);
@@ -81,7 +108,21 @@ public sealed class GameplayMatchService : IGameplayMatchService
         };
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Returns the current authoritative board and turn state snapshot for the match.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="matchId">The persistent match identifier.</param>
+    /// <returns>The current match state snapshot.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public MatchStateSnapshot GetMatchState(string sessionToken, long matchId)
     {
         MatchResult<Match> result = _applicationService.GetMatchState(sessionToken, matchId);
@@ -91,7 +132,21 @@ public sealed class GameplayMatchService : IGameplayMatchService
         return MatchContractMapper.MapState(match);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Validates and applies a player's disc placement and broadcasts the updated state.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="placement">The target match, expected version, and board coordinates.</param>
+    /// <returns>The resulting authoritative match state snapshot.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public MatchStateSnapshot PlacePiece(string sessionToken, PiecePlacement placement)
     {
         MatchPlacement? domainPlacement = MapPlacement(placement);
@@ -111,7 +166,21 @@ public sealed class GameplayMatchService : IGameplayMatchService
         return snapshot;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Forfeits an active match on behalf of the calling participant and broadcasts the conclusion.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="matchId">The persistent match identifier.</param>
+    /// <returns>The final match conclusion.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public MatchConclusion ForfeitMatch(string sessionToken, long matchId)
     {
         MatchResult<Match> result = _applicationService.ForfeitMatch(sessionToken, matchId);
@@ -123,7 +192,21 @@ public sealed class GameplayMatchService : IGameplayMatchService
         return MatchContractMapper.MapConclusion(match);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Registers the caller as an observer of an active match and returns its current state.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="matchId">The persistent match identifier.</param>
+    /// <returns>The current match state snapshot.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public MatchStateSnapshot ObserveMatch(string sessionToken, long matchId)
     {
         MatchResult<Match> result = _applicationService.ObserveMatch(sessionToken, matchId);
@@ -134,7 +217,20 @@ public sealed class GameplayMatchService : IGameplayMatchService
         return MatchContractMapper.MapState(match);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Returns the completed match history for the authenticated caller.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <returns>The caller's historical match summaries.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public MatchSummary[] GetMatchHistory(string sessionToken)
     {
         MatchResult<long> accountResult = _applicationService.GetSessionAccountId(sessionToken);
@@ -150,7 +246,21 @@ public sealed class GameplayMatchService : IGameplayMatchService
             .ToArray();
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Returns detailed results and participant summaries for a historical or active match.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="matchId">The persistent match identifier.</param>
+    /// <returns>The detailed match record.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public MatchDetails GetMatchDetails(string sessionToken, long matchId)
     {
         MatchResult<Match> result = _applicationService.GetAuthorizedMatchSnapshot(
@@ -162,7 +272,21 @@ public sealed class GameplayMatchService : IGameplayMatchService
         return MatchContractMapper.MapDetails(match);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Returns the ordered sequence of moves recorded for an authorized match.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="matchId">The persistent match identifier.</param>
+    /// <returns>The ordered move history.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public MoveRecord[] GetMoveHistory(string sessionToken, long matchId)
     {
         MatchResult<MatchMove[]> result = _applicationService.GetMoveHistory(

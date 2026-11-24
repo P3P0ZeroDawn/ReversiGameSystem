@@ -1,4 +1,5 @@
 using System;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -12,9 +13,11 @@ using ReversiGameSystem.Server.Persistence.Players;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal static class PlayerImageRepositoryTests
+[TestClass]
+public sealed class PlayerImageRepositoryTests
 {
-    internal static void SaveImage_DetailedBackgroundAboveSoftTarget_AcceptsImage()
+    [TestMethod]
+    public void SaveImage_DetailedBackgroundAboveSoftTarget_AcceptsImage()
     {
         string root = CreateRoot();
         try
@@ -41,16 +44,16 @@ internal static class PlayerImageRepositoryTests
                 }
 
                 source.Save(input, ImageFormat.Png);
-                TestAssert.AreEqual(true, input.Length < 5 * 1024 * 1024);
+                Assert.AreEqual(true, input.Length < 5 * 1024 * 1024);
                 PlayerImageRepository repository = new PlayerImageRepository(root);
                 ProfileResult<string> saved = repository.SaveImage(
                     new ProfileImageData(input.ToArray(), "image/png"),
                 PlayerImageKind.BoardBackground);
-                TestAssert.AreEqual(ProfileOperationStatus.Success, saved.Status);
+                Assert.AreEqual(ProfileStatus.Success, saved.Status);
                 ProfileImageData stored = repository.ReadImage(
                 TestAssert.IsNotNull(saved.Value));
-                TestAssert.AreEqual("image/jpeg", stored.MediaType);
-                TestAssert.AreEqual(true, stored.Content.Length > 512 * 1024);
+                Assert.AreEqual("image/jpeg", stored.MediaType);
+                Assert.AreEqual(true, stored.Content.Length > 512 * 1024);
             }
         }
         finally
@@ -59,7 +62,8 @@ internal static class PlayerImageRepositoryTests
         }
     }
 
-    internal static void SaveImage_WideTransparentImage_CropsCenterAndCompositesWhite()
+    [TestMethod]
+    public void SaveImage_WideTransparentImage_CropsCenterAndCompositesWhite()
     {
         string root = CreateRoot();
         try
@@ -81,14 +85,14 @@ internal static class PlayerImageRepositoryTests
                 using (MemoryStream output = new MemoryStream(stored.Content))
                 using (Bitmap decoded = new Bitmap(output))
                 {
-                    TestAssert.AreEqual("image/jpeg", stored.MediaType);
-                    TestAssert.AreEqual(true, reference.EndsWith(".jpg"));
-                    TestAssert.AreEqual(256, decoded.Width);
-                    TestAssert.AreEqual(256, decoded.Height);
+                    Assert.AreEqual("image/jpeg", stored.MediaType);
+                    Assert.AreEqual(true, reference.EndsWith(".jpg"));
+                    Assert.AreEqual(256, decoded.Width);
+                    Assert.AreEqual(256, decoded.Height);
                     Color corner = decoded.GetPixel(20, 20);
                     Color center = decoded.GetPixel(128, 128);
-                    TestAssert.AreEqual(true, corner.R > 240 && corner.G > 240 && corner.B > 240);
-                    TestAssert.AreEqual(true, center.G > center.R + 50 && center.G > center.B + 50);
+                    Assert.AreEqual(true, corner.R > 240 && corner.G > 240 && corner.B > 240);
+                    Assert.AreEqual(true, center.G > center.R + 50 && center.G > center.B + 50);
                 }
             }
         }
@@ -98,7 +102,8 @@ internal static class PlayerImageRepositoryTests
         }
     }
 
-    internal static void SaveImage_Background_ResizesAndDoesNotUpscale()
+    [TestMethod]
+    public void SaveImage_Background_ResizesAndDoesNotUpscale()
     {
         string root = CreateRoot();
         try
@@ -118,8 +123,8 @@ internal static class PlayerImageRepositoryTests
                     using (MemoryStream output = new MemoryStream(stored.Content))
                     using (Bitmap decoded = new Bitmap(output))
                     {
-                        TestAssert.AreEqual(Math.Min(dimension, 1024), decoded.Width);
-                        TestAssert.AreEqual(decoded.Width, decoded.Height);
+                        Assert.AreEqual(Math.Min(dimension, 1024), decoded.Width);
+                        Assert.AreEqual(decoded.Width, decoded.Height);
                     }
                 }
             }
@@ -130,7 +135,8 @@ internal static class PlayerImageRepositoryTests
         }
     }
 
-    internal static void ReadImage_LegacyFormats_PreservesMediaType()
+    [TestMethod]
+    public void ReadImage_LegacyFormats_PreservesMediaType()
     {
         string root = CreateRoot();
         try
@@ -154,7 +160,7 @@ internal static class PlayerImageRepositoryTests
                 }
 
                 ProfileImageData stored = repository.ReadImage("profile-images/" + name);
-                TestAssert.AreEqual(mediaType, stored.MediaType);
+                Assert.AreEqual(mediaType, stored.MediaType);
             }
         }
         finally
@@ -163,7 +169,8 @@ internal static class PlayerImageRepositoryTests
         }
     }
 
-    internal static void DeleteImage_TraversalReference_RejectsAndPreservesFile()
+    [TestMethod]
+    public void DeleteImage_TraversalReference_RejectsAndPreservesFile()
     {
         string root = CreateRoot();
         try
@@ -183,8 +190,8 @@ internal static class PlayerImageRepositoryTests
                 rejected = true;
             }
 
-            TestAssert.AreEqual(true, rejected);
-            TestAssert.AreEqual(true, File.Exists(path));
+            Assert.AreEqual(true, rejected);
+            Assert.AreEqual(true, File.Exists(path));
         }
         finally
         {
@@ -206,7 +213,8 @@ internal static class PlayerImageRepositoryTests
         }
     }
 
-    internal static void SaveAndDelete_ValidImage_UsesRelativeUri()
+    [TestMethod]
+    public void SaveAndDelete_ValidImage_UsesRelativeUri()
     {
         // Arrange
         string root = Path.Combine(
@@ -226,13 +234,13 @@ internal static class PlayerImageRepositoryTests
                 new ProfileImageData(imageContent, "image/png"), PlayerImageKind.Profile);
 
             // Assert
-            TestAssert.AreEqual(ProfileOperationStatus.Success, result.Status);
-            TestAssert.AreEqual(true, result.Value?.StartsWith("profile-images/"));
-            TestAssert.AreEqual(1, Directory.GetFiles(root).Length);
+            Assert.AreEqual(ProfileStatus.Success, result.Status);
+            Assert.AreEqual(true, result.Value?.StartsWith("profile-images/"));
+            Assert.AreEqual(1, Directory.GetFiles(root).Length);
 
             string imageUri = TestAssert.IsNotNull(result.Value);
             store.DeleteImage(imageUri);
-            TestAssert.AreEqual(0, Directory.GetFiles(root).Length);
+            Assert.AreEqual(0, Directory.GetFiles(root).Length);
         }
         finally
         {
@@ -243,7 +251,8 @@ internal static class PlayerImageRepositoryTests
         }
     }
 
-    internal static void SaveImage_ValidAndInvalidImages_ReturnsExpectedOutcome()
+    [TestMethod]
+    public void SaveImage_ValidAndInvalidImages_ReturnsExpectedOutcome()
     {
         // Arrange
         string root = Path.Combine(
@@ -265,15 +274,15 @@ internal static class PlayerImageRepositoryTests
                 new ProfileImageData(new byte[] { 1, 2 }, "image/png"), PlayerImageKind.Profile);
 
             // Assert
-            TestAssert.AreEqual(ProfileOperationStatus.Success, saved.Status);
+            Assert.AreEqual(ProfileStatus.Success, saved.Status);
             string savedReference = TestAssert.IsNotNull(saved.Value);
-            TestAssert.AreEqual(true, savedReference.StartsWith("profile-images/"));
-            TestAssert.AreEqual(ProfileOperationStatus.InvalidImage, rejected.Status);
+            Assert.AreEqual(true, savedReference.StartsWith("profile-images/"));
+            Assert.AreEqual(ProfileStatus.InvalidImage, rejected.Status);
             TestAssert.AreEqual<string?>(null, rejected.Value);
-            TestAssert.AreEqual(1, Directory.GetFiles(root).Length);
+            Assert.AreEqual(1, Directory.GetFiles(root).Length);
 
             repository.DeleteImage(savedReference);
-            TestAssert.AreEqual(0, Directory.GetFiles(root).Length);
+            Assert.AreEqual(0, Directory.GetFiles(root).Length);
         }
         finally
         {

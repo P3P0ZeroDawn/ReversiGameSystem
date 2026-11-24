@@ -9,6 +9,8 @@ using ReversiGameSystem.Server.Application.Verification;
 using ReversiGameSystem.Server.Persistence.Accounts;
 using ReversiGameSystem.Server.Persistence.Verification;
 
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
 namespace ReversiGameSystem.Server.Tests;
 
 internal sealed class ReviewAccountDatabaseTests : IEmailSender
@@ -56,7 +58,7 @@ internal sealed class ReviewAccountDatabaseTests : IEmailSender
             fixture.SeedLoginCode("ReviewAlpha", "000001");
             fixture.SeedLoginCode("ReviewBeta", "000002");
             action(fixture._applicationService, fixture._sessions);
-            TestAssert.AreEqual(2, Convert.ToInt32(fixture.Scalar(
+            Assert.AreEqual(2, Convert.ToInt32(fixture.Scalar(
                 "SELECT COUNT(*) FROM dbo.VerificationCode WHERE usedAtUtc IS NOT NULL")));
         });
     }
@@ -142,16 +144,16 @@ internal sealed class ReviewAccountDatabaseTests : IEmailSender
         AccountResult<long> result = repository.CreateAccount(registration);
 
         // Assert
-        TestAssert.AreEqual(AccountStatus.Success, result.Status);
-        TestAssert.IsTrue(result.Value > 0, "Registration must return the stored account ID.");
+        Assert.AreEqual(AccountStatus.Success, result.Status);
+        Assert.IsTrue(result.Value > 0, "Registration must return the stored account ID.");
         LoginAccount account = repository.FindByLogin(username).Value!;
-        TestAssert.AreEqual(result.Value, account.AccountId);
-        TestAssert.AreEqual("ACTIVE", account.StatusCode);
-        TestAssert.AreEqual("es-MX", account.PreferredLocaleCode);
-        TestAssert.IsTrue(account.PasswordHash != Password
+        Assert.AreEqual(result.Value, account.AccountId);
+        Assert.AreEqual("ACTIVE", account.StatusCode);
+        Assert.AreEqual("es-MX", account.PreferredLocaleCode);
+        Assert.IsTrue(account.PasswordHash != Password
             && PasswordHasher.Verify(Password, account.PasswordHash),
             "Stored PBKDF2 must verify the password.");
-        TestAssert.AreEqual(1, Convert.ToInt32(Scalar("SELECT COUNT(*) FROM dbo.AccountSettings "
+        Assert.AreEqual(1, Convert.ToInt32(Scalar("SELECT COUNT(*) FROM dbo.AccountSettings "
             + "WHERE accountId = " + account.AccountId + " AND pieceStyleCode = 'STANDARD'")));
     }
 
@@ -163,9 +165,9 @@ internal sealed class ReviewAccountDatabaseTests : IEmailSender
             "WrongPassword1!");
 
         // Assert
-        TestAssert.AreEqual(SessionOperationStatus.InvalidCredentials, result.Status);
-        TestAssert.AreEqual(0, _mail.Count);
-        TestAssert.AreEqual(0, Convert.ToInt32(Scalar(
+        Assert.AreEqual(SessionStatus.InvalidCredentials, result.Status);
+        Assert.AreEqual(0, _mail.Count);
+        Assert.AreEqual(0, Convert.ToInt32(Scalar(
             "SELECT COUNT(*) FROM dbo.VerificationCode")));
     }
 
@@ -182,8 +184,8 @@ internal sealed class ReviewAccountDatabaseTests : IEmailSender
             _applicationService.CompleteLogin("ReviewAlpha", wrongCode);
 
         // Assert
-        TestAssert.AreEqual(SessionOperationStatus.InvalidVerificationCode, result.Status);
-        TestAssert.AreEqual(1, Convert.ToInt32(Scalar(
+        Assert.AreEqual(SessionStatus.InvalidVerificationCode, result.Status);
+        Assert.AreEqual(1, Convert.ToInt32(Scalar(
             "SELECT failedAttempts FROM dbo.VerificationCode")));
     }
 
@@ -201,17 +203,17 @@ internal sealed class ReviewAccountDatabaseTests : IEmailSender
             ExtractVerificationCode(_mail["ReviewBeta@example.invalid"].Body)).Value!;
 
         // Assert
-        TestAssert.IsTrue(first.AccountId != second.AccountId
+        Assert.IsTrue(first.AccountId != second.AccountId
             && first.SessionToken != second.SessionToken,
             "Both accounts require distinct sessions.");
-        TestAssert.AreEqual("ReviewAlpha", first.Username);
-        TestAssert.AreEqual("ReviewBeta", second.Username);
-        TestAssert.IsTrue(_sessions.FindAuthenticated(first.SessionToken).Status == SessionOperationStatus.Success
-            && _sessions.FindAuthenticated(second.SessionToken).Status == SessionOperationStatus.Success,
+        Assert.AreEqual("ReviewAlpha", first.Username);
+        Assert.AreEqual("ReviewBeta", second.Username);
+        Assert.IsTrue(_sessions.FindAuthenticated(first.SessionToken).Status == SessionStatus.Success
+            && _sessions.FindAuthenticated(second.SessionToken).Status == SessionStatus.Success,
             "Both real in-memory sessions must exist.");
-        TestAssert.AreEqual(2, Convert.ToInt32(Scalar("SELECT COUNT(*) FROM dbo.VerificationCode "
+        Assert.AreEqual(2, Convert.ToInt32(Scalar("SELECT COUNT(*) FROM dbo.VerificationCode "
             + "WHERE usedAtUtc IS NOT NULL")));
-        TestAssert.AreEqual(2, Convert.ToInt32(Scalar(
+        Assert.AreEqual(2, Convert.ToInt32(Scalar(
             "SELECT COUNT(DISTINCT passwordHash) FROM dbo.Account")));
     }
 
@@ -231,7 +233,7 @@ internal sealed class ReviewAccountDatabaseTests : IEmailSender
         Execute(DatabaseName, script);
 
         // Assert
-        TestAssert.AreEqual(0, Convert.ToInt32(Scalar("SELECT COUNT(*) FROM dbo.Friendship")));
+        Assert.AreEqual(0, Convert.ToInt32(Scalar("SELECT COUNT(*) FROM dbo.Friendship")));
     }
 
     private void PrepareFriendship_Apply_AcceptsOnlySelectedPair()
@@ -247,13 +249,13 @@ INSERT dbo.Friendship VALUES (1,3,3,'PENDING','2026-01-01',NULL,NULL);");
         Execute(DatabaseName, FriendshipScript(true));
 
         // Assert
-        TestAssert.AreEqual(1, Convert.ToInt32(Scalar("SELECT COUNT(*) FROM dbo.Friendship "
+        Assert.AreEqual(1, Convert.ToInt32(Scalar("SELECT COUNT(*) FROM dbo.Friendship "
             + "WHERE accountIdA = 1 AND accountIdB = 2 AND requestedByAccountId = 1 "
             + "AND statusCode = 'ACCEPTED' AND respondedAtUtc IS NOT NULL "
             + "AND endedAtUtc IS NULL")));
-        TestAssert.IsTrue(before == UnrelatedRowsSnapshot(),
+        Assert.IsTrue(before == UnrelatedRowsSnapshot(),
             "Unrelated rows must remain unchanged.");
-        TestAssert.AreEqual(2, Convert.ToInt32(Scalar("SELECT COUNT(*) FROM dbo.Friendship")));
+        Assert.AreEqual(2, Convert.ToInt32(Scalar("SELECT COUNT(*) FROM dbo.Friendship")));
     }
 
     private void PrepareFriendship_Reapply_PreservesAllRows()
@@ -265,7 +267,7 @@ INSERT dbo.Friendship VALUES (1,3,3,'PENDING','2026-01-01',NULL,NULL);");
         Execute(DatabaseName, FriendshipScript(true));
 
         // Assert
-        TestAssert.IsTrue(before == DatabaseRowsSnapshot(), "Database rows must remain unchanged.");
+        Assert.IsTrue(before == DatabaseRowsSnapshot(), "Database rows must remain unchanged.");
     }
 
     private void PrepareFriendship_MissingAccount_RejectsWithoutWrites()
@@ -275,11 +277,11 @@ INSERT dbo.Friendship VALUES (1,3,3,'PENDING','2026-01-01',NULL,NULL);");
         string script = FriendshipScript(true).Replace("N'ReviewBeta'", "N'MissingReview'");
 
         // Act
-        SqlException failure = TestAssert.Throws<SqlException>(() => Execute(DatabaseName, script));
+        SqlException failure = Assert.Throws<SqlException>(() => Execute(DatabaseName, script));
 
         // Assert
-        TestAssert.AreEqual(50001, failure.Number);
-        TestAssert.IsTrue(before == DatabaseRowsSnapshot(), "Database rows must remain unchanged.");
+        Assert.AreEqual(50001, failure.Number);
+        Assert.IsTrue(before == DatabaseRowsSnapshot(), "Database rows must remain unchanged.");
     }
 
     private void PrepareFriendship_SameAccount_RejectsWithoutWrites()
@@ -289,18 +291,18 @@ INSERT dbo.Friendship VALUES (1,3,3,'PENDING','2026-01-01',NULL,NULL);");
         string script = FriendshipScript(true).Replace("N'ReviewBeta'", "N'ReviewAlpha'");
 
         // Act
-        SqlException failure = TestAssert.Throws<SqlException>(() => Execute(DatabaseName, script));
+        SqlException failure = Assert.Throws<SqlException>(() => Execute(DatabaseName, script));
 
         // Assert
-        TestAssert.AreEqual(50002, failure.Number);
-        TestAssert.IsTrue(before == DatabaseRowsSnapshot(), "Database rows must remain unchanged.");
+        Assert.AreEqual(50002, failure.Number);
+        Assert.IsTrue(before == DatabaseRowsSnapshot(), "Database rows must remain unchanged.");
     }
 
     private static string FriendshipScript(bool apply)
     {
         string script = File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
             "test-data", "PrepareReviewFriendship.sql"));
-        TestAssert.IsTrue(script.Contains("DECLARE @FirstUsername nvarchar(50) = N'p3p0';")
+        Assert.IsTrue(script.Contains("DECLARE @FirstUsername nvarchar(50) = N'p3p0';")
             && script.Contains("DECLARE @SecondUsername nvarchar(50) = N'cesardoc';")
             && (script.Contains("DECLARE @Apply bit = 0;")
                 || script.Contains("DECLARE @Apply bit = 1;")),
@@ -311,7 +313,7 @@ INSERT dbo.Friendship VALUES (1,3,3,'PENDING','2026-01-01',NULL,NULL);");
             string.Empty,
             RegexOptions.IgnoreCase | RegexOptions.Multiline,
             ReviewScriptRegexTimeout);
-        TestAssert.IsTrue(!Regex.IsMatch(
+        Assert.IsTrue(!Regex.IsMatch(
             script,
             @"^\s*USE\s",
             RegexOptions.IgnoreCase | RegexOptions.Multiline,

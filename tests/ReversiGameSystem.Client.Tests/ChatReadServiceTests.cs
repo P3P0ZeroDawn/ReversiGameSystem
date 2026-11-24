@@ -4,12 +4,15 @@ using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Statistics;
 using ReversiGameSystem.Validation;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class ChatReadServiceTests
+[TestClass]
+public sealed class ChatReadServiceTests
 {
-    internal void TryGetMessages_AuthorizedPlayer_SortsChronologically()
+    [TestMethod]
+    public void TryGetMessages_AuthorizedPlayer_SortsChronologically()
     {
         // Arrange
         DateTime now = new DateTime(
@@ -33,13 +36,14 @@ internal sealed class ChatReadServiceTests
             out IReadOnlyList<ChatMessage> messages);
 
         // Assert
-        TestAssert.AreEqual(ChatReadResult.Success, result);
-        TestAssert.AreEqual(2, messages.Count);
-        TestAssert.AreEqual("Earlier", messages[0].Content);
-        TestAssert.AreEqual("Later", messages[1].Content);
+        Assert.AreEqual(ChatReadResult.Success, result);
+        Assert.AreEqual(2, messages.Count);
+        Assert.AreEqual("Earlier", messages[0].Content);
+        Assert.AreEqual("Later", messages[1].Content);
     }
 
-    internal void TryGetMessages_EmptyConversation_ReturnsEmpty()
+    [TestMethod]
+    public void TryGetMessages_EmptyConversation_ReturnsEmpty()
     {
         // Arrange
         ChatService service = new ChatService(
@@ -51,11 +55,12 @@ internal sealed class ChatReadServiceTests
             out IReadOnlyList<ChatMessage> messages);
 
         // Assert
-        TestAssert.AreEqual(ChatReadResult.Success, result);
-        TestAssert.AreEqual(0, messages.Count);
+        Assert.AreEqual(ChatReadResult.Success, result);
+        Assert.AreEqual(0, messages.Count);
     }
 
-    internal void MessageReceived_OpenAuthorizedChat_AddsOnlyConversationMessage()
+    [TestMethod]
+    public void MessageReceived_OpenAuthorizedChat_AddsOnlyConversationMessage()
     {
         // Arrange
         ChatStore store = new ChatStore();
@@ -84,9 +89,9 @@ internal sealed class ChatReadServiceTests
         reader.MessageReceived -= OnMessage;
 
         // Assert
-        TestAssert.AreEqual(1, received.Count);
-        TestAssert.AreEqual("Ana", received[0].SenderUsername);
-        TestAssert.AreEqual("Hello Pedro", received[0].Content);
+        Assert.AreEqual(1, received.Count);
+        Assert.AreEqual("Ana", received[0].SenderUsername);
+        Assert.AreEqual("Hello Pedro", received[0].Content);
     }
 
     private static MatchSession CreateSession(string code, DiscColor localColor)

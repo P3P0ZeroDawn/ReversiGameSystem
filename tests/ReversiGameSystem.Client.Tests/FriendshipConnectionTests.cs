@@ -6,12 +6,15 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Services;
 using Proxy = ReversiGameSystem.ServerProxy;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal static class FriendshipConnectionTests
+[TestClass]
+public sealed class FriendshipConnectionTests
 {
-    internal static void GeneratedProxy_ReceivesPresenceAndPropagatesTypedSessionFault()
+    [TestMethod]
+    public void GeneratedProxy_ReceivesPresenceAndPropagatesTypedSessionFault()
     {
         string address = "net.pipe://localhost/ReversiFriendshipTests/" + Guid.NewGuid().ToString("N");
         FriendshipStubService service = new();
@@ -28,28 +31,28 @@ internal static class FriendshipConnectionTests
             host.Open();
             using FriendshipClient client = new(NullLogger<FriendshipClient>.Instance,
                 context => new Proxy.FriendshipServiceClient(context, CreateBinding(), new EndpointAddress(address)));
-            TestAssert.AreEqual(false, client.GetFriends("test-session")
+            Assert.AreEqual(false, client.GetFriends("test-session")
                 .GetAwaiter().GetResult().Friends[0].IsOnline);
-            TestAssert.AreEqual(true, Guid.TryParse(service.LastCorrelationId, out _));
+            Assert.AreEqual(true, Guid.TryParse(service.LastCorrelationId, out _));
             TestAssert.IsNotNull(service.Callback).OnFriendChanged(2, Proxy.FriendChange.Connected);
-            TestAssert.AreEqual(true, SpinWait.SpinUntil(
+            Assert.AreEqual(true, SpinWait.SpinUntil(
                 () => client.ReadFriends()[0].IsOnline, TimeSpan.FromSeconds(5)));
             service.Callback!.OnFriendChanged(2, Proxy.FriendChange.Disconnected);
-            TestAssert.AreEqual(true, SpinWait.SpinUntil(
+            Assert.AreEqual(true, SpinWait.SpinUntil(
                 () => !client.ReadFriends()[0].IsOnline, TimeSpan.FromSeconds(5)));
             service.Callback.OnFriendChanged(2, Proxy.FriendChange.Removed);
-            TestAssert.AreEqual(true, SpinWait.SpinUntil(
+            Assert.AreEqual(true, SpinWait.SpinUntil(
                 () => client.ReadFriends().Length == 0, TimeSpan.FromSeconds(5)));
             service.RejectSession = true;
             FriendshipResult rejected = client.GetFriends("test-session").GetAwaiter().GetResult();
-            TestAssert.AreEqual(FriendshipStatus.InvalidSession, rejected.Status);
-            TestAssert.AreEqual(false, client.IsConnected);
+            Assert.AreEqual(FriendshipStatus.InvalidSession, rejected.Status);
+            Assert.AreEqual(false, client.IsConnected);
             service.RejectSession = false;
-            TestAssert.AreEqual(1, client.GetFriends("test-session")
+            Assert.AreEqual(1, client.GetFriends("test-session")
                 .GetAwaiter().GetResult().Friends.Length);
             client.Close();
-            TestAssert.AreEqual(false, client.IsConnected);
-            TestAssert.AreEqual(0, client.ReadFriends().Length);
+            Assert.AreEqual(false, client.IsConnected);
+            Assert.AreEqual(0, client.ReadFriends().Length);
             host.Close();
         }
         finally
@@ -58,7 +61,8 @@ internal static class FriendshipConnectionTests
         }
     }
 
-    internal static void Keepalive_CloseWhileRefreshPending_DoesNotReopenChannel()
+    [TestMethod]
+    public void Keepalive_CloseWhileRefreshPending_DoesNotReopenChannel()
     {
         string address = "net.pipe://localhost/ReversiFriendshipTests/" + Guid.NewGuid().ToString("N");
         FriendshipStubService service = new();
@@ -76,21 +80,21 @@ internal static class FriendshipConnectionTests
                 context => new Proxy.FriendshipServiceClient(
                     context, CreateBinding(), new EndpointAddress(address)));
             client.GetFriends("test-session").GetAwaiter().GetResult();
-            TestAssert.AreEqual(true, client.IsConnected);
-            TestAssert.AreEqual(1, client.ReadFriends().Length);
+            Assert.AreEqual(true, client.IsConnected);
+            Assert.AreEqual(1, client.ReadFriends().Length);
 
             using ManualResetEventSlim started = new();
             using ManualResetEventSlim release = new();
             service.RequestStarted = started;
             service.ContinueRequest = release;
             Task refresh = client.GetFriends("test-session");
-            TestAssert.AreEqual(true, started.Wait(TimeSpan.FromSeconds(5)));
+            Assert.AreEqual(true, started.Wait(TimeSpan.FromSeconds(5)));
             Task close = Task.Run(() => client.Close());
-            TestAssert.AreEqual(false, close.Wait(TimeSpan.FromMilliseconds(100)));
+            Assert.AreEqual(false, close.Wait(TimeSpan.FromMilliseconds(100)));
             release.Set();
             Task.WhenAll(refresh, close).GetAwaiter().GetResult();
-            TestAssert.AreEqual(false, client.IsConnected);
-            TestAssert.AreEqual(0, client.ReadFriends().Length);
+            Assert.AreEqual(false, client.IsConnected);
+            Assert.AreEqual(0, client.ReadFriends().Length);
             host.Close();
         }
         finally

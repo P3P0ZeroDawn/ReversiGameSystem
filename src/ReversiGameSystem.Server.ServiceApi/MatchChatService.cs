@@ -33,7 +33,20 @@ public class MatchChatService : IMatchChatService
             ?? throw new ArgumentNullException(nameof(callbackSubscriptions));
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Authorizes participant access and registers the duplex callback channel for match chat.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="matchId">The persistent match identifier.</param>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public void OpenChatChannel(string sessionToken, long matchId)
     {
         ChatChannelAccess access = _applicationService.PrepareChatChannel(
@@ -48,7 +61,25 @@ public class MatchChatService : IMatchChatService
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Validates, moderates, persists, and broadcasts a participant chat message.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="matchId">The persistent match identifier.</param>
+    /// <param name="content">The proposed chat message text.</param>
+    /// <returns>The committed chat entry.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ChatFault}">
+    /// A declared chat moderation or validation rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public MatchChatEntry SendChatMessage(
         string sessionToken,
         long matchId,
@@ -75,7 +106,21 @@ public class MatchChatService : IMatchChatService
         return contractMessage;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Loads the persisted chat history for an authorized match participant.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="matchId">The persistent match identifier.</param>
+    /// <returns>The ordered chat entries for the match.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{MatchFault}">
+    /// A declared match rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public MatchChatEntry[] GetChatHistory(string sessionToken, long matchId)
     {
         ChatHistory history = _applicationService.LoadChatHistory(

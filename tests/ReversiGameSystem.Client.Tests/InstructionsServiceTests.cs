@@ -2,27 +2,32 @@ using System;
 using System.Collections.Generic;
 using System.Resources;
 using ReversiGameSystem.Services;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class InstructionsServiceTests
+[TestClass]
+public sealed class InstructionsServiceTests
 {
-    internal void LoadGeneral_CompleteResources_ReturnsContent()
+    [TestMethod]
+    public void LoadGeneral_CompleteResources_ReturnsContent()
     {
         InstructionsService service = CreateService("{0} / {1} / {2}");
         InstructionsContent content = service.LoadGeneral();
-        TestAssert.AreEqual("How to play", content.Title);
-        TestAssert.AreEqual("Rules", content.Message);
+        Assert.AreEqual("How to play", content.Title);
+        Assert.AreEqual("Rules", content.Message);
     }
 
-    internal void LoadForMatch_CompleteResources_AddsContext()
+    [TestMethod]
+    public void LoadForMatch_CompleteResources_AddsContext()
     {
         InstructionsService service = CreateService("{0} / {1} / {2}");
         InstructionsContent content = service.LoadForMatch("dark", 40);
-        TestAssert.AreEqual("dark / 40 / Rules", content.Message);
+        Assert.AreEqual("dark / 40 / Rules", content.Message);
     }
 
-    internal void LoadGeneral_MissingResource_PropagatesFailure()
+    [TestMethod]
+    public void LoadGeneral_MissingResource_PropagatesFailure()
     {
         InstructionsService service = new InstructionsService(key => string.Empty);
         bool failed = false;
@@ -34,10 +39,11 @@ internal sealed class InstructionsServiceTests
         {
             failed = true;
         }
-        TestAssert.AreEqual(true, failed);
+        Assert.AreEqual(true, failed);
     }
 
-    internal void LoadForMatch_InvalidFormat_PropagatesFailure()
+    [TestMethod]
+    public void LoadForMatch_InvalidFormat_PropagatesFailure()
     {
         InstructionsService service = CreateService("{3}");
         bool failed = false;
@@ -49,7 +55,7 @@ internal sealed class InstructionsServiceTests
         {
             failed = true;
         }
-        TestAssert.AreEqual(true, failed);
+        Assert.AreEqual(true, failed);
     }
 
     private static InstructionsService CreateService(string contextFormat)

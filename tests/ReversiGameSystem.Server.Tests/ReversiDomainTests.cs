@@ -17,18 +17,18 @@ public sealed class ReversiDomainTests
         int[] board = ReversiEngine.CreateInitialBoard();
 
         // Assert
-        TestAssert.AreEqual(ReversiEngine.CellCount, board.Length);
-        TestAssert.AreEqual(ReversiEngine.White, board[(3 * 8) + 3]);
-        TestAssert.AreEqual(ReversiEngine.Black, board[(3 * 8) + 4]);
-        TestAssert.AreEqual(ReversiEngine.Black, board[(4 * 8) + 3]);
-        TestAssert.AreEqual(ReversiEngine.White, board[(4 * 8) + 4]);
+        Assert.AreEqual(ReversiEngine.CellCount, board.Length);
+        Assert.AreEqual(ReversiEngine.White, board[(3 * 8) + 3]);
+        Assert.AreEqual(ReversiEngine.Black, board[(3 * 8) + 4]);
+        Assert.AreEqual(ReversiEngine.Black, board[(4 * 8) + 3]);
+        Assert.AreEqual(ReversiEngine.White, board[(4 * 8) + 4]);
     }
 
     [TestMethod]
     public void ApplyMove_InvalidBoardArray_ThrowsArgumentException()
     {
         // Arrange & Act & Assert
-        TestAssert.Throws<ArgumentException>(
+        Assert.Throws<ArgumentException>(
             () =>
             {
                 ReversiEngine.ApplyMove(new int[10], 2, 3, ReversiEngine.Black);
@@ -48,12 +48,12 @@ public sealed class ReversiDomainTests
         int[] noCaptures = ReversiEngine.ApplyMove(board, 0, 0, ReversiEngine.Black);
 
         // Assert
-        TestAssert.AreEqual(0, invalidDisc.Length);
-        TestAssert.AreEqual(0, outOfBounds.Length);
-        TestAssert.AreEqual(0, occupied.Length);
-        TestAssert.AreEqual(0, noCaptures.Length);
-        TestAssert.AreEqual(ReversiEngine.Empty, board[(2 * 8) + 3]);
-        TestAssert.AreEqual(ReversiEngine.White, board[(3 * 8) + 3]);
+        Assert.AreEqual(0, invalidDisc.Length);
+        Assert.AreEqual(0, outOfBounds.Length);
+        Assert.AreEqual(0, occupied.Length);
+        Assert.AreEqual(0, noCaptures.Length);
+        Assert.AreEqual(ReversiEngine.Empty, board[(2 * 8) + 3]);
+        Assert.AreEqual(ReversiEngine.White, board[(3 * 8) + 3]);
     }
 
     [TestMethod]
@@ -66,10 +66,10 @@ public sealed class ReversiDomainTests
         int[] flipped = ReversiEngine.ApplyMove(board, 2, 3, ReversiEngine.Black);
 
         // Assert
-        TestAssert.AreEqual(1, flipped.Length);
-        TestAssert.AreEqual((3 * 8) + 3, flipped[0]);
-        TestAssert.AreEqual(ReversiEngine.Black, board[(2 * 8) + 3]);
-        TestAssert.AreEqual(ReversiEngine.Black, board[(3 * 8) + 3]);
+        Assert.AreEqual(1, flipped.Length);
+        Assert.AreEqual((3 * 8) + 3, flipped[0]);
+        Assert.AreEqual(ReversiEngine.Black, board[(2 * 8) + 3]);
+        Assert.AreEqual(ReversiEngine.Black, board[(3 * 8) + 3]);
     }
 
     [TestMethod]
@@ -88,11 +88,11 @@ public sealed class ReversiDomainTests
         int[] flipped = ReversiEngine.ApplyMove(board, 3, 3, ReversiEngine.Black);
 
         // Assert
-        TestAssert.AreEqual(3, flipped.Length);
-        TestAssert.AreEqual(ReversiEngine.Black, board[(3 * 8) + 3]);
-        TestAssert.AreEqual(ReversiEngine.Black, board[(3 * 8) + 4]);
-        TestAssert.AreEqual(ReversiEngine.Black, board[(4 * 8) + 3]);
-        TestAssert.AreEqual(ReversiEngine.Black, board[(4 * 8) + 4]);
+        Assert.AreEqual(3, flipped.Length);
+        Assert.AreEqual(ReversiEngine.Black, board[(3 * 8) + 3]);
+        Assert.AreEqual(ReversiEngine.Black, board[(3 * 8) + 4]);
+        Assert.AreEqual(ReversiEngine.Black, board[(4 * 8) + 3]);
+        Assert.AreEqual(ReversiEngine.Black, board[(4 * 8) + 4]);
     }
 
     [TestMethod]
@@ -103,13 +103,13 @@ public sealed class ReversiDomainTests
         int[] emptyBoard = new int[ReversiEngine.CellCount];
 
         // Act & Assert
-        TestAssert.IsTrue(
+        Assert.IsTrue(
             ReversiEngine.HasValidMoves(initialBoard, ReversiEngine.Black),
             "Expected Black to have valid opening moves.");
-        TestAssert.IsTrue(
+        Assert.IsTrue(
             ReversiEngine.HasValidMoves(initialBoard, ReversiEngine.White),
             "Expected White to have valid moves on initial board.");
-        TestAssert.IsTrue(
+        Assert.IsTrue(
             !ReversiEngine.HasValidMoves(emptyBoard, ReversiEngine.Black),
             "Expected no valid moves on an empty board.");
     }
@@ -125,8 +125,8 @@ public sealed class ReversiDomainTests
         bool illegalCorner = ReversiEngine.IsLegalMove(board, 0, 0, ReversiEngine.Black);
 
         // Assert
-        TestAssert.IsTrue(legalOpening, "Expected (2, 3) to be a legal move for Black.");
-        TestAssert.IsTrue(!illegalCorner, "Expected (0, 0) to be illegal on initial board.");
-        TestAssert.AreEqual(ReversiEngine.Empty, board[(2 * 8) + 3]);
+        Assert.IsTrue(legalOpening, "Expected (2, 3) to be a legal move for Black.");
+        Assert.IsTrue(!illegalCorner, "Expected (0, 0) to be illegal on initial board.");
+        Assert.AreEqual(ReversiEngine.Empty, board[(2 * 8) + 3]);
     }
 }

@@ -5,7 +5,6 @@ using ReversiGameSystem.Server.Persistence.Configuration;
 
 namespace ReversiGameSystem.Server.Persistence.Model;
 
-/// <summary>Creates the EF connection from server configuration outside source control.</summary>
 internal static class DatabaseConnectionFactory
 {
     internal const string ConnectionStringVariable = "REVERSI_DB_CONNECTION_STRING";

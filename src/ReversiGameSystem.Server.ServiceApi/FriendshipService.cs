@@ -43,12 +43,21 @@ public sealed class FriendshipService : IFriendshipService
             ?? throw new ArgumentNullException(nameof(subscriptions));
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Authorizes the caller and opens a duplex callback channel for friendship presence updates.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public void OpenFriendshipChannel(string sessionToken)
     {
         FriendshipResult<AuthenticatedSession> accessResult =
             _applicationService.EvaluateChannelAccess(sessionToken);
-        ThrowFailure(accessResult.Status);
+        ThrowFaultIfFailed(accessResult.Status);
 
         AuthenticatedSession session = accessResult.Value
             ?? throw new InvalidOperationException(
@@ -67,12 +76,22 @@ public sealed class FriendshipService : IFriendshipService
             presenceRegistration);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Returns the confirmed friends of the authenticated caller along with online presence.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <returns>The caller's confirmed friend summaries.</returns>
+    /// <exception cref="FaultException{SessionFault}">
+    /// A declared session rejection occurred.
+    /// </exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// A controlled technical failure prevented the server from completing the operation.
+    /// </exception>
     public FriendSummary[] GetFriends(string sessionToken)
     {
         FriendshipResult<FriendAccount[]> result =
             _applicationService.ReadConfirmedFriends(sessionToken);
-        ThrowFailure(result.Status);
+        ThrowFaultIfFailed(result.Status);
 
         FriendAccount[] friends = result.Value
             ?? throw new InvalidOperationException(
@@ -97,37 +116,75 @@ public sealed class FriendshipService : IFriendshipService
         return summaries;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Searches for players matching the provided search text.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="searchText">The username search text.</param>
+    /// <returns>Matching player summaries.</returns>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// The operation is not currently available.
+    /// </exception>
     public PlayerSummary[] FindPlayers(string sessionToken, string searchText)
     {
         throw ServiceFaultFactory.CreateUnexpectedFault(CorrelationContext.GetOrCreate());
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Sends a friend request to the specified target account.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="recipientAccountId">The target player's account identifier.</param>
+    /// <returns>The created friend request.</returns>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// The operation is not currently available.
+    /// </exception>
     public FriendRequest SendFriendRequest(string sessionToken, long recipientAccountId)
     {
         throw ServiceFaultFactory.CreateUnexpectedFault(CorrelationContext.GetOrCreate());
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Returns pending incoming and outgoing friend requests for the caller.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <returns>The pending friend requests.</returns>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// The operation is not currently available.
+    /// </exception>
     public FriendRequest[] GetPendingFriendRequests(string sessionToken)
     {
         throw ServiceFaultFactory.CreateUnexpectedFault(CorrelationContext.GetOrCreate());
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Accepts or declines a pending friend request.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="requestId">The friend request identifier.</param>
+    /// <param name="accept"><c>true</c> to accept; <c>false</c> to decline.</param>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// The operation is not currently available.
+    /// </exception>
     public void RespondToFriendRequest(string sessionToken, string requestId, bool accept)
     {
         throw ServiceFaultFactory.CreateUnexpectedFault(CorrelationContext.GetOrCreate());
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Removes an existing friend relationship.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <param name="friendAccountId">The friend's account identifier.</param>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// The operation is not currently available.
+    /// </exception>
     public void RemoveFriend(string sessionToken, long friendAccountId)
     {
         throw ServiceFaultFactory.CreateUnexpectedFault(CorrelationContext.GetOrCreate());
     }
 
-    private static void ThrowFailure(FriendshipStatus status)
+    private static void ThrowFaultIfFailed(FriendshipStatus status)
     {
         switch (status)
         {

@@ -6,9 +6,6 @@ using ReversiGameSystem.Server.Domain.Accounts;
 
 namespace ReversiGameSystem.Server.Application.Accounts;
 
-/// <summary>
-/// Coordinates verified login, guest access, and session revocation.
-/// </summary>
 public sealed class SessionApplicationService
 {
     private const string ActiveStatusCode = "ACTIVE";
@@ -20,13 +17,6 @@ public sealed class SessionApplicationService
     private readonly VerificationCodeService _verificationCodes;
     private readonly SessionStore _sessions;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SessionApplicationService"/> class.
-    /// </summary>
-    /// <param name="accounts">The authoritative account repository.</param>
-    /// <param name="verificationCodes">The durable verification workflow.</param>
-    /// <param name="sessions">The in-memory active session store.</param>
-    /// <exception cref="ArgumentNullException">A required dependency is absent.</exception>
     public SessionApplicationService(
         IAccountRepository accounts,
         VerificationCodeService verificationCodes,
@@ -38,12 +28,6 @@ public sealed class SessionApplicationService
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
     }
 
-    /// <summary>
-    /// Validates credentials and sends a single-use login verification code.
-    /// </summary>
-    /// <param name="loginIdentifier">The account username or email address.</param>
-    /// <param name="password">The account password.</param>
-    /// <returns>The code expiration instant or a declared failure status.</returns>
     public SessionResult<DateTime> RequestLoginCode(
         string loginIdentifier,
         string password)
@@ -51,7 +35,7 @@ public sealed class SessionApplicationService
         SessionResult<LoginAccount> accountResult = ValidateCredentials(
             loginIdentifier,
             password);
-        if (accountResult.Status != SessionOperationStatus.Success || accountResult.Value == null)
+        if (accountResult.Status != SessionStatus.Success || accountResult.Value == null)
         {
             return new SessionResult<DateTime>(accountResult.Status);
         }
@@ -62,20 +46,14 @@ public sealed class SessionApplicationService
         return new SessionResult<DateTime>(expiresAtUtc);
     }
 
-    /// <summary>
-    /// Consumes a pending login code and creates an authenticated session.
-    /// </summary>
-    /// <param name="loginIdentifier">The account username or email address.</param>
-    /// <param name="verificationCode">The verification code delivered to the account owner.</param>
-    /// <returns>The created authenticated session or a declared failure status.</returns>
     public SessionResult<AuthenticatedSession> CompleteLogin(
         string loginIdentifier,
         string verificationCode)
     {
         SessionResult<LoginAccount> initialResult = ResolveAccount(
             loginIdentifier,
-            SessionOperationStatus.InvalidVerificationCode);
-        if (initialResult.Status != SessionOperationStatus.Success || initialResult.Value == null)
+            SessionStatus.InvalidVerificationCode);
+        if (initialResult.Status != SessionStatus.Success || initialResult.Value == null)
         {
             return new SessionResult<AuthenticatedSession>(initialResult.Status);
         }
@@ -89,27 +67,22 @@ public sealed class SessionApplicationService
             verificationCode);
         if (verification != VerificationStatus.Accepted)
         {
-            SessionOperationStatus failureStatus =
+            SessionStatus failureStatus =
                 verification == VerificationStatus.Expired
-                    ? SessionOperationStatus.ExpiredVerificationCode
-                    : SessionOperationStatus.InvalidVerificationCode;
+                    ? SessionStatus.ExpiredVerificationCode
+                    : SessionStatus.InvalidVerificationCode;
             return new SessionResult<AuthenticatedSession>(failureStatus);
         }
 
         return CreateSessionAfterVerification(loginIdentifier, initialIdentity);
     }
 
-    /// <summary>
-    /// Validates and reserves a temporary guest identity.
-    /// </summary>
-    /// <param name="displayName">The proposed guest name without the Guest- prefix.</param>
-    /// <returns>The created guest session or a declared failure status.</returns>
     public SessionResult<GuestSession> OpenGuestSession(string displayName)
     {
         string normalizedName = displayName?.Trim() ?? string.Empty;
         if (UsernamePolicy.Validate(normalizedName) != UsernameValidationError.None)
         {
-            return new SessionResult<GuestSession>(SessionOperationStatus.InvalidGuestName);
+            return new SessionResult<GuestSession>(SessionStatus.InvalidGuestName);
         }
 
         GuestSession guestSession = new GuestSession(
@@ -118,26 +91,21 @@ public sealed class SessionApplicationService
             _sessions.CalculateExpirationUtc());
         if (!_sessions.TryReserveGuest(guestSession))
         {
-            return new SessionResult<GuestSession>(SessionOperationStatus.GuestNameUnavailable);
+            return new SessionResult<GuestSession>(SessionStatus.GuestNameUnavailable);
         }
 
         return new SessionResult<GuestSession>(guestSession);
     }
 
-    /// <summary>
-    /// Revokes an authenticated or guest session idempotently.
-    /// </summary>
-    /// <param name="sessionToken">The opaque session token.</param>
-    /// <returns>The expected closure status.</returns>
-    public SessionOperationStatus CloseSession(string sessionToken)
+    public SessionStatus CloseSession(string sessionToken)
     {
         if (string.IsNullOrWhiteSpace(sessionToken))
         {
-            return SessionOperationStatus.MissingSessionToken;
+            return SessionStatus.MissingSessionToken;
         }
 
         _sessions.RevokeSession(sessionToken);
-        return SessionOperationStatus.Success;
+        return SessionStatus.Success;
     }
 
     private SessionResult<LoginAccount> ValidateCredentials(
@@ -146,8 +114,8 @@ public sealed class SessionApplicationService
     {
         SessionResult<LoginAccount> result = ResolveAccount(
             loginIdentifier,
-            SessionOperationStatus.InvalidCredentials);
-        if (result.Status != SessionOperationStatus.Success || result.Value == null)
+            SessionStatus.InvalidCredentials);
+        if (result.Status != SessionStatus.Success || result.Value == null)
         {
             return result;
         }
@@ -160,12 +128,12 @@ public sealed class SessionApplicationService
                 account.PasswordHash);
         if (!isPasswordValid)
         {
-            return new SessionResult<LoginAccount>(SessionOperationStatus.InvalidCredentials);
+            return new SessionResult<LoginAccount>(SessionStatus.InvalidCredentials);
         }
 
         if (!string.Equals(account.StatusCode, ActiveStatusCode, StringComparison.Ordinal))
         {
-            return new SessionResult<LoginAccount>(SessionOperationStatus.InactiveAccount);
+            return new SessionResult<LoginAccount>(SessionStatus.InactiveAccount);
         }
 
         return result;
@@ -173,7 +141,7 @@ public sealed class SessionApplicationService
 
     private SessionResult<LoginAccount> ResolveAccount(
         string loginIdentifier,
-        SessionOperationStatus missingAccountStatus)
+        SessionStatus missingAccountStatus)
     {
         string identifier = loginIdentifier?.Trim() ?? string.Empty;
         if (identifier.Length == 0 || identifier.Length > MaximumLoginIdentifierLength)
@@ -196,8 +164,8 @@ public sealed class SessionApplicationService
     {
         SessionResult<LoginAccount> currentResult = ResolveAccount(
             loginIdentifier,
-            SessionOperationStatus.InvalidVerificationCode);
-        if (currentResult.Status != SessionOperationStatus.Success || currentResult.Value == null)
+            SessionStatus.InvalidVerificationCode);
+        if (currentResult.Status != SessionStatus.Success || currentResult.Value == null)
         {
             return new SessionResult<AuthenticatedSession>(currentResult.Status);
         }
@@ -213,13 +181,13 @@ public sealed class SessionApplicationService
         if (!sameIdentity)
         {
             return new SessionResult<AuthenticatedSession>(
-                SessionOperationStatus.InvalidVerificationCode);
+                SessionStatus.InvalidVerificationCode);
         }
 
         if (!string.Equals(currentAccount.StatusCode, ActiveStatusCode, StringComparison.Ordinal))
         {
             return new SessionResult<AuthenticatedSession>(
-                SessionOperationStatus.InactiveAccount);
+                SessionStatus.InactiveAccount);
         }
 
         AuthenticatedSession session = StoreNewAuthenticatedSession(currentAccount);

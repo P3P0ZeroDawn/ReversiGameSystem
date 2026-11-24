@@ -26,14 +26,14 @@ public sealed class GameplayApplicationServiceTests
         context.ApplicationService.TrackStartedMatch(match);
 
         // Assert
-        TestAssert.AreEqual(0L, match.MatchStateVersion);
-        TestAssert.AreEqual<int?>(1, match.CurrentTurnSeatNumber);
-        TestAssert.AreEqual(64, match.Board.Length);
-        TestAssert.AreEqual(ReversiEngine.White, match.Board[27]);
-        TestAssert.AreEqual(ReversiEngine.Black, match.Board[28]);
-        TestAssert.AreEqual(ReversiEngine.Black, match.Board[35]);
-        TestAssert.AreEqual(ReversiEngine.White, match.Board[36]);
-        TestAssert.AreEqual(context.Clock.UtcNow, match.TurnStartedAtUtc);
+        Assert.AreEqual(0L, match.MatchStateVersion);
+        Assert.AreEqual<int?>(1, match.CurrentTurnSeatNumber);
+        Assert.AreEqual(64, match.Board.Length);
+        Assert.AreEqual(ReversiEngine.White, match.Board[27]);
+        Assert.AreEqual(ReversiEngine.Black, match.Board[28]);
+        Assert.AreEqual(ReversiEngine.Black, match.Board[35]);
+        Assert.AreEqual(ReversiEngine.White, match.Board[36]);
+        Assert.AreEqual(context.Clock.UtcNow, match.TurnStartedAtUtc);
     }
 
     [TestMethod]
@@ -48,7 +48,7 @@ public sealed class GameplayApplicationServiceTests
             null);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.MissingPlacement, result.Status);
+        Assert.AreEqual(MatchStatus.MissingPlacement, result.Status);
     }
 
     [TestMethod]
@@ -64,7 +64,7 @@ public sealed class GameplayApplicationServiceTests
             placement);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.InvalidMatchStateVersion, result.Status);
+        Assert.AreEqual(MatchStatus.InvalidMatchStateVersion, result.Status);
     }
 
     [TestMethod]
@@ -80,7 +80,7 @@ public sealed class GameplayApplicationServiceTests
             placement);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.InvalidSession, result.Status);
+        Assert.AreEqual(MatchStatus.InvalidSession, result.Status);
     }
 
     [TestMethod]
@@ -98,7 +98,7 @@ public sealed class GameplayApplicationServiceTests
             placement);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.NotPlayersTurn, result.Status);
+        Assert.AreEqual(MatchStatus.NotPlayersTurn, result.Status);
     }
 
     [TestMethod]
@@ -116,7 +116,7 @@ public sealed class GameplayApplicationServiceTests
             placement);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.StaleMatchStateVersion, result.Status);
+        Assert.AreEqual(MatchStatus.StaleMatchStateVersion, result.Status);
     }
 
     [TestMethod]
@@ -134,7 +134,7 @@ public sealed class GameplayApplicationServiceTests
             placement);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.InvalidPosition, result.Status);
+        Assert.AreEqual(MatchStatus.InvalidPosition, result.Status);
     }
 
     [TestMethod]
@@ -153,16 +153,16 @@ public sealed class GameplayApplicationServiceTests
         context.ApplicationService.SynchronizePendingMatches();
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Success, result.Status);
+        Assert.AreEqual(MatchStatus.Success, result.Status);
         Match updated = result.Value
             ?? throw new InvalidOperationException("The result must contain the updated match.");
-        TestAssert.AreEqual(1L, updated.MatchStateVersion);
-        TestAssert.AreEqual<int?>(2, updated.CurrentTurnSeatNumber);
-        TestAssert.AreEqual(ReversiEngine.Black, updated.Board[2 * 8 + 3]);
-        TestAssert.AreEqual(ReversiEngine.Black, updated.Board[3 * 8 + 3]);
-        TestAssert.AreEqual(1, updated.Moves.Count);
-        TestAssert.AreEqual("Player", updated.LastMove?.Origin ?? string.Empty);
-        TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(1L, updated.MatchStateVersion);
+        Assert.AreEqual<int?>(2, updated.CurrentTurnSeatNumber);
+        Assert.AreEqual(ReversiEngine.Black, updated.Board[2 * 8 + 3]);
+        Assert.AreEqual(ReversiEngine.Black, updated.Board[3 * 8 + 3]);
+        Assert.AreEqual(1, updated.Moves.Count);
+        Assert.AreEqual("Player", updated.LastMove?.Origin ?? string.Empty);
+        Assert.AreEqual(1, context.Repository.SynchronizeCalls);
     }
 
     [TestMethod]
@@ -180,22 +180,22 @@ public sealed class GameplayApplicationServiceTests
             new MatchPlacement(match.Id, 0, 2, 3));
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Success, result.Status);
-        TestAssert.AreEqual(1L, match.MatchStateVersion);
-        TestAssert.AreEqual(0, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(MatchStatus.Success, result.Status);
+        Assert.AreEqual(1L, match.MatchStateVersion);
+        Assert.AreEqual(0, context.Repository.SynchronizeCalls);
 
         context.ApplicationService.SynchronizePendingMatches();
-        TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(1, context.Repository.SynchronizeCalls);
 
         context.ApplicationService.SynchronizePendingMatches();
-        TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(1, context.Repository.SynchronizeCalls);
 
         context.Repository.SynchronizationAvailable = true;
         context.Clock.Advance(TimeSpan.FromSeconds(5));
         context.ApplicationService.SynchronizePendingMatches();
 
-        TestAssert.AreEqual(2, context.Repository.SynchronizeCalls);
-        TestAssert.AreEqual(1L, context.Repository.LastSynchronizedVersion);
+        Assert.AreEqual(2, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(1L, context.Repository.LastSynchronizedVersion);
     }
 
     [TestMethod]
@@ -214,8 +214,8 @@ public sealed class GameplayApplicationServiceTests
             placement);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Success, result.Status);
-        TestAssert.AreEqual(0, match.Participants[0].ConsecutiveTimeoutCount);
+        Assert.AreEqual(MatchStatus.Success, result.Status);
+        Assert.AreEqual(0, match.Participants[0].ConsecutiveTimeoutCount);
     }
 
     [TestMethod]
@@ -232,7 +232,7 @@ public sealed class GameplayApplicationServiceTests
             match.Id);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Unauthorized, result.Status);
+        Assert.AreEqual(MatchStatus.Unauthorized, result.Status);
     }
 
     [TestMethod]
@@ -250,15 +250,15 @@ public sealed class GameplayApplicationServiceTests
         context.ApplicationService.SynchronizePendingMatches();
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Success, result.Status);
+        Assert.AreEqual(MatchStatus.Success, result.Status);
         Match concluded = result.Value ?? throw new InvalidOperationException("Value expected.");
-        TestAssert.AreEqual("Finished", concluded.State);
-        TestAssert.AreEqual(1L, concluded.MatchStateVersion);
-        TestAssert.AreEqual("ABANDONMENT", concluded.EndReason);
-        TestAssert.AreEqual<int?>(1, concluded.AbandoningSeatNumber);
-        TestAssert.AreEqual<int?>(2, concluded.WinnerSeatNumber);
-        TestAssert.AreEqual<int?>(null, concluded.CurrentTurnSeatNumber);
-        TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
+        Assert.AreEqual("Finished", concluded.State);
+        Assert.AreEqual(1L, concluded.MatchStateVersion);
+        Assert.AreEqual("ABANDONMENT", concluded.EndReason);
+        Assert.AreEqual<int?>(1, concluded.AbandoningSeatNumber);
+        Assert.AreEqual<int?>(2, concluded.WinnerSeatNumber);
+        Assert.AreEqual<int?>(null, concluded.CurrentTurnSeatNumber);
+        Assert.AreEqual(1, context.Repository.SynchronizeCalls);
     }
 
     [TestMethod]
@@ -278,9 +278,9 @@ public sealed class GameplayApplicationServiceTests
         context.ApplicationService.SynchronizePendingMatches();
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Success, secondForfeit.Status);
-        TestAssert.AreEqual("Finished", secondForfeit.Value?.State);
-        TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(MatchStatus.Success, secondForfeit.Status);
+        Assert.AreEqual("Finished", secondForfeit.Value?.State);
+        Assert.AreEqual(1, context.Repository.SynchronizeCalls);
     }
 
     [TestMethod]
@@ -296,8 +296,8 @@ public sealed class GameplayApplicationServiceTests
         Match[] updated = context.ApplicationService.ProcessTurnTimeouts();
 
         // Assert
-        TestAssert.AreEqual(0, updated.Length);
-        TestAssert.AreEqual(0, match.Participants[0].ConsecutiveTimeoutCount);
+        Assert.AreEqual(0, updated.Length);
+        Assert.AreEqual(0, match.Participants[0].ConsecutiveTimeoutCount);
     }
 
     [TestMethod]
@@ -314,12 +314,12 @@ public sealed class GameplayApplicationServiceTests
         context.ApplicationService.SynchronizePendingMatches();
 
         // Assert
-        TestAssert.AreEqual(1, updated.Length);
-        TestAssert.AreEqual(1, match.Participants[0].ConsecutiveTimeoutCount);
-        TestAssert.AreEqual(1L, match.MatchStateVersion);
-        TestAssert.AreEqual<int?>(2, match.CurrentTurnSeatNumber);
-        TestAssert.AreEqual("Timeout", match.LastMove?.Origin ?? string.Empty);
-        TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(1, updated.Length);
+        Assert.AreEqual(1, match.Participants[0].ConsecutiveTimeoutCount);
+        Assert.AreEqual(1L, match.MatchStateVersion);
+        Assert.AreEqual<int?>(2, match.CurrentTurnSeatNumber);
+        Assert.AreEqual("Timeout", match.LastMove?.Origin ?? string.Empty);
+        Assert.AreEqual(1, context.Repository.SynchronizeCalls);
     }
 
     [TestMethod]
@@ -337,14 +337,14 @@ public sealed class GameplayApplicationServiceTests
         context.ApplicationService.SynchronizePendingMatches();
 
         // Assert
-        TestAssert.AreEqual(1, updated.Length);
-        TestAssert.AreEqual(3, match.Participants[0].ConsecutiveTimeoutCount);
-        TestAssert.AreEqual("Finished", match.State);
-        TestAssert.AreEqual("INACTIVITY", match.EndReason);
-        TestAssert.AreEqual<int?>(2, match.WinnerSeatNumber);
-        TestAssert.AreEqual<int?>(1, match.AbandoningSeatNumber);
-        TestAssert.AreEqual<int?>(null, match.CurrentTurnSeatNumber);
-        TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(1, updated.Length);
+        Assert.AreEqual(3, match.Participants[0].ConsecutiveTimeoutCount);
+        Assert.AreEqual("Finished", match.State);
+        Assert.AreEqual("INACTIVITY", match.EndReason);
+        Assert.AreEqual<int?>(2, match.WinnerSeatNumber);
+        Assert.AreEqual<int?>(1, match.AbandoningSeatNumber);
+        Assert.AreEqual<int?>(null, match.CurrentTurnSeatNumber);
+        Assert.AreEqual(1, context.Repository.SynchronizeCalls);
     }
 
     [TestMethod]
@@ -361,8 +361,8 @@ public sealed class GameplayApplicationServiceTests
             match.Id);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Success, result.Status);
-        TestAssert.AreEqual(match.Id, result.Value?.Id);
+        Assert.AreEqual(MatchStatus.Success, result.Status);
+        Assert.AreEqual(match.Id, result.Value?.Id);
     }
 
     [TestMethod]
@@ -380,7 +380,7 @@ public sealed class GameplayApplicationServiceTests
             match.Id);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.SpectatingUnavailable, result.Status);
+        Assert.AreEqual(MatchStatus.SpectatingUnavailable, result.Status);
     }
 
     [TestMethod]
@@ -400,12 +400,12 @@ public sealed class GameplayApplicationServiceTests
             match.Id);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Success, result.Status);
+        Assert.AreEqual(MatchStatus.Success, result.Status);
         MatchMove[] moves = result.Value ?? throw new InvalidOperationException("Moves expected.");
-        TestAssert.AreEqual(1, moves.Length);
-        TestAssert.AreEqual(1, moves[0].MoveNumber);
-        TestAssert.AreEqual(2, moves[0].Row);
-        TestAssert.AreEqual(3, moves[0].Column);
+        Assert.AreEqual(1, moves.Length);
+        Assert.AreEqual(1, moves[0].MoveNumber);
+        Assert.AreEqual(2, moves[0].Row);
+        Assert.AreEqual(3, moves[0].Column);
     }
 
     [TestMethod]
@@ -428,11 +428,11 @@ public sealed class GameplayApplicationServiceTests
             new MatchPlacement(match.Id, 0, 0, 0));
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Success, result.Status);
+        Assert.AreEqual(MatchStatus.Success, result.Status);
         Match updated = result.Value ?? throw new InvalidOperationException("Value expected.");
-        TestAssert.AreEqual("InProgress", updated.State);
-        TestAssert.AreEqual<int?>(1, updated.CurrentTurnSeatNumber);
-        TestAssert.AreEqual<int?>(2, updated.SkippedSeatNumber);
+        Assert.AreEqual("InProgress", updated.State);
+        Assert.AreEqual<int?>(1, updated.CurrentTurnSeatNumber);
+        Assert.AreEqual<int?>(2, updated.SkippedSeatNumber);
     }
 
     [TestMethod]
@@ -453,12 +453,12 @@ public sealed class GameplayApplicationServiceTests
             new MatchPlacement(match.Id, 0, 0, 0));
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Success, result.Status);
+        Assert.AreEqual(MatchStatus.Success, result.Status);
         Match concluded = result.Value ?? throw new InvalidOperationException("Value expected.");
-        TestAssert.AreEqual("Finished", concluded.State);
-        TestAssert.AreEqual("NORMAL", concluded.EndReason);
-        TestAssert.AreEqual<int?>(1, concluded.WinnerSeatNumber);
-        TestAssert.AreEqual<int?>(null, concluded.CurrentTurnSeatNumber);
+        Assert.AreEqual("Finished", concluded.State);
+        Assert.AreEqual("NORMAL", concluded.EndReason);
+        Assert.AreEqual<int?>(1, concluded.WinnerSeatNumber);
+        Assert.AreEqual<int?>(null, concluded.CurrentTurnSeatNumber);
     }
 
     [TestMethod]
@@ -479,10 +479,10 @@ public sealed class GameplayApplicationServiceTests
         Match[] updated = context.ApplicationService.ProcessTurnTimeouts();
 
         // Assert
-        TestAssert.AreEqual(1, updated.Length);
-        TestAssert.AreEqual(2L, updated[0].MatchStateVersion);
-        TestAssert.AreEqual("Timeout", updated[0].LastMove?.Origin ?? string.Empty);
-        TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(1, updated.Length);
+        Assert.AreEqual(2L, updated[0].MatchStateVersion);
+        Assert.AreEqual("Timeout", updated[0].LastMove?.Origin ?? string.Empty);
+        Assert.AreEqual(1, context.Repository.SynchronizeCalls);
     }
 
     [TestMethod]
@@ -501,9 +501,9 @@ public sealed class GameplayApplicationServiceTests
             match.Id);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Success, reloadResult.Status);
-        TestAssert.AreEqual("Finished", reloadResult.Value?.State);
-        TestAssert.AreEqual(1, context.Repository.LoadMatchCalls);
+        Assert.AreEqual(MatchStatus.Success, reloadResult.Status);
+        Assert.AreEqual("Finished", reloadResult.Value?.State);
+        Assert.AreEqual(1, context.Repository.LoadMatchCalls);
     }
 
     [TestMethod]
@@ -521,8 +521,8 @@ public sealed class GameplayApplicationServiceTests
                 match.Id);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Success, participantResult.Status);
-        TestAssert.AreEqual(match.Id, participantResult.Value?.Id);
+        Assert.AreEqual(MatchStatus.Success, participantResult.Status);
+        Assert.AreEqual(match.Id, participantResult.Value?.Id);
     }
 
     [TestMethod]
@@ -540,7 +540,7 @@ public sealed class GameplayApplicationServiceTests
                 match.Id);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Unauthorized, spectatorResult.Status);
+        Assert.AreEqual(MatchStatus.Unauthorized, spectatorResult.Status);
     }
 
     [TestMethod]
@@ -566,7 +566,7 @@ public sealed class GameplayApplicationServiceTests
         context.ApplicationService.SynchronizePendingMatches();
 
         // Assert
-        TestAssert.AreEqual(1, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(1, context.Repository.SynchronizeCalls);
     }
 }
 

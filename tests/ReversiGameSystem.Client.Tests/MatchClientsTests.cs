@@ -5,12 +5,15 @@ using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
 using Proxy = ReversiGameSystem.ServerProxy;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal static class MatchClientsTests
+[TestClass]
+public sealed class MatchClientsTests
 {
-    internal static void Callbacks_StaleVersionsAndDuplicateMessages_PreserveConfirmedState()
+    [TestMethod]
+    public void Callbacks_StaleVersionsAndDuplicateMessages_PreserveConfirmedState()
     {
         using GameplayClient client = CreateGameplay("unused");
         using MatchChatClient chat = CreateChat("unused");
@@ -44,27 +47,28 @@ internal static class MatchClientsTests
         chat.OnChatMessageReceived(new Proxy.MatchChatEntry { MatchId = 8, MessageNumber = 1, Content = "other" });
         client.OnParticipantConnectionChanged(7, 1, true);
         client.OnParticipantConnectionChanged(7, 2, false);
-        TestAssert.AreEqual(1, stateChanges);
-        TestAssert.AreEqual(3, messageChanges);
-        TestAssert.AreEqual(2, presenceChanges);
-        TestAssert.AreEqual(true, client.HasMatchState(7));
+        Assert.AreEqual(1, stateChanges);
+        Assert.AreEqual(3, messageChanges);
+        Assert.AreEqual(2, presenceChanges);
+        Assert.AreEqual(true, client.HasMatchState(7));
         MatchStateSnapshot state = client.ReadMatchState(7);
-        TestAssert.AreEqual(3L, state.Version);
-        TestAssert.AreEqual(2, chat.ReadMessages(7).Length);
-        TestAssert.AreEqual("first", chat.ReadMessages(7)[0].Content);
-        TestAssert.AreEqual(1, chat.ReadMessages(8).Length);
-        TestAssert.AreEqual(
+        Assert.AreEqual(3L, state.Version);
+        Assert.AreEqual(2, chat.ReadMessages(7).Length);
+        Assert.AreEqual("first", chat.ReadMessages(7)[0].Content);
+        Assert.AreEqual(1, chat.ReadMessages(8).Length);
+        Assert.AreEqual(
             ParticipantConnectionState.Connected,
             client.ReadParticipantConnection(7, 1));
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             ParticipantConnectionState.Disconnected,
             client.ReadParticipantConnection(7, 2));
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             ParticipantConnectionState.Unknown,
             client.ReadParticipantConnection(8, 1));
     }
 
-    internal static void Faults_SupportedCultures_ResolveLocalizedRecoveryAndRejectionMessages()
+    [TestMethod]
+    public void Faults_SupportedCultures_ResolveLocalizedRecoveryAndRejectionMessages()
     {
         ResourceManager resources = new("ReversiGameSystem.Properties.Resources", typeof(ReversiGameSystem.App).Assembly);
         foreach (string culture in new[] { "en-US", "es-MX" })
@@ -102,16 +106,17 @@ internal static class MatchClientsTests
                 string? localizedValue = resources.GetString(
                     key,
                     CultureInfo.GetCultureInfo(culture));
-                TestAssert.AreEqual(false, string.IsNullOrWhiteSpace(localizedValue));
+                Assert.AreEqual(false, string.IsNullOrWhiteSpace(localizedValue));
             }
         }
-        TestAssert.AreEqual("JoinMatch_MatchCodeNotAvailableMessage",
+        Assert.AreEqual("JoinMatch_MatchCodeNotAvailableMessage",
             RemoteMatchMessages.GetMessageResourceKey(MatchStatus.MatchCodeUnavailable));
-        TestAssert.AreEqual("RemoteMatch_ConnectionFailed",
+        Assert.AreEqual("RemoteMatch_ConnectionFailed",
             RemoteMatchMessages.GetMessageResourceKey(MatchStatus.ServiceUnavailable));
     }
 
-    internal static void Callbacks_ConclusionSnapshot_PreservesWinnerAndAbandonmentReason()
+    [TestMethod]
+    public void Callbacks_ConclusionSnapshot_PreservesWinnerAndAbandonmentReason()
     {
         using GameplayClient client = CreateGameplay("unused");
         client.OnMatchStateChanged(new Proxy.MatchStateSnapshot
@@ -137,11 +142,11 @@ internal static class MatchClientsTests
         });
 
         MatchStateSnapshot snapshot = client.ReadMatchState(15);
-        TestAssert.AreEqual(ConfirmedMatchState.Finished, snapshot.State);
+        Assert.AreEqual(ConfirmedMatchState.Finished, snapshot.State);
         RemoteMatchConclusion conclusion = snapshot.Conclusion
             ?? throw new InvalidOperationException("Expected confirmed match conclusion.");
-        TestAssert.AreEqual(RemoteMatchEndReason.Abandonment, conclusion.Reason);
-        TestAssert.AreEqual(2, conclusion.WinnerSeatNumber);
+        Assert.AreEqual(RemoteMatchEndReason.Abandonment, conclusion.Reason);
+        Assert.AreEqual(2, conclusion.WinnerSeatNumber);
     }
 
     internal static GameplayClient CreateGameplay(string token)

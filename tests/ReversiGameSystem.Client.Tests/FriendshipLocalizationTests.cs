@@ -1,11 +1,14 @@
 using System.Globalization;
 using System.Resources;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal static class FriendshipLocalizationTests
+[TestClass]
+public sealed class FriendshipLocalizationTests
 {
-    internal static void Presence_SupportedCultures_ContainStatusAndRecoveryMessages()
+    [TestMethod]
+    public void Presence_SupportedCultures_ContainStatusAndRecoveryMessages()
     {
         ResourceManager resources = new("ReversiGameSystem.Properties.Resources",
             typeof(ReversiGameSystem.App).Assembly);
@@ -17,13 +20,13 @@ internal static class FriendshipLocalizationTests
                 "Friends_PresenceUnavailable", "Friends_SessionUnavailable"
             })
             {
-                TestAssert.AreEqual(false, string.IsNullOrWhiteSpace(
+                Assert.AreEqual(false, string.IsNullOrWhiteSpace(
                     resources.GetString(key, CultureInfo.GetCultureInfo(culture))));
             }
         }
-        TestAssert.AreEqual("En línea", resources.GetString("Friends_Online",
+        Assert.AreEqual("En línea", resources.GetString("Friends_Online",
             CultureInfo.GetCultureInfo("es-MX")));
-        TestAssert.AreEqual("Online", resources.GetString("Friends_Online",
+        Assert.AreEqual("Online", resources.GetString("Friends_Online",
             CultureInfo.GetCultureInfo("en-US")));
     }
 }

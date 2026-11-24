@@ -6,10 +6,12 @@ using ReversiGameSystem.Game;
 using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
 using Proxy = ReversiGameSystem.ServerProxy;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal static class MatchInvitationClientTests
+[TestClass]
+public sealed class MatchInvitationClientTests
 {
     private static readonly string[] RequiredResourceKeys = new[]
     {
@@ -27,7 +29,8 @@ internal static class MatchInvitationClientTests
         "InviteMatch_DeliveryFailedMessage"
     };
 
-    internal static void RunAll()
+    [TestMethod]
+    public void RunAll()
     {
         RemoteMatchMessages_FriendshipFaultAccountUnavailable_ResolvesExpectedResourceKey();
         RemoteMatchMessages_FriendshipFaultFriendshipNotFound_ResolvesExpectedResourceKey();
@@ -43,7 +46,8 @@ internal static class MatchInvitationClientTests
         MatchLobbyClient_InviteToMatch_CommunicationException_AbortsWithoutAutoRetry();
     }
 
-    internal static void RemoteMatchMessages_FriendshipFaultAccountUnavailable_ResolvesExpectedResourceKey()
+    [TestMethod]
+    public void RemoteMatchMessages_FriendshipFaultAccountUnavailable_ResolvesExpectedResourceKey()
     {
         FaultException<Proxy.FriendshipFault> fault = new FaultException<Proxy.FriendshipFault>(
             new Proxy.FriendshipFault { Reason = Proxy.FriendshipFailure.AccountUnavailable });
@@ -51,10 +55,11 @@ internal static class MatchInvitationClientTests
         string key = RemoteMatchMessages.GetMessageResourceKey(
             MatchContractMapper.MapFailure(fault));
 
-        TestAssert.AreEqual("InviteMatch_AccountUnavailableMessage", key);
+        Assert.AreEqual("InviteMatch_AccountUnavailableMessage", key);
     }
 
-    internal static void RemoteMatchMessages_FriendshipFaultFriendshipNotFound_ResolvesExpectedResourceKey()
+    [TestMethod]
+    public void RemoteMatchMessages_FriendshipFaultFriendshipNotFound_ResolvesExpectedResourceKey()
     {
         FaultException<Proxy.FriendshipFault> fault = new FaultException<Proxy.FriendshipFault>(
             new Proxy.FriendshipFault { Reason = Proxy.FriendshipFailure.FriendshipNotFound });
@@ -62,10 +67,11 @@ internal static class MatchInvitationClientTests
         string key = RemoteMatchMessages.GetMessageResourceKey(
             MatchContractMapper.MapFailure(fault));
 
-        TestAssert.AreEqual("InviteMatch_FriendshipNotFoundMessage", key);
+        Assert.AreEqual("InviteMatch_FriendshipNotFoundMessage", key);
     }
 
-    internal static void RemoteMatchMessages_FriendshipFaultInvalidAccountId_ResolvesExpectedResourceKey()
+    [TestMethod]
+    public void RemoteMatchMessages_FriendshipFaultInvalidAccountId_ResolvesExpectedResourceKey()
     {
         FaultException<Proxy.FriendshipFault> fault = new FaultException<Proxy.FriendshipFault>(
             new Proxy.FriendshipFault { Reason = Proxy.FriendshipFailure.InvalidAccountId });
@@ -73,10 +79,11 @@ internal static class MatchInvitationClientTests
         string key = RemoteMatchMessages.GetMessageResourceKey(
             MatchContractMapper.MapFailure(fault));
 
-        TestAssert.AreEqual("InviteMatch_InvalidAccountIdMessage", key);
+        Assert.AreEqual("InviteMatch_InvalidAccountIdMessage", key);
     }
 
-    internal static void RemoteMatchMessages_FriendshipFaultInactiveAccount_ResolvesExpectedResourceKey()
+    [TestMethod]
+    public void RemoteMatchMessages_FriendshipFaultInactiveAccount_ResolvesExpectedResourceKey()
     {
         FaultException<Proxy.FriendshipFault> fault = new FaultException<Proxy.FriendshipFault>(
             new Proxy.FriendshipFault { Reason = Proxy.FriendshipFailure.InactiveAccount });
@@ -84,10 +91,11 @@ internal static class MatchInvitationClientTests
         string key = RemoteMatchMessages.GetMessageResourceKey(
             MatchContractMapper.MapFailure(fault));
 
-        TestAssert.AreEqual("RemoteMatch_InactiveAccount", key);
+        Assert.AreEqual("RemoteMatch_InactiveAccount", key);
     }
 
-    internal static void RemoteMatchMessages_MatchFaultUnauthorized_ResolvesExpectedResourceKey()
+    [TestMethod]
+    public void RemoteMatchMessages_MatchFaultUnauthorized_ResolvesExpectedResourceKey()
     {
         FaultException<Proxy.MatchFault> fault = new FaultException<Proxy.MatchFault>(
             new Proxy.MatchFault { Reason = Proxy.MatchFailure.Unauthorized });
@@ -95,10 +103,11 @@ internal static class MatchInvitationClientTests
         string key = RemoteMatchMessages.GetMessageResourceKey(
             MatchContractMapper.MapFailure(fault));
 
-        TestAssert.AreEqual("RemoteMatch_Unauthorized", key);
+        Assert.AreEqual("RemoteMatch_Unauthorized", key);
     }
 
-    internal static void RemoteMatchMessages_MatchFaultInactiveAccount_ResolvesExpectedResourceKey()
+    [TestMethod]
+    public void RemoteMatchMessages_MatchFaultInactiveAccount_ResolvesExpectedResourceKey()
     {
         FaultException<Proxy.MatchFault> fault = new FaultException<Proxy.MatchFault>(
             new Proxy.MatchFault { Reason = Proxy.MatchFailure.InactiveAccount });
@@ -106,10 +115,11 @@ internal static class MatchInvitationClientTests
         string key = RemoteMatchMessages.GetMessageResourceKey(
             MatchContractMapper.MapFailure(fault));
 
-        TestAssert.AreEqual("RemoteMatch_InactiveAccount", key);
+        Assert.AreEqual("RemoteMatch_InactiveAccount", key);
     }
 
-    internal static void RemoteMatchMessages_MatchFaultMatchNotWaiting_ResolvesExpectedResourceKey()
+    [TestMethod]
+    public void RemoteMatchMessages_MatchFaultMatchNotWaiting_ResolvesExpectedResourceKey()
     {
         FaultException<Proxy.MatchFault> fault = new FaultException<Proxy.MatchFault>(
             new Proxy.MatchFault { Reason = Proxy.MatchFailure.MatchNotWaiting });
@@ -117,19 +127,21 @@ internal static class MatchInvitationClientTests
         string key = RemoteMatchMessages.GetMessageResourceKey(
             MatchContractMapper.MapFailure(fault));
 
-        TestAssert.AreEqual("RemoteMatch_NotWaiting", key);
+        Assert.AreEqual("RemoteMatch_NotWaiting", key);
     }
 
-    internal static void RemoteMatchMessages_ServiceUnavailable_ResolvesConnectionFailedKey()
+    [TestMethod]
+    public void RemoteMatchMessages_ServiceUnavailable_ResolvesConnectionFailedKey()
     {
 
         string resourceKey = RemoteMatchMessages.GetMessageResourceKey(
             MatchStatus.ServiceUnavailable);
 
-        TestAssert.AreEqual("RemoteMatch_ConnectionFailed", resourceKey);
+        Assert.AreEqual("RemoteMatch_ConnectionFailed", resourceKey);
     }
 
-    internal static void LocalizationResources_InvitationKeys_ArePresentInAllSupportedCultures()
+    [TestMethod]
+    public void LocalizationResources_InvitationKeys_ArePresentInAllSupportedCultures()
     {
         ResourceManager resources = new ResourceManager(
             "ReversiGameSystem.Properties.Resources", typeof(ReversiGameSystem.App).Assembly);
@@ -141,55 +153,58 @@ internal static class MatchInvitationClientTests
             foreach (string key in RequiredResourceKeys)
             {
                 string? localized = resources.GetString(key, culture);
-                TestAssert.AreEqual(false, string.IsNullOrWhiteSpace(localized));
+                Assert.AreEqual(false, string.IsNullOrWhiteSpace(localized));
             }
         }
     }
 
-    internal static void TurnTimePolicy_ValidRange_ParsesConfiguredSeconds()
+    [TestMethod]
+    public void TurnTimePolicy_ValidRange_ParsesConfiguredSeconds()
     {
         bool parsedMin = TurnTimePolicy.TryParse("10", out int minSeconds);
-        TestAssert.AreEqual(true, parsedMin);
-        TestAssert.AreEqual(10, minSeconds);
+        Assert.AreEqual(true, parsedMin);
+        Assert.AreEqual(10, minSeconds);
 
         bool parsedDefault = TurnTimePolicy.TryParse("40", out int defaultSeconds);
-        TestAssert.AreEqual(true, parsedDefault);
-        TestAssert.AreEqual(40, defaultSeconds);
+        Assert.AreEqual(true, parsedDefault);
+        Assert.AreEqual(40, defaultSeconds);
 
         bool parsedMax = TurnTimePolicy.TryParse("120", out int maxSeconds);
-        TestAssert.AreEqual(true, parsedMax);
-        TestAssert.AreEqual(120, maxSeconds);
+        Assert.AreEqual(true, parsedMax);
+        Assert.AreEqual(120, maxSeconds);
     }
 
-    internal static void TurnTimePolicy_OutOfRangeOrNonNumeric_RejectsInput()
+    [TestMethod]
+    public void TurnTimePolicy_OutOfRangeOrNonNumeric_RejectsInput()
     {
         bool parsedUnderMin = TurnTimePolicy.TryParse("9", out _);
-        TestAssert.AreEqual(false, parsedUnderMin);
+        Assert.AreEqual(false, parsedUnderMin);
 
         bool parsedOverMax = TurnTimePolicy.TryParse("121", out _);
-        TestAssert.AreEqual(false, parsedOverMax);
+        Assert.AreEqual(false, parsedOverMax);
 
         bool parsedNegative = TurnTimePolicy.TryParse("-10", out _);
-        TestAssert.AreEqual(false, parsedNegative);
+        Assert.AreEqual(false, parsedNegative);
 
         bool parsedAlpha = TurnTimePolicy.TryParse("forty", out _);
-        TestAssert.AreEqual(false, parsedAlpha);
+        Assert.AreEqual(false, parsedAlpha);
 
         bool parsedDecimal = TurnTimePolicy.TryParse("40.5", out _);
-        TestAssert.AreEqual(false, parsedDecimal);
+        Assert.AreEqual(false, parsedDecimal);
 
         bool parsedEmpty = TurnTimePolicy.TryParse(string.Empty, out _);
-        TestAssert.AreEqual(false, parsedEmpty);
+        Assert.AreEqual(false, parsedEmpty);
     }
 
-    internal static void MatchLobbyClient_InviteToMatch_CommunicationException_AbortsWithoutAutoRetry()
+    [TestMethod]
+    public void MatchLobbyClient_InviteToMatch_CommunicationException_AbortsWithoutAutoRetry()
     {
         MatchLobbyClient client = MatchClientsTests.CreateLobby("test-token");
         try
         {
             MatchStatus status = client.InviteToMatch(100, 40)
                 .GetAwaiter().GetResult();
-            TestAssert.AreEqual(MatchStatus.ServiceUnavailable, status);
+            Assert.AreEqual(MatchStatus.ServiceUnavailable, status);
         }
         finally
         {

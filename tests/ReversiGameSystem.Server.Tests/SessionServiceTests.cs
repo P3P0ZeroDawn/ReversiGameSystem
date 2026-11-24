@@ -27,9 +27,9 @@ public sealed class SessionServiceTests
         {
             DateTime expires = channel.RequestLoginCode("PlayerOne", "Password1!");
             // Assert
-            TestAssert.AreEqual(context.UtcNow.AddMinutes(5), expires);
+            Assert.AreEqual(context.UtcNow.AddMinutes(5), expires);
             TestAssert.IsNotNull(context.Email);
-            TestAssert.AreEqual<VerificationAttempt?>(null, context.Attempt);
+            Assert.AreEqual<VerificationAttempt?>(null, context.Attempt);
             return true;
         });
     }
@@ -47,14 +47,14 @@ public sealed class SessionServiceTests
             ReversiGameSystem.Server.Contracts.Accounts.AuthenticatedSession session =
                 channel.CompleteLogin("PlayerOne", "000012");
             // Assert
-            TestAssert.AreEqual<long>(42, session.Account.AccountId);
-            TestAssert.AreEqual("en-US", session.PreferredLocaleCode);
-            TestAssert.AreEqual(
-                SessionOperationStatus.Success,
+            Assert.AreEqual<long>(42, session.Account.AccountId);
+            Assert.AreEqual("en-US", session.PreferredLocaleCode);
+            Assert.AreEqual(
+                SessionStatus.Success,
                 context.Sessions.FindAuthenticated(session.SessionToken).Status);
             channel.CloseSession(session.SessionToken);
-            TestAssert.AreEqual(
-                SessionOperationStatus.InvalidSession,
+            Assert.AreEqual(
+                SessionStatus.InvalidSession,
                 context.Sessions.FindAuthenticated(session.SessionToken).Status);
             channel.CloseSession(session.SessionToken);
             return true;
@@ -73,8 +73,8 @@ public sealed class SessionServiceTests
             catch (FaultException<SessionFault> fault)
             {
                 // Assert
-                TestAssert.AreEqual(SessionFailure.InvalidCredentials, fault.Detail.Reason);
-                TestAssert.AreEqual<EmailMessage?>(null, context.Email);
+                Assert.AreEqual(SessionFailure.InvalidCredentials, fault.Detail.Reason);
+                Assert.AreEqual<EmailMessage?>(null, context.Email);
                 return true;
             }
             throw new InvalidOperationException("Expected a typed session fault.");
@@ -93,9 +93,9 @@ public sealed class SessionServiceTests
             catch (FaultException<ServiceFault> fault)
             {
                 // Assert
-                TestAssert.IsTrue(!fault.ToString().Contains("Private provider diagnostic"),
+                Assert.IsTrue(!fault.ToString().Contains("Private provider diagnostic"),
                     "Provider diagnostics must not cross the WCF boundary.");
-                TestAssert.AreEqual<PendingVerificationCode?>(null, context.Pending);
+                Assert.AreEqual<PendingVerificationCode?>(null, context.Pending);
                 return true;
             }
             throw new InvalidOperationException("Expected a controlled service fault.");
@@ -117,7 +117,7 @@ public sealed class SessionServiceTests
             catch (FaultException<SessionFault> fault)
             {
                 // Assert
-                TestAssert.AreEqual(SessionFailure.ExpiredVerificationCode, fault.Detail.Reason);
+                Assert.AreEqual(SessionFailure.ExpiredVerificationCode, fault.Detail.Reason);
                 return true;
             }
             throw new InvalidOperationException("Expected an expired-code fault.");
@@ -134,7 +134,7 @@ public sealed class SessionServiceTests
             context.ApplicationService.CompleteLogin("PlayerOne", "000012");
 
         // Assert
-        TestAssert.AreEqual(SessionOperationStatus.InactiveAccount, result.Status);
+        Assert.AreEqual(SessionStatus.InactiveAccount, result.Status);
     }
 
     [TestMethod]
@@ -150,7 +150,7 @@ public sealed class SessionServiceTests
             context.ApplicationService.CompleteLogin("PlayerOne", "000012");
 
         // Assert
-        TestAssert.AreEqual(SessionOperationStatus.InvalidVerificationCode, result.Status);
+        Assert.AreEqual(SessionStatus.InvalidVerificationCode, result.Status);
     }
 
     [TestMethod]
@@ -158,19 +158,19 @@ public sealed class SessionServiceTests
     {
         // Arrange
         SessionTestContext context = new SessionTestContext();
-        TestAssert.AreEqual(false, context.Sessions.IsGuestActive("unknown"));
-        TestAssert.AreEqual(false, context.Sessions.IsGuestActive(string.Empty));
+        Assert.AreEqual(false, context.Sessions.IsGuestActive("unknown"));
+        Assert.AreEqual(false, context.Sessions.IsGuestActive(string.Empty));
         GuestSession previous = context.ApplicationService.OpenGuestSession("Visitor").Value
             ?? throw new InvalidOperationException("Guest session expected.");
-        TestAssert.AreEqual(true, context.Sessions.IsGuestActive(previous.SessionToken));
+        Assert.AreEqual(true, context.Sessions.IsGuestActive(previous.SessionToken));
         context.UtcNow = previous.ExpiresAtUtc;
         // Act
         GuestSession current = context.ApplicationService.OpenGuestSession("Visitor").Value
             ?? throw new InvalidOperationException("Guest session expected.");
         // Assert
-        TestAssert.AreEqual(false, context.Sessions.IsGuestActive(previous.SessionToken));
-        TestAssert.AreEqual("Guest-Visitor", current.DisplayName);
-        TestAssert.IsTrue(previous.SessionToken != current.SessionToken,
+        Assert.AreEqual(false, context.Sessions.IsGuestActive(previous.SessionToken));
+        Assert.AreEqual("Guest-Visitor", current.DisplayName);
+        Assert.IsTrue(previous.SessionToken != current.SessionToken,
             "A new guest must receive a new token.");
     }
 
@@ -185,15 +185,15 @@ public sealed class SessionServiceTests
             ReversiGameSystem.Server.Contracts.Accounts.GuestSession guest =
                 channel.OpenGuestSession("Visitor");
             // Assert
-            TestAssert.AreEqual("Guest-Visitor", guest.DisplayName);
-            TestAssert.AreEqual(true, context.Sessions.IsGuestActive(guest.SessionToken));
+            Assert.AreEqual("Guest-Visitor", guest.DisplayName);
+            Assert.AreEqual(true, context.Sessions.IsGuestActive(guest.SessionToken));
             try { channel.OpenGuestSession("visitor"); }
             catch (FaultException<SessionFault> fault)
             {
-                TestAssert.AreEqual(SessionFailure.GuestNameUnavailable, fault.Detail.Reason);
+                Assert.AreEqual(SessionFailure.GuestNameUnavailable, fault.Detail.Reason);
                 channel.CloseSession(guest.SessionToken);
-                TestAssert.AreEqual(false, context.Sessions.IsGuestActive(guest.SessionToken));
-                TestAssert.AreEqual("Guest-Visitor",
+                Assert.AreEqual(false, context.Sessions.IsGuestActive(guest.SessionToken));
+                Assert.AreEqual("Guest-Visitor",
                     channel.OpenGuestSession("Visitor").DisplayName);
                 return true;
             }
@@ -213,21 +213,21 @@ public sealed class SessionServiceTests
         {
             SessionResult<GuestSession> result =
                 context.ApplicationService.OpenGuestSession("Visitor");
-            if (result.Status == SessionOperationStatus.Success)
+            if (result.Status == SessionStatus.Success)
             {
                 Interlocked.Increment(ref accepted);
             }
             else
             {
-                TestAssert.AreEqual(
-                    SessionOperationStatus.GuestNameUnavailable,
+                Assert.AreEqual(
+                    SessionStatus.GuestNameUnavailable,
                     result.Status);
                 Interlocked.Increment(ref rejected);
             }
         });
         // Assert
-        TestAssert.AreEqual(1, accepted);
-        TestAssert.AreEqual(15, rejected);
+        Assert.AreEqual(1, accepted);
+        Assert.AreEqual(15, rejected);
     }
 
     [TestMethod]
@@ -242,7 +242,7 @@ public sealed class SessionServiceTests
             catch (FaultException<SessionFault> fault)
             {
                 // Assert
-                TestAssert.AreEqual(SessionFailure.MissingSessionToken, fault.Detail.Reason);
+                Assert.AreEqual(SessionFailure.MissingSessionToken, fault.Detail.Reason);
                 return true;
             }
             throw new InvalidOperationException("Expected a missing-token fault.");
@@ -265,7 +265,7 @@ public sealed class SessionServiceTests
         service.CloseSession("unknown-token");
 
         // Assert
-        TestAssert.AreEqual("unknown-token", observer.ObservedToken);
+        Assert.AreEqual("unknown-token", observer.ObservedToken);
     }
 
     private static TResult Invoke<TResult>(SessionTestContext context,

@@ -66,7 +66,7 @@ internal sealed class PlayerImageRepositoryStub : IPlayerImageRepository
         LastKind = kind;
         if (RejectSave)
         {
-            return new ProfileResult<string>(ProfileOperationStatus.InvalidImage);
+            return new ProfileResult<string>(ProfileStatus.InvalidImage);
         }
 
         return new ProfileResult<string>("new-image");

@@ -17,7 +17,7 @@ public sealed class EmailPolicyTests
         EmailValidationError actual = EmailPolicy.Validate(email);
 
         // Assert
-        TestAssert.AreEqual(EmailValidationError.None, actual);
+        Assert.AreEqual(EmailValidationError.None, actual);
     }
 
     [TestMethod]
@@ -30,7 +30,7 @@ public sealed class EmailPolicyTests
         EmailValidationError actual = EmailPolicy.Validate(email);
 
         // Assert
-        TestAssert.AreEqual(EmailValidationError.None, actual);
+        Assert.AreEqual(EmailValidationError.None, actual);
     }
 
     [TestMethod]
@@ -43,7 +43,7 @@ public sealed class EmailPolicyTests
         EmailValidationError actual = EmailPolicy.Validate(email);
 
         // Assert
-        TestAssert.AreEqual(EmailValidationError.None, actual);
+        Assert.AreEqual(EmailValidationError.None, actual);
     }
 
     [TestMethod]
@@ -57,7 +57,7 @@ public sealed class EmailPolicyTests
         EmailValidationError actual = EmailPolicy.Validate(email);
 
         // Assert
-        TestAssert.AreEqual(EmailValidationError.None, actual);
+        Assert.AreEqual(EmailValidationError.None, actual);
     }
 
     [TestMethod]
@@ -70,7 +70,7 @@ public sealed class EmailPolicyTests
         EmailValidationError actual = EmailPolicy.Validate(email);
 
         // Assert
-        TestAssert.AreEqual(EmailValidationError.TooLong, actual);
+        Assert.AreEqual(EmailValidationError.TooLong, actual);
     }
 
     [TestMethod]
@@ -83,7 +83,7 @@ public sealed class EmailPolicyTests
         EmailValidationError actual = EmailPolicy.Validate(email);
 
         // Assert
-        TestAssert.AreEqual(EmailValidationError.InvalidStructure, actual);
+        Assert.AreEqual(EmailValidationError.InvalidStructure, actual);
     }
 
     [TestMethod]
@@ -96,7 +96,7 @@ public sealed class EmailPolicyTests
         EmailValidationError actual = EmailPolicy.Validate(email);
 
         // Assert
-        TestAssert.AreEqual(EmailValidationError.InvalidStructure, actual);
+        Assert.AreEqual(EmailValidationError.InvalidStructure, actual);
     }
 
     [TestMethod]
@@ -109,7 +109,7 @@ public sealed class EmailPolicyTests
         EmailValidationError actual = EmailPolicy.Validate(email);
 
         // Assert
-        TestAssert.AreEqual(EmailValidationError.InvalidLocalPart, actual);
+        Assert.AreEqual(EmailValidationError.InvalidLocalPart, actual);
     }
 
     [TestMethod]
@@ -122,7 +122,7 @@ public sealed class EmailPolicyTests
         EmailValidationError actual = EmailPolicy.Validate(email);
 
         // Assert
-        TestAssert.AreEqual(EmailValidationError.InvalidLocalPart, actual);
+        Assert.AreEqual(EmailValidationError.InvalidLocalPart, actual);
     }
 
     [TestMethod]
@@ -135,7 +135,7 @@ public sealed class EmailPolicyTests
         EmailValidationError actual = EmailPolicy.Validate(email);
 
         // Assert
-        TestAssert.AreEqual(EmailValidationError.InvalidLocalPart, actual);
+        Assert.AreEqual(EmailValidationError.InvalidLocalPart, actual);
     }
 
     [TestMethod]
@@ -148,7 +148,7 @@ public sealed class EmailPolicyTests
         EmailValidationError actual = EmailPolicy.Validate(email);
 
         // Assert
-        TestAssert.AreEqual(EmailValidationError.InvalidLocalPart, actual);
+        Assert.AreEqual(EmailValidationError.InvalidLocalPart, actual);
     }
 
     [TestMethod]
@@ -161,7 +161,7 @@ public sealed class EmailPolicyTests
         EmailValidationError actual = EmailPolicy.Validate(email);
 
         // Assert
-        TestAssert.AreEqual(EmailValidationError.InvalidDomain, actual);
+        Assert.AreEqual(EmailValidationError.InvalidDomain, actual);
     }
 
     [TestMethod]
@@ -174,7 +174,7 @@ public sealed class EmailPolicyTests
         EmailValidationError actual = EmailPolicy.Validate(email);
 
         // Assert
-        TestAssert.AreEqual(EmailValidationError.InvalidDomain, actual);
+        Assert.AreEqual(EmailValidationError.InvalidDomain, actual);
     }
 
     [TestMethod]
@@ -187,7 +187,7 @@ public sealed class EmailPolicyTests
         EmailValidationError actual = EmailPolicy.Validate(email);
 
         // Assert
-        TestAssert.AreEqual(EmailValidationError.InvalidDomain, actual);
+        Assert.AreEqual(EmailValidationError.InvalidDomain, actual);
     }
 
     [TestMethod]
@@ -200,7 +200,7 @@ public sealed class EmailPolicyTests
         EmailValidationError actual = EmailPolicy.Validate(email);
 
         // Assert
-        TestAssert.AreEqual(EmailValidationError.InvalidDomain, actual);
+        Assert.AreEqual(EmailValidationError.InvalidDomain, actual);
     }
 
     [TestMethod]
@@ -213,6 +213,6 @@ public sealed class EmailPolicyTests
         EmailValidationError actual = EmailPolicy.Validate(email);
 
         // Assert
-        TestAssert.AreEqual(EmailValidationError.InvalidDomain, actual);
+        Assert.AreEqual(EmailValidationError.InvalidDomain, actual);
     }
 }

@@ -1,12 +1,15 @@
 using System.Threading.Tasks;
 using ReversiGameSystem.Presentation.AccountCreation;
 using ReversiGameSystem.Services;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class AccountCreationViewModelTests
+[TestClass]
+public sealed class AccountCreationViewModelTests
 {
-    internal void CreateAccount_MissingInformation_DoesNotCallServer()
+    [TestMethod]
+    public void CreateAccount_MissingInformation_DoesNotCallServer()
     {
         AccountClientStub accounts = new AccountClientStub();
         AccountCreationViewModel viewModel = CreateValidViewModel(accounts);
@@ -14,11 +17,12 @@ internal sealed class AccountCreationViewModelTests
 
         AccountCreationStatus status = viewModel.CreateAccount().GetAwaiter().GetResult();
 
-        TestAssert.AreEqual(AccountCreationStatus.MissingRequiredInformation, status);
-        TestAssert.AreEqual(0, accounts.CallCount);
+        Assert.AreEqual(AccountCreationStatus.MissingRequiredInformation, status);
+        Assert.AreEqual(0, accounts.CallCount);
     }
 
-    internal void CreateAccount_ValidInput_NormalizesAndCallsServer()
+    [TestMethod]
+    public void CreateAccount_ValidInput_NormalizesAndCallsServer()
     {
         AccountClientStub accounts = new AccountClientStub();
         AccountCreationViewModel viewModel = CreateValidViewModel(accounts);
@@ -27,13 +31,14 @@ internal sealed class AccountCreationViewModelTests
 
         AccountCreationStatus status = viewModel.CreateAccount().GetAwaiter().GetResult();
 
-        TestAssert.AreEqual(AccountCreationStatus.Success, status);
-        TestAssert.AreEqual(1, accounts.CallCount);
-        TestAssert.AreEqual("Player123", accounts.Username);
-        TestAssert.AreEqual("player@example.com", accounts.EmailAddress);
+        Assert.AreEqual(AccountCreationStatus.Success, status);
+        Assert.AreEqual(1, accounts.CallCount);
+        Assert.AreEqual("Player123", accounts.Username);
+        Assert.AreEqual("player@example.com", accounts.EmailAddress);
     }
 
-    internal void CreateAccount_ConcurrentSubmission_ReturnsSubmissionInProgress()
+    [TestMethod]
+    public void CreateAccount_ConcurrentSubmission_ReturnsSubmissionInProgress()
     {
         AccountClientStub accounts = new AccountClientStub();
         accounts.DelayCompletion = true;
@@ -44,9 +49,9 @@ internal sealed class AccountCreationViewModelTests
         accounts.Complete(AccountCreationStatus.Success);
         AccountCreationStatus firstStatus = firstSubmission.GetAwaiter().GetResult();
 
-        TestAssert.AreEqual(AccountCreationStatus.SubmissionInProgress, secondStatus);
-        TestAssert.AreEqual(AccountCreationStatus.Success, firstStatus);
-        TestAssert.AreEqual(1, accounts.CallCount);
+        Assert.AreEqual(AccountCreationStatus.SubmissionInProgress, secondStatus);
+        Assert.AreEqual(AccountCreationStatus.Success, firstStatus);
+        Assert.AreEqual(1, accounts.CallCount);
     }
 
     private static AccountCreationViewModel CreateValidViewModel(IAccountClient accounts)

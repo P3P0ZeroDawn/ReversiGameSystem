@@ -5,39 +5,24 @@ using ReversiGameSystem.Server.Persistence.Configuration;
 
 namespace ReversiGameSystem.Server.Persistence.Mail;
 
-/// <summary>Contains validated delivery configuration injected into the mail adapter.</summary>
 public sealed class MailSettings
 {
     private MailSettings() { }
 
-    /// <summary>Gets the provider hostname.</summary>
     public string Host { get; private set; } = string.Empty;
 
-    /// <summary>Gets the provider port.</summary>
     public int Port { get; private set; }
 
-    /// <summary>Gets whether encryption begins immediately on connection.</summary>
     public bool EncryptOnConnect { get; private set; }
 
-    /// <summary>Gets the provider account name.</summary>
     public string Username { get; private set; } = string.Empty;
 
-    /// <summary>Gets the provider account credential.</summary>
     public string Password { get; private set; } = string.Empty;
 
-    /// <summary>Gets the authorized sender address.</summary>
     public string FromAddress { get; private set; } = string.Empty;
 
-    /// <summary>Gets the public sender name.</summary>
     public string FromName { get; private set; } = string.Empty;
 
-    /// <summary>
-    /// Loads and validates delivery configuration without reporting secret values.
-    /// </summary>
-    /// <returns>The validated server delivery settings.</returns>
-    /// <exception cref="InvalidOperationException">
-    /// Delivery configuration is absent or invalid.
-    /// </exception>
     public static MailSettings Load()
     {
         MailSettings settings = new MailSettings

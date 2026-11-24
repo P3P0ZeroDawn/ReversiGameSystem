@@ -21,15 +21,15 @@ public sealed class VerificationCodeServiceTests
         // Assert
         ReversiGameSystem.Server.Application.Common.EmailMessage email =
             TestAssert.IsNotNull(context.Email);
-        TestAssert.AreEqual(context.UtcNow.AddMinutes(5), expiration);
-        TestAssert.AreEqual("player@example.com", email.RecipientAddress);
+        Assert.AreEqual(context.UtcNow.AddMinutes(5), expiration);
+        Assert.AreEqual("player@example.com", email.RecipientAddress);
         System.Text.RegularExpressions.Match codeMatch =
             System.Text.RegularExpressions.Regex.Match(email.Body, @"\b(\d{6})\b");
-        TestAssert.IsTrue(codeMatch.Success, "A verification code must contain exactly six ASCII digits.");
+        Assert.IsTrue(codeMatch.Success, "A verification code must contain exactly six ASCII digits.");
         string code = codeMatch.Groups[1].Value;
         PendingVerificationCode pending = TestAssert.IsNotNull(context.Pending);
-        TestAssert.AreEqual(expiration, pending.ExpiresAtUtc);
-        TestAssert.IsTrue(pending.Digest.SequenceEqual(
+        Assert.AreEqual(expiration, pending.ExpiresAtUtc);
+        Assert.IsTrue(pending.Digest.SequenceEqual(
             context.Protector.Protect(Identity.Key, code)),
             "The persisted digest must authenticate the delivered code and its identity.");
     }
@@ -50,7 +50,7 @@ public sealed class VerificationCodeServiceTests
         }
         catch (TimeoutException) { }
         // Assert
-        TestAssert.IsTrue(ReferenceEquals(previous, context.Pending),
+        Assert.IsTrue(ReferenceEquals(previous, context.Pending),
             "Failed delivery must preserve pending state.");
     }
 
@@ -66,10 +66,10 @@ public sealed class VerificationCodeServiceTests
         // Act
         VerificationStatus result = context.Codes.Consume(Identity, "000012");
         // Assert
-        TestAssert.AreEqual(VerificationStatus.Expired, result);
+        Assert.AreEqual(VerificationStatus.Expired, result);
         VerificationAttempt attempt = TestAssert.IsNotNull(context.Attempt);
-        TestAssert.AreEqual(context.UtcNow, attempt.NowUtc);
-        TestAssert.IsTrue(attempt.Digest.SequenceEqual(
+        Assert.AreEqual(context.UtcNow, attempt.NowUtc);
+        Assert.IsTrue(attempt.Digest.SequenceEqual(
             context.Protector.Protect(Identity.Key, "000012")),
             "Leading zeroes must survive verification.");
     }
@@ -86,7 +86,7 @@ public sealed class VerificationCodeServiceTests
         byte[] registration = protector.Protect(
             VerificationIdentity.ForRegistration("PlayerOne", "player@example.com").Key, "000012");
         // Assert
-        TestAssert.IsTrue(!login.SequenceEqual(other) && !login.SequenceEqual(registration),
+        Assert.IsTrue(!login.SequenceEqual(other) && !login.SequenceEqual(registration),
             "A code digest must not transfer between accounts or purposes.");
     }
 }

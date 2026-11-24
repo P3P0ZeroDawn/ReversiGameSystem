@@ -3,9 +3,6 @@ using System.Collections.Generic;
 
 namespace ReversiGameSystem.Server.Domain.Matches;
 
-/// <summary>
-/// Provides stateless Reversi board initialization, move validation, and capture evaluation rules.
-/// </summary>
 public static class ReversiEngine
 {
     public const int Empty = 0;
@@ -27,10 +24,6 @@ public static class ReversiEngine
         return board;
     }
 
-    /// <summary>
-    /// Flips captured opponent discs on <paramref name="board"/> in place when the move is legal,
-    /// returning the flipped flat cell indices (0..63) or an empty array if invalid.
-    /// </summary>
     public static int[] ApplyMove(int[] board, int row, int column, int disc)
     {
         ValidateBoard(board);

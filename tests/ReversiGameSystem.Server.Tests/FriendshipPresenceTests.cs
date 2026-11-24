@@ -28,12 +28,12 @@ public sealed class FriendshipPresenceTests
 
         // Assert
         Wait(() => one.Count(2, FriendChange.Connected) == 1);
-        TestAssert.AreEqual(1, friends.Length);
-        TestAssert.AreEqual(2L, friends[0].Account.AccountId);
-        TestAssert.IsTrue(friends[0].IsOnline && friends[0].HasProfileImage, "Expected public online friend.");
-        TestAssert.AreEqual(1L, two.Channel.GetFriends("two")[0].Account.AccountId);
-        TestAssert.AreEqual(0, stranger.Channel.GetFriends("stranger").Length);
-        TestAssert.AreEqual(0, stranger.Count(2, FriendChange.Connected));
+        Assert.AreEqual(1, friends.Length);
+        Assert.AreEqual(2L, friends[0].Account.AccountId);
+        Assert.IsTrue(friends[0].IsOnline && friends[0].HasProfileImage, "Expected public online friend.");
+        Assert.AreEqual(1L, two.Channel.GetFriends("two")[0].Account.AccountId);
+        Assert.AreEqual(0, stranger.Channel.GetFriends("stranger").Length);
+        Assert.AreEqual(0, stranger.Count(2, FriendChange.Connected));
     }
 
     [TestMethod]
@@ -56,12 +56,12 @@ public sealed class FriendshipPresenceTests
         context.Subscriptions.Remove("two-b");
 
         // Assert
-        TestAssert.IsTrue(observer.Channel.GetFriends("one")[0].IsOnline, "Third session must keep account online.");
-        TestAssert.AreEqual(0, observer.Count(2, FriendChange.Disconnected));
+        Assert.IsTrue(observer.Channel.GetFriends("one")[0].IsOnline, "Third session must keep account online.");
+        Assert.AreEqual(0, observer.Count(2, FriendChange.Disconnected));
         context.Expire("two-c");
         context.Subscriptions.Remove("two-c");
         Wait(() => observer.Count(2, FriendChange.Disconnected) == 1);
-        TestAssert.IsTrue(!observer.Channel.GetFriends("one")[0].IsOnline, "Last revocation must disconnect.");
+        Assert.IsTrue(!observer.Channel.GetFriends("one")[0].IsOnline, "Last revocation must disconnect.");
     }
 
     [TestMethod]
@@ -80,8 +80,8 @@ public sealed class FriendshipPresenceTests
         old.Dispose();
 
         // Assert
-        TestAssert.IsTrue(observer.Channel.GetFriends("one")[0].IsOnline, "Old close must not remove its replacement.");
-        TestAssert.AreEqual(0, observer.Count(2, FriendChange.Disconnected));
+        Assert.IsTrue(observer.Channel.GetFriends("one")[0].IsOnline, "Old close must not remove its replacement.");
+        Assert.AreEqual(0, observer.Count(2, FriendChange.Disconnected));
         replacement.Close();
         Wait(() => observer.Count(2, FriendChange.Disconnected) == 1);
     }
@@ -94,24 +94,24 @@ public sealed class FriendshipPresenceTests
         FriendshipPresenceTestClient client = context.CreateClient();
 
         // Act
-        FaultException<SessionFault> missing = TestAssert.Throws<FaultException<SessionFault>>(
+        FaultException<SessionFault> missing = Assert.Throws<FaultException<SessionFault>>(
             () => client.Channel.GetFriends(string.Empty));
-        FaultException<SessionFault> invalid = TestAssert.Throws<FaultException<SessionFault>>(
+        FaultException<SessionFault> invalid = Assert.Throws<FaultException<SessionFault>>(
             () => client.Channel.OpenFriendshipChannel("invalid"));
         context.Inactive = true;
-        FaultException<SessionFault> inactive = TestAssert.Throws<FaultException<SessionFault>>(
+        FaultException<SessionFault> inactive = Assert.Throws<FaultException<SessionFault>>(
             () => client.Channel.GetFriends("one"));
         context.Inactive = false;
         context.Expire("one");
-        FaultException<SessionFault> expired = TestAssert.Throws<FaultException<SessionFault>>(
+        FaultException<SessionFault> expired = Assert.Throws<FaultException<SessionFault>>(
             () => client.Channel.GetFriends("one"));
 
         // Assert
-        TestAssert.AreEqual(SessionFailure.MissingSessionToken, missing.Detail.Reason);
-        TestAssert.AreEqual(SessionFailure.InvalidSession, invalid.Detail.Reason);
-        TestAssert.AreEqual(SessionFailure.InactiveAccount, inactive.Detail.Reason);
-        TestAssert.AreEqual(SessionFailure.InvalidSession, expired.Detail.Reason);
-        TestAssert.AreEqual(0, context.FriendshipReads);
+        Assert.AreEqual(SessionFailure.MissingSessionToken, missing.Detail.Reason);
+        Assert.AreEqual(SessionFailure.InvalidSession, invalid.Detail.Reason);
+        Assert.AreEqual(SessionFailure.InactiveAccount, inactive.Detail.Reason);
+        Assert.AreEqual(SessionFailure.InvalidSession, expired.Detail.Reason);
+        Assert.AreEqual(0, context.FriendshipReads);
     }
 
     [TestMethod]
@@ -122,18 +122,18 @@ public sealed class FriendshipPresenceTests
         FriendshipPresenceTestClient client = context.CreateClient();
 
         // Act
-        TestAssert.Throws<FaultException<ServiceFault>>(() => client.Channel.FindPlayers("one", "private"));
-        TestAssert.Throws<FaultException<ServiceFault>>(() => client.Channel.SendFriendRequest("one", 2));
-        TestAssert.Throws<FaultException<ServiceFault>>(() => client.Channel.GetPendingFriendRequests("one"));
-        TestAssert.Throws<FaultException<ServiceFault>>(() => client.Channel.RespondToFriendRequest("one", "id", true));
-        TestAssert.Throws<FaultException<ServiceFault>>(() => client.Channel.RemoveFriend("one", 2));
+        Assert.Throws<FaultException<ServiceFault>>(() => client.Channel.FindPlayers("one", "private"));
+        Assert.Throws<FaultException<ServiceFault>>(() => client.Channel.SendFriendRequest("one", 2));
+        Assert.Throws<FaultException<ServiceFault>>(() => client.Channel.GetPendingFriendRequests("one"));
+        Assert.Throws<FaultException<ServiceFault>>(() => client.Channel.RespondToFriendRequest("one", "id", true));
+        Assert.Throws<FaultException<ServiceFault>>(() => client.Channel.RemoveFriend("one", 2));
 
         // Assert
-        TestAssert.AreEqual(0, context.FriendshipReads);
+        Assert.AreEqual(0, context.FriendshipReads);
         context.FailRepository = true;
-        FaultException<ServiceFault> fault = TestAssert.Throws<FaultException<ServiceFault>>(
+        FaultException<ServiceFault> fault = Assert.Throws<FaultException<ServiceFault>>(
             () => client.Channel.GetFriends("one"));
-        TestAssert.IsTrue(!fault.ToString().Contains("Private provider diagnostic"), "Provider messages must stay private.");
+        Assert.IsTrue(!fault.ToString().Contains("Private provider diagnostic"), "Provider messages must stay private.");
     }
 
     [TestMethod]
@@ -153,7 +153,7 @@ public sealed class FriendshipPresenceTests
 
         // Assert
         Wait(() => live.Count(2, FriendChange.Connected) == 1);
-        TestAssert.AreEqual(0, revoked.Count(2, FriendChange.Connected));
+        Assert.AreEqual(0, revoked.Count(2, FriendChange.Connected));
     }
 
     [TestMethod]
@@ -187,7 +187,7 @@ public sealed class FriendshipPresenceTests
 
         // Assert
         Wait(() => Volatile.Read(ref context.RelationshipChecks) > initialChecks);
-        TestAssert.AreEqual(0, observer.Count(2, FriendChange.Connected));
+        Assert.AreEqual(0, observer.Count(2, FriendChange.Connected));
     }
 
     [TestMethod]
@@ -201,14 +201,14 @@ public sealed class FriendshipPresenceTests
         // Act
         FriendshipPresenceTestClient friend = context.Connect("two");
         Wait(() => Volatile.Read(ref context.FailedRelationshipChecks) > 0);
-        TestAssert.AreEqual(CommunicationState.Opened,
+        Assert.AreEqual(CommunicationState.Opened,
             ((ICommunicationObject)observer.Channel).State);
         context.FailRelationshipChecks = false;
 
         // Assert
-        TestAssert.IsTrue(observer.Channel.GetFriends("one")[0].IsOnline,
+        Assert.IsTrue(observer.Channel.GetFriends("one")[0].IsOnline,
             "The existing channel must recover its friend snapshot.");
-        TestAssert.IsTrue(friend.Channel.GetFriends("two")[0].IsOnline,
+        Assert.IsTrue(friend.Channel.GetFriends("two")[0].IsOnline,
             "A repository failure must not remove the observer's presence.");
         context.Expire("two");
         context.Subscriptions.Remove("two");
@@ -225,11 +225,11 @@ public sealed class FriendshipPresenceTests
         context.FailRepository = true;
 
         // Act
-        TestAssert.Throws<FaultException<ServiceFault>>(() => client.Channel.GetFriends("one"));
+        Assert.Throws<FaultException<ServiceFault>>(() => client.Channel.GetFriends("one"));
         Wait(() => logger.Failure != null);
 
         // Assert
-        TestAssert.IsTrue(ReferenceEquals(context.RepositoryFailure, logger.Failure),
+        Assert.IsTrue(ReferenceEquals(context.RepositoryFailure, logger.Failure),
             "The logger must receive the original exception, including its diagnostic structure.");
     }
 
@@ -248,7 +248,7 @@ public sealed class FriendshipPresenceTests
         try
         {
             Console.SetError(fallback);
-            TestAssert.Throws<FaultException<ServiceFault>>(() => client.Channel.GetFriends("one"));
+            Assert.Throws<FaultException<ServiceFault>>(() => client.Channel.GetFriends("one"));
             Wait(() => fallback.ToString().Contains("CorrelationId:"));
         }
         finally
@@ -258,13 +258,13 @@ public sealed class FriendshipPresenceTests
 
         // Assert
         string output = fallback.ToString();
-        TestAssert.IsTrue(output.Contains("CorrelationId:")
+        Assert.IsTrue(output.Contains("CorrelationId:")
             && output.Contains(nameof(FriendshipService.GetFriends)),
             "Fallback diagnostics must retain the operation and correlation.");
-        TestAssert.IsTrue(output.Contains(nameof(InvalidOperationException))
+        Assert.IsTrue(output.Contains(nameof(InvalidOperationException))
             && output.Contains(nameof(IOException)),
             "Fallback diagnostics must report both the operation and logger failures.");
-        TestAssert.IsTrue(!output.Contains("private-"),
+        Assert.IsTrue(!output.Contains("private-"),
             "The independent diagnostic sink must exclude both provider messages.");
     }
 
@@ -291,5 +291,5 @@ public sealed class FriendshipPresenceTests
     }
 
     private static void Wait(Func<bool> condition, int timeout = 5000) =>
-        TestAssert.IsTrue(SpinWait.SpinUntil(condition, timeout), "Expected presence callback before timeout.");
+        Assert.IsTrue(SpinWait.SpinUntil(condition, timeout), "Expected presence callback before timeout.");
 }

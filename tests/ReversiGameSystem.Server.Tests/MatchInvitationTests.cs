@@ -94,13 +94,13 @@ public sealed class MatchInvitationTests
             ?? throw new InvalidOperationException("Match expected.");
 
         // Assert
-        TestAssert.AreEqual("Waiting", result.State);
-        TestAssert.AreEqual(true, result.IsPrivate);
-        TestAssert.AreEqual(1, mailer.SentEmails.Count);
+        Assert.AreEqual("Waiting", result.State);
+        Assert.AreEqual(true, result.IsPrivate);
+        Assert.AreEqual(1, mailer.SentEmails.Count);
         EmailMessage sent = mailer.SentEmails[0];
-        TestAssert.AreEqual("beta@example.com", sent.RecipientAddress);
-        TestAssert.IsTrue(sent.Body.Contains("AlphaPlayer"), "Email body should contain inviter username.");
-        TestAssert.IsTrue(sent.Body.Contains(result.Code ?? string.Empty), "Email body should contain match code.");
+        Assert.AreEqual("beta@example.com", sent.RecipientAddress);
+        Assert.IsTrue(sent.Body.Contains("AlphaPlayer"), "Email body should contain inviter username.");
+        Assert.IsTrue(sent.Body.Contains(result.Code ?? string.Empty), "Email body should contain match code.");
     }
 
     /// <summary>
@@ -125,10 +125,10 @@ public sealed class MatchInvitationTests
             ?? throw new InvalidOperationException("Match expected.");
 
         // Assert
-        TestAssert.AreEqual("Waiting", result.State);
-        TestAssert.AreEqual(true, result.IsPrivate);
-        TestAssert.AreEqual(1, mailer.SentEmails.Count);
-        TestAssert.AreEqual("gamma@example.com", mailer.SentEmails[0].RecipientAddress);
+        Assert.AreEqual("Waiting", result.State);
+        Assert.AreEqual(true, result.IsPrivate);
+        Assert.AreEqual(1, mailer.SentEmails.Count);
+        Assert.AreEqual("gamma@example.com", mailer.SentEmails[0].RecipientAddress);
     }
 
     /// <summary>
@@ -152,8 +152,8 @@ public sealed class MatchInvitationTests
             new MatchSettings());
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Unauthorized, result.Status);
-        TestAssert.AreEqual(0, mailer.SentEmails.Count);
+        Assert.AreEqual(MatchStatus.Unauthorized, result.Status);
+        Assert.AreEqual(0, mailer.SentEmails.Count);
     }
 
     /// <summary>
@@ -176,8 +176,8 @@ public sealed class MatchInvitationTests
             new MatchSettings());
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Unauthorized, result.Status);
-        TestAssert.AreEqual(0, mailer.SentEmails.Count);
+        Assert.AreEqual(MatchStatus.Unauthorized, result.Status);
+        Assert.AreEqual(0, mailer.SentEmails.Count);
     }
 
     /// <summary>
@@ -194,10 +194,10 @@ public sealed class MatchInvitationTests
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
 
         // Act & Assert
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             MatchStatus.InvalidFriendAccountId,
             handler.InviteToMatch(creator.SessionToken, 0, new MatchSettings()).Status);
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             MatchStatus.InvalidFriendAccountId,
             handler.InviteToMatch(creator.SessionToken, -5, new MatchSettings()).Status);
     }
@@ -222,8 +222,8 @@ public sealed class MatchInvitationTests
             new MatchSettings());
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.FriendAccountUnavailable, result.Status);
-        TestAssert.AreEqual(0, mailer.SentEmails.Count);
+        Assert.AreEqual(MatchStatus.FriendAccountUnavailable, result.Status);
+        Assert.AreEqual(0, mailer.SentEmails.Count);
     }
 
     /// <summary>
@@ -247,8 +247,8 @@ public sealed class MatchInvitationTests
             new MatchSettings());
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.FriendshipNotFound, result.Status);
-        TestAssert.AreEqual(0, mailer.SentEmails.Count);
+        Assert.AreEqual(MatchStatus.FriendshipNotFound, result.Status);
+        Assert.AreEqual(0, mailer.SentEmails.Count);
     }
 
     /// <summary>
@@ -274,8 +274,8 @@ public sealed class MatchInvitationTests
             new MatchSettings());
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.InactiveAccount, result.Status);
-        TestAssert.AreEqual(0, mailer.SentEmails.Count);
+        Assert.AreEqual(MatchStatus.InactiveAccount, result.Status);
+        Assert.AreEqual(0, mailer.SentEmails.Count);
     }
 
     /// <summary>
@@ -292,13 +292,13 @@ public sealed class MatchInvitationTests
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
 
         // Act & Assert
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             MatchStatus.InvalidTurnDuration,
             handler.InviteToMatch(
                 creator.SessionToken,
                 20,
                 new MatchSettings { TurnDurationSeconds = 9 }).Status);
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             MatchStatus.InvalidTurnDuration,
             handler.InviteToMatch(
                 creator.SessionToken,
@@ -326,7 +326,7 @@ public sealed class MatchInvitationTests
             new MatchSettings { OpponentKind = "System" });
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.InvalidConfiguration, result.Status);
+        Assert.AreEqual(MatchStatus.InvalidConfiguration, result.Status);
     }
 
     /// <summary>
@@ -349,7 +349,7 @@ public sealed class MatchInvitationTests
             new MatchSettings { CountsTowardStatistics = true });
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.InvalidConfiguration, result.Status);
+        Assert.AreEqual(MatchStatus.InvalidConfiguration, result.Status);
     }
 
     /// <summary>
@@ -367,12 +367,12 @@ public sealed class MatchInvitationTests
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
 
         // Act
-        TestAssert.Throws<InvalidOperationException>(() =>
+        Assert.Throws<InvalidOperationException>(() =>
             handler.InviteToMatch(creator.SessionToken, 20, new MatchSettings()));
 
         // Assert
-        TestAssert.AreEqual(1, store.CancelCount);
-        TestAssert.AreEqual(0, store.ConfirmedCount);
+        Assert.AreEqual(1, store.CancelCount);
+        Assert.AreEqual(0, store.ConfirmedCount);
     }
 
     /// <summary>
@@ -391,13 +391,13 @@ public sealed class MatchInvitationTests
         MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
 
         // Act
-        TestAssert.Throws<AggregateException>(() =>
+        Assert.Throws<AggregateException>(() =>
             handler.InviteToMatch(creator.SessionToken, 20, new MatchSettings()));
 
         // Assert
-        TestAssert.AreEqual(1, store.Rows.Count);
+        Assert.AreEqual(1, store.Rows.Count);
         MockMatchRow row = store.Rows.Values.First();
-        TestAssert.IsTrue(!row.IsConfirmed, "Match must not be confirmed.");
+        Assert.IsTrue(!row.IsConfirmed, "Match must not be confirmed.");
     }
 
     /// <summary>
@@ -426,8 +426,8 @@ public sealed class MatchInvitationTests
             new MatchSettings());
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.MatchNotWaiting, result.Status);
-        TestAssert.AreEqual(1, store.CancelCount);
+        Assert.AreEqual(MatchStatus.MatchNotWaiting, result.Status);
+        Assert.AreEqual(1, store.CancelCount);
     }
 
     /// <summary>
@@ -453,18 +453,18 @@ public sealed class MatchInvitationTests
         // Act & Assert
         Match[] forCreator = handler.GetAvailableMatches(creator.SessionToken).Value
             ?? throw new InvalidOperationException("Matches expected.");
-        TestAssert.AreEqual(1, forCreator.Length);
-        TestAssert.AreEqual(false, forCreator[0].IsPrivate);
+        Assert.AreEqual(1, forCreator.Length);
+        Assert.AreEqual(false, forCreator[0].IsPrivate);
 
         Match[] forFriend = handler.GetAvailableMatches(friend.SessionToken).Value
             ?? throw new InvalidOperationException("Matches expected.");
-        TestAssert.AreEqual(1, forFriend.Length);
-        TestAssert.AreEqual(false, forFriend[0].IsPrivate);
+        Assert.AreEqual(1, forFriend.Length);
+        Assert.AreEqual(false, forFriend[0].IsPrivate);
 
         Match[] forStranger = handler.GetAvailableMatches(stranger.SessionToken).Value
             ?? throw new InvalidOperationException("Matches expected.");
-        TestAssert.AreEqual(1, forStranger.Length);
-        TestAssert.AreEqual(false, forStranger[0].IsPrivate);
+        Assert.AreEqual(1, forStranger.Length);
+        Assert.AreEqual(false, forStranger[0].IsPrivate);
     }
 
     /// <summary>
@@ -492,9 +492,9 @@ public sealed class MatchInvitationTests
             ?? throw new InvalidOperationException("Match expected.");
 
         // Assert
-        TestAssert.AreEqual("InProgress", joined.State);
-        TestAssert.AreEqual(2, joined.Participants.Length);
-        TestAssert.AreEqual(20L, joined.Participants[1].AccountId);
+        Assert.AreEqual("InProgress", joined.State);
+        Assert.AreEqual(2, joined.Participants.Length);
+        Assert.AreEqual(20L, joined.Participants[1].AccountId);
     }
 
     /// <summary>
@@ -524,7 +524,7 @@ public sealed class MatchInvitationTests
             waiting.Code!);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Unauthorized, result.Status);
+        Assert.AreEqual(MatchStatus.Unauthorized, result.Status);
     }
 
     /// <summary>
@@ -550,7 +550,7 @@ public sealed class MatchInvitationTests
         MatchStatus status = store.ValidateGuestJoin(waiting.Code!);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.Unauthorized, status);
+        Assert.AreEqual(MatchStatus.Unauthorized, status);
     }
 
     /// <summary>
@@ -577,7 +577,7 @@ public sealed class MatchInvitationTests
         MatchResult<Match> result = store.JoinMatch(friend, "AB2324", DateTime.UtcNow);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.MatchCodeUnavailable, result.Status);
+        Assert.AreEqual(MatchStatus.MatchCodeUnavailable, result.Status);
     }
 
     /// <summary>
@@ -604,7 +604,7 @@ public sealed class MatchInvitationTests
         MatchResult<Match> result = store.JoinMatch(friend, "AB2325", DateTime.UtcNow);
 
         // Assert
-        TestAssert.AreEqual(MatchStatus.MatchCodeUnavailable, result.Status);
+        Assert.AreEqual(MatchStatus.MatchCodeUnavailable, result.Status);
     }
 
     /// <summary>
@@ -639,7 +639,7 @@ public sealed class MatchInvitationTests
 
         // Assert
         int successes = attempts.Count(task => task.Result);
-        TestAssert.AreEqual(1, successes);
+        Assert.AreEqual(1, successes);
     }
 
     /// <summary>
@@ -665,9 +665,9 @@ public sealed class MatchInvitationTests
         long[] cancelled = handler.CancelWaitingForSession(creator.SessionToken);
 
         // Assert
-        TestAssert.AreEqual(1, cancelled.Length);
-        TestAssert.AreEqual(waiting.Id, cancelled[0]);
-        TestAssert.AreEqual(0, handler.CancelWaitingForSession(creator.SessionToken).Length);
+        Assert.AreEqual(1, cancelled.Length);
+        Assert.AreEqual(waiting.Id, cancelled[0]);
+        Assert.AreEqual(0, handler.CancelWaitingForSession(creator.SessionToken).Length);
     }
 
     /// <summary>
@@ -695,9 +695,9 @@ public sealed class MatchInvitationTests
         long[] cancelled = handler.CancelWaitingForSession(creatorSession1.SessionToken);
 
         // Assert
-        TestAssert.AreEqual(1, cancelled.Length);
-        TestAssert.AreEqual(waiting.Id, cancelled[0]);
-        TestAssert.AreEqual(0, handler.CancelWaitingForSession(creatorSession2.SessionToken).Length);
+        Assert.AreEqual(1, cancelled.Length);
+        Assert.AreEqual(waiting.Id, cancelled[0]);
+        Assert.AreEqual(0, handler.CancelWaitingForSession(creatorSession2.SessionToken).Length);
     }
 
     /// <summary>
@@ -726,9 +726,9 @@ public sealed class MatchInvitationTests
             string body = TestAssert.IsNotNull(message.TextBody);
 
             // Assert
-            TestAssert.IsTrue(body.Contains(ExpectedMandatoryLegend), "Body must contain mandatory legend.");
-            TestAssert.IsTrue(body.Contains("REV999"), "Body must contain the match code.");
-            TestAssert.IsTrue(body.Contains("AlphaPlayer"), "Body must contain creator display name.");
+            Assert.IsTrue(body.Contains(ExpectedMandatoryLegend), "Body must contain mandatory legend.");
+            Assert.IsTrue(body.Contains("REV999"), "Body must contain the match code.");
+            Assert.IsTrue(body.Contains("AlphaPlayer"), "Body must contain creator display name.");
         });
     }
 

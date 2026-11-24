@@ -4,43 +4,48 @@ using ReversiGameSystem.Game;
 using ReversiGameSystem.Services;
 using ReversiGameSystem.Statistics;
 using ReversiGameSystem.Validation;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Client.Tests;
 
-internal sealed class GuestUsernamePolicyTests
+[TestClass]
+public sealed class GuestUsernamePolicyTests
 {
-    internal void Validate_ValidName_ReturnsNone()
+    [TestMethod]
+    public void Validate_ValidName_ReturnsNone()
     {
         // Arrange
 
         // Act
 
         // Assert
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             UsernameValidationError.None,
             GuestUsernamePolicy.Validate("Pedro_27"));
     }
 
-    internal void Validate_WhitespaceOnly_ReturnsMissing()
+    [TestMethod]
+    public void Validate_WhitespaceOnly_ReturnsMissing()
     {
         // Arrange
 
         // Act
 
         // Assert
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             UsernameValidationError.Missing,
             GuestUsernamePolicy.Validate("   "));
     }
 
-    internal void Normalize_NameWithOuterWhitespace_ReturnsBaseName()
+    [TestMethod]
+    public void Normalize_NameWithOuterWhitespace_ReturnsBaseName()
     {
         // Arrange
 
         // Act
 
         // Assert
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             "Pedro",
             GuestUsernamePolicy.Normalize("  Pedro  "));
     }

@@ -77,7 +77,7 @@ public sealed class ContractArchitectureTests
             foreach (FieldInfo field in type.GetFields(BindingFlags.Public | BindingFlags.Static))
             {
                 EnumMemberAttribute member = GetAttribute<EnumMemberAttribute>(field);
-                TestAssert.IsTrue(string.IsNullOrEmpty(member.Value) || member.Value == field.Name,
+                Assert.IsTrue(string.IsNullOrEmpty(member.Value) || member.Value == field.Name,
                     $"Unexpected wire enum value for {type.Name}.{field.Name}.");
             }
         }
@@ -94,10 +94,10 @@ public sealed class ContractArchitectureTests
         DataMemberAttribute attribute = GetAttribute<DataMemberAttribute>(member);
 
         // Assert
-        TestAssert.AreEqual(typeof(bool), member.PropertyType);
-        TestAssert.AreEqual(3, attribute.Order);
-        TestAssert.AreEqual(true, attribute.IsRequired);
-        TestAssert.AreEqual(DiagnosticsNamespace,
+        Assert.AreEqual(typeof(bool), member.PropertyType);
+        Assert.AreEqual(3, attribute.Order);
+        Assert.AreEqual(true, attribute.IsRequired);
+        Assert.AreEqual(DiagnosticsNamespace,
             GetAttribute<DataContractAttribute>(type).Namespace);
     }
 
@@ -116,40 +116,40 @@ public sealed class ContractArchitectureTests
             || reference.Name == "PresentationFramework");
 
         // Assert
-        TestAssert.IsTrue(!hasInfrastructure,
+        Assert.IsTrue(!hasInfrastructure,
             "The contract assembly must not reference domain, persistence, or WPF types.");
     }
 
     private static void AssertService(Type type)
     {
         ServiceContractAttribute attribute = GetAttribute<ServiceContractAttribute>(type);
-        TestAssert.AreEqual(ServicesNamespace, attribute.Namespace);
-        TestAssert.IsTrue(string.IsNullOrEmpty(attribute.Name) || attribute.Name == type.Name,
+        Assert.AreEqual(ServicesNamespace, attribute.Namespace);
+        Assert.IsTrue(string.IsNullOrEmpty(attribute.Name) || attribute.Name == type.Name,
             $"Unexpected service name for {type.Name}.");
-        TestAssert.IsTrue(type.IsInterface, $"{type.Name} must be an interface.");
+        Assert.IsTrue(type.IsInterface, $"{type.Name} must be an interface.");
         bool isCallback = type.Name.EndsWith("Callback", StringComparison.Ordinal);
         string callbackName = type.Name + "Callback";
         bool hasCallback = !isCallback
             && ContractCatalogExpectations.Operations.ContainsKey(callbackName);
         Type? callback = hasCallback ? FindType(callbackName) : null;
-        TestAssert.AreEqual(callback, attribute.CallbackContract);
+        Assert.AreEqual(callback, attribute.CallbackContract);
         string category = isCallback ? "Callbacks" : "Services";
-        TestAssert.AreEqual("ReversiGameSystem.Server.Contracts." + category, type.Namespace);
+        Assert.AreEqual("ReversiGameSystem.Server.Contracts." + category, type.Namespace);
     }
 
     private static void AssertOperation(MethodInfo method, string contractName)
     {
         OperationContractAttribute operation = GetAttribute<OperationContractAttribute>(method);
-        TestAssert.IsTrue(string.IsNullOrEmpty(operation.Name) || operation.Name == method.Name,
+        Assert.IsTrue(string.IsNullOrEmpty(operation.Name) || operation.Name == method.Name,
             $"Unexpected operation name for {method.Name}.");
         bool isCallback = contractName.EndsWith("Callback", StringComparison.Ordinal);
-        TestAssert.AreEqual(isCallback, operation.IsOneWay);
+        Assert.AreEqual(isCallback, operation.IsOneWay);
         FaultContractAttribute[] faults = method.GetCustomAttributes<FaultContractAttribute>()
             .ToArray();
         if (isCallback)
         {
-            TestAssert.AreEqual(typeof(void), method.ReturnType);
-            TestAssert.AreEqual(0, faults.Length);
+            Assert.AreEqual(typeof(void), method.ReturnType);
+            Assert.AreEqual(0, faults.Length);
             return;
         }
 
@@ -159,7 +159,7 @@ public sealed class ContractArchitectureTests
         {
             string expectedNamespace = fault.DetailType == typeof(ServiceFault)
                 ? DiagnosticsNamespace : DataNamespace;
-            TestAssert.AreEqual(expectedNamespace, fault.Namespace);
+            Assert.AreEqual(expectedNamespace, fault.Namespace);
         }
     }
 
@@ -195,8 +195,8 @@ public sealed class ContractArchitectureTests
         DataContractAttribute attribute = GetAttribute<DataContractAttribute>(type);
         string expectedNamespace = type == typeof(ServiceFault)
             ? DiagnosticsNamespace : DataNamespace;
-        TestAssert.AreEqual(expectedNamespace, attribute.Namespace);
-        TestAssert.IsTrue(string.IsNullOrEmpty(attribute.Name) || attribute.Name == type.Name,
+        Assert.AreEqual(expectedNamespace, attribute.Namespace);
+        Assert.IsTrue(string.IsNullOrEmpty(attribute.Name) || attribute.Name == type.Name,
             $"Unexpected wire name for {type.Name}.");
     }
 
@@ -211,10 +211,10 @@ public sealed class ContractArchitectureTests
             string[] parts = expected[index].Split(' ');
             PropertyInfo property = TestAssert.IsNotNull(type.GetProperty(parts[1]));
             DataMemberAttribute member = GetAttribute<DataMemberAttribute>(property);
-            TestAssert.AreEqual(index + 1, member.Order);
-            TestAssert.AreEqual(!parts[0].EndsWith("?", StringComparison.Ordinal),
+            Assert.AreEqual(index + 1, member.Order);
+            Assert.AreEqual(!parts[0].EndsWith("?", StringComparison.Ordinal),
                 member.IsRequired);
-            TestAssert.IsTrue(string.IsNullOrEmpty(member.Name) || member.Name == property.Name,
+            Assert.IsTrue(string.IsNullOrEmpty(member.Name) || member.Name == property.Name,
                 $"Unexpected wire member name for {type.Name}.{property.Name}.");
         }
     }
@@ -256,7 +256,7 @@ public sealed class ContractArchitectureTests
     {
         Type? type = typeof(ServiceFault).Assembly.GetExportedTypes()
             .SingleOrDefault(candidate => candidate.Name == name);
-        TestAssert.IsTrue(type != null, $"Catalog contract {name} is missing.");
+        Assert.IsTrue(type != null, $"Catalog contract {name} is missing.");
         return TestAssert.IsNotNull(type);
     }
 
@@ -270,6 +270,6 @@ public sealed class ContractArchitectureTests
     {
         string expectedText = string.Join("; ", expected.OrderBy(value => value));
         string actualText = string.Join("; ", actual.OrderBy(value => value));
-        TestAssert.AreEqual(expectedText, actualText);
+        Assert.AreEqual(expectedText, actualText);
     }
 }

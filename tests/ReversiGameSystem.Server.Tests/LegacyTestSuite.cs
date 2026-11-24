@@ -148,15 +148,16 @@ internal static class LegacyTestSuite
 
     private static Action[] CreatePlayerImageRepositoryTests()
     {
+        PlayerImageRepositoryTests tests = new PlayerImageRepositoryTests();
         return new Action[]
         {
-            PlayerImageRepositoryTests.SaveImage_WideTransparentImage_CropsCenterAndCompositesWhite,
-            PlayerImageRepositoryTests.SaveImage_Background_ResizesAndDoesNotUpscale,
-            PlayerImageRepositoryTests.ReadImage_LegacyFormats_PreservesMediaType,
-            PlayerImageRepositoryTests.DeleteImage_TraversalReference_RejectsAndPreservesFile,
-            PlayerImageRepositoryTests.SaveImage_DetailedBackgroundAboveSoftTarget_AcceptsImage,
-            PlayerImageRepositoryTests.SaveAndDelete_ValidImage_UsesRelativeUri,
-            PlayerImageRepositoryTests.SaveImage_ValidAndInvalidImages_ReturnsExpectedOutcome,
+            tests.SaveImage_WideTransparentImage_CropsCenterAndCompositesWhite,
+            tests.SaveImage_Background_ResizesAndDoesNotUpscale,
+            tests.ReadImage_LegacyFormats_PreservesMediaType,
+            tests.DeleteImage_TraversalReference_RejectsAndPreservesFile,
+            tests.SaveImage_DetailedBackgroundAboveSoftTarget_AcceptsImage,
+            tests.SaveAndDelete_ValidImage_UsesRelativeUri,
+            tests.SaveImage_ValidAndInvalidImages_ReturnsExpectedOutcome,
         };
     }
 

@@ -4,13 +4,8 @@ using System.IO;
 
 namespace ReversiGameSystem.Server.Persistence.Configuration;
 
-/// <summary>Reads server configuration without exposing its values in diagnostics.</summary>
 public static class EnvironmentSettings
 {
-    /// <summary>Reads a required process variable or a local development file value.</summary>
-    /// <param name="name">The configuration variable name.</param>
-    /// <returns>The configured value.</returns>
-    /// <exception cref="InvalidOperationException">The required value is absent.</exception>
     public static string ReadRequired(string name)
     {
         string? value = Environment.GetEnvironmentVariable(name);

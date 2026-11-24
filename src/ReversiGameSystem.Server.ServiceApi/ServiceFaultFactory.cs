@@ -34,14 +34,6 @@ internal static class ServiceFaultFactory
             "The server could not complete the operation.");
     }
 
-    internal static FaultException<AccountFault> CreateAccountFault(AccountFailure reason)
-    {
-        return new FaultException<AccountFault>(new AccountFault
-        {
-            Reason = reason
-        }, "The account request was rejected.");
-    }
-
     internal static FaultException<MatchFault> CreateMatchFault(MatchFailure reason)
     {
         return new FaultException<MatchFault>(new MatchFault

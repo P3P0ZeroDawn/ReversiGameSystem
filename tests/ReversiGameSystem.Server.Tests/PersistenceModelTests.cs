@@ -32,7 +32,7 @@ public sealed class PersistenceModelTests
                 .GetItems<EntityType>(DataSpace.CSpace);
 
             // Assert
-            TestAssert.AreEqual(13, entityTypes.Count);
+            Assert.AreEqual(13, entityTypes.Count);
         }
         finally
         {

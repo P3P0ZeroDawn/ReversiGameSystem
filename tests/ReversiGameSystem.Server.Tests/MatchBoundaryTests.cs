@@ -21,9 +21,9 @@ public sealed class MatchBoundaryTests
     {
         BoundaryStore store = new BoundaryStore();
         GameplayMatchService service = CreateGameplay(store);
-        FaultException<MatchFault> failure = TestAssert.Throws<FaultException<MatchFault>>(
+        FaultException<MatchFault> failure = Assert.Throws<FaultException<MatchFault>>(
             () => service.GetMatchInformation("valid", 7));
-        TestAssert.AreEqual(MatchFailure.Unauthorized, failure.Detail.Reason);
+        Assert.AreEqual(MatchFailure.Unauthorized, failure.Detail.Reason);
     }
 
     [TestMethod]
@@ -32,14 +32,14 @@ public sealed class MatchBoundaryTests
         BoundaryStore store = new BoundaryStore { AllowRead = true };
         GameplayMatchService service = CreateGameplay(store);
         MatchStateSnapshot state = service.GetMatchState("valid", 7);
-        TestAssert.AreEqual(7L, state.MatchId);
-        TestAssert.AreEqual(0L, state.MatchStateVersion);
-        TestAssert.AreEqual(64, state.Board.Length);
-        TestAssert.AreEqual(BoardCellState.White, state.Board[27]);
-        TestAssert.AreEqual(BoardCellState.Black, state.Board[28]);
-        TestAssert.AreEqual<int?>(1, state.CurrentTurnSeatNumber);
-        TestAssert.AreEqual(2, state.BlackPieceCount);
-        TestAssert.AreEqual(2, state.WhitePieceCount);
+        Assert.AreEqual(7L, state.MatchId);
+        Assert.AreEqual(0L, state.MatchStateVersion);
+        Assert.AreEqual(64, state.Board.Length);
+        Assert.AreEqual(BoardCellState.White, state.Board[27]);
+        Assert.AreEqual(BoardCellState.Black, state.Board[28]);
+        Assert.AreEqual<int?>(1, state.CurrentTurnSeatNumber);
+        Assert.AreEqual(2, state.BlackPieceCount);
+        Assert.AreEqual(2, state.WhitePieceCount);
     }
 
     [TestMethod]
@@ -47,9 +47,9 @@ public sealed class MatchBoundaryTests
     {
         BoundaryStore store = new BoundaryStore { FailStorage = true };
         GameplayMatchService service = CreateGameplay(store);
-        InvalidOperationException failure = TestAssert.Throws<InvalidOperationException>(
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(
             () => service.PlacePiece("valid", new PiecePlacement { MatchId = 7 }));
-        TestAssert.IsTrue(
+        Assert.IsTrue(
             failure.Message.Contains("private storage failure"),
             "The service must preserve the technical failure for ServiceErrorBehavior.");
     }
@@ -63,9 +63,9 @@ public sealed class MatchBoundaryTests
         MatchLobbyService service = CreateLobby(handler);
 
         // Act & Assert
-        InvalidOperationException failure = TestAssert.Throws<InvalidOperationException>(
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(
             () => service.GetAvailableMatches("valid"));
-        TestAssert.IsTrue(
+        Assert.IsTrue(
             failure.Message.Contains("private storage failure"),
             "The service must preserve the technical failure for ServiceErrorBehavior.");
     }
@@ -86,9 +86,9 @@ public sealed class MatchBoundaryTests
         MatchLobbyService service = CreateLobby(handler);
 
         // Act & Assert
-        FaultException<MatchFault> failure = TestAssert.Throws<FaultException<MatchFault>>(
+        FaultException<MatchFault> failure = Assert.Throws<FaultException<MatchFault>>(
             () => service.InviteToMatch(guest.SessionToken, 10, new MatchConfiguration { TurnDurationSeconds = 40 }));
-        TestAssert.AreEqual(MatchFailure.Unauthorized, failure.Detail.Reason);
+        Assert.AreEqual(MatchFailure.Unauthorized, failure.Detail.Reason);
     }
 
     [TestMethod]
@@ -101,9 +101,9 @@ public sealed class MatchBoundaryTests
         MatchLobbyService service = CreateLobby(handler);
 
         // Act & Assert
-        FaultException<MatchFault> failure = TestAssert.Throws<FaultException<MatchFault>>(
+        FaultException<MatchFault> failure = Assert.Throws<FaultException<MatchFault>>(
             () => service.InviteToMatch("valid", 1, new MatchConfiguration { TurnDurationSeconds = 40 }));
-        TestAssert.AreEqual(MatchFailure.Unauthorized, failure.Detail.Reason);
+        Assert.AreEqual(MatchFailure.Unauthorized, failure.Detail.Reason);
     }
 
     [TestMethod]
@@ -116,9 +116,9 @@ public sealed class MatchBoundaryTests
         MatchLobbyService service = CreateLobby(handler);
 
         // Act & Assert
-        FaultException<FriendshipFault> failure = TestAssert.Throws<FaultException<FriendshipFault>>(
+        FaultException<FriendshipFault> failure = Assert.Throws<FaultException<FriendshipFault>>(
             () => service.InviteToMatch("valid", 0, new MatchConfiguration { TurnDurationSeconds = 40 }));
-        TestAssert.AreEqual(FriendshipFailure.InvalidAccountId, failure.Detail.Reason);
+        Assert.AreEqual(FriendshipFailure.InvalidAccountId, failure.Detail.Reason);
     }
 
     [TestMethod]
@@ -131,9 +131,9 @@ public sealed class MatchBoundaryTests
         MatchLobbyService service = CreateLobby(handler);
 
         // Act & Assert
-        FaultException<FriendshipFault> failure = TestAssert.Throws<FaultException<FriendshipFault>>(
+        FaultException<FriendshipFault> failure = Assert.Throws<FaultException<FriendshipFault>>(
             () => service.InviteToMatch("valid", 2, new MatchConfiguration { TurnDurationSeconds = 40 }));
-        TestAssert.AreEqual(FriendshipFailure.AccountUnavailable, failure.Detail.Reason);
+        Assert.AreEqual(FriendshipFailure.AccountUnavailable, failure.Detail.Reason);
     }
 
     [TestMethod]
@@ -146,9 +146,9 @@ public sealed class MatchBoundaryTests
         MatchLobbyService service = CreateLobby(handler);
 
         // Act & Assert
-        FaultException<FriendshipFault> failure = TestAssert.Throws<FaultException<FriendshipFault>>(
+        FaultException<FriendshipFault> failure = Assert.Throws<FaultException<FriendshipFault>>(
             () => service.InviteToMatch("valid", 3, new MatchConfiguration { TurnDurationSeconds = 40 }));
-        TestAssert.AreEqual(FriendshipFailure.FriendshipNotFound, failure.Detail.Reason);
+        Assert.AreEqual(FriendshipFailure.FriendshipNotFound, failure.Detail.Reason);
     }
 
     [TestMethod]
@@ -161,9 +161,9 @@ public sealed class MatchBoundaryTests
         MatchLobbyService service = CreateLobby(handler);
 
         // Act & Assert
-        InvalidOperationException failure = TestAssert.Throws<InvalidOperationException>(
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(
             () => service.InviteToMatch("valid", 999, new MatchConfiguration { TurnDurationSeconds = 40 }));
-        TestAssert.IsTrue(
+        Assert.IsTrue(
             failure.Message.Contains("private storage failure"),
             "The service must preserve the technical failure for ServiceErrorBehavior.");
     }

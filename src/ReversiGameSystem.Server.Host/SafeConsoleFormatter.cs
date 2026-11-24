@@ -7,20 +7,14 @@ using ReversiGameSystem.Server.ServiceApi;
 
 namespace ReversiGameSystem.Server.Host;
 
-/// <summary>
-/// Writes technical diagnostics without exception messages or private exception data.
-/// </summary>
 public sealed class SafeConsoleFormatter : ConsoleFormatter
 {
-    /// <summary>Identifies the server's diagnostic console format.</summary>
     public const string FormatterName = "safe-diagnostics";
 
-    /// <summary>Initializes the diagnostic console formatter.</summary>
     public SafeConsoleFormatter() : base(FormatterName)
     {
     }
 
-    /// <inheritdoc />
     public override void Write<TState>(in LogEntry<TState> logEntry,
         IExternalScopeProvider? scopeProvider, TextWriter textWriter)
     {

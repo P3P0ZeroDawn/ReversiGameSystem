@@ -83,7 +83,7 @@ public sealed class PlayerImageRepository : IPlayerImageRepository
         {
             recoded = RecodeImage(image, kind);
         }
-        if (recoded.Status != ProfileOperationStatus.Success)
+        if (recoded.Status != ProfileStatus.Success)
         {
             return new ProfileResult<string>(recoded.Status);
         }
@@ -146,7 +146,7 @@ public sealed class PlayerImageRepository : IPlayerImageRepository
     {
         if (image == null || !PlayerImagePolicy.IsSupported(image.Content, image.MediaType))
         {
-            return new ProfileResult<byte[]>(ProfileOperationStatus.InvalidImage);
+            return new ProfileResult<byte[]>(ProfileStatus.InvalidImage);
         }
 
         try
@@ -165,7 +165,7 @@ public sealed class PlayerImageRepository : IPlayerImageRepository
                     || source.Width > PlayerImagePolicy.MaximumDimension
                     || source.Height > PlayerImagePolicy.MaximumDimension)
                 {
-                    return new ProfileResult<byte[]>(ProfileOperationStatus.InvalidImage);
+                    return new ProfileResult<byte[]>(ProfileStatus.InvalidImage);
                 }
 
                 return EncodeImage(source, kind);
@@ -173,7 +173,7 @@ public sealed class PlayerImageRepository : IPlayerImageRepository
         }
         catch (ArgumentException)
         {
-            return new ProfileResult<byte[]>(ProfileOperationStatus.InvalidImage);
+            return new ProfileResult<byte[]>(ProfileStatus.InvalidImage);
         }
     }
 

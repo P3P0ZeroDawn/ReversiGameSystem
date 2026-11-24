@@ -30,15 +30,15 @@ public sealed class LeaderboardApplicationServiceTests
         LeaderboardResult result = applicationService.Get(3);
 
         // Assert
-        TestAssert.AreEqual(LeaderboardStatus.Success, result.Status);
-        TestAssert.AreEqual(true, repository.WasCalled);
-        TestAssert.AreEqual(3, result.Entries.Count);
-        TestAssert.AreEqual("Charlie", result.Entries[0].Username);
-        TestAssert.AreEqual(1, result.Entries[0].Position);
-        TestAssert.AreEqual("Alpha", result.Entries[1].Username);
-        TestAssert.AreEqual(2, result.Entries[1].Position);
-        TestAssert.AreEqual("beta", result.Entries[2].Username);
-        TestAssert.AreEqual(0.7d, result.Entries[2].WinRate);
+        Assert.AreEqual(LeaderboardStatus.Success, result.Status);
+        Assert.AreEqual(true, repository.WasCalled);
+        Assert.AreEqual(3, result.Entries.Count);
+        Assert.AreEqual("Charlie", result.Entries[0].Username);
+        Assert.AreEqual(1, result.Entries[0].Position);
+        Assert.AreEqual("Alpha", result.Entries[1].Username);
+        Assert.AreEqual(2, result.Entries[1].Position);
+        Assert.AreEqual("beta", result.Entries[2].Username);
+        Assert.AreEqual(0.7d, result.Entries[2].WinRate);
     }
 
     [TestMethod]
@@ -55,13 +55,13 @@ public sealed class LeaderboardApplicationServiceTests
             .Get(LeaderboardApplicationService.MaximumAllowedEntries + 1);
 
         // Assert
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             LeaderboardStatus.InvalidMaximumEntries,
             belowMinimum.Status);
-        TestAssert.AreEqual(
+        Assert.AreEqual(
             LeaderboardStatus.InvalidMaximumEntries,
             aboveMaximum.Status);
-        TestAssert.AreEqual(false, repository.WasCalled);
+        Assert.AreEqual(false, repository.WasCalled);
     }
 
     [TestMethod]
@@ -76,9 +76,9 @@ public sealed class LeaderboardApplicationServiceTests
         LeaderboardResult result = applicationService.Get(10);
 
         // Assert
-        TestAssert.AreEqual(LeaderboardStatus.Success, result.Status);
-        TestAssert.AreEqual(0, result.Entries.Count);
-        TestAssert.AreEqual(true, repository.WasCalled);
+        Assert.AreEqual(LeaderboardStatus.Success, result.Status);
+        Assert.AreEqual(0, result.Entries.Count);
+        Assert.AreEqual(true, repository.WasCalled);
     }
 
     [TestMethod]
@@ -111,10 +111,10 @@ public sealed class LeaderboardApplicationServiceTests
             .Get(LeaderboardApplicationService.MaximumAllowedEntries);
 
         // Assert
-        TestAssert.AreEqual(LeaderboardStatus.Success, minimumResult.Status);
-        TestAssert.AreEqual(1, minimumResult.Entries.Count);
-        TestAssert.AreEqual(LeaderboardStatus.Success, maximumResult.Status);
-        TestAssert.AreEqual(100, maximumResult.Entries.Count);
+        Assert.AreEqual(LeaderboardStatus.Success, minimumResult.Status);
+        Assert.AreEqual(1, minimumResult.Entries.Count);
+        Assert.AreEqual(LeaderboardStatus.Success, maximumResult.Status);
+        Assert.AreEqual(100, maximumResult.Entries.Count);
     }
 
     [TestMethod]
@@ -126,11 +126,11 @@ public sealed class LeaderboardApplicationServiceTests
             new LeaderboardRepositoryStub { ThrowOnGet = true });
 
         // Act
-        InvalidOperationException exception = TestAssert.Throws<InvalidOperationException>(
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
             () => applicationService.Get(10));
 
         // Assert
-        TestAssert.AreEqual("Simulated leaderboard repository failure.", exception.Message);
+        Assert.AreEqual("Simulated leaderboard repository failure.", exception.Message);
     }
 }
 

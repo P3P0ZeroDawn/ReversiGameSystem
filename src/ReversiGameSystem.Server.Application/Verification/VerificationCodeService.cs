@@ -3,7 +3,6 @@ using ReversiGameSystem.Server.Application.Common;
 
 namespace ReversiGameSystem.Server.Application.Verification;
 
-/// <summary>Coordinates delivery and durable single-use verification.</summary>
 public sealed class VerificationCodeService
 {
     private const int VerificationCodeLength = 6;
@@ -13,10 +12,6 @@ public sealed class VerificationCodeService
     private readonly IVerificationCodeRepository _repository;
     private readonly IUtcClock _clock;
 
-    /// <summary>Creates the reusable verification workflow.</summary>
-    /// <param name="issuer">The delivery and protection service.</param>
-    /// <param name="repository">The durable verification store.</param>
-    /// <param name="clock">The authoritative UTC clock.</param>
     public VerificationCodeService(VerificationCodeIssuer issuer,
         IVerificationCodeRepository repository, IUtcClock clock)
     {
@@ -25,17 +20,12 @@ public sealed class VerificationCodeService
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
     }
 
-    /// <summary>Calculates a plausible expiration instant for a new code.</summary>
-    /// <returns>The UTC expiration instant five minutes from now.</returns>
     public DateTime CalculatePlausibleExpiry()
     {
         DateTime expiryUtc = _clock.UtcNow.AddMinutes(5);
         return expiryUtc;
     }
 
-    /// <summary>Replaces a pending code only after delivery has been accepted.</summary>
-    /// <param name="identity">The authorized action and recipient binding.</param>
-    /// <returns>The accepted code's UTC expiry.</returns>
     public DateTime Request(VerificationIdentity identity)
     {
         // Bound synchronization memory while serializing delivery and replacement per identity.
@@ -48,10 +38,6 @@ public sealed class VerificationCodeService
         }
     }
 
-    /// <summary>Attempts one durable single-use verification.</summary>
-    /// <param name="identity">The authorized action and recipient binding.</param>
-    /// <param name="code">The candidate supplied by the user.</param>
-    /// <returns>The verification outcome.</returns>
     public VerificationStatus Consume(VerificationIdentity identity, string code)
     {
         string candidate = code ?? string.Empty;

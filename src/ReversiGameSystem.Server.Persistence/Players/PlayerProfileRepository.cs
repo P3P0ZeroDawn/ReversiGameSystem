@@ -10,7 +10,6 @@ using ReversiGameSystem.Server.Persistence.Model;
 
 namespace ReversiGameSystem.Server.Persistence.Players;
 
-/// <summary>Loads active public profiles and their finished-match totals.</summary>
 public sealed class PlayerProfileRepository : IPlayerProfileRepository
 {
     private const string ActiveAccountStatusCode = "ACTIVE";
@@ -19,12 +18,11 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
     private const string LossResultCode = "LOSS";
     private const string DrawResultCode = "DRAW";
 
-    /// <inheritdoc />
     public ProfileResult<PlayerProfile> GetProfile(long accountId)
     {
         if (accountId <= 0)
         {
-            return new ProfileResult<PlayerProfile>(ProfileOperationStatus.AccountNotFound);
+            return new ProfileResult<PlayerProfile>(ProfileStatus.AccountNotFound);
         }
 
         using (ReversiGameSystemEntities context = new ReversiGameSystemEntities())
@@ -33,12 +31,11 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
         }
     }
 
-    /// <inheritdoc />
     public ProfileResult<string> GetProfileImageReference(long accountId)
     {
         if (accountId <= 0)
         {
-            return new ProfileResult<string>(ProfileOperationStatus.AccountNotFound);
+            return new ProfileResult<string>(ProfileStatus.AccountNotFound);
         }
 
         using (ReversiGameSystemEntities context = new ReversiGameSystemEntities())
@@ -54,14 +51,13 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
                 .FirstOrDefault();
             if (lookup == null)
             {
-                return new ProfileResult<string>(ProfileOperationStatus.AccountNotFound);
+                return new ProfileResult<string>(ProfileStatus.AccountNotFound);
             }
 
             return new ProfileResult<string>(lookup.ProfileImageUri ?? string.Empty);
         }
     }
 
-    /// <inheritdoc />
     public bool IsActive(long accountId)
     {
         if (accountId <= 0)
@@ -76,12 +72,11 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
         }
     }
 
-    /// <inheritdoc />
-    public ProfileOperationStatus ChangeUsername(
+    public ProfileStatus ChangeUsername(
         long accountId,
         string username)
     {
-        ProfileOperationStatus updateStatus;
+        ProfileStatus updateStatus;
         try
         {
             using (ReversiGameSystemEntities context = new ReversiGameSystemEntities())
@@ -93,7 +88,7 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
                     && item.statusCode == ActiveAccountStatusCode);
                 if (account == null)
                 {
-                    updateStatus = ProfileOperationStatus.InactiveAccount;
+                    updateStatus = ProfileStatus.InactiveAccount;
                 }
                 else
                 {
@@ -103,28 +98,27 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
                         && other.username == username);
                     if (usernameUnavailable)
                     {
-                        updateStatus = ProfileOperationStatus.UsernameUnavailable;
+                        updateStatus = ProfileStatus.UsernameUnavailable;
                     }
                     else
                     {
                         account.username = username;
                         context.SaveChanges();
                         transaction.Commit();
-                        updateStatus = ProfileOperationStatus.Success;
+                        updateStatus = ProfileStatus.Success;
                     }
                 }
             }
         }
         catch (DbUpdateException exception) when (IsUniqueViolation(exception))
         {
-            updateStatus = ProfileOperationStatus.UsernameUnavailable;
+            updateStatus = ProfileStatus.UsernameUnavailable;
         }
 
         return updateStatus;
     }
 
-    /// <inheritdoc />
-    public ProfileOperationStatus SetProfileImage(
+    public ProfileStatus SetProfileImage(
         long accountId,
         string imageReference)
     {
@@ -137,13 +131,13 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
                 && item.statusCode == ActiveAccountStatusCode);
             if (account == null)
             {
-                return ProfileOperationStatus.InactiveAccount;
+                return ProfileStatus.InactiveAccount;
             }
 
             account.profileImageUri = imageReference;
             context.SaveChanges();
             transaction.Commit();
-            return ProfileOperationStatus.Success;
+            return ProfileStatus.Success;
         }
     }
 
@@ -164,7 +158,7 @@ public sealed class PlayerProfileRepository : IPlayerProfileRepository
             .FirstOrDefault();
         if (identity == null)
         {
-            return new ProfileResult<PlayerProfile>(ProfileOperationStatus.AccountNotFound);
+            return new ProfileResult<PlayerProfile>(ProfileStatus.AccountNotFound);
         }
 
         List<ResultCount> resultCounts = LoadResultCounts(context, accountId);

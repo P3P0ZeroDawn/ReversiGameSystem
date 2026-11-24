@@ -19,8 +19,8 @@ public sealed class ChatApplicationServiceTests
             10,
             "   ");
 
-        TestAssert.AreEqual(ChatStatus.EmptyMessage, result.Status);
-        TestAssert.AreEqual(0, context.Repository.SubmissionCalls);
+        Assert.AreEqual(ChatStatus.EmptyMessage, result.Status);
+        Assert.AreEqual(0, context.Repository.SubmissionCalls);
     }
 
     [TestMethod]
@@ -42,10 +42,10 @@ public sealed class ChatApplicationServiceTests
             10,
             "  Hello  ");
 
-        TestAssert.AreEqual(ChatStatus.Success, result.Status);
-        TestAssert.AreEqual(expected, result.Message);
-        TestAssert.AreEqual("Hello", context.Repository.LastContent);
-        TestAssert.AreEqual(1, context.Repository.SubmissionCalls);
+        Assert.AreEqual(ChatStatus.Success, result.Status);
+        Assert.AreEqual(expected, result.Message);
+        Assert.AreEqual("Hello", context.Repository.LastContent);
+        Assert.AreEqual(1, context.Repository.SubmissionCalls);
     }
 
     [TestMethod]
@@ -54,7 +54,7 @@ public sealed class ChatApplicationServiceTests
         ChatTestContext context = new ChatTestContext();
         context.Repository.ThrowOnSubmission = true;
 
-        TestAssert.Throws<InvalidOperationException>(() =>
+        Assert.Throws<InvalidOperationException>(() =>
             context.ApplicationService.SubmitChatMessage(
                 context.FirstSession.SessionToken,
                 10,
@@ -79,9 +79,9 @@ public sealed class ChatApplicationServiceTests
             differentAccount.SessionToken,
             10);
 
-        TestAssert.AreEqual(true, sameAccount);
-        TestAssert.AreEqual(false, otherAccount);
-        TestAssert.AreEqual(0, context.Repository.AccessEvaluationCalls);
+        Assert.AreEqual(true, sameAccount);
+        Assert.AreEqual(false, otherAccount);
+        Assert.AreEqual(0, context.Repository.AccessEvaluationCalls);
     }
 
     private sealed class ChatTestContext
