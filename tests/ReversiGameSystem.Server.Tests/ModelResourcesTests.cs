@@ -9,24 +9,19 @@ namespace ReversiGameSystem.Server.Tests;
 public sealed class ModelResourcesTests
 {
     [TestMethod]
-    public void Assembly_RequiredRuntimeModel_IsEmbedded()
+    [DataRow("Model.Database_model.csdl")]
+    [DataRow("Model.Database_model.ssdl")]
+    [DataRow("Model.Database_model.msl")]
+    public void Assembly_RequiredRuntimeModel_IsEmbedded(string resourceName)
     {
-        // Arrange
-        string[] required =
-        {
-            "Model.Database_model.csdl",
-            "Model.Database_model.ssdl",
-            "Model.Database_model.msl"
-        };
+        bool expectedEmbedded = true;
 
-        // Act
         string[] resources = typeof(VerificationCodeRepository).Assembly.GetManifestResourceNames();
+        bool actualEmbedded = resources.Contains(resourceName);
 
-        // Assert
-        foreach (string name in required)
-        {
-            Assert.IsTrue(resources.Contains(name),
-                "The persistence model must be available in the compiled assembly: " + name);
-        }
+        Assert.AreEqual(
+            expectedEmbedded,
+            actualEmbedded,
+            "The persistence model must be available in the compiled assembly: " + resourceName);
     }
 }

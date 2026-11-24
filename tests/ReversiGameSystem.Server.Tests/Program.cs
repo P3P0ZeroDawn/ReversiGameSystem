@@ -218,7 +218,9 @@ internal static class Program
             playerBoundaryTests.GetLeaderboard_ThroughWcf_MapsOrderedEntries,
             playerBoundaryTests.GetLeaderboard_InvalidLimitThroughWcf_ReturnsTypedFault,
             playerBoundaryTests.GetLeaderboard_UnavailableThroughWcf_ReturnsServiceFault,
-            new ModelResourcesTests().Assembly_RequiredRuntimeModel_IsEmbedded
+            () => new ModelResourcesTests().Assembly_RequiredRuntimeModel_IsEmbedded("Model.Database_model.csdl"),
+            () => new ModelResourcesTests().Assembly_RequiredRuntimeModel_IsEmbedded("Model.Database_model.ssdl"),
+            () => new ModelResourcesTests().Assembly_RequiredRuntimeModel_IsEmbedded("Model.Database_model.msl")
         };
         tests.AddRange(MatchInvitationTests.CreateTests());
         return tests.ToArray();

@@ -1,4 +1,3 @@
-using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Domain.Accounts;
 
@@ -10,208 +9,116 @@ public sealed class PasswordPolicyTests
     [TestMethod]
     public void Validate_SevenCharacters_ReturnsTooShort()
     {
-        // Arrange
         string password = "Aa1234!";
+        PasswordValidationStatus expectedResult = PasswordValidationStatus.TooShort;
 
-        // Act
-        PasswordValidationError actual = PasswordPolicy.Validate(password);
+        PasswordValidationStatus actualResult = PasswordPolicy.Validate(password);
 
-        // Assert
-        Assert.AreEqual(PasswordValidationError.TooShort, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
-    public void Validate_EightCharacters_ReturnsNone()
+    [DataRow("Aa12345!")]
+    [DataRow("Aa12345*")]
+    [DataRow("Áb١٢٣٤٥!")]
+    [DataRow("Aa12345😀")]
+    public void Validate_ValidPassword_ReturnsSuccess(string password)
     {
-        // Arrange
-        string password = "Aa12345!";
+        PasswordValidationStatus expectedResult = PasswordValidationStatus.Success;
 
-        // Act
-        PasswordValidationError actual = PasswordPolicy.Validate(password);
+        PasswordValidationStatus actualResult = PasswordPolicy.Validate(password);
 
-        // Assert
-        Assert.AreEqual(PasswordValidationError.None, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
-    public void Validate_AsteriskAsSymbol_ReturnsNone()
+    public void Validate_OneHundredTwentyEightCharacters_ReturnsSuccess()
     {
-        // Arrange
-        string password = "Aa12345*";
-
-        // Act
-        PasswordValidationError actual = PasswordPolicy.Validate(password);
-
-        // Assert
-        Assert.AreEqual(PasswordValidationError.None, actual);
-    }
-
-    [TestMethod]
-    public void Validate_UnicodeLettersAndDigits_ReturnsNone()
-    {
-        // Arrange
-        string password = "Áb١٢٣٤٥!";
-
-        // Act
-        PasswordValidationError actual = PasswordPolicy.Validate(password);
-
-        // Assert
-        Assert.AreEqual(PasswordValidationError.None, actual);
-    }
-
-    [TestMethod]
-    public void Validate_OneHundredTwentyEightCharacters_ReturnsNone()
-    {
-        // Arrange
         string password = "Aa1!" + new string('x', 124);
+        PasswordValidationStatus expectedResult = PasswordValidationStatus.Success;
 
-        // Act
-        PasswordValidationError actual = PasswordPolicy.Validate(password);
+        PasswordValidationStatus actualResult = PasswordPolicy.Validate(password);
 
-        // Assert
-        Assert.AreEqual(PasswordValidationError.None, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
     public void Validate_OneHundredTwentyNineCharacters_ReturnsTooLong()
     {
-        // Arrange
         string password = "Aa1!" + new string('x', 125);
+        PasswordValidationStatus expectedResult = PasswordValidationStatus.TooLong;
 
-        // Act
-        PasswordValidationError actual = PasswordPolicy.Validate(password);
+        PasswordValidationStatus actualResult = PasswordPolicy.Validate(password);
 
-        // Assert
-        Assert.AreEqual(PasswordValidationError.TooLong, actual);
-    }
-
-    [TestMethod]
-    public void Validate_SupplementarySymbols_CountsCodePoints()
-    {
-        // Arrange
-        string password = "Aa12345😀";
-
-        // Act
-        PasswordValidationError actual = PasswordPolicy.Validate(password);
-
-        // Assert
-        Assert.AreEqual(PasswordValidationError.None, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
     public void Validate_WithoutUppercase_ReturnsMissingUppercaseLetter()
     {
-        // Arrange
         string password = "lower123!";
+        PasswordValidationStatus expectedResult = PasswordValidationStatus.MissingUppercaseLetter;
 
-        // Act
-        PasswordValidationError actual = PasswordPolicy.Validate(password);
+        PasswordValidationStatus actualResult = PasswordPolicy.Validate(password);
 
-        // Assert
-        Assert.AreEqual(PasswordValidationError.MissingUppercaseLetter, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
     public void Validate_WithoutLowercase_ReturnsMissingLowercaseLetter()
     {
-        // Arrange
         string password = "UPPER123!";
+        PasswordValidationStatus expectedResult = PasswordValidationStatus.MissingLowercaseLetter;
 
-        // Act
-        PasswordValidationError actual = PasswordPolicy.Validate(password);
+        PasswordValidationStatus actualResult = PasswordPolicy.Validate(password);
 
-        // Assert
-        Assert.AreEqual(PasswordValidationError.MissingLowercaseLetter, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
     public void Validate_WithoutDigit_ReturnsMissingDigit()
     {
-        // Arrange
         string password = "Uppercase!";
+        PasswordValidationStatus expectedResult = PasswordValidationStatus.MissingDigit;
 
-        // Act
-        PasswordValidationError actual = PasswordPolicy.Validate(password);
+        PasswordValidationStatus actualResult = PasswordPolicy.Validate(password);
 
-        // Assert
-        Assert.AreEqual(PasswordValidationError.MissingDigit, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
-    public void Validate_WithoutSymbol_ReturnsMissingSymbol()
+    [DataRow("Upper123")]
+    [DataRow("Aa12345 ")]
+    public void Validate_WithoutSymbol_ReturnsMissingSymbol(string password)
     {
-        // Arrange
-        string password = "Upper123";
+        PasswordValidationStatus expectedResult = PasswordValidationStatus.MissingSymbol;
 
-        // Act
-        PasswordValidationError actual = PasswordPolicy.Validate(password);
+        PasswordValidationStatus actualResult = PasswordPolicy.Validate(password);
 
-        // Assert
-        Assert.AreEqual(PasswordValidationError.MissingSymbol, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
-    public void Validate_SpaceWithoutSymbol_ReturnsMissingSymbol()
+    [DataRow("Aa1234!\n")]
+    [DataRow("Aa1234!\u200B")]
+    [DataRow("Aa1234!\u2028")]
+    public void Validate_UnsupportedCharacter_ReturnsUnsupportedCharacter(string password)
     {
-        // Arrange
-        string password = "Aa12345 ";
+        PasswordValidationStatus expectedResult = PasswordValidationStatus.UnsupportedCharacter;
 
-        // Act
-        PasswordValidationError actual = PasswordPolicy.Validate(password);
+        PasswordValidationStatus actualResult = PasswordPolicy.Validate(password);
 
-        // Assert
-        Assert.AreEqual(PasswordValidationError.MissingSymbol, actual);
-    }
-
-    [TestMethod]
-    public void Validate_ControlCharacter_ReturnsUnsupportedCharacter()
-    {
-        // Arrange
-        string password = "Aa1234!\n";
-
-        // Act
-        PasswordValidationError actual = PasswordPolicy.Validate(password);
-
-        // Assert
-        Assert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
-    }
-
-    [TestMethod]
-    public void Validate_InvisibleFormatCharacter_ReturnsUnsupportedCharacter()
-    {
-        // Arrange
-        string password = "Aa1234!\u200B";
-
-        // Act
-        PasswordValidationError actual = PasswordPolicy.Validate(password);
-
-        // Assert
-        Assert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
-    }
-
-    [TestMethod]
-    public void Validate_LineSeparator_ReturnsUnsupportedCharacter()
-    {
-        // Arrange
-        string password = "Aa1234!\u2028";
-
-        // Act
-        PasswordValidationError actual = PasswordPolicy.Validate(password);
-
-        // Assert
-        Assert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
     public void Validate_UnpairedSurrogate_ReturnsUnsupportedCharacter()
     {
-        // Arrange
         string password = "Aa1234!\uD800";
+        PasswordValidationStatus expectedResult = PasswordValidationStatus.UnsupportedCharacter;
 
-        // Act
-        PasswordValidationError actual = PasswordPolicy.Validate(password);
+        PasswordValidationStatus actualResult = PasswordPolicy.Validate(password);
 
-        // Assert
-        Assert.AreEqual(PasswordValidationError.UnsupportedCharacter, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 }
