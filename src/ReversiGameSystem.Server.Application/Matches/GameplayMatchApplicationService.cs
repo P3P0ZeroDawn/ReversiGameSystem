@@ -18,6 +18,9 @@ public sealed class GameplayMatchApplicationService
     private readonly object _activeMatchesSync = new object();
     private readonly Dictionary<long, Match> _activeMatches = new Dictionary<long, Match>();
     private readonly HashSet<long> _matchesPendingPersistence = new HashSet<long>();
+    private readonly object _observationsSync = new object();
+    private readonly Dictionary<string, HashSet<long>> _observations =
+        new Dictionary<string, HashSet<long>>(StringComparer.Ordinal);
     private DateTime _nextPersistenceRetryUtc;
 
     public GameplayMatchApplicationService(
@@ -224,7 +227,7 @@ public sealed class GameplayMatchApplicationService
         Match? snapshot = null;
         lock (match.SyncRoot)
         {
-            if (GameplayMatchRules.IsParticipant(match, resolved.Value.Player.AccountId))
+            if (CanReadMatch(match, resolved.Value.Player.AccountId, sessionToken))
             {
                 snapshot = match.CreateSnapshot();
             }
@@ -240,20 +243,7 @@ public sealed class GameplayMatchApplicationService
 
     public MatchResult<Match> GetMatchState(string sessionToken, long matchId)
     {
-        MatchResult<MatchSessionContext> resolved = ResolveSessionAndMatch(sessionToken, matchId);
-        if (resolved.Value == null)
-        {
-            return new MatchResult<Match>(resolved.Status);
-        }
-
-        Match match = resolved.Value.Match;
-        Match snapshot;
-        lock (match.SyncRoot)
-        {
-            snapshot = match.CreateSnapshot();
-        }
-
-        return new MatchResult<Match>(snapshot);
+        return GetAuthorizedMatchSnapshot(sessionToken, matchId);
     }
 
     public MatchResult<Match> ObserveMatch(string sessionToken, long matchId)
@@ -264,12 +254,20 @@ public sealed class GameplayMatchApplicationService
             return new MatchResult<Match>(resolved.Status);
         }
 
+        MatchStatus access = _matches.EvaluateLobbyAccess(resolved.Value.Player.AccountId);
+        if (access != MatchStatus.Success)
+        {
+            return new MatchResult<Match>(access);
+        }
+
+        PruneObservations();
         Match match = resolved.Value.Match;
         Match? snapshot = null;
         lock (match.SyncRoot)
         {
             if (string.Equals(match.State, StateInProgress, StringComparison.Ordinal))
             {
+                RegisterObservation(sessionToken, matchId);
                 snapshot = match.CreateSnapshot();
             }
         }
@@ -280,6 +278,48 @@ public sealed class GameplayMatchApplicationService
         }
 
         return new MatchResult<Match>(snapshot);
+    }
+
+    public MatchResult<Match[]> GetObservableMatches(string sessionToken)
+    {
+        MatchResult<AuthenticatedSession> player = ResolveActiveSession(sessionToken);
+        if (player.Value == null)
+        {
+            return new MatchResult<Match[]>(player.Status);
+        }
+
+        Match[] trackedBeforeLoad;
+        lock (_activeMatchesSync)
+        {
+            trackedBeforeLoad = _activeMatches.Values.ToArray();
+        }
+
+        MatchResult<Match[]> persisted = _matches.GetObservableMatches(player.Value.AccountId);
+        if (persisted.Value == null)
+        {
+            return persisted;
+        }
+
+        Dictionary<long, Match> candidates = persisted.Value.ToDictionary(match => match.Id);
+        Match[] tracked;
+        lock (_activeMatchesSync)
+        {
+            tracked = trackedBeforeLoad.Concat(_activeMatches.Values).Distinct().ToArray();
+        }
+
+        foreach (Match match in tracked)
+        {
+            lock (match.SyncRoot)
+            {
+                candidates[match.Id] = match.CreateSnapshot();
+            }
+        }
+
+        Match[] snapshots = candidates.Values
+            .Where(match => string.Equals(match.State, StateInProgress, StringComparison.Ordinal))
+            .OrderBy(match => match.Id)
+            .ToArray();
+        return new MatchResult<Match[]>(snapshots);
     }
 
     public MatchResult<Match[]> GetMatchHistory(string sessionToken)
@@ -346,7 +386,7 @@ public sealed class GameplayMatchApplicationService
         MatchMove[]? moveSnapshots = null;
         lock (match.SyncRoot)
         {
-            if (GameplayMatchRules.IsParticipant(match, resolved.Value.Player.AccountId))
+            if (CanReadMatch(match, resolved.Value.Player.AccountId, sessionToken))
             {
                 moveSnapshots = match.Moves
                     .Select(move => move.CreateSnapshot())
@@ -533,6 +573,56 @@ public sealed class GameplayMatchApplicationService
         }
 
         return true;
+    }
+
+    private bool CanReadMatch(Match match, long accountId, string sessionToken)
+    {
+        if (GameplayMatchRules.IsParticipant(match, accountId)
+            || string.Equals(match.State, StateInProgress, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        lock (_observationsSync)
+        {
+            HashSet<long>? observed = _observations.ContainsKey(sessionToken)
+                ? _observations[sessionToken]
+                : null;
+            return observed != null && observed.Contains(match.Id);
+        }
+    }
+
+    private void PruneObservations()
+    {
+        string[] tokens;
+        lock (_observationsSync)
+        {
+            tokens = _observations.Keys.ToArray();
+        }
+
+        string[] expiredTokens = tokens
+            .Where(token => _sessions.FindAuthenticated(token).Status != SessionStatus.Success)
+            .ToArray();
+        lock (_observationsSync)
+        {
+            foreach (string token in expiredTokens)
+            {
+                _observations.Remove(token);
+            }
+        }
+    }
+
+    private void RegisterObservation(string sessionToken, long matchId)
+    {
+        lock (_observationsSync)
+        {
+            if (!_observations.ContainsKey(sessionToken))
+            {
+                _observations.Add(sessionToken, new HashSet<long>());
+            }
+
+            _observations[sessionToken].Add(matchId);
+        }
     }
 
     private MatchResult<MatchSessionContext> ResolveSessionAndMatch(

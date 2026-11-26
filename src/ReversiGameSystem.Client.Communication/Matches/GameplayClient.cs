@@ -18,6 +18,9 @@ internal sealed class GameplayClient : IDisposable, Proxy.IGameplayMatchServiceC
     private readonly DuplexChannel<Proxy.GameplayMatchServiceClient, Proxy.IGameplayMatchService>
         _channel;
 
+    private MatchInformation[] _observableMatches = Array.Empty<MatchInformation>();
+    private readonly HashSet<long> _observedMatches = new HashSet<long>();
+    private readonly Dictionary<long, MatchMove[]> _moves = new Dictionary<long, MatchMove[]>();
     private readonly HashSet<long> _subscribedMatches = new HashSet<long>();
     private readonly Dictionary<long, MatchStateSnapshot> _states =
         new Dictionary<long, MatchStateSnapshot>();
@@ -52,13 +55,21 @@ internal sealed class GameplayClient : IDisposable, Proxy.IGameplayMatchServiceC
         }
         _channel = new DuplexChannel<Proxy.GameplayMatchServiceClient, Proxy.IGameplayMatchService>(
             CreateClient, logger);
-        _channel.ChannelCreated += _subscribedMatches.Clear;
+        _channel.ChannelCreated += OnChannelCreated;
         _channel.ConnectionLost += OnConnectionLost;
     }
 
     internal event Action<MatchStateSnapshot>? StateChanged;
     internal event Action<long>? ParticipantConnectionChanged;
     internal event Action? ConnectionLost;
+
+    private void OnChannelCreated()
+    {
+        lock (_matchDataLock)
+        {
+            _subscribedMatches.Clear();
+        }
+    }
 
     private void OnConnectionLost()
     {
@@ -67,11 +78,119 @@ internal sealed class GameplayClient : IDisposable, Proxy.IGameplayMatchServiceC
 
     private async Task OpenGameplayChannel(Proxy.GameplayMatchServiceClient client, long matchId)
     {
-        if (!_subscribedMatches.Contains(matchId))
+        bool subscribed;
+        bool observing;
+        lock (_matchDataLock)
         {
-            await client.OpenMatchChannelAsync(_sessionToken, matchId).ConfigureAwait(false);
-            _subscribedMatches.Add(matchId);
+            subscribed = _subscribedMatches.Contains(matchId);
+            observing = _observedMatches.Contains(matchId);
         }
+        if (!subscribed)
+        {
+            if (observing)
+            {
+                Proxy.MatchStateSnapshot snapshot = await client.ObserveMatchAsync(
+                    _sessionToken, matchId).ConfigureAwait(false);
+                StoreState(MatchContractMapper.MapState(snapshot));
+            }
+            else
+            {
+                await client.OpenMatchChannelAsync(_sessionToken, matchId).ConfigureAwait(false);
+            }
+            lock (_matchDataLock)
+            {
+                _subscribedMatches.Add(matchId);
+            }
+        }
+    }
+
+    internal Task<MatchStatus> LoadObservableMatches(CancellationToken cancellation = default)
+    {
+        async Task LoadMatches(Proxy.GameplayMatchServiceClient client)
+        {
+            Proxy.MatchInformation[] matches = await client.GetObservableMatchesAsync(
+                _sessionToken).ConfigureAwait(false);
+            MatchInformation[] information = matches.Select(MapInformation).ToArray();
+            lock (_matchDataLock)
+            {
+                _observableMatches = information;
+            }
+        }
+        return SendMatchOperation(LoadMatches, cancellation);
+    }
+
+    internal MatchInformation[] ReadObservableMatches()
+    {
+        lock (_matchDataLock)
+        {
+            return (MatchInformation[])_observableMatches.Clone();
+        }
+    }
+
+    internal Task<MatchStatus> ObserveMatch(long matchId, CancellationToken cancellation = default)
+    {
+        async Task ObserveState(Proxy.GameplayMatchServiceClient client)
+        {
+            Proxy.MatchStateSnapshot state = await client.ObserveMatchAsync(
+                _sessionToken, matchId).ConfigureAwait(false);
+            Proxy.MatchInformation information = await client.GetMatchInformationAsync(
+                _sessionToken, matchId).ConfigureAwait(false);
+            lock (_matchDataLock)
+            {
+                _observedMatches.Add(matchId);
+                _subscribedMatches.Add(matchId);
+                _information[matchId] = MapInformation(information);
+            }
+            StoreState(MatchContractMapper.MapState(state));
+        }
+        return SendMatchOperation(ObserveState, cancellation);
+    }
+
+    internal Task<MatchStatus> LoadMoveHistory(long matchId,
+        CancellationToken cancellation = default)
+    {
+        async Task LoadMoves(Proxy.GameplayMatchServiceClient client)
+        {
+            Proxy.MoveRecord[] records = await client.GetMoveHistoryAsync(
+                _sessionToken, matchId).ConfigureAwait(false);
+            MatchMove[] moves = records.Select(record => new MatchMove
+            {
+                MoveNumber = record.MoveNumber,
+                SeatNumber = record.SeatNumber,
+                Row = record.Row,
+                Column = record.Column,
+                PlayedAtUtc = record.PlayedAtUtc,
+                FlippedPieceCount = record.FlippedPieceCount,
+                IsAutomatic = record.Origin != Proxy.MoveOrigin.Manual
+            }).ToArray();
+            lock (_matchDataLock)
+            {
+                _moves[matchId] = moves;
+            }
+        }
+        return SendMatchOperation(LoadMoves, cancellation);
+    }
+
+    internal MatchMove[] ReadMoveHistory(long matchId)
+    {
+        lock (_matchDataLock)
+        {
+            if (!_moves.ContainsKey(matchId))
+            {
+                throw new InvalidOperationException("The match movements have not been loaded.");
+            }
+            return (MatchMove[])_moves[matchId].Clone();
+        }
+    }
+
+    internal void StopObservingMatch(long matchId)
+    {
+        lock (_matchDataLock)
+        {
+            _observedMatches.Remove(matchId);
+            _subscribedMatches.Remove(matchId);
+        }
+        _channel.ResetConnection();
     }
 
     internal Task<MatchStatus> LoadMatchInformation(
@@ -161,7 +280,8 @@ internal sealed class GameplayClient : IDisposable, Proxy.IGameplayMatchServiceC
                 await OpenGameplayChannel(client, matchId).ConfigureAwait(false);
             }
             catch (FaultException<Proxy.MatchFault> fault)
-                when (fault.Detail.Reason == Proxy.MatchFailure.MatchNotInProgress)
+                when (fault.Detail.Reason is Proxy.MatchFailure.MatchNotInProgress
+                    or Proxy.MatchFailure.SpectatingUnavailable)
             {
                 Proxy.MatchStateSnapshot current = await client.GetMatchStateAsync(
                 _sessionToken, matchId)

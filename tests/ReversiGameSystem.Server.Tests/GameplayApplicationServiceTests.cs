@@ -531,7 +531,7 @@ public sealed class GameplayApplicationServiceTests
         // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
-        context.ApplicationService.TrackStartedMatch(match);
+        match.State = "Finished";
 
         // Act
         MatchResult<Match> spectatorResult =
@@ -648,6 +648,42 @@ internal sealed class MockGameplayMatchRepository : IGameplayRepository
     internal void StoreMatch(Match match)
     {
         _matches[match.Id] = match;
+    }
+
+    public MatchStatus EvaluateLobbyAccess(long accountId)
+    {
+        if (AccessUnavailable)
+        {
+            throw new InvalidOperationException("access storage unavailable");
+        }
+
+        return AccessStatus;
+    }
+
+    internal bool AccessUnavailable { get; set; }
+    internal Action? ObservableMatchesLoaded { get; set; }
+    internal MatchStatus AccessStatus { get; set; } = MatchStatus.Success;
+
+    internal bool ListUnavailable { get; set; }
+
+    public MatchResult<Match[]> GetObservableMatches(long accountId)
+    {
+        if (ListUnavailable)
+        {
+            throw new InvalidOperationException("storage unavailable");
+        }
+
+        if (AccessStatus != MatchStatus.Success)
+        {
+            return new MatchResult<Match[]>(AccessStatus);
+        }
+
+        Match[] matches = _matches.Values
+            .Where(match => match.State == "InProgress")
+            .Select(match => match.CreateSnapshot())
+            .ToArray();
+        ObservableMatchesLoaded?.Invoke();
+        return new MatchResult<Match[]>(matches);
     }
 
     public MatchResult<Match> LoadMatch(long matchId)

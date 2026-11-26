@@ -25,9 +25,6 @@ internal sealed class GameViewModel : INotifyPropertyChanged
     private const string UnavailablePlayerNameKey = "AccountInformation_UnavailableValue";
     private const string SystemPlayerNameKey = "Game_SystemPlayerName";
     private const string GeneralDateTimeFormat = "g";
-    private static readonly TimeSpan ConnectionCheckTimeout = TimeSpan.FromSeconds(3);
-    private static readonly TimeSpan RecoveryRetryDelay = TimeSpan.FromSeconds(1);
-    private static readonly TimeSpan ReconnectionWindow = TimeSpan.FromSeconds(30);
     private readonly GameplayClient _gameplay;
     private readonly MatchChatClient _chat;
     private readonly SynchronizationContext _presentationContext;
@@ -343,7 +340,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
         {
             return;
         }
-        using CancellationTokenSource check = new CancellationTokenSource(ConnectionCheckTimeout);
+        using CancellationTokenSource check = new CancellationTokenSource(MatchConnectionPolicy.ConnectionCheckTimeout);
         _connectionCheck = check;
         try
         {
@@ -396,7 +393,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
 
     private async Task RecoverMatchConnection()
     {
-        using CancellationTokenSource recovery = new CancellationTokenSource(ReconnectionWindow);
+        using CancellationTokenSource recovery = new CancellationTokenSource(MatchConnectionPolicy.ReconnectionWindow);
         _recovery = recovery;
         _chatReady = false;
         bool restored = false;
@@ -409,7 +406,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
             {
                 using CancellationTokenSource attempt = CancellationTokenSource
                     .CreateLinkedTokenSource(recovery.Token);
-                attempt.CancelAfter(ConnectionCheckTimeout);
+                attempt.CancelAfter(MatchConnectionPolicy.ConnectionCheckTimeout);
                 try
                 {
                     status = await _gameplay.RestoreMatchConnection(_matchId, attempt.Token);
@@ -421,7 +418,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
                 }
                 if (status is MatchStatus.ServiceUnavailable or MatchStatus.MatchNotInProgress)
                 {
-                    await Task.Delay(RecoveryRetryDelay, recovery.Token);
+                    await Task.Delay(MatchConnectionPolicy.RecoveryRetryDelay, recovery.Token);
                 }
             }
             restored = status == MatchStatus.Success;

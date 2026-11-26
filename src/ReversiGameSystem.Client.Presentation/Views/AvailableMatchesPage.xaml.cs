@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.ServiceModel;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using ReversiGameSystem.Features.Matches;
 using ReversiGameSystem.Game;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Matches;
@@ -18,13 +21,16 @@ public partial class AvailableMatchesPage : Page
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
 
     private bool _loading;
+    private AvailableMatchesViewModel? _viewModel;
+    private CancellationTokenSource _lifetime = new CancellationTokenSource();
 
     internal string? SelectedMatchId { get; private set; }
 
     public AvailableMatchesPage()
     {
         InitializeComponent();
-        Loaded += async (_, _) => await LoadMatches();
+        Loaded += OnPageLoaded;
+        Unloaded += OnPageUnloaded;
     }
 
     public AvailableMatchesPage(string guestName) : this()
@@ -32,6 +38,33 @@ public partial class AvailableMatchesPage : Page
         _guestName = guestName;
         UpdateGuestIdentity();
         guestIdentityPanel.Visibility = Visibility.Visible;
+    }
+
+    private async void OnPageLoaded(object sender, RoutedEventArgs e)
+    {
+        _lifetime.Dispose();
+        _lifetime = new CancellationTokenSource();
+        ClientSession session = ClientRuntime.CurrentSession;
+        bool canObserve = _guestName == null && !session.IsGuest && session.AccountId.HasValue;
+        _viewModel = new AvailableMatchesViewModel(session,
+            canObserve ? ClientRuntime.GetGameplayClient(false) : null);
+        spectatorSection.Visibility = canObserve ? Visibility.Visible : Visibility.Collapsed;
+        spectatorTitle.Visibility = spectatorSection.Visibility;
+        spectatorRow.MinHeight = canObserve ? 60 : 0;
+        spectatorRow.Height = canObserve ? new GridLength(2, GridUnitType.Star) : new GridLength(0);
+        spectatableMatchesItemsControl.SetBinding(ItemsControl.ItemsSourceProperty,
+            new Binding(nameof(AvailableMatchesViewModel.ObservableMatches)) { Source = _viewModel });
+        await LoadMatches();
+    }
+
+    private void OnPageUnloaded(object sender, RoutedEventArgs e)
+    {
+        if (!_lifetime.IsCancellationRequested)
+        {
+            _lifetime.Cancel();
+        }
+        _lifetime.Dispose();
+        _viewModel?.Deactivate();
     }
 
     private void OnBackToMenuClick(object sender, RoutedEventArgs e)
@@ -79,51 +112,79 @@ public partial class AvailableMatchesPage : Page
         {
             return;
         }
+        CancellationToken cancellation = _lifetime.Token;
+        AvailableMatchesViewModel? viewModel = _viewModel;
         _loading = true;
         IsEnabled = false;
         LocalizationManager localization = LocalizationManager.Instance;
         List<AvailableMatchItem> items = new List<AvailableMatchItem>();
         MatchLobbyClient client = ClientRuntime.GetMatchLobbyClient(_guestName != null);
-        MatchStatus status = await client.LoadAvailableMatches();
-        _loading = false;
-        IsEnabled = true;
-        if (status != MatchStatus.Success)
+        try
         {
-            string messageKey = RemoteMatchMessages.GetMessageResourceKey(
-                status, _guestName != null);
-            availableMatchesItemsControl.ItemsSource = null;
-            emptyMatchesTextBlock.SetBinding(TextBlock.TextProperty,
-                new Binding("[" + messageKey + "]")
-            { Source = localization });
-            _dialogService.ShowError(this, "AvailableMatches_RetrievalErrorTitle",
-                messageKey);
-            return;
-        }
-        AvailableMatch[] matches = client.ReadAvailableMatches();
-
-        emptyMatchesTextBlock.SetBinding(TextBlock.TextProperty,
-            new Binding("[AvailableMatches_EmptyMessage]")
-        { Source = localization });
-        foreach (AvailableMatch match in matches)
-        {
-            items.Add(new AvailableMatchItem
+            MatchStatus status = await client.LoadAvailableMatches(cancellation);
+            if (cancellation.IsCancellationRequested || viewModel?.IsCurrentSession() != true)
             {
-                MatchId = match.MatchCode,
-                HostName = match.CreatorDisplayName,
-                CreatedAgoText = string.Format(
-                    localization["AvailableMatches_TurnTimeFormat"],
-                    match.TurnDurationSeconds),
-                StateText = localization["AvailableMatches_WaitingState"]
-            });
-        }
+                return;
+            }
+            if (status != MatchStatus.Success)
+            {
+                string messageKey = RemoteMatchMessages.GetMessageResourceKey(
+                    status, _guestName != null);
+                availableMatchesItemsControl.ItemsSource = null;
+                emptyMatchesTextBlock.SetBinding(TextBlock.TextProperty,
+                    new Binding("[" + messageKey + "]")
+                { Source = localization });
+                _dialogService.ShowError(this, "AvailableMatches_RetrievalErrorTitle",
+                    messageKey);
+                return;
+            }
+            AvailableMatch[] matches = client.ReadAvailableMatches();
 
-        availableMatchesItemsControl.ItemsSource = items;
-        spectatableMatchesItemsControl.ItemsSource = Array.Empty<AvailableMatchItem>();
+            emptyMatchesTextBlock.SetBinding(TextBlock.TextProperty,
+                new Binding("[AvailableMatches_EmptyMessage]")
+            { Source = localization });
+            foreach (AvailableMatch match in matches)
+            {
+                items.Add(new AvailableMatchItem
+                {
+                    MatchId = match.MatchCode,
+                    HostName = match.CreatorDisplayName,
+                    CreatedAgoText = string.Format(
+                        localization["AvailableMatches_TurnTimeFormat"],
+                        match.TurnDurationSeconds),
+                    StateText = localization["AvailableMatches_WaitingState"]
+                });
+            }
+
+            availableMatchesItemsControl.ItemsSource = items;
+            if (viewModel.CanObserve)
+            {
+                MatchStatus observerStatus = await viewModel.LoadObservableMatches();
+                if (viewModel.IsCurrentSession() && observerStatus != MatchStatus.Success)
+                {
+                    _dialogService.ShowError(this, "AvailableMatches_RetrievalErrorTitle",
+                        RemoteMatchMessages.GetMessageResourceKey(observerStatus, false));
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            viewModel?.Deactivate();
+        }
+        catch (FaultException<ReversiGameSystem.ServerProxy.ServiceFault> exception)
+        {
+            ClientRuntime.Errors.ReportOperationFailure(exception, nameof(LoadMatches));
+        }
+        finally
+        {
+            _loading = false;
+            IsEnabled = true;
+        }
     }
 
-    private void OnRefreshMatchesClick(object sender, RoutedEventArgs e)
+    private async void OnRefreshMatchesClick(object sender, RoutedEventArgs e)
     {
-        _ = LoadMatches();
+        await LoadMatches();
     }
 
     private async void OnJoinMatchClick(object sender, RoutedEventArgs e)
@@ -154,23 +215,44 @@ public partial class AvailableMatchesPage : Page
 
     private async Task JoinRemoteMatch(string code)
     {
+        CancellationToken cancellation = _lifetime.Token;
+        AvailableMatchesViewModel? viewModel = _viewModel;
         IsEnabled = false;
-        MatchLobbyClient client = ClientRuntime.GetMatchLobbyClient(_guestName != null);
-        MatchStatus status = await client.JoinMatch(code);
-        if (status == MatchStatus.Success)
+        try
         {
-            LobbySnapshot lobby = client.ReadCurrentLobby();
-            NavigationService?.Navigate(new GamePage(
-                ClientRuntime.GetGameplayClient(_guestName != null),
-                ClientRuntime.GetMatchChatClient(_guestName != null), lobby.MatchId, _guestName));
+            MatchLobbyClient client = ClientRuntime.GetMatchLobbyClient(_guestName != null);
+            string? sessionToken = ClientRuntime.CurrentSession.SessionToken;
+            MatchStatus status = await client.JoinMatch(code, cancellation);
+            if (cancellation.IsCancellationRequested || ClientRuntime.CurrentSession.SessionToken != sessionToken)
+            {
+                return;
+            }
+            if (status == MatchStatus.Success)
+            {
+                LobbySnapshot lobby = client.ReadCurrentLobby();
+                NavigationService?.Navigate(new GamePage(
+                    ClientRuntime.GetGameplayClient(_guestName != null),
+                    ClientRuntime.GetMatchChatClient(_guestName != null), lobby.MatchId, _guestName));
+            }
+            else
+            {
+                _dialogService.ShowError(this, "JoinMatch_PersistenceErrorTitle",
+                    RemoteMatchMessages.GetMessageResourceKey(status, _guestName != null));
+                await LoadMatches();
+            }
         }
-        else
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
-            _dialogService.ShowError(this, "JoinMatch_PersistenceErrorTitle",
-                RemoteMatchMessages.GetMessageResourceKey(status, _guestName != null));
-            await LoadMatches();
+            viewModel?.Deactivate();
         }
-        IsEnabled = true;
+        catch (FaultException<ReversiGameSystem.ServerProxy.ServiceFault> exception)
+        {
+            ClientRuntime.Errors.ReportOperationFailure(exception, nameof(JoinRemoteMatch));
+        }
+        finally
+        {
+            IsEnabled = true;
+        }
     }
 
     private void ShowJoinWarning(string resourceName)
@@ -183,8 +265,13 @@ public partial class AvailableMatchesPage : Page
 
     private void OnSpectateMatchClick(object sender, RoutedEventArgs e)
     {
-        _dialogService.ShowWarning(this, "AvailableMatches_RetrievalErrorTitle",
-            "RemoteMatch_NotAvailable");
+        if (_viewModel?.CanObserve != true || !_viewModel.IsCurrentSession()
+            || sender is not Button button || button.Tag is not long matchId)
+        {
+            return;
+        }
+        NavigationService?.Navigate(new MatchInformationPage(
+            ClientRuntime.GetGameplayClient(false), matchId));
     }
 
     private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -194,7 +281,7 @@ public partial class AvailableMatchesPage : Page
         if (LocalizationManager.Instance.CultureName != previousCulture)
         {
             UpdateGuestIdentity();
-            _ = LoadMatches();
+            await LoadMatches();
         }
     }
 

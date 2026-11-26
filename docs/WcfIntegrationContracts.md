@@ -121,6 +121,7 @@ Todas las operaciones declaran `MatchFault`, `SessionFault` y `ServiceFault`.
 Callback: `IGameplayMatchServiceCallback`.
 
 ```csharp
+MatchInformation[] GetObservableMatches(string sessionToken);
 void OpenMatchChannel(string sessionToken, long matchId);
 MatchInformation GetMatchInformation(string sessionToken, long matchId);
 MatchStateSnapshot GetMatchState(string sessionToken, long matchId);
@@ -133,6 +134,12 @@ MoveRecord[] GetMoveHistory(string sessionToken, long matchId);
 ```
 
 Todas las operaciones declaran `MatchFault`, `SessionFault` y `ServiceFault`.
+
+`GetObservableMatches` requiere una cuenta autenticada y activa. Devuelve las partidas
+en curso, incluidas las creadas por invitación y contra el sistema, o un array vacío.
+`ObserveMatch` suscribe al observador sin asignarle asiento ni registrar presencia de jugador.
+`MatchInformation.AssignedSeatNumber` identifica el asiento del solicitante o su ausencia
+cuando es observador.
 
 ### `IMatchChatService`
 
