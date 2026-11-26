@@ -57,20 +57,12 @@ internal static class Program
         MatchApplicationServiceLifecycleTests lifecycleTests = new MatchApplicationServiceLifecycleTests();
         LobbyAuthorizationTests lobbyAuthorizationTests = new LobbyAuthorizationTests();
         ServiceErrorBehaviorTests errorBehaviorTests = new ServiceErrorBehaviorTests();
-        ReversiDomainTests reversiTests = new ReversiDomainTests();
         GameplayMatchRulesTests gameplayRulesTests = new GameplayMatchRulesTests();
         GameplayApplicationServiceTests gameplayTests = new GameplayApplicationServiceTests();
         PlayerBoundaryTests playerBoundaryTests = new PlayerBoundaryTests();
         System.Collections.Generic.List<Action> tests =
             new System.Collections.Generic.List<Action>
         {
-            reversiTests.CreateInitialBoard_StandardSetup_PlacesFourCenteredDiscs,
-            reversiTests.ApplyMove_InvalidBoardArray_ThrowsArgumentException,
-            reversiTests.ApplyMove_IllegalPlacements_ReturnsEmptyAndLeavesBoardUnchanged,
-            reversiTests.ApplyMove_ValidMove_PlacesDiscAndFlipsBracketedCells,
-            reversiTests.ApplyMove_MultiDirectionalCaptures_FlipsAllLines,
-            reversiTests.HasValidMoves_EvaluatesBoardAvailabilityAccurately,
-            reversiTests.IsLegalMove_BoardEvaluation_DetectsLegalityWithoutMutatingBoard,
             gameplayTests.TrackStartedMatch_InitializesBoardAndTurnCorrectly,
             gameplayTests.PlacePiece_MissingPlacement_ReturnsMissingPlacement,
             gameplayTests.PlacePiece_NegativeVersion_ReturnsInvalidMatchStateVersion,

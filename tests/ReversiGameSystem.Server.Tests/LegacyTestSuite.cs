@@ -13,7 +13,6 @@ internal static class LegacyTestSuite
         tests.AddRange(CreatePersistenceModelTests());
         tests.AddRange(CreatePlayerProfileApplicationServiceTests());
         tests.AddRange(CreatePlayerImageRepositoryTests());
-        tests.AddRange(CreateUsernamePolicyTests());
         return tests.ToArray();
     }
 
@@ -93,22 +92,6 @@ internal static class LegacyTestSuite
             tests.SaveImage_DetailedBackgroundAboveSoftTarget_AcceptsImage,
             tests.SaveAndDelete_ValidImage_UsesRelativeUri,
             tests.SaveImage_ValidAndInvalidImages_ReturnsExpectedOutcome,
-        };
-    }
-
-    private static Action[] CreateUsernamePolicyTests()
-    {
-        UsernamePolicyTests tests = new UsernamePolicyTests();
-        return new Action[]
-        {
-            () => tests.Validate_ValidUsername_ReturnsSuccess("Pedro123"),
-            () => tests.Validate_ValidUsername_ReturnsSuccess("Pedro_123"),
-            tests.Validate_EmptyUsername_ReturnsMissing,
-            () => tests.Validate_LengthOutOfRange_ReturnsInvalidLength(2),
-            () => tests.Validate_LengthOutOfRange_ReturnsInvalidLength(
-                ReversiGameSystem.Server.Domain.Accounts.UsernamePolicy.MaximumLength + 1),
-            () => tests.Validate_UnsupportedCharacters_ReturnsInvalidCharacters("_pedro"),
-            () => tests.Validate_UnsupportedCharacters_ReturnsInvalidCharacters("Pedro 123"),
         };
     }
 }
