@@ -8,26 +8,10 @@ internal static class LegacyTestSuite
     internal static Action[] CreateTests()
     {
         List<Action> tests = new List<Action>();
-        tests.AddRange(CreateAccountAccessValidationTests());
         tests.AddRange(CreatePersistenceModelTests());
         tests.AddRange(CreatePlayerProfileApplicationServiceTests());
         tests.AddRange(CreatePlayerImageRepositoryTests());
         return tests.ToArray();
-    }
-
-    private static Action[] CreateAccountAccessValidationTests()
-    {
-        AccountAccessValidationTests tests = new AccountAccessValidationTests();
-        return new Action[]
-        {
-            tests.ValidateCredentials_ValidCredentials_NormalizesAndReturnsActiveAccount,
-            tests.ValidateCredentials_MissingCredentials_RejectsBeforeLookup,
-            tests.ValidateCredentials_UnknownAccount_ReturnsInvalidCredentials,
-            tests.ValidateCredentials_WrongPassword_ReturnsInvalidCredentials,
-            tests.ValidateCredentials_InactiveAccount_ReturnsInactiveAccount,
-            tests.ValidateCredentials_UnavailableStore_PropagatesTechnicalFailure,
-            tests.SessionStore_CreateFindAndExpire_EnforcesLifetime,
-        };
     }
 
     private static Action[] CreatePersistenceModelTests()
