@@ -2,9 +2,10 @@ using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Chat;
 
-namespace ReversiGameSystem.Server.Tests;
+namespace ReversiGameSystem.Server.Tests.UnitTests.Application.ChatModelsTests;
 
 [TestClass]
+[TestCategory("Unit")]
 public sealed class ChatModelsTests
 {
     [TestMethod]

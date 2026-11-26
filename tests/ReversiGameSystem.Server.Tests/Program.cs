@@ -53,10 +53,6 @@ internal static class Program
         VerificationCodeServiceTests codeTests = new VerificationCodeServiceTests();
         VerificationEmailSenderTests mailTests = new VerificationEmailSenderTests();
         FriendshipPresenceTests presenceTests = new FriendshipPresenceTests();
-        ChatContentPolicyTests chatPolicyTests = new ChatContentPolicyTests();
-        ChatModelsTests chatModelsTests = new ChatModelsTests();
-        ChatApplicationServiceTests chatApplicationTests =
-            new ChatApplicationServiceTests();
         MatchBoundaryTests matchBoundaryTests = new MatchBoundaryTests();
         MatchApplicationServiceLifecycleTests lifecycleTests = new MatchApplicationServiceLifecycleTests();
         LobbyAuthorizationTests lobbyAuthorizationTests = new LobbyAuthorizationTests();
@@ -119,25 +115,6 @@ internal static class Program
             errorBehaviorTests.UndeclaredFault_ThroughWcf_IsSanitizedAndLogged,
             errorBehaviorTests.LoggingFailure_ThroughWcf_StillReturnsSanitizedFault,
             errorBehaviorTests.BusinessFault_ThroughWcf_PreservesTypeWithoutTechnicalLog,
-            chatPolicyTests.Matches_AccentsCaseAndPunctuation_MatchesCompletePhrase,
-            chatPolicyTests.Matches_WordInsideAnotherWord_DoesNotMatch,
-            chatPolicyTests.Matches_EmptyPattern_DoesNotBlockEveryMessage,
-            chatModelsTests.ChatChannelAccess_SuccessStatus_RejectsStatusConstructor,
-            () => chatModelsTests.ChatMessageSubmission_StatusRequiringPayload_RejectsStatusConstructor(
-                ReversiGameSystem.Server.Application.Chat.ChatStatus.Success),
-            () => chatModelsTests.ChatMessageSubmission_StatusRequiringPayload_RejectsStatusConstructor(
-                ReversiGameSystem.Server.Application.Chat.ChatStatus.PlayerMuted),
-            chatModelsTests.ChatHistory_SuccessStatus_RejectsMissingMessages,
-            chatApplicationTests.SubmitChatMessage_EmptyContent_ReturnsEmptyMessageStatus,
-            chatApplicationTests.SubmitChatMessage_EmptyContent_DoesNotCallRepository,
-            chatApplicationTests.SubmitChatMessage_ValidContent_ReturnsSuccessStatus,
-            chatApplicationTests.SubmitChatMessage_ValidContent_ReturnsPersistedMessage,
-            chatApplicationTests.SubmitChatMessage_ValidContent_TrimsContentBeforeRepositoryCall,
-            chatApplicationTests.SubmitChatMessage_ValidContent_CallsRepositoryOnce,
-            chatApplicationTests.SubmitChatMessage_RepositoryFailure_PropagatesException,
-            chatApplicationTests.CanReceiveMuteNotification_SameAccountSession_ReturnsTrue,
-            chatApplicationTests.CanReceiveMuteNotification_DifferentAccountSession_ReturnsFalse,
-            chatApplicationTests.CanReceiveMuteNotification_SessionCheck_DoesNotCallRepository,
             matchBoundaryTests.Gameplay_UnauthorizedParticipant_PreservesDeclaredRejection,
             matchBoundaryTests.Gameplay_InitialState_UsesApplicationSnapshot,
             matchBoundaryTests.Gameplay_StoreFailure_PropagatesToGlobalHandler,

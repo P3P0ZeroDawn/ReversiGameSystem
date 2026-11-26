@@ -1,10 +1,11 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Domain.Chat;
 
-namespace ReversiGameSystem.Server.Tests;
+namespace ReversiGameSystem.Server.Tests.UnitTests.Domain.ChatContentPolicyTests;
 
 [TestClass]
-public sealed class ChatContentPolicyTests
+[TestCategory("Unit")]
+public sealed class MatchesTests
 {
     [TestMethod]
     public void Matches_AccentsCaseAndPunctuation_MatchesCompletePhrase()
@@ -14,10 +15,7 @@ public sealed class ChatContentPolicyTests
 
         bool actualMatch = ChatContentPolicy.Matches(content, "palabra prohibida");
 
-        Assert.AreEqual(
-            expectedMatch,
-            actualMatch,
-            "Moderation must normalize diacritics, case, and separators.");
+        Assert.AreEqual(expectedMatch, actualMatch);
     }
 
     [TestMethod]
@@ -28,10 +26,7 @@ public sealed class ChatContentPolicyTests
 
         bool actualMatch = ChatContentPolicy.Matches(content, "blockedword");
 
-        Assert.AreEqual(
-            expectedMatch,
-            actualMatch,
-            "A substring must not count as a complete prohibited word.");
+        Assert.AreEqual(expectedMatch, actualMatch);
     }
 
     [TestMethod]
@@ -42,9 +37,28 @@ public sealed class ChatContentPolicyTests
 
         bool actualMatch = ChatContentPolicy.Matches(content, " , ! ");
 
-        Assert.AreEqual(
-            expectedMatch,
-            actualMatch,
-            "An empty normalized pattern cannot prohibit every message.");
+        Assert.AreEqual(expectedMatch, actualMatch);
+    }
+
+    [TestMethod]
+    public void Matches_EmptyContent_DoesNotMatch()
+    {
+        const string content = "";
+        bool expectedMatch = false;
+
+        bool actualMatch = ChatContentPolicy.Matches(content, "prohibida");
+
+        Assert.AreEqual(expectedMatch, actualMatch);
+    }
+
+    [TestMethod]
+    public void Matches_MultipleSpacesAndSymbols_MatchesNormalizedPhrase()
+    {
+        const string content = "hola   ---   MÚNDO!!!";
+        bool expectedMatch = true;
+
+        bool actualMatch = ChatContentPolicy.Matches(content, "hola mundo");
+
+        Assert.AreEqual(expectedMatch, actualMatch);
     }
 }
