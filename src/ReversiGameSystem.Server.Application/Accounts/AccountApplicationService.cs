@@ -249,7 +249,8 @@ public sealed class AccountApplicationService
         string? imageUri = null;
         if (registration.ProfileImage != null)
         {
-            ProfileResult<string> imageResult = _images.SaveImage(registration.ProfileImage);
+            ProfileResult<string> imageResult = _images.SaveImage(
+                registration.ProfileImage, PlayerImageKind.Profile);
             if (imageResult.Status != ProfileStatus.Success
                 || string.IsNullOrWhiteSpace(imageResult.Value))
             {
@@ -315,7 +316,7 @@ public sealed class AccountApplicationService
         }
 
         if (registration.ProfileImage != null
-            && !ProfileImagePolicy.IsSupported(
+            && !PlayerImagePolicy.IsSupported(
                 registration.ProfileImage.Content,
                 registration.ProfileImage.MediaType))
         {

@@ -1,21 +1,22 @@
 using System;
 using System.IO;
 using System.Security;
+using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace ReversiGameSystem.Validation;
 
-/// <summary>
-/// Checks the selected profile picture and creates a small preview.
-/// </summary>
 internal static class ProfilePicturePolicy
 {
-    internal const long MaximumFileBytes = ProfileImagePolicy.MaximumFileBytes;
-    internal const int MaximumDimension = ProfileImagePolicy.MaximumDimension;
+    private const double PreviewDpi = 96;
+    internal const long MaximumFileBytes = PlayerImagePolicy.MaximumFileBytes;
+    internal const int MaximumDimension = PlayerImagePolicy.MaximumDimension;
+    internal const int ProfilePreviewSize = PlayerImagePolicy.MaximumProfileOutputDimension;
 
     internal static BitmapSource? CreatePreview(
         string path,
-        int previewWidth = 128)
+        int previewWidth = ProfilePreviewSize)
     {
         BitmapSource? preview = null;
         if (!HasSupportedExtension(path))
@@ -127,13 +128,34 @@ internal static class ProfilePicturePolicy
 
     private static BitmapSource DecodePreview(string path, int previewWidth)
     {
-        BitmapImage image = new BitmapImage();
-        image.BeginInit();
-        image.UriSource = new Uri(path);
-        image.CacheOption = BitmapCacheOption.OnLoad;
-        image.DecodePixelWidth = previewWidth;
-        image.EndInit();
-        image.Freeze();
-        return image;
+        using (FileStream stream = File.OpenRead(path))
+        {
+            BitmapDecoder decoder = BitmapDecoder.Create(
+                stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+            return CreateSquarePreview(decoder.Frames[0], previewWidth);
+        }
+    }
+
+    internal static BitmapSource CreateSquarePreview(BitmapSource source, int maximumSize)
+    {
+        int side = Math.Min(source.PixelWidth, source.PixelHeight);
+        int targetSize = Math.Min(side, maximumSize);
+        Int32Rect crop = new Int32Rect(
+            (source.PixelWidth - side) / 2, (source.PixelHeight - side) / 2, side, side);
+        CroppedBitmap square = new CroppedBitmap(source, crop);
+        DrawingVisual visual = new DrawingVisual();
+        RenderOptions.SetBitmapScalingMode(visual, BitmapScalingMode.HighQuality);
+        using (DrawingContext drawing = visual.RenderOpen())
+        {
+            Rect bounds = new Rect(0, 0, targetSize, targetSize);
+            drawing.DrawRectangle(Brushes.White, null, bounds);
+            drawing.DrawImage(square, bounds);
+        }
+
+        RenderTargetBitmap preview = new RenderTargetBitmap(
+            targetSize, targetSize, PreviewDpi, PreviewDpi, PixelFormats.Pbgra32);
+        preview.Render(visual);
+        preview.Freeze();
+        return preview;
     }
 }

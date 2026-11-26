@@ -20,8 +20,6 @@ public partial class AccountInformationPage : Page
 {
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
     private readonly ProfileImageSelectionService _profileImageSelectionService;
-    private readonly ProfileImageModificationService _profileImageService =
-        new ProfileImageModificationService();
     private readonly IAccountDeactivationService _accountDeactivationService =
         new AccountDeactivationService();
     private readonly AccountInformationReturnTarget _returnTarget;
@@ -123,7 +121,7 @@ public partial class AccountInformationPage : Page
         try
         {
             System.Windows.Media.Imaging.BitmapSource? bitmap =
-                ProfileImageModificationService.Decode(imageResult.Value);
+                ProfileImageModificationService.CreateProfilePreview(imageResult.Value);
             if (bitmap != null)
             {
                 ClientRuntime.CurrentSession.UpdateProfilePicture(bitmap);
@@ -271,7 +269,7 @@ public partial class AccountInformationPage : Page
         try
         {
             profilePictureButton.IsEnabled = false;
-            ProfileStatus status = await _profileImageService.Save(
+            ProfileStatus status = await ProfileImageModificationService.ChangeProfileImage(
                 ClientRuntime.CurrentSession.SessionToken ?? string.Empty,
                 selection.FilePath);
             if (status != ProfileStatus.Success)
@@ -332,17 +330,15 @@ public partial class AccountInformationPage : Page
             return;
         }
 
-        string prefix = result == FriendRequestResult.CannotAddYourself
-            ? "FriendRequest_CannotAddYourself"
-            : result == FriendRequestResult.FriendshipAlreadyExists
-                ? "FriendRequest_FriendshipAlreadyExists"
-                : result == FriendRequestResult.FriendRequestAlreadyPending
-                    ? "FriendRequest_AlreadyPending"
-                    : result == FriendRequestResult.AccountNotAvailable
-                        ? "FriendRequest_AccountNotAvailable"
-                        : result == FriendRequestResult.PersistenceError
-                            ? "FriendRequest_PersistenceError"
-                            : "FriendRequest_ServerConnectionFailed";
+        string prefix = result switch
+        {
+            FriendRequestResult.CannotAddYourself => "FriendRequest_CannotAddYourself",
+            FriendRequestResult.FriendshipAlreadyExists => "FriendRequest_FriendshipAlreadyExists",
+            FriendRequestResult.FriendRequestAlreadyPending => "FriendRequest_AlreadyPending",
+            FriendRequestResult.AccountNotAvailable => "FriendRequest_AccountNotAvailable",
+            FriendRequestResult.PersistenceError => "FriendRequest_PersistenceError",
+            _ => "FriendRequest_ServerConnectionFailed"
+        };
         _dialogService.ShowError(this, prefix + "Title", prefix + "Message");
     }
 

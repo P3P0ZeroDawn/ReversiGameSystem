@@ -1,3 +1,4 @@
+using ReversiGameSystem.Server.Domain.Accounts;
 using System;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -228,7 +229,7 @@ public sealed class PreferencesApplicationServiceTests
             return Image;
         }
 
-        public ProfileResult<string> SaveImage(ProfileImageData image)
+        public ProfileResult<string> SaveImage(ProfileImageData image, PlayerImageKind kind)
         {
             return new ProfileResult<string>(ImageReference);
         }

@@ -94,7 +94,7 @@ internal static class ReviewMatchHost
         session.SessionClosed += chatSubscriptions.RemoveSession;
         string backgroundDirectory = Path.Combine(Path.GetTempPath(),
             "ReversiReviewPreferences-" + Guid.NewGuid().ToString("N"));
-        ProfileImageRepository backgrounds = new ProfileImageRepository(
+        PlayerImageRepository backgrounds = new PlayerImageRepository(
             backgroundDirectory, "board-backgrounds/");
         PreferencesApplicationService preferencesApplication = new PreferencesApplicationService(
             store, new PreferencesRepository(), backgrounds);

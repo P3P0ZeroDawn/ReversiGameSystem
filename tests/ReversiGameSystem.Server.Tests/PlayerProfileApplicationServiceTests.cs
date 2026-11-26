@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using ReversiGameSystem.Server.Domain.Accounts;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Players;
@@ -188,7 +190,7 @@ public sealed class PlayerProfileApplicationServiceTests
     {
         // Arrange
         PlayerProfileRepositoryStub profiles = CreateActiveProfiles();
-        ProfileImageRepositoryStub images = new ProfileImageRepositoryStub();
+        PlayerImageRepositoryStub images = new PlayerImageRepositoryStub();
         PlayerProfileApplicationService applicationService = new PlayerProfileApplicationService(
             CreateSessionStore(CreateSession(42)),
             profiles,
@@ -217,7 +219,7 @@ public sealed class PlayerProfileApplicationServiceTests
             2,
             1,
             0));
-        ProfileImageRepositoryStub images = new ProfileImageRepositoryStub();
+        PlayerImageRepositoryStub images = new PlayerImageRepositoryStub();
         PlayerProfileApplicationService applicationService = new PlayerProfileApplicationService(
             CreateSessionStore(CreateSession(42)),
             profiles,
@@ -297,7 +299,7 @@ public sealed class PlayerProfileApplicationServiceTests
         // Arrange
         PlayerProfileRepositoryStub profiles = CreateActiveProfiles();
         profiles.SetImageStatus = ProfileStatus.InactiveAccount;
-        ProfileImageRepositoryStub images = new ProfileImageRepositoryStub();
+        PlayerImageRepositoryStub images = new PlayerImageRepositoryStub();
         PlayerProfileApplicationService applicationService = new PlayerProfileApplicationService(
             CreateSessionStore(CreateSession(42)),
             profiles,
@@ -319,7 +321,7 @@ public sealed class PlayerProfileApplicationServiceTests
         // Arrange
         PlayerProfileRepositoryStub profiles = CreateActiveProfiles();
         profiles.ThrowOnSetImage = true;
-        ProfileImageRepositoryStub images = new ProfileImageRepositoryStub();
+        PlayerImageRepositoryStub images = new PlayerImageRepositoryStub();
         PlayerProfileApplicationService applicationService = new PlayerProfileApplicationService(
             CreateSessionStore(CreateSession(42)),
             profiles,
@@ -331,6 +333,72 @@ public sealed class PlayerProfileApplicationServiceTests
                 "session-token",
                 new ProfileImageData(new byte[] { 1 }, "image/png")));
         Assert.AreEqual("new-image", images.Deleted);
+    }
+
+    [TestMethod]
+    public void UpdateImage_Success_DeletesPreviousImageAfterAssociation()
+    {
+        const long AccountId = 42;
+        const string PreviousReference = "profile-images/previous.jpg";
+        PlayerProfileRepositoryStub profiles = CreateActiveProfiles();
+        profiles.Profiles[AccountId] = new PlayerProfile(
+            AccountId, "PlayerOne", PreviousReference, 1, 0, 0);
+        PlayerImageRepositoryStub images = new PlayerImageRepositoryStub();
+        PlayerProfileApplicationService service = new PlayerProfileApplicationService(
+            CreateSessionStore(CreateSession(AccountId)), profiles, images);
+
+        ProfileStatus status = service.UpdateImage("session-token",
+            new ProfileImageData(new byte[] { 1 }, "image/png"));
+
+        Assert.AreEqual(ProfileStatus.Success, status);
+        Assert.AreEqual("new-image", profiles.ImageReference);
+        Assert.AreEqual(PreviousReference, images.Deleted);
+        Assert.AreEqual(PlayerImageKind.Profile, images.LastKind);
+    }
+
+    [TestMethod]
+    public void UpdateImage_AssociationAndCleanupFail_PreservesBothFailures()
+    {
+        const long AccountId = 42;
+        PlayerProfileRepositoryStub profiles = CreateActiveProfiles();
+        profiles.ThrowOnSetImage = true;
+        IOException cleanupFailure = new IOException("The cleanup failed.");
+        PlayerImageRepositoryStub images = new PlayerImageRepositoryStub
+        {
+            CleanupFailure = cleanupFailure
+        };
+        PlayerProfileApplicationService service = new PlayerProfileApplicationService(
+            CreateSessionStore(CreateSession(AccountId)), profiles, images);
+
+        AggregateException reported = Assert.Throws<AggregateException>(() =>
+            service.UpdateImage("session-token",
+                new ProfileImageData(new byte[] { 1 }, "image/png")));
+
+        Assert.IsInstanceOfType<InvalidOperationException>(reported.InnerExceptions[0]);
+        Assert.AreSame(cleanupFailure, reported.InnerExceptions[1]);
+    }
+
+    [TestMethod]
+    public void UpdateImage_PreviousDeletionFails_PreservesNewAssociation()
+    {
+        const long AccountId = 42;
+        PlayerProfileRepositoryStub profiles = CreateActiveProfiles();
+        profiles.Profiles[AccountId] = new PlayerProfile(
+            AccountId, "PlayerOne", "profile-images/previous.jpg", 1, 0, 0);
+        IOException cleanupFailure = new IOException("The previous image cannot be removed.");
+        PlayerImageRepositoryStub images = new PlayerImageRepositoryStub
+        {
+            CleanupFailure = cleanupFailure
+        };
+        PlayerProfileApplicationService service = new PlayerProfileApplicationService(
+            CreateSessionStore(CreateSession(AccountId)), profiles, images);
+
+        IOException reported = Assert.Throws<IOException>(() =>
+            service.UpdateImage("session-token",
+                new ProfileImageData(new byte[] { 1 }, "image/png")));
+
+        Assert.AreSame(cleanupFailure, reported);
+        Assert.AreEqual("new-image", profiles.ImageReference);
     }
 
     private static SessionStore CreateSessionStore(AuthenticatedSession? session = null)
@@ -351,7 +419,7 @@ public sealed class PlayerProfileApplicationServiceTests
         return new PlayerProfileApplicationService(
             sessions,
             profiles,
-            new ProfileImageRepositoryStub());
+            new PlayerImageRepositoryStub());
     }
 
     private static PlayerProfileRepositoryStub CreateActiveProfiles()

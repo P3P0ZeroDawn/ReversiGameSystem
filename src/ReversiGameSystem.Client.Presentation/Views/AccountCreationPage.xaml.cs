@@ -90,7 +90,7 @@ public partial class AccountCreationPage : Page
         }
 
         ProfileImageContent upload = await System.Threading.Tasks.Task.Run(
-            () => ProfileImageModificationService.ReadUpload(imagePath));
+            () => ProfileImageModificationService.ReadImageFile(imagePath));
         return upload;
     }
 

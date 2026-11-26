@@ -11,6 +11,7 @@ public sealed class PreferencesApplicationService
     private const string SpanishLocale = "es-MX";
     private const string StandardPieceStyle = "STANDARD";
     private const string ProfilePicturesPieceStyle = "PROFILE_PICTURES";
+    private readonly object _backgroundReplacementLock = new object();
     private readonly SessionStore _sessions;
     private readonly IPreferencesRepository _preferences;
     private readonly IPlayerImageRepository _images;
@@ -62,18 +63,21 @@ public sealed class PreferencesApplicationService
 
     public PreferencesAccess GetBoardBackground(string sessionToken)
     {
-        PreferencesAccess access = GetPreferences(sessionToken);
-        if (access.Status != PreferencesStatus.Success)
+        lock (_backgroundReplacementLock)
         {
-            return access;
+            PreferencesAccess access = GetPreferences(sessionToken);
+            if (access.Status != PreferencesStatus.Success)
+            {
+                return access;
+            }
+            PlayerPreferences preferences = access.Preferences;
+            ProfileImageData? image = null;
+            if (!string.IsNullOrWhiteSpace(preferences.BoardBackgroundReference))
+            {
+                image = _images.ReadImage(preferences.BoardBackgroundReference);
+            }
+            return new PreferencesAccess(preferences, image);
         }
-        PlayerPreferences preferences = access.Preferences;
-        ProfileImageData? image = null;
-        if (!string.IsNullOrWhiteSpace(preferences.BoardBackgroundReference))
-        {
-            image = _images.ReadImage(preferences.BoardBackgroundReference);
-        }
-        return new PreferencesAccess(preferences, image);
     }
 
     public PreferencesStatus ChangeBoardBackground(string sessionToken, ProfileImageData? image)
@@ -84,45 +88,56 @@ public sealed class PreferencesApplicationService
         {
             return MapSessionStatus(session.Status);
         }
+        if (image == null || !PlayerImagePolicy.IsSupported(image.Content, image.MediaType))
+        {
+            return PreferencesStatus.InvalidImage;
+        }
         long accountId = session.Value.AccountId;
-        PreferencesAccess access = _preferences.ReadPreferences(accountId);
-        if (access.Status != PreferencesStatus.Success)
+        lock (_backgroundReplacementLock)
         {
-            return access.Status;
-        }
-        if (image == null || !ProfileImagePolicy.IsSupported(image.Content, image.MediaType))
-        {
-            return PreferencesStatus.InvalidImage;
-        }
-        ProfileResult<string> stored = _images.SaveImage(image);
-        if (stored.Status == ProfileStatus.InvalidImage)
-        {
-            return PreferencesStatus.InvalidImage;
-        }
-        string reference = stored.Value
-            ?? throw new InvalidOperationException("The stored image reference is unavailable.");
-        PreferencesStatus status;
-        try
-        {
-            status = _preferences.SetBoardBackground(accountId, reference);
-        }
-        catch (Exception associationFailure)
-        {
+            PreferencesAccess access = _preferences.ReadPreferences(accountId);
+            if (access.Status != PreferencesStatus.Success)
+            {
+                return access.Status;
+            }
+            string previousReference = access.Preferences.BoardBackgroundReference;
+            ProfileResult<string> stored = _images.SaveImage(
+                image, PlayerImageKind.BoardBackground);
+            if (stored.Status == ProfileStatus.InvalidImage)
+            {
+                return PreferencesStatus.InvalidImage;
+            }
+            string reference = stored.Value
+                ?? throw new InvalidOperationException(
+                    "The stored image reference is unavailable.");
+            PreferencesStatus status;
             try
+            {
+                status = _preferences.SetBoardBackground(accountId, reference);
+            }
+            catch (Exception associationFailure)
+            {
+                try
+                {
+                    _images.DeleteImage(reference);
+                }
+                catch (Exception cleanupFailure)
+                {
+                    throw new AggregateException(associationFailure, cleanupFailure);
+                }
+                throw;
+            }
+            if (status != PreferencesStatus.Success)
             {
                 _images.DeleteImage(reference);
             }
-            catch (Exception cleanupFailure)
+            else if (!string.IsNullOrWhiteSpace(previousReference)
+                && previousReference != reference)
             {
-                throw new AggregateException(associationFailure, cleanupFailure);
+                _images.DeleteImage(previousReference);
             }
-            throw;
+            return status;
         }
-        if (status != PreferencesStatus.Success)
-        {
-            _images.DeleteImage(reference);
-        }
-        return status;
     }
 
     private static PreferencesStatus MapSessionStatus(SessionStatus status)

@@ -3,6 +3,8 @@ using System.Data.SqlClient;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Net;
+using System.Net.Sockets;
 using System.ServiceModel;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Preferences;
@@ -23,8 +25,25 @@ internal static class PreferencesDatabaseTests
     private const string DatabasePrefix = "ReversiReviewAccountTests_";
     private const string ConnectionVariable = "REVERSI_DB_CONNECTION_STRING";
     private const string MigrationFile = "20261121_CustomBoardBackgroundPreference.sql";
-    private const string ExistingReference = "board-backgrounds/existing.png";
-    private const string TestAddress = "net.tcp://localhost:18098/ReversiReview/PlayerPreferences";
+    private const string ExistingReference =
+        "board-backgrounds/00000000000000000000000000000001.png";
+    private static readonly string TestAddress = CreateTestAddress();
+
+    private static string CreateTestAddress()
+    {
+        TcpListener listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        try
+        {
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            return new UriBuilder(Uri.UriSchemeNetTcp, "localhost", port,
+                "ReversiReview/PlayerPreferences").ToString();
+        }
+        finally
+        {
+            listener.Stop();
+        }
+    }
 
     internal static void Run()
     {
@@ -55,7 +74,9 @@ internal static class PreferencesDatabaseTests
         Directory.CreateDirectory(directory);
         try
         {
-            ProfileImageRepository images = new ProfileImageRepository(
+            File.WriteAllBytes(Path.Combine(directory, Path.GetFileName(ExistingReference)),
+                CreateImage().Content);
+            PlayerImageRepository images = new PlayerImageRepository(
                 directory, "board-backgrounds/");
             PreferencesApplicationService application = new PreferencesApplicationService(
                 sessions, repository, images);
@@ -75,6 +96,8 @@ internal static class PreferencesDatabaseTests
             Assert.AreEqual(PreferencesStatus.Success,
                 application.ChangeBoardBackground(alpha.SessionToken, image));
             stored = repository.ReadPreferences(alpha.AccountId).Preferences;
+            Assert.AreEqual(false, File.Exists(Path.Combine(directory,
+                Path.GetFileName(ExistingReference))));
             Assert.AreEqual(true, stored.UseCustomBoardBackground);
             Assert.AreEqual(true,
                 stored.BoardBackgroundReference.StartsWith(
@@ -88,6 +111,10 @@ internal static class PreferencesDatabaseTests
             Assert.AreEqual(stored.BoardBackgroundReference,
                 background.Preferences.BoardBackgroundReference);
             VerifyRemoteBoundary(application, repository, alpha);
+            Assert.AreEqual(1, Directory.GetFiles(directory).Length);
+            Assert.AreEqual("image/jpeg",
+                TestAssert.IsNotNull(application.GetBoardBackground(
+                    alpha.SessionToken).BackgroundImage).MediaType);
             Assert.AreEqual(PreferencesStatus.InactiveAccount,
                 repository.ReadPreferences(long.MaxValue).Status);
             Console.WriteLine(
@@ -110,6 +137,10 @@ internal static class PreferencesDatabaseTests
             new ChannelFactory<IPlayerPreferencesService>(new NetTcpBinding(SecurityMode.None),
                 new EndpointAddress(TestAddress));
         IPlayerPreferencesService client = factory.CreateChannel();
+        if (client is not IClientChannel channel)
+        {
+            throw new InvalidOperationException("The WCF proxy has no client channel.");
+        }
         try
         {
             ProfileImageData uploaded = CreateImage();
@@ -128,13 +159,13 @@ internal static class PreferencesDatabaseTests
             Assert.AreEqual("PROFILE_PICTURES", stored.PieceStyleCode);
             Assert.AreEqual(false, stored.UseCustomBoardBackground);
             Assert.AreEqual(true, client.GetBoardBackground(session.SessionToken) != null);
-            ((IClientChannel)client).Close();
+            channel.Close();
             factory.Close();
             host.Close();
         }
         finally
         {
-            ((IClientChannel)client).Abort();
+            channel.Abort();
             factory.Abort();
             host.Abort();
         }
