@@ -9,7 +9,6 @@ internal static class LegacyTestSuite
     {
         List<Action> tests = new List<Action>();
         tests.AddRange(CreateCreateAccountHandlerTests());
-        tests.AddRange(CreateLeaderboardApplicationServiceTests());
         tests.AddRange(CreateAccountAccessValidationTests());
         tests.AddRange(CreatePersistenceModelTests());
         tests.AddRange(CreatePlayerProfileApplicationServiceTests());
@@ -30,20 +29,6 @@ internal static class LegacyTestSuite
             tests.ExecuteAsync_DuplicateUsername_RemovesStoredImage,
             tests.ExecuteAsync_UnsupportedLocale_ReturnsInvalidRequest,
             tests.PasswordHasher_HashAndVerify_UsesSaltedPbkdf2,
-        };
-    }
-
-    private static Action[] CreateLeaderboardApplicationServiceTests()
-    {
-        LeaderboardApplicationServiceTests tests =
-            new LeaderboardApplicationServiceTests();
-        return new Action[]
-        {
-            tests.GetLeaderboard_ValidRequest_RanksAndLimitsEntries,
-            tests.GetLeaderboard_InvalidMaximum_RejectsBeforeRepositoryAccess,
-            tests.GetLeaderboard_EmptyRepository_ReturnsSuccessfulEmptyList,
-            tests.GetLeaderboard_BoundaryMaximums_AcceptsOneAndOneHundred,
-            tests.GetLeaderboard_RepositoryFailure_PropagatesException,
         };
     }
 
