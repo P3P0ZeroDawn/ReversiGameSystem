@@ -10,7 +10,7 @@ namespace ReversiGameSystem.Server.Tests;
 public sealed class LeaderboardApplicationServiceTests
 {
     [TestMethod]
-    public void Get_ValidRequest_RanksAndLimitsEntries()
+    public void GetLeaderboard_ValidRequest_RanksAndLimitsEntries()
     {
         // Arrange
         LeaderboardRepositoryStub repository = new LeaderboardRepositoryStub
@@ -27,7 +27,7 @@ public sealed class LeaderboardApplicationServiceTests
             new LeaderboardApplicationService(repository);
 
         // Act
-        LeaderboardResult result = applicationService.Get(3);
+        LeaderboardResult result = applicationService.GetLeaderboard(3);
 
         // Assert
         Assert.AreEqual(LeaderboardStatus.Success, result.Status);
@@ -42,7 +42,7 @@ public sealed class LeaderboardApplicationServiceTests
     }
 
     [TestMethod]
-    public void Get_InvalidMaximum_RejectsBeforeRepositoryAccess()
+    public void GetLeaderboard_InvalidMaximum_RejectsBeforeRepositoryAccess()
     {
         // Arrange
         LeaderboardRepositoryStub repository = new LeaderboardRepositoryStub();
@@ -50,9 +50,9 @@ public sealed class LeaderboardApplicationServiceTests
             new LeaderboardApplicationService(repository);
 
         // Act
-        LeaderboardResult belowMinimum = applicationService.Get(0);
+        LeaderboardResult belowMinimum = applicationService.GetLeaderboard(0);
         LeaderboardResult aboveMaximum = applicationService
-            .Get(LeaderboardApplicationService.MaximumAllowedEntries + 1);
+            .GetLeaderboard(LeaderboardApplicationService.MaximumAllowedEntries + 1);
 
         // Assert
         Assert.AreEqual(
@@ -65,7 +65,7 @@ public sealed class LeaderboardApplicationServiceTests
     }
 
     [TestMethod]
-    public void Get_EmptyRepository_ReturnsSuccessfulEmptyList()
+    public void GetLeaderboard_EmptyRepository_ReturnsSuccessfulEmptyList()
     {
         // Arrange
         LeaderboardRepositoryStub repository = new LeaderboardRepositoryStub();
@@ -73,7 +73,7 @@ public sealed class LeaderboardApplicationServiceTests
             new LeaderboardApplicationService(repository);
 
         // Act
-        LeaderboardResult result = applicationService.Get(10);
+        LeaderboardResult result = applicationService.GetLeaderboard(10);
 
         // Assert
         Assert.AreEqual(LeaderboardStatus.Success, result.Status);
@@ -82,7 +82,7 @@ public sealed class LeaderboardApplicationServiceTests
     }
 
     [TestMethod]
-    public void Get_BoundaryMaximums_AcceptsOneAndOneHundred()
+    public void GetLeaderboard_BoundaryMaximums_AcceptsOneAndOneHundred()
     {
         // Arrange
         IReadOnlyList<LeaderboardPlayer> players = Enumerable.Range(1, 101)
@@ -105,10 +105,10 @@ public sealed class LeaderboardApplicationServiceTests
         // Act
         LeaderboardResult minimumResult =
             new LeaderboardApplicationService(minimumRepository)
-            .Get(1);
+            .GetLeaderboard(1);
         LeaderboardResult maximumResult =
             new LeaderboardApplicationService(maximumRepository)
-            .Get(LeaderboardApplicationService.MaximumAllowedEntries);
+            .GetLeaderboard(LeaderboardApplicationService.MaximumAllowedEntries);
 
         // Assert
         Assert.AreEqual(LeaderboardStatus.Success, minimumResult.Status);
@@ -118,7 +118,7 @@ public sealed class LeaderboardApplicationServiceTests
     }
 
     [TestMethod]
-    public void Get_RepositoryFailure_PropagatesException()
+    public void GetLeaderboard_RepositoryFailure_PropagatesException()
     {
         // Arrange
         LeaderboardApplicationService applicationService =
@@ -127,7 +127,7 @@ public sealed class LeaderboardApplicationServiceTests
 
         // Act
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => applicationService.Get(10));
+            () => applicationService.GetLeaderboard(10));
 
         // Assert
         Assert.AreEqual("Simulated leaderboard repository failure.", exception.Message);
@@ -143,7 +143,7 @@ internal sealed class LeaderboardRepositoryStub : ILeaderboardRepository
     internal IReadOnlyList<LeaderboardPlayer> Players { get; set; } =
         Array.Empty<LeaderboardPlayer>();
 
-    public IReadOnlyList<LeaderboardPlayer> GetPlayers()
+    public IReadOnlyList<LeaderboardPlayer> GetLeaderboardPlayers()
     {
         WasCalled = true;
         if (ThrowOnGet)

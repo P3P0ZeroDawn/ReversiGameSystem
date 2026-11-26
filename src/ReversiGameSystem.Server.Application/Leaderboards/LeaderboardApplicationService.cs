@@ -16,7 +16,7 @@ public sealed class LeaderboardApplicationService
             ?? throw new ArgumentNullException(nameof(leaderboardRepository));
     }
 
-    public LeaderboardResult Get(int maximumEntries)
+    public LeaderboardResult GetLeaderboard(int maximumEntries)
     {
         if (maximumEntries < 1 || maximumEntries > MaximumAllowedEntries)
         {
@@ -24,7 +24,7 @@ public sealed class LeaderboardApplicationService
         }
 
         IReadOnlyList<LeaderboardPlayer> players =
-            _leaderboardRepository.GetPlayers();
+            _leaderboardRepository.GetLeaderboardPlayers();
         List<LeaderboardPlayer> rankedPlayers = players
             .OrderByDescending(player => player.Wins)
             .ThenByDescending(CalculateWinRate)

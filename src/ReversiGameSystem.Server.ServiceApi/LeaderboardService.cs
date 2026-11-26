@@ -40,7 +40,7 @@ public sealed class LeaderboardService : ILeaderboardService
     /// </exception>
     public ContractEntry[] GetLeaderboard(int maximumEntries)
     {
-        LeaderboardResult result = _applicationService.Get(maximumEntries);
+        LeaderboardResult result = _applicationService.GetLeaderboard(maximumEntries);
         ThrowFaultIfFailed(result.Status);
 
         IReadOnlyList<ApplicationEntry> entries = result.Entries

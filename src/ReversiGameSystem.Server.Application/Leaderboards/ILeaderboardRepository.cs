@@ -4,5 +4,5 @@ namespace ReversiGameSystem.Server.Application.Leaderboards;
 
 public interface ILeaderboardRepository
 {
-    public IReadOnlyList<LeaderboardPlayer> GetPlayers();
+    public IReadOnlyList<LeaderboardPlayer> GetLeaderboardPlayers();
 }
