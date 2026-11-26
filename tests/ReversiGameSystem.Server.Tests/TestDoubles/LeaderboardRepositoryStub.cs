@@ -4,13 +4,13 @@ using ReversiGameSystem.Server.Application.Leaderboards;
 
 namespace ReversiGameSystem.Server.Tests.TestDoubles;
 
-public sealed class LeaderboardRepositoryStub : ILeaderboardRepository
+internal sealed class LeaderboardRepositoryStub : ILeaderboardRepository
 {
-    public bool WasCalled { get; private set; }
+    internal bool WasCalled { get; private set; }
 
-    public bool ThrowOnGet { get; set; }
+    internal bool ThrowOnGet { get; set; }
 
-    public IReadOnlyList<LeaderboardPlayer> Players { get; set; } =
+    internal IReadOnlyList<LeaderboardPlayer> Players { get; set; } =
         Array.Empty<LeaderboardPlayer>();
 
     public IReadOnlyList<LeaderboardPlayer> GetLeaderboardPlayers()

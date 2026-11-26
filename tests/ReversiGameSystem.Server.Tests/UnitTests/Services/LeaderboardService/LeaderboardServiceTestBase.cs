@@ -8,7 +8,7 @@ namespace ReversiGameSystem.Server.Tests.UnitTests.Services.LeaderboardService;
 
 public abstract class LeaderboardServiceTestBase
 {
-    protected SharedLeaderboardRepositoryStub Repository { get; private set; } = null!;
+    private protected SharedLeaderboardRepositoryStub Repository { get; private set; } = null!;
 
     protected WcfLeaderboardService Service { get; private set; } = null!;
 

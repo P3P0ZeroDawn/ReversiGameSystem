@@ -8,7 +8,7 @@ namespace ReversiGameSystem.Server.Tests.UnitTests.Application.LeaderboardApplic
 
 public abstract class LeaderboardApplicationServiceTestBase
 {
-    protected SharedLeaderboardRepositoryStub Repository { get; private set; } = null!;
+    private protected SharedLeaderboardRepositoryStub Repository { get; private set; } = null!;
 
     protected ApplicationService Service { get; private set; } = null!;
 
