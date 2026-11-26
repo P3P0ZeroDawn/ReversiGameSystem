@@ -9,23 +9,43 @@ namespace ReversiGameSystem.Server.Tests;
 public sealed class FailureDiagnosticsTests
 {
     [TestMethod]
-    public void Describe_NestedProviderFailure_ExcludesMessagesAndPrivateData()
+    [DataRow("System.InvalidOperationException")]
+    [DataRow("System.TimeoutException")]
+    [DataRow("HResult=")]
+    public void Describe_NestedProviderFailure_IncludesRequiredDiagnostics(string expectedToken)
     {
-        // Arrange
+        Exception failure = CreateNestedFailure();
+        bool expectedContains = true;
+
+        string diagnostic = FailureDiagnostics.Describe(failure);
+        bool actualContains = diagnostic.Contains(expectedToken);
+
+        Assert.AreEqual(
+            expectedContains,
+            actualContains,
+            $"Diagnostic text must include '{expectedToken}'.");
+    }
+
+    [TestMethod]
+    public void Describe_NestedProviderFailure_ExcludesPrivateData()
+    {
+        Exception failure = CreateNestedFailure();
+        bool expectedContains = false;
+
+        string diagnostic = FailureDiagnostics.Describe(failure);
+        bool actualContains = diagnostic.Contains("private-");
+
+        Assert.AreEqual(
+            expectedContains,
+            actualContains,
+            "Provider messages and private diagnostic data must not be copied.");
+    }
+
+    private static Exception CreateNestedFailure()
+    {
         Exception cause = new TimeoutException("private-provider-message");
         Exception failure = new InvalidOperationException("private-configuration-value", cause);
         failure.Data.Add("Credential", "private-credential");
-
-        // Act
-        string diagnostic = FailureDiagnostics.Describe(failure);
-
-        // Assert
-        Assert.IsTrue(diagnostic.Contains(typeof(InvalidOperationException).FullName),
-            "The outer failure type must remain available.");
-        Assert.IsTrue(diagnostic.Contains(typeof(TimeoutException).FullName),
-            "The underlying failure type must remain available.");
-        Assert.IsTrue(diagnostic.Contains("HResult="), "The status must remain available.");
-        Assert.IsTrue(!diagnostic.Contains("private-"),
-            "Provider messages and private diagnostic data must not be copied.");
+        return failure;
     }
 }
