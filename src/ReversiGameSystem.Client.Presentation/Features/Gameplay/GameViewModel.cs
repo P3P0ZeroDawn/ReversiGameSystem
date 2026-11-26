@@ -132,6 +132,27 @@ internal sealed class GameViewModel : INotifyPropertyChanged
             return IsParticipant && !IsFinished && State.State == ConfirmedMatchState.InProgress;
         }
     }
+    public DiscColor SystemPlayerColor
+    {
+        get
+        {
+            DiscColor color = DiscColor.Empty;
+            if (IsReady)
+            {
+                foreach (MatchParticipant participant in Information.Participants)
+                {
+                    if (participant.IsSystem)
+                    {
+                        color = participant.SeatNumber == CreatorSeat
+                            ? DiscColor.Black : DiscColor.White;
+                        break;
+                    }
+                }
+            }
+            return color;
+        }
+    }
+
     public bool IsChatVisible
     {
         get
