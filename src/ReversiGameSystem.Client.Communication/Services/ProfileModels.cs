@@ -31,6 +31,7 @@ internal sealed class ProfileResult<T> where T : class
     }
 
     internal ProfileStatus Status { get; }
+
     internal T? Value { get; }
 }
 
@@ -44,7 +45,9 @@ internal sealed class PlayerProfile
     }
 
     internal string Username { get; }
+
     internal bool HasProfileImage { get; }
+
     internal ProfileStatistics Statistics { get; }
 }
 
@@ -60,20 +63,25 @@ internal sealed class ProfileStatistics
     }
 
     internal int MatchesPlayed { get; }
+
     internal int Wins { get; }
+
     internal int Losses { get; }
+
     internal int Draws { get; }
+
     internal double WinRate { get; }
 }
 
-internal sealed class ProfileImageContent
+internal sealed class PlayerImageContent
 {
-    internal ProfileImageContent(byte[] content, string mediaType)
+    internal PlayerImageContent(byte[] content, string mediaType)
     {
         Content = content;
         MediaType = mediaType;
     }
 
     internal byte[] Content { get; }
+
     internal string MediaType { get; }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using ReversiGameSystem.Features.Preferences;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Presentation.Authentication;
 using ReversiGameSystem.Services;
@@ -11,7 +12,8 @@ namespace ReversiGameSystem.Views;
 
 public partial class LoginScreenPage : Page
 {
-    private const string SavedLanguageUnavailableMessage = "The saved language could not be applied.";
+    private const string SavedLanguageUnavailableMessage
+        = "The saved language could not be applied.";
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
     private readonly LoginViewModel _viewModel;
 
@@ -93,6 +95,18 @@ public partial class LoginScreenPage : Page
                     throw new InvalidOperationException(SavedLanguageUnavailableMessage);
                 }
                 ClientRuntime.CurrentSession.StartAuthenticated(session);
+                SettingsViewModel preferences = new SettingsViewModel(
+                    ClientRuntime.PreferencesService, ClientRuntime.CurrentSession);
+                PreferencesStatus preferencesStatus = await preferences.LoadPreferences();
+                if (ClientRuntime.CurrentSession.SessionToken != session.SessionToken)
+                {
+                    return;
+                }
+                if (preferencesStatus != PreferencesStatus.Success)
+                {
+                    ShowLoginError("Settings_PersistenceErrorTitle",
+                        "Settings_PersistenceErrorMessage");
+                }
                 NavigationService?.Navigate(new MainMenuPage());
                 return;
             }

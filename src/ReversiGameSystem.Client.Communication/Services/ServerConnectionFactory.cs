@@ -124,6 +124,8 @@ internal static class ServerConnectionFactory
             SendTimeout = TimeSpan.FromSeconds(PreferencesRequestTimeoutSeconds),
             MaxReceivedMessageSize = MaximumPreferencesMessageBytes
         };
+        binding.ReaderQuotas.MaxArrayLength = (int)MaximumPreferencesMessageBytes;
+        binding.ReaderQuotas.MaxStringContentLength = (int)MaximumPreferencesMessageBytes;
         return new Proxy.PlayerPreferencesServiceClient(binding,
             CreateEndpointAddress(PreferencesEndpoint));
     }

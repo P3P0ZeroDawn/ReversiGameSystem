@@ -2,21 +2,29 @@ using System.Windows.Media.Imaging;
 
 namespace ReversiGameSystem.Services;
 
-/// <summary>
-/// Holds the signed-in player's appearance preferences for the current session.
-/// </summary>
 internal static class UserPreferencesState
 {
-    internal static bool UseProfilePicturesOnPieces { get; set; }
+    internal static bool UseProfilePicturesOnPieces { get; private set; }
 
-    internal static bool UseCustomBoardBackground { get; set; }
+    internal static bool UseCustomBoardBackground { get; private set; }
 
     internal static BitmapSource? BoardBackgroundPreview { get; private set; }
 
     internal static void SetBoardBackground(BitmapSource preview)
     {
         BoardBackgroundPreview = preview;
-        UseCustomBoardBackground = true;
+    }
+
+    internal static void ApplyPreferences(PlayerPreferences preferences)
+    {
+        UseProfilePicturesOnPieces =
+            preferences.PieceStyleCode == PlayerPreferences.ProfilePicturesPieceStyle;
+        UseCustomBoardBackground = preferences.UseCustomBoardBackground;
+    }
+
+    internal static void ClearBoardBackground()
+    {
+        BoardBackgroundPreview = null;
     }
 
     internal static void Reset()

@@ -6,9 +6,9 @@
       xmlns:localization="clr-namespace:ReversiGameSystem.Localization"
       mc:Ignorable="d"
       d:DesignHeight="800" d:DesignWidth="1280"
-      Title="{Binding [Settings_Title]}"
+      Title="{Binding [Settings_Title], Source={x:Static localization:LocalizationManager.Instance}}"
       Style="{StaticResource AuthenticationPageStyle}"
-      DataContext="{x:Static localization:LocalizationManager.Instance}">
+      Loaded="OnLoaded">
     <Viewbox Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <Grid Width="1280" Height="800" Margin="32,24">
             <Grid.RowDefinitions>
@@ -22,18 +22,18 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="220" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="1" Text="{Binding [Application_Name]}"
+                <TextBlock Grid.Column="1" Text="{Binding [Application_Name], Source={x:Static localization:LocalizationManager.Instance}}"
                            Style="{StaticResource AuthenticationBrandStyle}" />
                 <StackPanel Grid.Column="2" Style="{StaticResource LanguagePanelStyle}">
-                    <Label Content="{Binding [Common_LanguageLabel]}"
+                    <Label Content="{Binding [Common_LanguageLabel], Source={x:Static localization:LocalizationManager.Instance}}"
                            Style="{StaticResource LanguageLabelStyle}" />
-                    <ComboBox x:Name="languageComboBox"
+                    <ComboBox x:Name="languageComboBox" IsEnabled="{Binding CanEdit}"
                               Style="{StaticResource LanguageComboBoxStyle}"
                               SelectedValuePath="Tag"
                               SelectionChanged="OnLanguageSelectionChanged"
-                              SelectedValue="{Binding CultureName, Mode=TwoWay, UpdateSourceTrigger=Explicit}">
-                        <ComboBoxItem Tag="en-US" Content="{Binding [Language_English]}" />
-                        <ComboBoxItem Tag="es-MX" Content="{Binding [Language_Spanish]}" />
+                              SelectedValue="{Binding CultureName, Source={x:Static localization:LocalizationManager.Instance}, Mode=TwoWay, UpdateSourceTrigger=Explicit}">
+                        <ComboBoxItem Tag="en-US" Content="{Binding [Language_English], Source={x:Static localization:LocalizationManager.Instance}}" />
+                        <ComboBoxItem Tag="es-MX" Content="{Binding [Language_Spanish], Source={x:Static localization:LocalizationManager.Instance}}" />
                     </ComboBox>
                 </StackPanel>
             </Grid>
@@ -48,10 +48,10 @@
                         </Grid.RowDefinitions>
 
                         <StackPanel Grid.Row="0" Margin="0,0,0,22">
-                            <TextBlock Text="{Binding [Settings_Title]}"
+                            <TextBlock Text="{Binding [Settings_Title], Source={x:Static localization:LocalizationManager.Instance}}"
                                        Style="{StaticResource AuthenticationTitleStyle}"
                                        Margin="0,0,0,6" />
-                            <TextBlock Text="{Binding [Settings_Description]}"
+                            <TextBlock Text="{Binding [Settings_Description], Source={x:Static localization:LocalizationManager.Instance}}"
                                        Style="{StaticResource AuthenticationSupportingTextStyle}"
                                        TextWrapping="Wrap" />
                         </StackPanel>
@@ -64,24 +64,24 @@
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <CheckBox x:Name="profilePicturesCheckBox"
-                                          Content="{Binding [Settings_ProfilePicturesOnPiecesLabel]}"
+                                <CheckBox x:Name="profilePicturesCheckBox" IsEnabled="{Binding CanEdit}" IsChecked="{Binding UseProfilePicturesOnPieces, Mode=OneWay}" Click="OnProfilePicturesPreferenceChanged"
+                                          Content="{Binding [Settings_ProfilePicturesOnPiecesLabel], Source={x:Static localization:LocalizationManager.Instance}}"
                                           Style="{StaticResource SettingsOptionCheckBoxStyle}" />
-                                <TextBlock Text="{Binding [Settings_ProfilePicturesOnPiecesDescription]}"
+                                <TextBlock Text="{Binding [Settings_ProfilePicturesOnPiecesDescription], Source={x:Static localization:LocalizationManager.Instance}}"
                                            Style="{StaticResource AuthenticationSupportingTextStyle}"
                                            TextWrapping="Wrap" Margin="28,2,0,18" />
 
                                 <Separator Margin="0,0,0,18" />
 
-                                <CheckBox x:Name="customBackgroundCheckBox"
-                                          Content="{Binding [Settings_CustomBackgroundLabel]}"
+                                <CheckBox x:Name="customBackgroundCheckBox" IsEnabled="{Binding CanEdit}" IsChecked="{Binding UseCustomBoardBackground, Mode=OneWay}" Click="OnCustomBackgroundPreferenceChanged"
+                                          Content="{Binding [Settings_CustomBackgroundLabel], Source={x:Static localization:LocalizationManager.Instance}}"
                                           Style="{StaticResource SettingsOptionCheckBoxStyle}" />
-                                <TextBlock Text="{Binding [Settings_CustomBackgroundDescription]}"
+                                <TextBlock Text="{Binding [Settings_CustomBackgroundDescription], Source={x:Static localization:LocalizationManager.Instance}}"
                                            Style="{StaticResource AuthenticationSupportingTextStyle}"
                                            TextWrapping="Wrap" Margin="28,2,0,18" />
 
-                                <Button x:Name="changeBackgroundButton"
-                                        Content="{Binding [Settings_ChangeBackgroundButton]}"
+                                <Button x:Name="changeBackgroundButton" IsEnabled="{Binding CanEdit}"
+                                        Content="{Binding [Settings_ChangeBackgroundButton], Source={x:Static localization:LocalizationManager.Instance}}"
                                         Style="{StaticResource AuthenticationPrimaryButtonStyle}"
                                         Click="OnChangeBackgroundClick"
                                         MinWidth="220" HorizontalAlignment="Left"
@@ -94,14 +94,14 @@
                                     BorderBrush="#D8E5DC" BorderThickness="1"
                                     ClipToBounds="True">
                                 <Grid>
-                                    <Image x:Name="backgroundPreviewImage"
+                                    <Image x:Name="backgroundPreviewImage" Source="{Binding BackgroundPreview}"
                                            Stretch="UniformToFill" Visibility="Collapsed" />
                                     <Image x:Name="backgroundMaskImage"
                                            Source="/Assets/Images/BoardMask.png"
                                            Stretch="Fill" Visibility="Collapsed"
                                            IsHitTestVisible="False" />
                                     <TextBlock x:Name="noBackgroundTextBlock"
-                                               Text="{Binding [Settings_NoBackgroundMessage]}"
+                                               Text="{Binding [Settings_NoBackgroundMessage], Source={x:Static localization:LocalizationManager.Instance}}"
                                                Style="{StaticResource MainMenuEmptyTextStyle}"
                                                TextAlignment="Center" TextWrapping="Wrap"
                                                VerticalAlignment="Center" Margin="18" />
@@ -112,7 +112,7 @@
                 </Border>
 
                 <Button x:Name="backToMenuButton"
-                        Content="{Binding [Settings_BackButton]}"
+                        Content="{Binding [Settings_BackButton], Source={x:Static localization:LocalizationManager.Instance}}"
                         Click="OnBackToMenuClick"
                         Style="{StaticResource AuthenticationSecondaryButtonStyle}"
                         MinWidth="180" HorizontalAlignment="Left" Margin="0,18,0,0" />

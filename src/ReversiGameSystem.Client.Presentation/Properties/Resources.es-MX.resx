@@ -1354,4 +1354,16 @@
   <data name="RemoteMatch_Unauthorized" xml:space="preserve"><value>No tienes autorización para realizar esta operación de la partida.</value></data>
   <data name="RemoteMatch_InactiveAccount" xml:space="preserve"><value>Tu cuenta está inactiva.</value></data>
   <data name="Client_DiagnosticsUnavailableMessage" xml:space="preserve"><value>No se pudo guardar el diagnóstico. Referencia: {0}.</value></data>
+  <data name="Settings_ServerConnectionFailedTitle" xml:space="preserve">
+    <value>Preferencias no disponibles</value>
+  </data>
+  <data name="Settings_ServerConnectionFailedMessage" xml:space="preserve">
+    <value>No pudimos confirmar la operación. Inténtalo de nuevo.</value>
+  </data>
+  <data name="Settings_PersistenceErrorTitle" xml:space="preserve">
+    <value>No se pudieron confirmar las preferencias</value>
+  </data>
+  <data name="Settings_PersistenceErrorMessage" xml:space="preserve">
+    <value>La operación no pudo confirmarse. Se conservaron las preferencias locales anteriores.</value>
+  </data>
 </root>

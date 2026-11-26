@@ -6,30 +6,47 @@ using ReversiGameSystem.Validation;
 
 namespace ReversiGameSystem.Services;
 
-internal static class ProfileImageModificationService
+internal static class PlayerImageService
 {
-    internal static async Task<ProfileStatus> ChangeProfileImage(string sessionToken, string imagePath)
+    private const int FileBufferSize = 81920;
+
+    internal static async Task<ProfileStatus> ChangeProfileImage(string sessionToken,
+        string imagePath)
     {
-        ProfileImageContent image = await Task.Run(() => ReadImageFile(imagePath));
+        PlayerImageContent image = await ReadImageFile(imagePath);
         return await ClientRuntime.ProfileService.UpdateProfileImage(
             sessionToken, image.Content, image.MediaType);
     }
 
-    internal static ProfileImageContent ReadImageFile(string imagePath)
+    internal static async Task<PlayerImageContent> ReadImageFile(string imagePath)
     {
-        FileInfo file = new FileInfo(imagePath);
-        if (!file.Exists || file.Length > ProfilePicturePolicy.MaximumFileBytes)
+        using (FileStream stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read,
+            FileShare.Read, FileBufferSize, true))
         {
-            throw new IOException("The selected image exceeds the upload limit or is unavailable.");
+            if (stream.Length == 0 || stream.Length > ProfilePicturePolicy.MaximumFileBytes)
+            {
+                throw new IOException("The selected image exceeds the upload limit or is empty.");
+            }
+            byte[] bytes = new byte[(int)stream.Length];
+            int offset = 0;
+            while (offset < bytes.Length)
+            {
+                int bytesRead = await stream.ReadAsync(bytes, offset, bytes.Length - offset);
+                if (bytesRead == 0)
+                {
+                    throw new EndOfStreamException(
+                        "The selected image could not be read completely.");
+                }
+                offset += bytesRead;
+            }
+            string mediaType = Path.GetExtension(imagePath).Equals(
+                ".png", StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
+            return new PlayerImageContent(bytes, mediaType);
         }
-        string mediaType = Path.GetExtension(imagePath).Equals(
-            ".png", StringComparison.OrdinalIgnoreCase)
-            ? "image/png"
-            : "image/jpeg";
-        return new ProfileImageContent(File.ReadAllBytes(imagePath), mediaType);
     }
 
-    internal static BitmapSource? CreateProfilePreview(ProfileImageContent? content)
+    internal static BitmapSource? CreatePreview(
+        PlayerImageContent? content, int maximumSize = ProfilePicturePolicy.ProfilePreviewSize)
     {
         if (content == null)
         {
@@ -60,7 +77,7 @@ internal static class ProfileImageModificationService
             }
 
             return ProfilePicturePolicy.CreateSquarePreview(
-                frame, ProfilePicturePolicy.ProfilePreviewSize);
+                frame, maximumSize);
         }
     }
 }
