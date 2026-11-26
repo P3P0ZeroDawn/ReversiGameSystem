@@ -16,6 +16,15 @@ El guardado del idioma y su recuperación al iniciar sesión están comprobados 
 3. Al finalizar las migraciones, inventariar las pruebas existentes, completar las faltantes y
    revisar su cumplimiento del estándar y su ejecución individual en Visual Studio.
 
+4. Revisar qué se registra en los logs, por qué y con qué nivel. Durante una partida,
+   registrar la pérdida de conexión, los intentos de recuperación, la reconexión lograda
+   y el vencimiento de la ventana de 30 segundos. Distinguir cierre voluntario de corte
+   inesperado, correlacionar los eventos sin tokens ni contenido del chat y evitar
+   mensajes repetidos en cada tick.
+5. Generalizar los límites recuperables de las operaciones remotas del cliente: registrar
+   e informar los fallos sin cerrar la aplicación, restaurar controles y conservar el
+   estado confirmado. Mantener el cierre global para errores no recuperados.
+
 La verificación debe cubrir gameplay/MVVM, rival automático e inactividad, reconexión de 30 segundos,
 chat (muteo y límite de mensajes), idioma persistente, cierre de sesión, clasificación de excepciones
 y registros sin datos sensibles. Incluir fallos durante la reconexión y al escribir los logs.

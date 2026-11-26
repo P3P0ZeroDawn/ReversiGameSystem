@@ -12,22 +12,28 @@ using ReversiGameSystem.Services;
 
 namespace ReversiGameSystem.Views;
 
-/// <summary>
-/// Renders a Reversi board with the current player's local appearance preferences.
-/// </summary>
 public partial class ReversiBoardControl : UserControl
 {
     private const double PieceSize = 46;
+    private const double ProfilePictureDiameterRatio = 0.65;
+    private const double ProfilePieceOutlineThickness = 1;
+    private const double GridDrawingSize = 470;
+    private const double DarkGridStroke = 3;
+    private const double LightGridStroke = 1;
+    private const double OuterPieceStroke = 3;
+    private const double InnerPieceStroke = 3;
+    private const double PieceImageInset = 6;
+    private const string EmbeddedImagePrefix =
+        "pack://application:,,,/ReversiGameSystem.Client.Presentation;component";
 
-    /// <summary>
-    /// Initializes the reusable board.
-    /// </summary>
     public ReversiBoardControl()
     {
         InitializeComponent();
     }
 
     internal event EventHandler<BoardSquareSelectedEventArgs>? SquareSelected;
+
+    internal DiscColor SystemPlayerColor { get; set; } = DiscColor.Empty;
 
     internal void ShowBoard(ReversiBoard board)
     {
@@ -59,9 +65,42 @@ public partial class ReversiBoardControl : UserControl
         boardBackgroundImage.Source = useCustomBackground
             ? customBackground
             : CreateImageSource("/Assets/Images/DefaultBoardBackground.png");
-        boardMaskImage.Visibility = useCustomBackground
+        contrastGridView.Visibility = useCustomBackground
             ? Visibility.Visible
             : Visibility.Collapsed;
+        boardMaskImage.Visibility = contrastGridView.Visibility;
+        contrastGridCanvas.Children.Clear();
+        if (useCustomBackground)
+        {
+            for (int index = 0; index <= ReversiBoard.Size; index++)
+            {
+                double position = index * GridDrawingSize / ReversiBoard.Size;
+                DrawContrastLine(new Point(position, 0), new Point(position, GridDrawingSize));
+                DrawContrastLine(new Point(0, position), new Point(GridDrawingSize, position));
+            }
+        }
+    }
+
+    private void DrawContrastLine(Point start, Point end)
+    {
+        contrastGridCanvas.Children.Add(new Line
+        {
+            X1 = start.X,
+            Y1 = start.Y,
+            X2 = end.X,
+            Y2 = end.Y,
+            Stroke = Brushes.Black,
+            StrokeThickness = DarkGridStroke
+        });
+        contrastGridCanvas.Children.Add(new Line
+        {
+            X1 = start.X,
+            Y1 = start.Y,
+            X2 = end.X,
+            Y2 = end.Y,
+            Stroke = Brushes.White,
+            StrokeThickness = LightGridStroke
+        });
     }
 
     private void RenderPieces(ReversiBoard board, DiscColor localPlayerColor)
@@ -155,47 +194,89 @@ public partial class ReversiBoardControl : UserControl
 
     private static FrameworkElement CreateDefaultPiece(DiscColor color)
     {
-        return new Image
+        Grid piece = CreatePieceFrame(color);
+        piece.Children.Add(new Image
         {
-            Width = PieceSize,
-            Height = PieceSize,
+            Margin = new Thickness(PieceImageInset),
             Stretch = Stretch.Uniform,
             Source = CreateImageSource(color == DiscColor.Black
                 ? "/Assets/Images/DefaultBlackPiece.png"
                 : "/Assets/Images/DefaultWhitePiece.png")
-        };
+        });
+        return piece;
     }
 
-    private static FrameworkElement CreateProfilePiece(
+    private FrameworkElement CreateProfilePiece(
         DiscColor color,
         DiscColor localPlayerColor)
     {
-        ImageSource source = color == localPlayerColor
-            && ClientRuntime.CurrentSession.ProfilePicture != null
-                ? ClientRuntime.CurrentSession.ProfilePicture
-                : CreateImageSource("/Assets/Images/DefaultProfilePicture.png");
-        Grid pieceGrid = new Grid { Width = PieceSize, Height = PieceSize };
-        pieceGrid.Children.Add(new Ellipse
+        ImageSource source;
+        if (color == SystemPlayerColor)
         {
-            Fill = new ImageBrush(source) { Stretch = Stretch.UniformToFill },
-            Stroke = new SolidColorBrush(color == DiscColor.Black
-                ? Color.FromRgb(35, 35, 35)
-                : Colors.White),
-            StrokeThickness = 4
+            source = CreateImageSource("/Assets/Images/SystemProfilePicture.png");
+        }
+        else if (color == localPlayerColor && ClientRuntime.CurrentSession.ProfilePicture != null)
+        {
+            source = ClientRuntime.CurrentSession.ProfilePicture;
+        }
+        else
+        {
+            source = CreateImageSource("/Assets/Images/DefaultProfilePicture.png");
+        }
+        Brush discColor = color == DiscColor.Black ? Brushes.Black : Brushes.White;
+        Brush outlineColor = color == DiscColor.Black ? Brushes.White : Brushes.Black;
+        double pictureInset = PieceSize * (1 - ProfilePictureDiameterRatio) / 2;
+        Grid piece = new Grid { Width = PieceSize, Height = PieceSize };
+        piece.Children.Add(new Ellipse
+        {
+            Fill = discColor,
+            Stroke = outlineColor,
+            StrokeThickness = ProfilePieceOutlineThickness
         });
-        pieceGrid.Children.Add(new Image
+        piece.Children.Add(new Ellipse
         {
+            Margin = new Thickness(pictureInset),
+            Fill = new ImageBrush(source) { Stretch = Stretch.UniformToFill }
+        });
+        piece.Children.Add(new Image
+        {
+            Margin = new Thickness(pictureInset),
             Source = CreateImageSource("/Assets/Images/PieceMask.png"),
             Stretch = Stretch.Fill,
             IsHitTestVisible = false
         });
-        return pieceGrid;
+        return piece;
+    }
+
+    private static Grid CreatePieceFrame(DiscColor color)
+    {
+        Brush mainColor = color == DiscColor.Black ? Brushes.Black : Brushes.White;
+        Brush contrastColor = color == DiscColor.Black ? Brushes.White : Brushes.Black;
+        Grid piece = new Grid { Width = PieceSize, Height = PieceSize };
+        piece.Children.Add(new Ellipse
+        {
+            Fill = mainColor,
+            Stroke = contrastColor,
+            StrokeThickness = OuterPieceStroke
+        });
+        piece.Children.Add(new Ellipse
+        {
+            Margin = new Thickness(OuterPieceStroke),
+            Stroke = mainColor,
+            StrokeThickness = InnerPieceStroke
+        });
+        return piece;
     }
 
     private static BitmapImage CreateImageSource(string path)
     {
-        return new BitmapImage(new Uri(
-            "/ReversiGameSystem.Client.Presentation;component" + path, UriKind.Relative));
+        BitmapImage image = new BitmapImage();
+        image.BeginInit();
+        image.CacheOption = BitmapCacheOption.OnLoad;
+        image.UriSource = new Uri(EmbeddedImagePrefix + path, UriKind.Absolute);
+        image.EndInit();
+        image.Freeze();
+        return image;
     }
 }
 

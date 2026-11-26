@@ -9,8 +9,11 @@
                    Stretch="Fill" />
             <Image x:Name="boardMaskImage"
                    Source="/ReversiGameSystem.Client.Presentation;component/Assets/Images/BoardMask.png"
-                   Stretch="Fill" Visibility="Collapsed"
-                   IsHitTestVisible="False" />
+                   Stretch="Fill" Visibility="Collapsed" IsHitTestVisible="False" />
+            <Viewbox x:Name="contrastGridView" Margin="15" Stretch="Fill"
+                     Visibility="Collapsed" IsHitTestVisible="False">
+                <Canvas x:Name="contrastGridCanvas" Width="470" Height="470" />
+            </Viewbox>
             <Grid x:Name="piecesGrid" Margin="15"
                   IsHitTestVisible="False" />
             <Grid x:Name="interactionGrid" Margin="15"

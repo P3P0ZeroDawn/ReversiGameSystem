@@ -189,6 +189,7 @@ public partial class GamePage : Page
         DiscColor localColor =
             _viewModel.Information.AssignedSeatNumber == GameViewModel.OpponentSeat
             ? DiscColor.White : DiscColor.Black;
+        gameBoardControl.SystemPlayerColor = _viewModel.SystemPlayerColor;
         if (_viewModel.CanPlacePiece)
         {
             gameBoardControl.ShowInteractiveBoard(

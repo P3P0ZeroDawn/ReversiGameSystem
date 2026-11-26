@@ -97,45 +97,64 @@ public partial class AccountInformationPage : Page
             return;
         }
 
-        ProfileResult<PlayerProfile> profileResult =
-            await ClientRuntime.ProfileService.GetPlayerProfile(sessionToken);
-        if (profileResult.Status != ProfileStatus.Success)
-        {
-            ShowProfileLoadError(profileResult.Status == ProfileStatus.ServiceUnavailable);
-            return;
-        }
-        PlayerProfile profile = profileResult.Value
-            ?? throw new InvalidOperationException(
-                "A successful profile result must contain its value.");
-        ApplyProfile(profile);
-        if (!profile.HasProfileImage)
-        {
-            return;
-        }
-        ProfileResult<PlayerImageContent> imageResult =
-            await ClientRuntime.ProfileService.GetProfileImage(sessionToken);
-        if (imageResult.Status != ProfileStatus.Success)
-        {
-            ShowProfileLoadError(imageResult.Status == ProfileStatus.ServiceUnavailable);
-            return;
-        }
         try
         {
-            System.Windows.Media.Imaging.BitmapSource? bitmap =
-                PlayerImageService.CreatePreview(imageResult.Value);
-            if (bitmap != null)
+            ProfileResult<PlayerProfile> profileResult =
+                await ClientRuntime.ProfileService.GetPlayerProfile(sessionToken);
+            if (ClientRuntime.CurrentSession.SessionToken != sessionToken)
             {
-                ClientRuntime.CurrentSession.UpdateProfilePicture(bitmap);
-                profilePictureButton.Background = new ImageBrush(bitmap)
+                return;
+            }
+            if (profileResult.Status != ProfileStatus.Success)
+            {
+                ShowProfileLoadError(profileResult.Status == ProfileStatus.ServiceUnavailable);
+                return;
+            }
+            PlayerProfile profile = profileResult.Value
+                ?? throw new InvalidOperationException(
+                    "A successful profile result must contain its value.");
+            ApplyProfile(profile);
+            if (!profile.HasProfileImage)
+            {
+                return;
+            }
+            ProfileResult<PlayerImageContent> imageResult =
+                await ClientRuntime.ProfileService.GetProfileImage(sessionToken);
+            if (ClientRuntime.CurrentSession.SessionToken != sessionToken)
+            {
+                return;
+            }
+            if (imageResult.Status != ProfileStatus.Success)
+            {
+                ShowProfileLoadError(imageResult.Status == ProfileStatus.ServiceUnavailable);
+                return;
+            }
+            try
+            {
+                System.Windows.Media.Imaging.BitmapSource? bitmap =
+                    PlayerImageService.CreatePreview(imageResult.Value);
+                if (bitmap != null)
                 {
-                    Stretch = Stretch.UniformToFill
-                };
+                    ClientRuntime.CurrentSession.UpdateProfilePicture(bitmap);
+                    profilePictureButton.Background = new ImageBrush(bitmap)
+                    {
+                        Stretch = Stretch.UniformToFill
+                    };
+                }
+            }
+            catch (Exception exception) when (exception is IOException
+                or NotSupportedException or ArgumentException or FormatException)
+            {
+                ShowProfileLoadError(false);
             }
         }
-        catch (Exception exception) when (exception is IOException
-            or NotSupportedException or ArgumentException or FormatException)
+        catch (System.ServiceModel.FaultException<ServerProxy.ServiceFault> fault)
         {
-            ShowProfileLoadError(false);
+            ClientRuntime.Errors.ReportOperationFailure(fault, nameof(AccountInformationPage));
+            if (NavigationService != null && NavigationService.CanGoBack)
+            {
+                NavigationService.GoBack();
+            }
         }
     }
 
