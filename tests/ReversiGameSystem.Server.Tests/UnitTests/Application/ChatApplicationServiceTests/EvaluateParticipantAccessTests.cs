@@ -11,7 +11,7 @@ public sealed class EvaluateParticipantAccessTests : ChatApplicationServiceTestB
     [TestMethod]
     [DataRow("")]
     [DataRow("   ")]
-    public void EvaluateParticipantAccess_MissingToken_ReturnsMissingSessionTokenWithoutRepositoryCall(
+    public void EvaluateParticipantAccess_MissingToken_ReturnsMissingTokenWithoutCall(
         string sessionToken)
     {
         ChatStatus expectedStatus = ChatStatus.MissingSessionToken;
@@ -25,7 +25,7 @@ public sealed class EvaluateParticipantAccessTests : ChatApplicationServiceTestB
     }
 
     [TestMethod]
-    public void EvaluateParticipantAccess_InvalidSession_ReturnsInvalidSessionWithoutRepositoryCall()
+    public void EvaluateParticipantAccess_InvalidSession_ReturnsInvalidSessionWithoutCall()
     {
         ChatStatus expectedStatus = ChatStatus.InvalidSession;
         int expectedCalls = 0;
@@ -40,7 +40,7 @@ public sealed class EvaluateParticipantAccessTests : ChatApplicationServiceTestB
     [TestMethod]
     [DataRow(0L)]
     [DataRow(-5L)]
-    public void EvaluateParticipantAccess_NonPositiveMatchId_ReturnsInvalidMatchIdWithoutRepositoryCall(
+    public void EvaluateParticipantAccess_NonPositiveMatchId_ReturnsInvalidMatchIdWithoutCall(
         long matchId)
     {
         ChatStatus expectedStatus = ChatStatus.InvalidMatchId;
@@ -67,11 +67,14 @@ public sealed class EvaluateParticipantAccessTests : ChatApplicationServiceTestB
         ChatStatus actualStatus = Service.EvaluateParticipantAccess(
             FirstSession.SessionToken,
             15L);
+        int actualCalls = Repository.AccessEvaluationCalls;
+        long actualAccountId = Repository.LastAccountId;
+        long actualMatchId = Repository.LastMatchId;
 
         Assert.AreEqual(expectedStatus, actualStatus);
-        Assert.AreEqual(expectedCalls, Repository.AccessEvaluationCalls);
-        Assert.AreEqual(expectedAccountId, Repository.LastAccountId);
-        Assert.AreEqual(expectedMatchId, Repository.LastMatchId);
+        Assert.AreEqual(expectedCalls, actualCalls);
+        Assert.AreEqual(expectedAccountId, actualAccountId);
+        Assert.AreEqual(expectedMatchId, actualMatchId);
     }
 
     [TestMethod]

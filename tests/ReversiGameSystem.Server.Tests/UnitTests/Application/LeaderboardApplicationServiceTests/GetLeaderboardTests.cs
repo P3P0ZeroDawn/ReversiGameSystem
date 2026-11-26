@@ -2,10 +2,8 @@ using System;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Leaderboards;
-using ApplicationService =
-    ReversiGameSystem.Server.Application.Leaderboards.LeaderboardApplicationService;
 
-namespace ReversiGameSystem.Server.Tests.UnitTests.Application.LeaderboardApplicationService;
+namespace ReversiGameSystem.Server.Tests.UnitTests.Application.LeaderboardApplicationServiceTests;
 
 [TestClass]
 [TestCategory("Unit")]
@@ -62,13 +60,14 @@ public sealed class GetLeaderboardTests : LeaderboardApplicationServiceTestBase
         int expectedCount = 2;
 
         LeaderboardResult result = Service.GetLeaderboard(expectedCount);
+        int actualCount = result.Entries.Count;
 
-        Assert.AreEqual(expectedCount, result.Entries.Count);
+        Assert.AreEqual(expectedCount, actualCount);
     }
 
     [TestMethod]
     [DataRow(1)]
-    [DataRow(ApplicationService.MaximumAllowedEntries)]
+    [DataRow(LeaderboardApplicationService.MaximumAllowedEntries)]
     public void GetLeaderboard_BoundaryMaximums_ReturnsSuccessWithRequestedCount(
         int maximumEntries)
     {
@@ -80,33 +79,47 @@ public sealed class GetLeaderboardTests : LeaderboardApplicationServiceTestBase
                 1,
                 1))
             .ToArray();
+        LeaderboardStatus expectedStatus = LeaderboardStatus.Success;
+        int expectedCount = maximumEntries;
 
         LeaderboardResult result = Service.GetLeaderboard(maximumEntries);
+        LeaderboardStatus actualStatus = result.Status;
+        int actualCount = result.Entries.Count;
 
-        Assert.AreEqual(LeaderboardStatus.Success, result.Status);
-        Assert.AreEqual(maximumEntries, result.Entries.Count);
+        Assert.AreEqual(expectedStatus, actualStatus);
+        Assert.AreEqual(expectedCount, actualCount);
     }
 
     [TestMethod]
     [DataRow(0)]
     [DataRow(-1)]
-    [DataRow(ApplicationService.MaximumAllowedEntries + 1)]
+    [DataRow(LeaderboardApplicationService.MaximumAllowedEntries + 1)]
     public void GetLeaderboard_InvalidMaximum_ReturnsInvalidMaximumEntries(
         int maximumEntries)
     {
-        LeaderboardResult result = Service.GetLeaderboard(maximumEntries);
+        LeaderboardStatus expectedStatus = LeaderboardStatus.InvalidMaximumEntries;
+        bool expectedWasCalled = false;
 
-        Assert.AreEqual(LeaderboardStatus.InvalidMaximumEntries, result.Status);
-        Assert.IsFalse(Repository.WasCalled);
+        LeaderboardResult result = Service.GetLeaderboard(maximumEntries);
+        LeaderboardStatus actualStatus = result.Status;
+        bool actualWasCalled = Repository.WasCalled;
+
+        Assert.AreEqual(expectedStatus, actualStatus);
+        Assert.AreEqual(expectedWasCalled, actualWasCalled);
     }
 
     [TestMethod]
     public void GetLeaderboard_EmptyRepository_ReturnsSuccessWithEmptyEntries()
     {
-        LeaderboardResult result = Service.GetLeaderboard(10);
+        LeaderboardStatus expectedStatus = LeaderboardStatus.Success;
+        int expectedCount = 0;
 
-        Assert.AreEqual(LeaderboardStatus.Success, result.Status);
-        Assert.AreEqual(0, result.Entries.Count);
+        LeaderboardResult result = Service.GetLeaderboard(10);
+        LeaderboardStatus actualStatus = result.Status;
+        int actualCount = result.Entries.Count;
+
+        Assert.AreEqual(expectedStatus, actualStatus);
+        Assert.AreEqual(expectedCount, actualCount);
     }
 
     [TestMethod]
@@ -119,20 +132,22 @@ public sealed class GetLeaderboardTests : LeaderboardApplicationServiceTestBase
         double expectedWinRate = 0d;
 
         LeaderboardResult result = Service.GetLeaderboard(10);
+        double actualWinRate = result.Entries[0].WinRate;
 
-        Assert.AreEqual(expectedWinRate, result.Entries[0].WinRate);
+        Assert.AreEqual(expectedWinRate, actualWinRate);
     }
 
     [TestMethod]
     public void GetLeaderboard_RepositoryThrows_PropagatesException()
     {
         Repository.ThrowOnGet = true;
+        string expectedMessage = "Simulated leaderboard repository failure.";
+        Action action = () => Service.GetLeaderboard(10);
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => Service.GetLeaderboard(10));
+        InvalidOperationException exception =
+            Assert.Throws<InvalidOperationException>(action);
+        string actualMessage = exception.Message;
 
-        Assert.AreEqual(
-            "Simulated leaderboard repository failure.",
-            exception.Message);
+        Assert.AreEqual(expectedMessage, actualMessage);
     }
 }

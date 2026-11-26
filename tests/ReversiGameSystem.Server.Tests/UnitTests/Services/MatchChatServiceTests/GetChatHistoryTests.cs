@@ -22,8 +22,9 @@ public sealed class GetChatHistoryTests : MatchChatServiceTestBase
 
         FaultException<SessionFault> exception =
             Assert.Throws<FaultException<SessionFault>>(action);
+        SessionFailure actualFailure = exception.Detail.Reason;
 
-        Assert.AreEqual(expectedFailure, exception.Detail.Reason);
+        Assert.AreEqual(expectedFailure, actualFailure);
     }
 
     [TestMethod]
@@ -39,8 +40,9 @@ public sealed class GetChatHistoryTests : MatchChatServiceTestBase
 
         FaultException<MatchFault> exception =
             Assert.Throws<FaultException<MatchFault>>(action);
+        MatchFailure actualFailure = exception.Detail.Reason;
 
-        Assert.AreEqual(expectedFailure, exception.Detail.Reason);
+        Assert.AreEqual(expectedFailure, actualFailure);
     }
 
     [TestMethod]
@@ -62,8 +64,9 @@ public sealed class GetChatHistoryTests : MatchChatServiceTestBase
         MatchChatEntry[] actualEntries = Service.GetChatHistory(
             FirstSession.SessionToken,
             20L);
+        int actualCount = actualEntries.Length;
 
-        Assert.HasCount(expectedCount, actualEntries);
+        Assert.AreEqual(expectedCount, actualCount);
         Assert.AreEqual(first.MessageNumber, actualEntries[0].MessageNumber);
         Assert.AreEqual(first.Content, actualEntries[0].Content);
         Assert.AreEqual(second.MessageNumber, actualEntries[1].MessageNumber);

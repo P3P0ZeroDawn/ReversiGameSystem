@@ -22,8 +22,9 @@ public sealed class SendChatMessageTests : MatchChatServiceTestBase
 
         FaultException<SessionFault> exception =
             Assert.Throws<FaultException<SessionFault>>(action);
+        SessionFailure actualFailure = exception.Detail.Reason;
 
-        Assert.AreEqual(expectedFailure, exception.Detail.Reason);
+        Assert.AreEqual(expectedFailure, actualFailure);
     }
 
     [TestMethod]
@@ -43,8 +44,9 @@ public sealed class SendChatMessageTests : MatchChatServiceTestBase
 
         FaultException<MatchFault> exception =
             Assert.Throws<FaultException<MatchFault>>(action);
+        MatchFailure actualFailure = exception.Detail.Reason;
 
-        Assert.AreEqual(expectedFailure, exception.Detail.Reason);
+        Assert.AreEqual(expectedFailure, actualFailure);
     }
 
     [TestMethod]
@@ -55,6 +57,7 @@ public sealed class SendChatMessageTests : MatchChatServiceTestBase
         ChatFailure expectedFailure)
     {
         Repository.Submission = new ChatMessageSubmission(repositoryStatus);
+        DateTime? expectedMuteEndsAtUtc = null;
         Action action = () => Service.SendChatMessage(
             FirstSession.SessionToken,
             10L,
@@ -62,9 +65,11 @@ public sealed class SendChatMessageTests : MatchChatServiceTestBase
 
         FaultException<ChatFault> exception =
             Assert.Throws<FaultException<ChatFault>>(action);
+        ChatFailure actualFailure = exception.Detail.Reason;
+        DateTime? actualMuteEndsAtUtc = exception.Detail.MuteEndsAtUtc;
 
-        Assert.AreEqual(expectedFailure, exception.Detail.Reason);
-        Assert.IsNull(exception.Detail.MuteEndsAtUtc);
+        Assert.AreEqual(expectedFailure, actualFailure);
+        Assert.AreEqual(expectedMuteEndsAtUtc, actualMuteEndsAtUtc);
     }
 
     [TestMethod]
@@ -78,8 +83,9 @@ public sealed class SendChatMessageTests : MatchChatServiceTestBase
 
         FaultException<ChatFault> exception =
             Assert.Throws<FaultException<ChatFault>>(action);
+        ChatFailure actualFailure = exception.Detail.Reason;
 
-        Assert.AreEqual(expectedFailure, exception.Detail.Reason);
+        Assert.AreEqual(expectedFailure, actualFailure);
     }
 
     [TestMethod]
@@ -88,7 +94,7 @@ public sealed class SendChatMessageTests : MatchChatServiceTestBase
         ChatMute mute = CreateSampleMute();
         Repository.Submission = new ChatMessageSubmission(mute);
         ChatFailure expectedFailure = ChatFailure.PlayerMuted;
-        DateTime expectedEndsAtUtc = mute.EndsAtUtc;
+        DateTime? expectedEndsAtUtc = mute.EndsAtUtc;
         Action action = () => Service.SendChatMessage(
             FirstSession.SessionToken,
             10L,
@@ -96,9 +102,11 @@ public sealed class SendChatMessageTests : MatchChatServiceTestBase
 
         FaultException<ChatFault> exception =
             Assert.Throws<FaultException<ChatFault>>(action);
+        ChatFailure actualFailure = exception.Detail.Reason;
+        DateTime? actualEndsAtUtc = exception.Detail.MuteEndsAtUtc;
 
-        Assert.AreEqual(expectedFailure, exception.Detail.Reason);
-        Assert.AreEqual(expectedEndsAtUtc, exception.Detail.MuteEndsAtUtc);
+        Assert.AreEqual(expectedFailure, actualFailure);
+        Assert.AreEqual(expectedEndsAtUtc, actualEndsAtUtc);
     }
 
     [TestMethod]

@@ -17,10 +17,11 @@ public sealed class PrepareChatChannelTests : ChatApplicationServiceTestBase
         ChatStatus expectedStatus = ChatStatus.MissingSessionToken;
         int expectedCalls = 0;
 
-        ChatChannelAccess actualAccess = Service.PrepareChatChannel(sessionToken, 10L);
+        ChatChannelAccess access = Service.PrepareChatChannel(sessionToken, 10L);
+        ChatStatus actualStatus = access.Status;
         int actualCalls = Repository.LoadChannelAccessCalls;
 
-        Assert.AreEqual(expectedStatus, actualAccess.Status);
+        Assert.AreEqual(expectedStatus, actualStatus);
         Assert.AreEqual(expectedCalls, actualCalls);
     }
 
@@ -30,10 +31,11 @@ public sealed class PrepareChatChannelTests : ChatApplicationServiceTestBase
         ChatStatus expectedStatus = ChatStatus.InvalidSession;
         int expectedCalls = 0;
 
-        ChatChannelAccess actualAccess = Service.PrepareChatChannel("unknown-token", 10L);
+        ChatChannelAccess access = Service.PrepareChatChannel("unknown-token", 10L);
+        ChatStatus actualStatus = access.Status;
         int actualCalls = Repository.LoadChannelAccessCalls;
 
-        Assert.AreEqual(expectedStatus, actualAccess.Status);
+        Assert.AreEqual(expectedStatus, actualStatus);
         Assert.AreEqual(expectedCalls, actualCalls);
     }
 
@@ -46,36 +48,43 @@ public sealed class PrepareChatChannelTests : ChatApplicationServiceTestBase
         ChatStatus expectedStatus = ChatStatus.InvalidMatchId;
         int expectedCalls = 0;
 
-        ChatChannelAccess actualAccess = Service.PrepareChatChannel(
+        ChatChannelAccess access = Service.PrepareChatChannel(
             FirstSession.SessionToken,
             matchId);
+        ChatStatus actualStatus = access.Status;
         int actualCalls = Repository.LoadChannelAccessCalls;
 
-        Assert.AreEqual(expectedStatus, actualAccess.Status);
+        Assert.AreEqual(expectedStatus, actualStatus);
         Assert.AreEqual(expectedCalls, actualCalls);
     }
 
     [TestMethod]
     public void PrepareChatChannel_ValidRequest_PassesClockUtcNowAndReturnsAccess()
     {
-        ChatMute activeMute = CreateSampleMute();
-        Repository.ChannelAccess = new ChatChannelAccess(activeMute);
+        ChatMute expectedMute = CreateSampleMute();
+        Repository.ChannelAccess = new ChatChannelAccess(expectedMute);
         ChatStatus expectedStatus = ChatStatus.Success;
         int expectedCalls = 1;
         long expectedAccountId = FirstSession.AccountId;
         long expectedMatchId = 25L;
         DateTime expectedNowUtc = Clock.UtcNow;
 
-        ChatChannelAccess actualAccess = Service.PrepareChatChannel(
+        ChatChannelAccess access = Service.PrepareChatChannel(
             FirstSession.SessionToken,
             25L);
+        ChatStatus actualStatus = access.Status;
+        ChatMute? actualMute = access.ActiveMute;
+        int actualCalls = Repository.LoadChannelAccessCalls;
+        long actualAccountId = Repository.LastAccountId;
+        long actualMatchId = Repository.LastMatchId;
+        DateTime actualNowUtc = Repository.LastNowUtc;
 
-        Assert.AreEqual(expectedStatus, actualAccess.Status);
-        Assert.AreSame(activeMute, actualAccess.ActiveMute);
-        Assert.AreEqual(expectedCalls, Repository.LoadChannelAccessCalls);
-        Assert.AreEqual(expectedAccountId, Repository.LastAccountId);
-        Assert.AreEqual(expectedMatchId, Repository.LastMatchId);
-        Assert.AreEqual(expectedNowUtc, Repository.LastNowUtc);
+        Assert.AreEqual(expectedStatus, actualStatus);
+        Assert.AreSame(expectedMute, actualMute);
+        Assert.AreEqual(expectedCalls, actualCalls);
+        Assert.AreEqual(expectedAccountId, actualAccountId);
+        Assert.AreEqual(expectedMatchId, actualMatchId);
+        Assert.AreEqual(expectedNowUtc, actualNowUtc);
     }
 
     [TestMethod]

@@ -1,20 +1,28 @@
 using System;
+using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Chat;
+using ReversiGameSystem.Server.Contracts.Callbacks;
+using ReversiGameSystem.Server.ServiceApi;
 using ReversiGameSystem.Server.Tests.TestDoubles;
-using ChatService = ReversiGameSystem.Server.Application.Chat.ChatApplicationService;
 
-namespace ReversiGameSystem.Server.Tests.UnitTests.Application.ChatApplicationServiceTests;
+namespace ReversiGameSystem.Server.Tests.UnitTests.Services.MatchChatServiceTests;
 
-public abstract class ChatApplicationServiceTestBase
+public abstract class MatchChatServiceTestBase : IDisposable
 {
-    protected ChatApplicationServiceTestBase()
+    private readonly MatchCallbackSubscriptions<IMatchChatServiceCallback> _callbackSubscriptions;
+
+    protected MatchChatServiceTestBase()
     {
         Clock = new UtcClockStub();
         Sessions = new SessionStore(Clock);
         Repository = new ChatRepositoryStub();
-        FirstSession = CreateSession(1L, "PlayerOne");
-        Service = new ChatService(Sessions, Repository, Clock);
+        FirstSession = TestSessionHelper.CreateSession(Sessions, 1L, "PlayerOne");
+        ApplicationService = new ChatApplicationService(Sessions, Repository, Clock);
+        _callbackSubscriptions = new MatchCallbackSubscriptions<IMatchChatServiceCallback>(
+            (_, _) => true,
+            NullLogger.Instance);
+        Service = new MatchChatService(ApplicationService, _callbackSubscriptions);
     }
 
     private protected UtcClockStub Clock { get; }
@@ -25,11 +33,13 @@ public abstract class ChatApplicationServiceTestBase
 
     protected AuthenticatedSession FirstSession { get; }
 
-    protected ChatService Service { get; }
+    protected ChatApplicationService ApplicationService { get; }
 
-    protected AuthenticatedSession CreateSession(long accountId, string username)
+    protected MatchChatService Service { get; }
+
+    public void Dispose()
     {
-        return TestSessionHelper.CreateSession(Sessions, accountId, username);
+        _callbackSubscriptions.Dispose();
     }
 
     protected ChatMessage CreateSampleMessage(

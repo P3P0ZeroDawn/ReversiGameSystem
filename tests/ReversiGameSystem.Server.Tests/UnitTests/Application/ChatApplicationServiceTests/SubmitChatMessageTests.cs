@@ -18,13 +18,14 @@ public sealed class SubmitChatMessageTests : ChatApplicationServiceTestBase
         ChatStatus expectedStatus = ChatStatus.MissingSessionToken;
         int expectedCalls = 0;
 
-        ChatMessageSubmission actualSubmission = Service.SubmitChatMessage(
+        ChatMessageSubmission submission = Service.SubmitChatMessage(
             sessionToken,
             10L,
             "Hello");
+        ChatStatus actualStatus = submission.Status;
         int actualCalls = Repository.SubmissionCalls;
 
-        Assert.AreEqual(expectedStatus, actualSubmission.Status);
+        Assert.AreEqual(expectedStatus, actualStatus);
         Assert.AreEqual(expectedCalls, actualCalls);
     }
 
@@ -34,13 +35,14 @@ public sealed class SubmitChatMessageTests : ChatApplicationServiceTestBase
         ChatStatus expectedStatus = ChatStatus.InvalidSession;
         int expectedCalls = 0;
 
-        ChatMessageSubmission actualSubmission = Service.SubmitChatMessage(
+        ChatMessageSubmission submission = Service.SubmitChatMessage(
             "unknown-token",
             10L,
             "Hello");
+        ChatStatus actualStatus = submission.Status;
         int actualCalls = Repository.SubmissionCalls;
 
-        Assert.AreEqual(expectedStatus, actualSubmission.Status);
+        Assert.AreEqual(expectedStatus, actualStatus);
         Assert.AreEqual(expectedCalls, actualCalls);
     }
 
@@ -53,13 +55,14 @@ public sealed class SubmitChatMessageTests : ChatApplicationServiceTestBase
         ChatStatus expectedStatus = ChatStatus.InvalidMatchId;
         int expectedCalls = 0;
 
-        ChatMessageSubmission actualSubmission = Service.SubmitChatMessage(
+        ChatMessageSubmission submission = Service.SubmitChatMessage(
             FirstSession.SessionToken,
             matchId,
             "Hello");
+        ChatStatus actualStatus = submission.Status;
         int actualCalls = Repository.SubmissionCalls;
 
-        Assert.AreEqual(expectedStatus, actualSubmission.Status);
+        Assert.AreEqual(expectedStatus, actualStatus);
         Assert.AreEqual(expectedCalls, actualCalls);
     }
 
@@ -73,13 +76,14 @@ public sealed class SubmitChatMessageTests : ChatApplicationServiceTestBase
         ChatStatus expectedStatus = ChatStatus.EmptyMessage;
         int expectedCalls = 0;
 
-        ChatMessageSubmission actualSubmission = Service.SubmitChatMessage(
+        ChatMessageSubmission submission = Service.SubmitChatMessage(
             FirstSession.SessionToken,
             10L,
             content!);
+        ChatStatus actualStatus = submission.Status;
         int actualCalls = Repository.SubmissionCalls;
 
-        Assert.AreEqual(expectedStatus, actualSubmission.Status);
+        Assert.AreEqual(expectedStatus, actualStatus);
         Assert.AreEqual(expectedCalls, actualCalls);
     }
 
@@ -90,13 +94,14 @@ public sealed class SubmitChatMessageTests : ChatApplicationServiceTestBase
         ChatStatus expectedStatus = ChatStatus.MessageTooLong;
         int expectedCalls = 0;
 
-        ChatMessageSubmission actualSubmission = Service.SubmitChatMessage(
+        ChatMessageSubmission submission = Service.SubmitChatMessage(
             FirstSession.SessionToken,
             10L,
             oversizedContent);
+        ChatStatus actualStatus = submission.Status;
         int actualCalls = Repository.SubmissionCalls;
 
-        Assert.AreEqual(expectedStatus, actualSubmission.Status);
+        Assert.AreEqual(expectedStatus, actualStatus);
         Assert.AreEqual(expectedCalls, actualCalls);
     }
 
@@ -108,15 +113,19 @@ public sealed class SubmitChatMessageTests : ChatApplicationServiceTestBase
         Repository.Submission = new ChatMessageSubmission(expectedMessage);
         ChatStatus expectedStatus = ChatStatus.Success;
         int expectedCalls = 1;
+        string expectedContent = maxLengthContent;
 
-        ChatMessageSubmission actualSubmission = Service.SubmitChatMessage(
+        ChatMessageSubmission submission = Service.SubmitChatMessage(
             FirstSession.SessionToken,
             10L,
             maxLengthContent);
+        ChatStatus actualStatus = submission.Status;
+        int actualCalls = Repository.SubmissionCalls;
+        string actualContent = Repository.LastContent;
 
-        Assert.AreEqual(expectedStatus, actualSubmission.Status);
-        Assert.AreEqual(expectedCalls, Repository.SubmissionCalls);
-        Assert.AreEqual(maxLengthContent, Repository.LastContent);
+        Assert.AreEqual(expectedStatus, actualStatus);
+        Assert.AreEqual(expectedCalls, actualCalls);
+        Assert.AreEqual(expectedContent, actualContent);
     }
 
     [TestMethod]
@@ -130,17 +139,23 @@ public sealed class SubmitChatMessageTests : ChatApplicationServiceTestBase
         int expectedMaximumMessages = 2;
         TimeSpan expectedRateWindow = TimeSpan.FromSeconds(1);
 
-        ChatMessageSubmission actualSubmission = Service.SubmitChatMessage(
+        ChatMessageSubmission submission = Service.SubmitChatMessage(
             FirstSession.SessionToken,
             10L,
             "  Hello  ");
+        ChatStatus actualStatus = submission.Status;
+        ChatMessage? actualMessage = submission.Message;
+        int actualCalls = Repository.SubmissionCalls;
+        string actualContent = Repository.LastContent;
+        int actualMaximumMessages = Repository.LastMaximumMessages;
+        TimeSpan actualRateWindow = Repository.LastRateWindow;
 
-        Assert.AreEqual(expectedStatus, actualSubmission.Status);
-        Assert.AreSame(expectedMessage, actualSubmission.Message);
-        Assert.AreEqual(expectedCalls, Repository.SubmissionCalls);
-        Assert.AreEqual(expectedContent, Repository.LastContent);
-        Assert.AreEqual(expectedMaximumMessages, Repository.LastMaximumMessages);
-        Assert.AreEqual(expectedRateWindow, Repository.LastRateWindow);
+        Assert.AreEqual(expectedStatus, actualStatus);
+        Assert.AreSame(expectedMessage, actualMessage);
+        Assert.AreEqual(expectedCalls, actualCalls);
+        Assert.AreEqual(expectedContent, actualContent);
+        Assert.AreEqual(expectedMaximumMessages, actualMaximumMessages);
+        Assert.AreEqual(expectedRateWindow, actualRateWindow);
     }
 
     [TestMethod]

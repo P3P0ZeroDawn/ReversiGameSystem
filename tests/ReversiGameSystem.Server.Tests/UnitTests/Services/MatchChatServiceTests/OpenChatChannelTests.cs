@@ -21,8 +21,9 @@ public sealed class OpenChatChannelTests : MatchChatServiceTestBase
 
         FaultException<SessionFault> exception =
             Assert.Throws<FaultException<SessionFault>>(action);
+        SessionFailure actualFailure = exception.Detail.Reason;
 
-        Assert.AreEqual(expectedFailure, exception.Detail.Reason);
+        Assert.AreEqual(expectedFailure, actualFailure);
     }
 
     [TestMethod]
@@ -33,8 +34,9 @@ public sealed class OpenChatChannelTests : MatchChatServiceTestBase
 
         FaultException<MatchFault> exception =
             Assert.Throws<FaultException<MatchFault>>(action);
+        MatchFailure actualFailure = exception.Detail.Reason;
 
-        Assert.AreEqual(expectedFailure, exception.Detail.Reason);
+        Assert.AreEqual(expectedFailure, actualFailure);
     }
 
     [TestMethod]
@@ -51,7 +53,8 @@ public sealed class OpenChatChannelTests : MatchChatServiceTestBase
 
         FaultException<MatchFault> exception =
             Assert.Throws<FaultException<MatchFault>>(action);
+        MatchFailure actualFailure = exception.Detail.Reason;
 
-        Assert.AreEqual(expectedFailure, exception.Detail.Reason);
+        Assert.AreEqual(expectedFailure, actualFailure);
     }
 }
