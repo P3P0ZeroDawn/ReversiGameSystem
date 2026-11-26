@@ -13,6 +13,7 @@ using ReversiGameSystem.Server.Contracts.Common;
 using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.Contracts.Services;
 using ReversiGameSystem.Server.ServiceApi;
+using ReversiGameSystem.Server.Tests.TestDoubles;
 
 namespace ReversiGameSystem.Server.Tests;
 

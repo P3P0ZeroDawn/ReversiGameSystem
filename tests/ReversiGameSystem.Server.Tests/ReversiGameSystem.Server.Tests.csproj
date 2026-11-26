@@ -36,6 +36,15 @@
     <ProjectReference Include="..\..\src\ReversiGameSystem.Server.ServiceApi\ReversiGameSystem.Server.ServiceApi.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="TestDoubles\" />
+    <Folder Include="UnitTests\Domain\" />
+    <Folder Include="UnitTests\Application\" />
+    <Folder Include="UnitTests\Services\" />
+    <Folder Include="IntegrationTests\Repository\" />
+    <Folder Include="IntegrationTests\Services\" />
+    <Folder Include="IntegrationTests\System\" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="..\..\database\migrations\20261121_CustomBoardBackgroundPreference.sql"
           Link="migrations\20261121_CustomBoardBackgroundPreference.sql"
           CopyToOutputDirectory="PreserveNewest" />

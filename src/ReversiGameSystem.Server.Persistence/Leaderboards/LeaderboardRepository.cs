@@ -11,15 +11,15 @@ public sealed class LeaderboardRepository : ILeaderboardRepository
     private const string FinishedMatchStatusCode = "FINISHED";
     private const string WinResultCode = "WIN";
 
-    public IReadOnlyList<LeaderboardPlayer> GetPlayers()
+    public IReadOnlyList<LeaderboardPlayer> GetLeaderboardPlayers()
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
-        List<LeaderboardAccount> accounts = LoadAccounts(context);
-        List<PlayerResultCount> resultCounts = LoadResultCounts(context);
+        List<LeaderboardAccount> accounts = LoadActiveAccounts(context);
+        List<PlayerResultCount> resultCounts = LoadMatchResultCounts(context);
         return CreatePlayers(accounts, resultCounts);
     }
 
-    private static List<LeaderboardAccount> LoadAccounts(
+    private static List<LeaderboardAccount> LoadActiveAccounts(
         ReversiGameSystemEntities context)
     {
         return context.Account
@@ -34,7 +34,7 @@ public sealed class LeaderboardRepository : ILeaderboardRepository
             .ToList();
     }
 
-    private static List<PlayerResultCount> LoadResultCounts(
+    private static List<PlayerResultCount> LoadMatchResultCounts(
         ReversiGameSystemEntities context)
     {
         return context.MatchParticipant
