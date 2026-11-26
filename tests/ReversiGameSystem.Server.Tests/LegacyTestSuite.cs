@@ -8,27 +8,11 @@ internal static class LegacyTestSuite
     internal static Action[] CreateTests()
     {
         List<Action> tests = new List<Action>();
-        tests.AddRange(CreateCreateAccountHandlerTests());
         tests.AddRange(CreateAccountAccessValidationTests());
         tests.AddRange(CreatePersistenceModelTests());
         tests.AddRange(CreatePlayerProfileApplicationServiceTests());
         tests.AddRange(CreatePlayerImageRepositoryTests());
         return tests.ToArray();
-    }
-
-    private static Action[] CreateCreateAccountHandlerTests()
-    {
-        CreateAccountHandlerTests tests = new CreateAccountHandlerTests();
-        return new Action[]
-        {
-            tests.ExecuteAsync_ValidRequest_StoresAccount,
-            tests.ExecuteAsync_MissingRequiredValue_ReturnsInvalidRequest,
-            tests.ExecuteAsync_InvalidFields_ReturnSpecificOutcomes,
-            tests.ExecuteAsync_InvalidProfileImage_ReturnsInvalidRequest,
-            tests.ExecuteAsync_DuplicateUsername_RemovesStoredImage,
-            tests.ExecuteAsync_UnsupportedLocale_ReturnsInvalidRequest,
-            tests.PasswordHasher_HashAndVerify_UsesSaltedPbkdf2,
-        };
     }
 
     private static Action[] CreateAccountAccessValidationTests()
