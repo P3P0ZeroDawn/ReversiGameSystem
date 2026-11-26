@@ -10,60 +10,44 @@ public sealed class ChatModelsTests
     [TestMethod]
     public void ChatChannelAccess_SuccessStatus_RejectsStatusConstructor()
     {
-        // Arrange
         ChatStatus status = ChatStatus.Success;
+        string expectedParamName = nameof(status);
 
-        // Act
         ArgumentOutOfRangeException exception =
             Assert.Throws<ArgumentOutOfRangeException>(
                 () => new ChatChannelAccess(status));
+        string? actualParamName = exception.ParamName;
 
-        // Assert
-        Assert.AreEqual(nameof(status), exception.ParamName);
+        Assert.AreEqual(expectedParamName, actualParamName);
     }
 
     [TestMethod]
-    public void ChatMessageSubmission_SuccessStatus_RejectsMissingMessage()
+    [DataRow(ChatStatus.Success)]
+    [DataRow(ChatStatus.PlayerMuted)]
+    public void ChatMessageSubmission_StatusRequiringPayload_RejectsStatusConstructor(
+        ChatStatus status)
     {
-        // Arrange
-        ChatStatus status = ChatStatus.Success;
+        string expectedParamName = nameof(status);
 
-        // Act
         ArgumentOutOfRangeException exception =
             Assert.Throws<ArgumentOutOfRangeException>(
                 () => new ChatMessageSubmission(status));
+        string? actualParamName = exception.ParamName;
 
-        // Assert
-        Assert.AreEqual(nameof(status), exception.ParamName);
-    }
-
-    [TestMethod]
-    public void ChatMessageSubmission_PlayerMutedStatus_RejectsMissingMute()
-    {
-        // Arrange
-        ChatStatus status = ChatStatus.PlayerMuted;
-
-        // Act
-        ArgumentOutOfRangeException exception =
-            Assert.Throws<ArgumentOutOfRangeException>(
-                () => new ChatMessageSubmission(status));
-
-        // Assert
-        Assert.AreEqual(nameof(status), exception.ParamName);
+        Assert.AreEqual(expectedParamName, actualParamName);
     }
 
     [TestMethod]
     public void ChatHistory_SuccessStatus_RejectsMissingMessages()
     {
-        // Arrange
         ChatStatus status = ChatStatus.Success;
+        string expectedParamName = nameof(status);
 
-        // Act
         ArgumentOutOfRangeException exception =
             Assert.Throws<ArgumentOutOfRangeException>(
                 () => new ChatHistory(status));
+        string? actualParamName = exception.ParamName;
 
-        // Assert
-        Assert.AreEqual(nameof(status), exception.ParamName);
+        Assert.AreEqual(expectedParamName, actualParamName);
     }
 }

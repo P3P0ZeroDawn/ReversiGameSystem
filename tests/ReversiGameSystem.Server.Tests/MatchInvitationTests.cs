@@ -711,19 +711,28 @@ public sealed class MatchInvitationTests
         {
             MailSettings settings = MailSettings.Load();
             SmtpEmailSender sender = new SmtpEmailSender(settings);
-            MethodInfo createInvitationMethod = TestAssert.IsNotNull(
-                typeof(MatchApplicationService).GetMethod(
-                    "CreateInvitationEmail",
-                    BindingFlags.NonPublic | BindingFlags.Static));
-            EmailMessage email = (EmailMessage)TestAssert.IsNotNull(
-                createInvitationMethod.Invoke(null, new object[] { "beta@example.com", "AlphaPlayer", "REV999" }));
+            ReversiGameSystem.Server.Persistence.Mail.HtmlEmailTemplateRenderer renderer =
+                new ReversiGameSystem.Server.Persistence.Mail.HtmlEmailTemplateRenderer();
+            ReversiGameSystem.Server.Persistence.Mail.RenderedEmailTemplate rendered = renderer.Render(
+                EmailTemplateNames.MatchInvitation,
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    { "Locale", "es-MX" },
+                    { "CreatorDisplayName", "AlphaPlayer" },
+                    { "MatchCode", "REV999" }
+                });
+            EmailMessage email = new EmailMessage(
+                "beta@example.com",
+                rendered.Subject,
+                rendered.HtmlBody,
+                isHtml: true);
 
             // Act
             MethodInfo method = TestAssert.IsNotNull(
                 typeof(SmtpEmailSender).GetMethod("CreateMimeMessage", BindingFlags.NonPublic | BindingFlags.Instance));
             object? rawResult = method.Invoke(sender, new object[] { email });
             MimeMessage message = (MimeMessage)TestAssert.IsNotNull(rawResult);
-            string body = TestAssert.IsNotNull(message.TextBody);
+            string body = TestAssert.IsNotNull(message.HtmlBody);
 
             // Assert
             Assert.IsTrue(body.Contains(ExpectedMandatoryLegend), "Body must contain mandatory legend.");
@@ -769,11 +778,31 @@ public sealed class MatchInvitationTests
         return TestSessionHelper.CreateSession(context.Sessions, accountId, username);
     }
 
-    private sealed class InMemoryInvitationSender : IEmailSender
+    private sealed class InMemoryInvitationSender : ITemplatedEmailSender, IEmailSender
     {
+        private readonly ReversiGameSystem.Server.Persistence.Mail.TemplatedEmailSender _templatedSender;
+
+        internal InMemoryInvitationSender()
+        {
+            _templatedSender = new ReversiGameSystem.Server.Persistence.Mail.TemplatedEmailSender(
+                new ReversiGameSystem.Server.Persistence.Mail.HtmlEmailTemplateRenderer(),
+                this);
+        }
+
         internal List<EmailMessage> SentEmails { get; } = new List<EmailMessage>();
         internal bool FailSend { get; set; }
         internal Action? BeforeSendCallback { get; set; }
+
+        public void SendTemplatedEmail(
+            string recipientAddress,
+            string templateName,
+            IReadOnlyDictionary<string, string> templateValues)
+        {
+            _templatedSender.SendTemplatedEmail(
+                recipientAddress,
+                templateName,
+                templateValues);
+        }
 
         public void Send(EmailMessage email)
         {

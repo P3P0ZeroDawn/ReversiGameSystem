@@ -9,39 +9,42 @@ public sealed class ChatContentPolicyTests
     [TestMethod]
     public void Matches_AccentsCaseAndPunctuation_MatchesCompletePhrase()
     {
-        // Arrange
         const string content = "A message: PÁLÁBRA, PROHIBIDA!";
+        bool expectedMatch = true;
 
-        // Act
-        bool matches = ChatContentPolicy.Matches(content, "palabra prohibida");
+        bool actualMatch = ChatContentPolicy.Matches(content, "palabra prohibida");
 
-        // Assert
-        Assert.IsTrue(matches, "Moderation must normalize diacritics, case, and separators.");
+        Assert.AreEqual(
+            expectedMatch,
+            actualMatch,
+            "Moderation must normalize diacritics, case, and separators.");
     }
 
     [TestMethod]
     public void Matches_WordInsideAnotherWord_DoesNotMatch()
     {
-        // Arrange
         const string content = "An unblockedword fragment";
+        bool expectedMatch = false;
 
-        // Act
-        bool matches = ChatContentPolicy.Matches(content, "blockedword");
+        bool actualMatch = ChatContentPolicy.Matches(content, "blockedword");
 
-        // Assert
-        Assert.IsTrue(!matches, "A substring must not count as a complete prohibited word.");
+        Assert.AreEqual(
+            expectedMatch,
+            actualMatch,
+            "A substring must not count as a complete prohibited word.");
     }
 
     [TestMethod]
     public void Matches_EmptyPattern_DoesNotBlockEveryMessage()
     {
-        // Arrange
         const string content = "ordinary message";
+        bool expectedMatch = false;
 
-        // Act
-        bool matches = ChatContentPolicy.Matches(content, " , ! ");
+        bool actualMatch = ChatContentPolicy.Matches(content, " , ! ");
 
-        // Assert
-        Assert.IsTrue(!matches, "An empty normalized pattern cannot prohibit every message.");
+        Assert.AreEqual(
+            expectedMatch,
+            actualMatch,
+            "An empty normalized pattern cannot prohibit every message.");
     }
 }

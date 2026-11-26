@@ -4,7 +4,11 @@ namespace ReversiGameSystem.Server.Application.Common;
 
 public sealed class EmailMessage
 {
-    public EmailMessage(string recipientAddress, string subject, string body)
+    public EmailMessage(
+        string recipientAddress,
+        string subject,
+        string body,
+        bool isHtml = false)
     {
         if (string.IsNullOrWhiteSpace(recipientAddress))
         {
@@ -30,6 +34,7 @@ public sealed class EmailMessage
         RecipientAddress = recipientAddress;
         Subject = subject;
         Body = body;
+        IsHtml = isHtml;
     }
 
     public string RecipientAddress { get; }
@@ -37,9 +42,11 @@ public sealed class EmailMessage
     public string Subject { get; }
 
     public string Body { get; }
+
+    public bool IsHtml { get; }
 }
 
 public interface IEmailSender
 {
-    void Send(EmailMessage message);
+    public void Send(EmailMessage message);
 }

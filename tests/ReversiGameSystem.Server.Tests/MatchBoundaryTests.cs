@@ -192,9 +192,12 @@ public sealed class MatchBoundaryTests
         return new MatchLobbyService(handler, subscriptions);
     }
 
-    private sealed class BoundaryMailer : IEmailSender
+    private sealed class BoundaryMailer : ITemplatedEmailSender
     {
-        public void Send(EmailMessage email)
+        public void SendTemplatedEmail(
+            string recipientAddress,
+            string templateName,
+            System.Collections.Generic.IReadOnlyDictionary<string, string> templateValues)
         {
         }
     }

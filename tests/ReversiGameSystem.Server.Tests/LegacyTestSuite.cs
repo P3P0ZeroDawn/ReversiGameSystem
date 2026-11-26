@@ -9,10 +9,8 @@ internal static class LegacyTestSuite
     {
         List<Action> tests = new List<Action>();
         tests.AddRange(CreateCreateAccountHandlerTests());
-        tests.AddRange(CreateEmailPolicyTests());
         tests.AddRange(CreateLeaderboardApplicationServiceTests());
         tests.AddRange(CreateAccountAccessValidationTests());
-        tests.AddRange(CreatePasswordPolicyTests());
         tests.AddRange(CreatePersistenceModelTests());
         tests.AddRange(CreatePlayerProfileApplicationServiceTests());
         tests.AddRange(CreatePlayerImageRepositoryTests());
@@ -32,30 +30,6 @@ internal static class LegacyTestSuite
             tests.ExecuteAsync_DuplicateUsername_RemovesStoredImage,
             tests.ExecuteAsync_UnsupportedLocale_ReturnsInvalidRequest,
             tests.PasswordHasher_HashAndVerify_UsesSaltedPbkdf2,
-        };
-    }
-
-    private static Action[] CreateEmailPolicyTests()
-    {
-        EmailPolicyTests tests = new EmailPolicyTests();
-        return new Action[]
-        {
-            tests.Validate_OrdinaryAddress_ReturnsNone,
-            tests.Validate_TaggedAddress_ReturnsNone,
-            tests.Validate_InternationalizedDomain_ReturnsNone,
-            tests.Validate_AddressAtMaximumLength_ReturnsNone,
-            tests.Validate_AddressAboveMaximumLength_ReturnsTooLong,
-            tests.Validate_MissingAtSign_ReturnsInvalidStructure,
-            tests.Validate_MultipleAtSigns_ReturnsInvalidStructure,
-            tests.Validate_ConsecutiveLocalDots_ReturnsInvalidLocalPart,
-            tests.Validate_LocalPartAboveMaximum_ReturnsInvalidLocalPart,
-            tests.Validate_AccentedLocalPart_ReturnsInvalidLocalPart,
-            tests.Validate_DisplayName_ReturnsInvalidLocalPart,
-            tests.Validate_SingleLabelDomain_ReturnsInvalidDomain,
-            tests.Validate_HyphenAtDomainStart_ReturnsInvalidDomain,
-            tests.Validate_ConsecutiveDomainDots_ReturnsInvalidDomain,
-            tests.Validate_TrailingDomainDot_ReturnsInvalidDomain,
-            tests.Validate_DomainLabelAboveMaximum_ReturnsInvalidDomain,
         };
     }
 
@@ -85,30 +59,6 @@ internal static class LegacyTestSuite
             tests.ValidateCredentials_InactiveAccount_ReturnsInactiveAccount,
             tests.ValidateCredentials_UnavailableStore_PropagatesTechnicalFailure,
             tests.SessionStore_CreateFindAndExpire_EnforcesLifetime,
-        };
-    }
-
-    private static Action[] CreatePasswordPolicyTests()
-    {
-        PasswordPolicyTests tests = new PasswordPolicyTests();
-        return new Action[]
-        {
-            tests.Validate_SevenCharacters_ReturnsTooShort,
-            tests.Validate_EightCharacters_ReturnsNone,
-            tests.Validate_AsteriskAsSymbol_ReturnsNone,
-            tests.Validate_UnicodeLettersAndDigits_ReturnsNone,
-            tests.Validate_OneHundredTwentyEightCharacters_ReturnsNone,
-            tests.Validate_OneHundredTwentyNineCharacters_ReturnsTooLong,
-            tests.Validate_SupplementarySymbols_CountsCodePoints,
-            tests.Validate_WithoutUppercase_ReturnsMissingUppercaseLetter,
-            tests.Validate_WithoutLowercase_ReturnsMissingLowercaseLetter,
-            tests.Validate_WithoutDigit_ReturnsMissingDigit,
-            tests.Validate_WithoutSymbol_ReturnsMissingSymbol,
-            tests.Validate_SpaceWithoutSymbol_ReturnsMissingSymbol,
-            tests.Validate_ControlCharacter_ReturnsUnsupportedCharacter,
-            tests.Validate_LineSeparator_ReturnsUnsupportedCharacter,
-            tests.Validate_InvisibleFormatCharacter_ReturnsUnsupportedCharacter,
-            tests.Validate_UnpairedSurrogate_ReturnsUnsupportedCharacter,
         };
     }
 
@@ -166,13 +116,14 @@ internal static class LegacyTestSuite
         UsernamePolicyTests tests = new UsernamePolicyTests();
         return new Action[]
         {
-            tests.Validate_ValidUsername_ReturnsNone,
-            tests.Validate_UsernameWithUnderscore_ReturnsNone,
+            () => tests.Validate_ValidUsername_ReturnsSuccess("Pedro123"),
+            () => tests.Validate_ValidUsername_ReturnsSuccess("Pedro_123"),
             tests.Validate_EmptyUsername_ReturnsMissing,
-            tests.Validate_TooShortUsername_ReturnsInvalidLength,
-            tests.Validate_TooLongUsername_ReturnsInvalidLength,
-            tests.Validate_LeadingUnderscore_ReturnsInvalidCharacters,
-            tests.Validate_UsernameWithSpace_ReturnsInvalidCharacters,
+            () => tests.Validate_LengthOutOfRange_ReturnsInvalidLength(2),
+            () => tests.Validate_LengthOutOfRange_ReturnsInvalidLength(
+                ReversiGameSystem.Server.Domain.Accounts.UsernamePolicy.MaximumLength + 1),
+            () => tests.Validate_UnsupportedCharacters_ReturnsInvalidCharacters("_pedro"),
+            () => tests.Validate_UnsupportedCharacters_ReturnsInvalidCharacters("Pedro 123"),
         };
     }
 }

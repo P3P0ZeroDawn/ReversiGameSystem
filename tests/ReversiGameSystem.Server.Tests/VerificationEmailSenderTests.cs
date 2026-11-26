@@ -14,41 +14,104 @@ namespace ReversiGameSystem.Server.Tests;
 public sealed class VerificationEmailSenderTests
 {
     [TestMethod]
-    public void Load_ProcessConfiguration_ValidatesPortAndRequiresEncryption()
+    public void Load_ConfiguredPort_ReturnsConfiguredPort()
     {
-        // Arrange
-        WithSettings(587, () =>
+        int expectedPort = 587;
+
+        int actualPort = 0;
+        WithSettings(expectedPort, "StartTls", () =>
         {
-            // Act
-            MailSettings settings = MailSettings.Load();
-            // Assert
-            Assert.AreEqual(587, settings.Port);
-            Assert.AreEqual(false, settings.EncryptOnConnect);
-            Environment.SetEnvironmentVariable("REVERSI_MAIL_SECURITY", "None");
-            ExpectInvalidConfiguration();
-            Environment.SetEnvironmentVariable("REVERSI_MAIL_SECURITY", "Tls");
-            Assert.AreEqual(true, MailSettings.Load().EncryptOnConnect);
-            Environment.SetEnvironmentVariable("REVERSI_MAIL_PORT", "65536");
-            ExpectInvalidConfiguration();
+            actualPort = MailSettings.Load().Port;
         });
+
+        Assert.AreEqual(expectedPort, actualPort);
+    }
+
+    [TestMethod]
+    [DataRow("StartTls", false)]
+    [DataRow("Tls", true)]
+    public void Load_MailSecurity_SetsEncryptOnConnect(
+        string securityMode,
+        bool expectedEncryptOnConnect)
+    {
+        bool actualEncryptOnConnect = !expectedEncryptOnConnect;
+        WithSettings(587, securityMode, () =>
+        {
+            actualEncryptOnConnect = MailSettings.Load().EncryptOnConnect;
+        });
+
+        Assert.AreEqual(expectedEncryptOnConnect, actualEncryptOnConnect);
+    }
+
+    [TestMethod]
+    [DataRow(587, "None")]
+    [DataRow(65536, "StartTls")]
+    public void Load_InvalidConfiguration_ThrowsInvalidOperationException(
+        int port,
+        string securityMode)
+    {
+        InvalidOperationException? actualException = null;
+
+        WithSettings(port, securityMode, () =>
+        {
+            actualException = Assert.Throws<InvalidOperationException>(() => MailSettings.Load());
+        });
+
+        Assert.IsNotNull(actualException);
+    }
+
+    [TestMethod]
+    public void Send_LocalServerWithheldBanner_FailsDelivery()
+    {
+        bool expectedFailed = true;
+
+        (bool actualFailed, _, _) = ExecuteStalledSend();
+
+        Assert.AreEqual(expectedFailed, actualFailed, "A stalled SMTP connection must fail delivery.");
+    }
+
+    [TestMethod]
+    public void Send_LocalServerWithheldBanner_ConnectsToServer()
+    {
+        bool expectedConnected = true;
+
+        (_, bool actualConnected, _) = ExecuteStalledSend();
+
+        Assert.AreEqual(
+            expectedConnected,
+            actualConnected,
+            "The local server must have accepted the connection.");
     }
 
     [TestMethod]
     public void Send_LocalServerWithheldBanner_CancelsWithinDeliveryBudget()
     {
-        // Arrange
+        bool expectedWithinBudget = true;
+
+        (_, _, TimeSpan elapsed) = ExecuteStalledSend();
+        bool actualWithinBudget = elapsed >= TimeSpan.FromSeconds(4)
+            && elapsed < TimeSpan.FromSeconds(7);
+
+        Assert.AreEqual(
+            expectedWithinBudget,
+            actualWithinBudget,
+            "The five-second deadline allows two seconds of scheduling tolerance.");
+    }
+
+    private static (bool Failed, bool Connected, TimeSpan Elapsed) ExecuteStalledSend()
+    {
         TcpListener listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         try
         {
             int port = ((IPEndPoint)listener.LocalEndpoint).Port;
             Task<TcpClient> connection = listener.AcceptTcpClientAsync();
-            WithSettings(port, () =>
+            bool failed = false;
+            Stopwatch elapsed = Stopwatch.StartNew();
+
+            WithSettings(port, "StartTls", () =>
             {
                 SmtpEmailSender sender = new SmtpEmailSender(MailSettings.Load());
-                Stopwatch elapsed = Stopwatch.StartNew();
-                bool failed = false;
-                // Act
                 try
                 {
                     sender.Send(new EmailMessage(
@@ -63,34 +126,25 @@ public sealed class VerificationEmailSenderTests
                     failed = true;
                 }
                 elapsed.Stop();
-                // Assert
-                Assert.IsTrue(failed, "A stalled SMTP connection must fail delivery.");
-                Assert.IsTrue(connection.IsCompleted,
-                    "The local server must have accepted the connection.");
-                Assert.IsTrue(elapsed.Elapsed >= TimeSpan.FromSeconds(4)
-                    && elapsed.Elapsed < TimeSpan.FromSeconds(7),
-                    "The five-second deadline allows two seconds of scheduling tolerance.");
             });
+
             using (TcpClient client = connection.GetAwaiter().GetResult()) { }
+            return (failed, connection.IsCompleted, elapsed.Elapsed);
         }
-        finally { listener.Stop(); }
+        finally
+        {
+            listener.Stop();
+        }
     }
 
-    private static void ExpectInvalidConfiguration()
-    {
-        try { MailSettings.Load(); }
-        catch (InvalidOperationException) { return; }
-        throw new InvalidOperationException("Expected rejected mail configuration.");
-    }
-
-    private static void WithSettings(int port, Action action)
+    private static void WithSettings(int port, string securityMode, Action action)
     {
         Dictionary<string, string> values = new Dictionary<string, string>
         {
             ["REVERSI_MAIL_HOST"] = "127.0.0.1",
             ["REVERSI_MAIL_PORT"] =
                 port.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            ["REVERSI_MAIL_SECURITY"] = "StartTls",
+            ["REVERSI_MAIL_SECURITY"] = securityMode,
             ["REVERSI_MAIL_USERNAME"] = "disposable-test-user",
             ["REVERSI_MAIL_PASSWORD"] = "disposable-test-password",
             ["REVERSI_MAIL_FROM_ADDRESS"] = "sender@example.invalid",

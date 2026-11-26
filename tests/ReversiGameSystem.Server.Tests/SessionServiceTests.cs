@@ -29,7 +29,7 @@ public sealed class SessionServiceTests
             // Assert
             Assert.AreEqual(context.UtcNow.AddMinutes(5), expires);
             TestAssert.IsNotNull(context.Email);
-            Assert.AreEqual<VerificationAttempt?>(null, context.Attempt);
+            Assert.IsNull(context.Stored?.UsedAtUtc);
             return true;
         });
     }
@@ -43,9 +43,12 @@ public sealed class SessionServiceTests
         Invoke(context, channel =>
         {
             channel.RequestLoginCode("PlayerOne", "Password1!");
-            TestAssert.IsNotNull(context.Email);
+            ReversiGameSystem.Server.Application.Common.EmailMessage deliveredEmail =
+                TestAssert.IsNotNull(context.Email);
+            string deliveredCode = System.Text.RegularExpressions.Regex
+                .Match(deliveredEmail.Body, @"(?<!#)\b(\d{6})\b").Groups[1].Value;
             ReversiGameSystem.Server.Contracts.Accounts.AuthenticatedSession session =
-                channel.CompleteLogin("PlayerOne", "000012");
+                channel.CompleteLogin("PlayerOne", deliveredCode);
             // Assert
             Assert.AreEqual<long>(42, session.Account.AccountId);
             Assert.AreEqual("en-US", session.PreferredLocaleCode);
@@ -128,7 +131,11 @@ public sealed class SessionServiceTests
     public void CompleteLogin_InactiveAccount_RejectsSessionCreation()
     {
         // Arrange
-        SessionTestContext context = new SessionTestContext { Inactive = true };
+        SessionTestContext context = new SessionTestContext
+        {
+            Inactive = true,
+            ConsumeStatus = VerificationStatus.Accepted
+        };
         // Act
         SessionResult<AuthenticatedSession> result =
             context.ApplicationService.CompleteLogin("PlayerOne", "000012");

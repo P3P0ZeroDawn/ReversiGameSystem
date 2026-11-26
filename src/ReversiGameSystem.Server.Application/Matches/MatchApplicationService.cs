@@ -16,7 +16,7 @@ public sealed class MatchApplicationService
     private readonly SessionStore _sessions;
     private readonly IMatchRepository _matches;
     private readonly IUtcClock _clock;
-    private readonly IEmailSender? _emailSender;
+    private readonly ITemplatedEmailSender? _emailSender;
     private readonly Dictionary<string, Dictionary<long, long>> _createdMatches =
         new Dictionary<string, Dictionary<long, long>>(StringComparer.Ordinal);
     private readonly HashSet<string> _sessionsPendingLobbyCleanup =
@@ -37,7 +37,7 @@ public sealed class MatchApplicationService
         SessionStore sessions,
         IMatchRepository matches,
         IUtcClock clock,
-        IEmailSender? emailSender)
+        ITemplatedEmailSender? emailSender)
     {
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
         _matches = matches ?? throw new ArgumentNullException(nameof(matches));
@@ -370,11 +370,7 @@ public sealed class MatchApplicationService
                 throw new InvalidOperationException(
                     "A prepared private match must contain a join code.");
             }
-            EmailMessage email = CreateInvitationEmail(
-                preparation.FriendEmail,
-                player.Username,
-                matchCode);
-            _emailSender.Send(email);
+            SendInvitationEmail(preparation.FriendEmail, player.Username, matchCode);
         }
         catch (Exception deliveryException)
         {
@@ -528,24 +524,20 @@ public sealed class MatchApplicationService
         return cancelled.ToArray();
     }
 
-    private static EmailMessage CreateInvitationEmail(
+    private void SendInvitationEmail(
         string recipientEmail,
         string creatorDisplayName,
         string matchCode)
     {
-        const string Subject = "Reversi: Invitación a partida / Match invitation";
-        string body = "Hello / Hola,\n\n"
-            + creatorDisplayName + " has invited you to play a match of Reversi. / "
-            + creatorDisplayName + " te ha invitado a jugar una partida de Reversi.\n\n"
-            + "Match code / Código de partida: " + matchCode + "\n\n"
-            + "Instructions / Instrucciones:\n"
-            + "1. Sign in to your Reversi account. / Inicia sesión en tu cuenta de Reversi.\n"
-            + "2. Go to 'Join with code' in Available Matches and enter this code. / "
-            + "Ve a 'Unirse con código' en Partidas Disponibles e ingresa este código.\n\n"
-            + "«Puedes unirte con este código mientras el creador siga esperando» / "
-            + "«You can join with this code while the creator is still waiting»\n";
+        Dictionary<string, string> templateValues = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            { "CreatorDisplayName", creatorDisplayName },
+            { "MatchCode", matchCode }
+        };
 
-        EmailMessage message = new EmailMessage(recipientEmail, Subject, body);
-        return message;
+        _emailSender!.SendTemplatedEmail(
+            recipientEmail,
+            EmailTemplateNames.MatchInvitation,
+            templateValues);
     }
 }

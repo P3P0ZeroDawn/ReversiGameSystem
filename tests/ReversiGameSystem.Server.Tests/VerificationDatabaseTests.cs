@@ -123,7 +123,7 @@ internal sealed class VerificationDatabaseTests
         VerificationIdentity identity = Identity(4);
         Replace(identity, "000005");
         Assert.AreEqual(VerificationStatus.Expired,
-            _repository.Consume(Attempt(identity, "000005", _now.AddMinutes(5))));
+            ConsumeAt(identity, "000005", _now.AddMinutes(5)));
     }
 
     private void Replace_NewCode_InvalidatesPreviousDigest()
@@ -202,20 +202,37 @@ VALUES ('invalid@example.invalid','UNKNOWN','test-digest',
 
     private void Replace(VerificationIdentity identity, string code)
     {
-        _repository.Replace(new PendingVerificationCode
+        _repository.SavePendingCode(new PendingVerificationCode
         {
-            IdentityKey = identity.Key, Digest = _protector.Protect(identity.Key, code),
+            IdentityKey = identity.Key, Digest = _protector.ComputeCodeDigest(identity.Key, code),
             RecipientAddress = identity.RecipientAddress, Purpose = identity.Purpose,
             CreatedAtUtc = _now, ExpiresAtUtc = _now.AddMinutes(5)
         });
     }
 
     private VerificationStatus Consume(VerificationIdentity identity, string code) =>
-        _repository.Consume(Attempt(identity, code, _now));
+        ConsumeAt(identity, code, _now);
 
-    private VerificationAttempt Attempt(VerificationIdentity identity, string code, DateTime now) =>
-        new VerificationAttempt { IdentityKey = identity.Key,
-            Digest = _protector.Protect(identity.Key, code), NowUtc = now };
+    private VerificationStatus ConsumeAt(VerificationIdentity identity, string code, DateTime now)
+    {
+        VerificationCodeService service = new VerificationCodeService(
+            _protector,
+            _repository,
+            new NoOpTemplatedEmailSender(),
+            new TestUtcClock(now));
+        return service.VerifyCode(identity, code);
+    }
+
+    private sealed class NoOpTemplatedEmailSender :
+        ReversiGameSystem.Server.Application.Common.ITemplatedEmailSender
+    {
+        public void SendTemplatedEmail(
+            string recipientAddress,
+            string templateName,
+            System.Collections.Generic.IReadOnlyDictionary<string, string> templateValues)
+        {
+        }
+    }
 
     private static VerificationIdentity Identity(long id) =>
         VerificationIdentity.ForLogin(id, "player@example.invalid");

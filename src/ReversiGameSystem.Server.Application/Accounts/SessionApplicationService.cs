@@ -41,8 +41,11 @@ public sealed class SessionApplicationService
         }
 
         LoginAccount account = accountResult.Value;
-        DateTime expiresAtUtc = _verificationCodes.Request(
-            VerificationIdentity.ForLogin(account.AccountId, account.EmailAddress));
+        DateTime expiresAtUtc = _verificationCodes.IssueVerificationCode(
+            VerificationIdentity.ForLogin(
+                account.AccountId,
+                account.EmailAddress,
+                account.PreferredLocaleCode));
         return new SessionResult<DateTime>(expiresAtUtc);
     }
 
@@ -62,7 +65,7 @@ public sealed class SessionApplicationService
         VerificationIdentity initialIdentity = VerificationIdentity.ForLogin(
             initialAccount.AccountId,
             initialAccount.EmailAddress);
-        VerificationStatus verification = _verificationCodes.Consume(
+        VerificationStatus verification = _verificationCodes.VerifyCode(
             initialIdentity,
             verificationCode);
         if (verification != VerificationStatus.Accepted)
@@ -80,7 +83,7 @@ public sealed class SessionApplicationService
     public SessionResult<GuestSession> OpenGuestSession(string displayName)
     {
         string normalizedName = displayName?.Trim() ?? string.Empty;
-        if (UsernamePolicy.Validate(normalizedName) != UsernameValidationError.None)
+        if (UsernamePolicy.Validate(normalizedName) != UsernameValidationStatus.Success)
         {
             return new SessionResult<GuestSession>(SessionStatus.InvalidGuestName);
         }

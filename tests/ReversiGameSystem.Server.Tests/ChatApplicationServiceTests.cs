@@ -10,42 +10,92 @@ namespace ReversiGameSystem.Server.Tests;
 public sealed class ChatApplicationServiceTests
 {
     [TestMethod]
-    public void SubmitChatMessage_EmptyContent_RejectsBeforeRepositoryAccess()
+    public void SubmitChatMessage_EmptyContent_ReturnsEmptyMessageStatus()
     {
         ChatTestContext context = new ChatTestContext();
+        ChatStatus expectedStatus = ChatStatus.EmptyMessage;
 
-        ChatMessageSubmission result = context.ApplicationService.SubmitChatMessage(
+        ChatMessageSubmission submission = context.ApplicationService.SubmitChatMessage(
             context.FirstSession.SessionToken,
             10,
             "   ");
+        ChatStatus actualStatus = submission.Status;
 
-        Assert.AreEqual(ChatStatus.EmptyMessage, result.Status);
-        Assert.AreEqual(0, context.Repository.SubmissionCalls);
+        Assert.AreEqual(expectedStatus, actualStatus);
+    }
+
+    [TestMethod]
+    public void SubmitChatMessage_EmptyContent_DoesNotCallRepository()
+    {
+        ChatTestContext context = new ChatTestContext();
+        int expectedCalls = 0;
+
+        context.ApplicationService.SubmitChatMessage(
+            context.FirstSession.SessionToken,
+            10,
+            "   ");
+        int actualCalls = context.Repository.SubmissionCalls;
+
+        Assert.AreEqual(expectedCalls, actualCalls);
+    }
+
+    [TestMethod]
+    public void SubmitChatMessage_ValidContent_ReturnsSuccessStatus()
+    {
+        ChatTestContext context = CreateContextWithSubmission(out _);
+        ChatStatus expectedStatus = ChatStatus.Success;
+
+        ChatMessageSubmission submission = context.ApplicationService.SubmitChatMessage(
+            context.FirstSession.SessionToken,
+            10,
+            "  Hello  ");
+        ChatStatus actualStatus = submission.Status;
+
+        Assert.AreEqual(expectedStatus, actualStatus);
     }
 
     [TestMethod]
     public void SubmitChatMessage_ValidContent_ReturnsPersistedMessage()
     {
-        ChatTestContext context = new ChatTestContext();
-        ChatMessage expected = new ChatMessage
-        {
-            MatchId = 10,
-            MessageNumber = 3,
-            SenderSeatNumber = 1,
-            Content = "Hello",
-            SentAtUtc = context.Clock.UtcNow
-        };
-        context.Repository.Submission = new ChatMessageSubmission(expected);
+        ChatTestContext context = CreateContextWithSubmission(out ChatMessage expectedMessage);
 
-        ChatMessageSubmission result = context.ApplicationService.SubmitChatMessage(
+        ChatMessageSubmission submission = context.ApplicationService.SubmitChatMessage(
             context.FirstSession.SessionToken,
             10,
             "  Hello  ");
+        ChatMessage? actualMessage = submission.Message;
 
-        Assert.AreEqual(ChatStatus.Success, result.Status);
-        Assert.AreEqual(expected, result.Message);
-        Assert.AreEqual("Hello", context.Repository.LastContent);
-        Assert.AreEqual(1, context.Repository.SubmissionCalls);
+        Assert.AreEqual(expectedMessage, actualMessage);
+    }
+
+    [TestMethod]
+    public void SubmitChatMessage_ValidContent_TrimsContentBeforeRepositoryCall()
+    {
+        ChatTestContext context = CreateContextWithSubmission(out _);
+        string expectedContent = "Hello";
+
+        context.ApplicationService.SubmitChatMessage(
+            context.FirstSession.SessionToken,
+            10,
+            "  Hello  ");
+        string actualContent = context.Repository.LastContent;
+
+        Assert.AreEqual(expectedContent, actualContent);
+    }
+
+    [TestMethod]
+    public void SubmitChatMessage_ValidContent_CallsRepositoryOnce()
+    {
+        ChatTestContext context = CreateContextWithSubmission(out _);
+        int expectedCalls = 1;
+
+        context.ApplicationService.SubmitChatMessage(
+            context.FirstSession.SessionToken,
+            10,
+            "  Hello  ");
+        int actualCalls = context.Repository.SubmissionCalls;
+
+        Assert.AreEqual(expectedCalls, actualCalls);
     }
 
     [TestMethod]
@@ -53,35 +103,79 @@ public sealed class ChatApplicationServiceTests
     {
         ChatTestContext context = new ChatTestContext();
         context.Repository.ThrowOnSubmission = true;
+        Action action = () => context.ApplicationService.SubmitChatMessage(
+            context.FirstSession.SessionToken,
+            10,
+            "Hello");
 
-        Assert.Throws<InvalidOperationException>(() =>
-            context.ApplicationService.SubmitChatMessage(
-                context.FirstSession.SessionToken,
-                10,
-                "Hello"));
+        InvalidOperationException actualException =
+            Assert.Throws<InvalidOperationException>(action);
+
+        Assert.IsNotNull(actualException);
     }
 
     [TestMethod]
-    public void CanReceiveMuteNotification_SameAccountSession_AuthorizesRecipient()
+    public void CanReceiveMuteNotification_SameAccountSession_ReturnsTrue()
     {
         ChatTestContext context = new ChatTestContext();
         AuthenticatedSession secondSession = TestSessionHelper.CreateSession(
             context.Sessions, 1, "PlayerOne");
-        AuthenticatedSession differentAccount = TestSessionHelper.CreateSession(
-            context.Sessions, 2, "PlayerTwo");
+        bool expectedResult = true;
 
-        bool sameAccount = context.ApplicationService.CanReceiveMuteNotification(
+        bool actualResult = context.ApplicationService.CanReceiveMuteNotification(
             context.FirstSession.SessionToken,
             secondSession.SessionToken,
             10);
-        bool otherAccount = context.ApplicationService.CanReceiveMuteNotification(
+
+        Assert.AreEqual(expectedResult, actualResult);
+    }
+
+    [TestMethod]
+    public void CanReceiveMuteNotification_DifferentAccountSession_ReturnsFalse()
+    {
+        ChatTestContext context = new ChatTestContext();
+        AuthenticatedSession differentAccount = TestSessionHelper.CreateSession(
+            context.Sessions, 2, "PlayerTwo");
+        bool expectedResult = false;
+
+        bool actualResult = context.ApplicationService.CanReceiveMuteNotification(
             context.FirstSession.SessionToken,
             differentAccount.SessionToken,
             10);
 
-        Assert.AreEqual(true, sameAccount);
-        Assert.AreEqual(false, otherAccount);
-        Assert.AreEqual(0, context.Repository.AccessEvaluationCalls);
+        Assert.AreEqual(expectedResult, actualResult);
+    }
+
+    [TestMethod]
+    public void CanReceiveMuteNotification_SessionCheck_DoesNotCallRepository()
+    {
+        ChatTestContext context = new ChatTestContext();
+        AuthenticatedSession secondSession = TestSessionHelper.CreateSession(
+            context.Sessions, 1, "PlayerOne");
+        int expectedCalls = 0;
+
+        context.ApplicationService.CanReceiveMuteNotification(
+            context.FirstSession.SessionToken,
+            secondSession.SessionToken,
+            10);
+        int actualCalls = context.Repository.AccessEvaluationCalls;
+
+        Assert.AreEqual(expectedCalls, actualCalls);
+    }
+
+    private static ChatTestContext CreateContextWithSubmission(out ChatMessage expectedMessage)
+    {
+        ChatTestContext context = new ChatTestContext();
+        expectedMessage = new ChatMessage
+        {
+            MatchId = 10,
+            MessageNumber = 3,
+            SenderSeatNumber = 1,
+            Content = "Hello",
+            SentAtUtc = context.Clock.UtcNow
+        };
+        context.Repository.Submission = new ChatMessageSubmission(expectedMessage);
+        return context;
     }
 
     private sealed class ChatTestContext
@@ -104,17 +198,6 @@ public sealed class ChatApplicationServiceTests
         internal AuthenticatedSession FirstSession { get; }
 
         internal ChatApplicationService ApplicationService { get; }
-
-        internal static LoginAccount CreateAccount(long accountId, string username)
-        {
-            return new LoginAccount(
-                accountId,
-                username,
-                username + "@example.test",
-                "hash",
-                "ACTIVE",
-                "en-US");
-        }
     }
 
     private sealed class ChatClock : IUtcClock

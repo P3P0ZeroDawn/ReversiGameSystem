@@ -158,6 +158,8 @@
           <Property Name="expiresAtUtc" Type="datetime2" Precision="3" Nullable="false" />
           <Property Name="usedAtUtc" Type="datetime2" Precision="3" />
           <Property Name="invalidatedAtUtc" Type="datetime2" Precision="3" />
+          <Property Name="identityKey" Type="nvarchar" MaxLength="450" />
+          <Property Name="failedAttempts" Type="int" Nullable="false" />
         </EntityType>
         <Association Name="FK_AccountSettings_Account">
           <End Role="Account" Type="Self.Account" Multiplicity="1" />
@@ -646,6 +648,8 @@
           <Property Name="expiresAtUtc" Type="DateTime" Nullable="false" Precision="3" />
           <Property Name="usedAtUtc" Type="DateTime" Precision="3" />
           <Property Name="invalidatedAtUtc" Type="DateTime" Precision="3" />
+          <Property Name="identityKey" Type="String" MaxLength="450" FixedLength="false" Unicode="true" />
+          <Property Name="failedAttempts" Type="Int32" Nullable="false" />
         </EntityType>
         <Association Name="FK_AccountSettings_Account">
           <End Role="Account" Type="Self.Account" Multiplicity="1" />
@@ -1108,6 +1112,8 @@
                 <ScalarProperty Name="expiresAtUtc" ColumnName="expiresAtUtc" />
                 <ScalarProperty Name="usedAtUtc" ColumnName="usedAtUtc" />
                 <ScalarProperty Name="invalidatedAtUtc" ColumnName="invalidatedAtUtc" />
+                <ScalarProperty Name="identityKey" ColumnName="identityKey" />
+                <ScalarProperty Name="failedAttempts" ColumnName="failedAttempts" />
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>

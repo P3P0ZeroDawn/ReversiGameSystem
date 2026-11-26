@@ -174,13 +174,10 @@ public sealed class CreateAccountHandlerTests
         IPlayerImageRepository images)
     {
         IUtcClock clock = new TestUtcClock(new DateTime(2026, 9, 26, 12, 0, 0, DateTimeKind.Utc));
-        VerificationCodeIssuer issuer = new VerificationCodeIssuer(
-            new VerificationEmailSenderStub(),
-            new VerificationCodeProtector(new byte[32]),
-            clock);
         VerificationCodeService verificationCodes = new VerificationCodeService(
-            issuer,
+            new VerificationCodeProtector(new byte[32]),
             new VerificationCodeRepositoryStub(),
+            new VerificationEmailSenderStub(),
             clock);
         return new AccountApplicationService(
             accounts,

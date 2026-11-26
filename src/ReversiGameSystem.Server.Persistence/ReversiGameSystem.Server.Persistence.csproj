@@ -21,6 +21,11 @@
     <ProjectReference Include="..\ReversiGameSystem.Server.Application\ReversiGameSystem.Server.Application.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Mail\Templates\*.html">
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
     <Compile Update="Model\Account.cs;Model\AccountSettings.cs;Model\ChatMessage.cs;Model\ChatMute.cs;Model\ChatViolation.cs;Model\Friendship.cs;Model\GameMatch.cs;Model\GameMove.cs;Model\MatchParticipant.cs;Model\ModerationPattern.cs;Model\ModerationRule.cs;Model\SupportedLocale.cs;Model\VerificationCode.cs">
       <DependentUpon>Database_model.tt</DependentUpon>
     </Compile>

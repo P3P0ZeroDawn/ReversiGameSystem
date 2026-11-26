@@ -136,9 +136,12 @@ public sealed class MatchApplicationServiceLifecycleTests
         return TestSessionHelper.CreateSession(context.Sessions, 42, "PlayerOne");
     }
 
-    private sealed class FailingInvitationEmailSender : IEmailSender
+    private sealed class FailingInvitationEmailSender : ITemplatedEmailSender
     {
-        public void Send(EmailMessage email)
+        public void SendTemplatedEmail(
+            string recipientAddress,
+            string templateName,
+            System.Collections.Generic.IReadOnlyDictionary<string, string> templateValues)
         {
             throw new InvalidOperationException("Simulated provider outage.");
         }

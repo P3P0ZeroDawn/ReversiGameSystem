@@ -1,4 +1,3 @@
-using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Domain.Accounts;
 
@@ -8,93 +7,50 @@ namespace ReversiGameSystem.Server.Tests;
 public sealed class UsernamePolicyTests
 {
     [TestMethod]
-    public void Validate_ValidUsername_ReturnsNone()
+    [DataRow("Pedro123")]
+    [DataRow("Pedro_123")]
+    public void Validate_ValidUsername_ReturnsSuccess(string username)
     {
-        // Arrange
-        string username = "Pedro123";
+        UsernameValidationStatus expectedResult = UsernameValidationStatus.Success;
 
-        // Act
-        UsernameValidationError actual = UsernamePolicy.Validate(username);
+        UsernameValidationStatus actualResult = UsernamePolicy.Validate(username);
 
-        // Assert
-        Assert.AreEqual(UsernameValidationError.None, actual);
-    }
-
-    [TestMethod]
-    public void Validate_UsernameWithUnderscore_ReturnsNone()
-    {
-        // Arrange
-        string username = "Pedro_123";
-
-        // Act
-        UsernameValidationError actual = UsernamePolicy.Validate(username);
-
-        // Assert
-        Assert.AreEqual(UsernameValidationError.None, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
     public void Validate_EmptyUsername_ReturnsMissing()
     {
-        // Arrange
         string username = " ";
+        UsernameValidationStatus expectedResult = UsernameValidationStatus.Missing;
 
-        // Act
-        UsernameValidationError actual = UsernamePolicy.Validate(username);
+        UsernameValidationStatus actualResult = UsernamePolicy.Validate(username);
 
-        // Assert
-        Assert.AreEqual(UsernameValidationError.Missing, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
-    public void Validate_TooShortUsername_ReturnsInvalidLength()
+    [DataRow(2)]
+    [DataRow(UsernamePolicy.MaximumLength + 1)]
+    public void Validate_LengthOutOfRange_ReturnsInvalidLength(int length)
     {
-        // Arrange
-        string username = "ab";
+        string username = new string('a', length);
+        UsernameValidationStatus expectedResult = UsernameValidationStatus.InvalidLength;
 
-        // Act
-        UsernameValidationError actual = UsernamePolicy.Validate(username);
+        UsernameValidationStatus actualResult = UsernamePolicy.Validate(username);
 
-        // Assert
-        Assert.AreEqual(UsernameValidationError.InvalidLength, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
-    public void Validate_TooLongUsername_ReturnsInvalidLength()
+    [DataRow("_pedro")]
+    [DataRow("Pedro 123")]
+    public void Validate_UnsupportedCharacters_ReturnsInvalidCharacters(string username)
     {
-        // Arrange
-        string username = new string('a', UsernamePolicy.MaximumLength + 1);
+        UsernameValidationStatus expectedResult = UsernameValidationStatus.InvalidCharacters;
 
-        // Act
-        UsernameValidationError actual = UsernamePolicy.Validate(username);
+        UsernameValidationStatus actualResult = UsernamePolicy.Validate(username);
 
-        // Assert
-        Assert.AreEqual(UsernameValidationError.InvalidLength, actual);
-    }
-
-    [TestMethod]
-    public void Validate_LeadingUnderscore_ReturnsInvalidCharacters()
-    {
-        // Arrange
-        string username = "_pedro";
-
-        // Act
-        UsernameValidationError actual = UsernamePolicy.Validate(username);
-
-        // Assert
-        Assert.AreEqual(UsernameValidationError.InvalidCharacters, actual);
-    }
-
-    [TestMethod]
-    public void Validate_UsernameWithSpace_ReturnsInvalidCharacters()
-    {
-        // Arrange
-        string username = "Pedro 123";
-
-        // Act
-        UsernameValidationError actual = UsernamePolicy.Validate(username);
-
-        // Assert
-        Assert.AreEqual(UsernameValidationError.InvalidCharacters, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 }

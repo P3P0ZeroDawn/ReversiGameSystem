@@ -1,4 +1,3 @@
-using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Domain.Accounts;
 
@@ -8,211 +7,99 @@ namespace ReversiGameSystem.Server.Tests;
 public sealed class EmailPolicyTests
 {
     [TestMethod]
-    public void Validate_OrdinaryAddress_ReturnsNone()
+    [DataRow("player@example.com")]
+    [DataRow("first.last+tag@example.co.uk")]
+    [DataRow("player@bücher.de")]
+    public void Validate_ValidAddress_ReturnsSuccess(string email)
     {
-        // Arrange
-        string email = "player@example.com";
+        EmailValidationStatus expectedResult = EmailValidationStatus.Success;
 
-        // Act
-        EmailValidationError actual = EmailPolicy.Validate(email);
+        EmailValidationStatus actualResult = EmailPolicy.Validate(email);
 
-        // Assert
-        Assert.AreEqual(EmailValidationError.None, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
-    public void Validate_TaggedAddress_ReturnsNone()
+    public void Validate_AddressAtMaximumLength_ReturnsSuccess()
     {
-        // Arrange
-        string email = "first.last+tag@example.co.uk";
-
-        // Act
-        EmailValidationError actual = EmailPolicy.Validate(email);
-
-        // Assert
-        Assert.AreEqual(EmailValidationError.None, actual);
-    }
-
-    [TestMethod]
-    public void Validate_InternationalizedDomain_ReturnsNone()
-    {
-        // Arrange
-        string email = "player@bücher.de";
-
-        // Act
-        EmailValidationError actual = EmailPolicy.Validate(email);
-
-        // Assert
-        Assert.AreEqual(EmailValidationError.None, actual);
-    }
-
-    [TestMethod]
-    public void Validate_AddressAtMaximumLength_ReturnsNone()
-    {
-        // Arrange
         string label = new string('a', 61);
         string email = new string('b', 64) + "@" + label + "." + label + "." + label + ".com";
+        EmailValidationStatus expectedResult = EmailValidationStatus.Success;
 
-        // Act
-        EmailValidationError actual = EmailPolicy.Validate(email);
+        EmailValidationStatus actualResult = EmailPolicy.Validate(email);
 
-        // Assert
-        Assert.AreEqual(EmailValidationError.None, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
     public void Validate_AddressAboveMaximumLength_ReturnsTooLong()
     {
-        // Arrange
         string email = new string('a', 250) + "@example.com";
+        EmailValidationStatus expectedResult = EmailValidationStatus.TooLong;
 
-        // Act
-        EmailValidationError actual = EmailPolicy.Validate(email);
+        EmailValidationStatus actualResult = EmailPolicy.Validate(email);
 
-        // Assert
-        Assert.AreEqual(EmailValidationError.TooLong, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
-    public void Validate_MissingAtSign_ReturnsInvalidStructure()
+    [DataRow("player.example.com")]
+    [DataRow("player@@example.com")]
+    public void Validate_InvalidStructure_ReturnsInvalidStructure(string email)
     {
-        // Arrange
-        string email = "player.example.com";
+        EmailValidationStatus expectedResult = EmailValidationStatus.InvalidStructure;
 
-        // Act
-        EmailValidationError actual = EmailPolicy.Validate(email);
+        EmailValidationStatus actualResult = EmailPolicy.Validate(email);
 
-        // Assert
-        Assert.AreEqual(EmailValidationError.InvalidStructure, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
-    public void Validate_MultipleAtSigns_ReturnsInvalidStructure()
+    [DataRow("first..last@example.com")]
+    [DataRow("Player <player@example.com>")]
+    [DataRow("josé@example.com")]
+    public void Validate_InvalidLocalPart_ReturnsInvalidLocalPart(string email)
     {
-        // Arrange
-        string email = "player@@example.com";
+        EmailValidationStatus expectedResult = EmailValidationStatus.InvalidLocalPart;
 
-        // Act
-        EmailValidationError actual = EmailPolicy.Validate(email);
+        EmailValidationStatus actualResult = EmailPolicy.Validate(email);
 
-        // Assert
-        Assert.AreEqual(EmailValidationError.InvalidStructure, actual);
-    }
-
-    [TestMethod]
-    public void Validate_ConsecutiveLocalDots_ReturnsInvalidLocalPart()
-    {
-        // Arrange
-        string email = "first..last@example.com";
-
-        // Act
-        EmailValidationError actual = EmailPolicy.Validate(email);
-
-        // Assert
-        Assert.AreEqual(EmailValidationError.InvalidLocalPart, actual);
-    }
-
-    [TestMethod]
-    public void Validate_DisplayName_ReturnsInvalidLocalPart()
-    {
-        // Arrange
-        string email = "Player <player@example.com>";
-
-        // Act
-        EmailValidationError actual = EmailPolicy.Validate(email);
-
-        // Assert
-        Assert.AreEqual(EmailValidationError.InvalidLocalPart, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
     public void Validate_LocalPartAboveMaximum_ReturnsInvalidLocalPart()
     {
-        // Arrange
         string email = new string('a', 65) + "@example.com";
+        EmailValidationStatus expectedResult = EmailValidationStatus.InvalidLocalPart;
 
-        // Act
-        EmailValidationError actual = EmailPolicy.Validate(email);
+        EmailValidationStatus actualResult = EmailPolicy.Validate(email);
 
-        // Assert
-        Assert.AreEqual(EmailValidationError.InvalidLocalPart, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
-    public void Validate_AccentedLocalPart_ReturnsInvalidLocalPart()
+    [DataRow("player@localhost")]
+    [DataRow("player@-example.com")]
+    [DataRow("player@example..com")]
+    [DataRow("player@example.com.")]
+    public void Validate_InvalidDomain_ReturnsInvalidDomain(string email)
     {
-        // Arrange
-        string email = "josé@example.com";
+        EmailValidationStatus expectedResult = EmailValidationStatus.InvalidDomain;
 
-        // Act
-        EmailValidationError actual = EmailPolicy.Validate(email);
+        EmailValidationStatus actualResult = EmailPolicy.Validate(email);
 
-        // Assert
-        Assert.AreEqual(EmailValidationError.InvalidLocalPart, actual);
-    }
-
-    [TestMethod]
-    public void Validate_SingleLabelDomain_ReturnsInvalidDomain()
-    {
-        // Arrange
-        string email = "player@localhost";
-
-        // Act
-        EmailValidationError actual = EmailPolicy.Validate(email);
-
-        // Assert
-        Assert.AreEqual(EmailValidationError.InvalidDomain, actual);
-    }
-
-    [TestMethod]
-    public void Validate_HyphenAtDomainStart_ReturnsInvalidDomain()
-    {
-        // Arrange
-        string email = "player@-example.com";
-
-        // Act
-        EmailValidationError actual = EmailPolicy.Validate(email);
-
-        // Assert
-        Assert.AreEqual(EmailValidationError.InvalidDomain, actual);
-    }
-
-    [TestMethod]
-    public void Validate_ConsecutiveDomainDots_ReturnsInvalidDomain()
-    {
-        // Arrange
-        string email = "player@example..com";
-
-        // Act
-        EmailValidationError actual = EmailPolicy.Validate(email);
-
-        // Assert
-        Assert.AreEqual(EmailValidationError.InvalidDomain, actual);
-    }
-
-    [TestMethod]
-    public void Validate_TrailingDomainDot_ReturnsInvalidDomain()
-    {
-        // Arrange
-        string email = "player@example.com.";
-
-        // Act
-        EmailValidationError actual = EmailPolicy.Validate(email);
-
-        // Assert
-        Assert.AreEqual(EmailValidationError.InvalidDomain, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 
     [TestMethod]
     public void Validate_DomainLabelAboveMaximum_ReturnsInvalidDomain()
     {
-        // Arrange
         string email = "player@" + new string('a', 64) + ".com";
+        EmailValidationStatus expectedResult = EmailValidationStatus.InvalidDomain;
 
-        // Act
-        EmailValidationError actual = EmailPolicy.Validate(email);
+        EmailValidationStatus actualResult = EmailPolicy.Validate(email);
 
-        // Assert
-        Assert.AreEqual(EmailValidationError.InvalidDomain, actual);
+        Assert.AreEqual(expectedResult, actualResult);
     }
 }

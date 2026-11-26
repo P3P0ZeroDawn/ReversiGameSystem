@@ -172,13 +172,10 @@ public sealed class AccountAccessValidationTests
     {
         MutableUtcClock clock = new MutableUtcClock(
             new DateTime(2026, 9, 26, 12, 0, 0, DateTimeKind.Utc));
-        VerificationCodeIssuer issuer = new VerificationCodeIssuer(
-            new VerificationEmailSenderStub(),
-            new VerificationCodeProtector(new byte[32]),
-            clock);
         VerificationCodeService verificationCodes = new VerificationCodeService(
-            issuer,
+            new VerificationCodeProtector(new byte[32]),
             new VerificationCodeRepositoryStub(),
+            new VerificationEmailSenderStub(),
             clock);
         return new SessionApplicationService(
             accounts,
@@ -238,20 +235,25 @@ internal sealed class AccountLoginRepositoryStub : IAccountRepository
     }
 }
 
-internal sealed class VerificationEmailSenderStub : IEmailSender
+internal sealed class VerificationEmailSenderStub : ITemplatedEmailSender
 {
-    public void Send(EmailMessage email)
+    public void SendTemplatedEmail(
+        string recipientAddress,
+        string templateName,
+        System.Collections.Generic.IReadOnlyDictionary<string, string> templateValues)
     {
     }
 }
 
 internal sealed class VerificationCodeRepositoryStub : IVerificationCodeRepository
 {
-    public void Replace(PendingVerificationCode code)
+    public void SavePendingCode(PendingVerificationCode pendingCode)
     {
     }
 
-    public VerificationStatus Consume(VerificationAttempt attempt)
+    public VerificationStatus ProcessVerificationAttempt(
+        string identityKey,
+        Func<StoredVerificationCode, VerificationEvaluationResult> evaluateAttempt)
     {
         return VerificationStatus.Accepted;
     }
