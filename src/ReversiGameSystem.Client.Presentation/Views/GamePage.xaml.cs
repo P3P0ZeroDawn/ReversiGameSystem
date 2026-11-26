@@ -23,7 +23,6 @@ public partial class GamePage : Page
 {
     private const string RecoveryOperation = "GameplayConnectionRecovery";
     private const int ClockRefreshSeconds = 1;
-    private const int ConnectionCheckSeconds = 5;
     private const char BlackCell = 'B';
     private const char WhiteCell = 'W';
     private const char EmptyCell = '.';
@@ -67,7 +66,7 @@ public partial class GamePage : Page
     };
     private readonly DispatcherTimer _connectionCheck = new DispatcherTimer
     {
-        Interval = TimeSpan.FromSeconds(ConnectionCheckSeconds)
+        Interval = MatchConnectionPolicy.ConnectionCheckInterval
     };
     private bool _conclusionShown;
 

@@ -229,6 +229,11 @@ public sealed class MatchBoundaryTests
 
         public MatchStatus EvaluateLobbyAccess(long accountId)
         {
+            if (AllowRead)
+            {
+                return MatchStatus.Success;
+            }
+
             throw new InvalidOperationException("private storage failure");
         }
         internal bool AllowRead { get; set; }
@@ -237,6 +242,11 @@ public sealed class MatchBoundaryTests
         {
             throw new NotSupportedException();
         }
+        public MatchResult<Match[]> GetObservableMatches(long accountId)
+        {
+            throw new InvalidOperationException("private storage failure");
+        }
+
         public MatchResult<Match[]> GetAvailableMatches(long accountId)
         {
             throw new InvalidOperationException("private storage failure");

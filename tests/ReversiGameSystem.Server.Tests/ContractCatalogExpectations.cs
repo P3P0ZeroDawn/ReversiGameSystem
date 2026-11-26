@@ -87,6 +87,7 @@ internal static class ContractCatalogExpectations
         {
             "void OpenMatchChannel(string sessionToken, long matchId)",
             "MatchInformation GetMatchInformation(string sessionToken, long matchId)",
+            "MatchInformation[] GetObservableMatches(string sessionToken)",
             "MatchStateSnapshot GetMatchState(string sessionToken, long matchId)",
             "MatchStateSnapshot PlacePiece(string sessionToken, PiecePlacement placement)",
             "MatchConclusion ForfeitMatch(string sessionToken, long matchId)",

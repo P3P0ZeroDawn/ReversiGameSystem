@@ -52,9 +52,9 @@ internal sealed class AvailableMatch
         TurnDurationSeconds = turnDurationSeconds;
     }
 
-    internal string MatchCode { get; }
-    internal string CreatorDisplayName { get; }
-    internal int TurnDurationSeconds { get; }
+    public string MatchCode { get; }
+    public string CreatorDisplayName { get; }
+    public int TurnDurationSeconds { get; }
 }
 
 internal sealed class MatchInformation
@@ -71,10 +71,10 @@ internal sealed class MatchInformation
         TurnDurationSeconds = turnDurationSeconds;
     }
 
-    internal long MatchId { get; }
-    internal MatchParticipant[] Participants { get; }
-    internal int? AssignedSeatNumber { get; }
-    internal int TurnDurationSeconds { get; }
+    public long MatchId { get; }
+    public MatchParticipant[] Participants { get; }
+    public int? AssignedSeatNumber { get; }
+    public int TurnDurationSeconds { get; }
 }
 
 internal sealed class MatchParticipant
@@ -85,9 +85,9 @@ internal sealed class MatchParticipant
         DisplayName = displayName;
     }
 
-    internal int SeatNumber { get; }
-    internal string DisplayName { get; }
-    internal bool IsSystem { get; set; }
+    public int SeatNumber { get; }
+    public string DisplayName { get; }
+    public bool IsSystem { get; set; }
 }
 
 internal enum ConfirmedMatchState
@@ -170,4 +170,15 @@ internal enum ParticipantConnectionState
     Unknown,
     Connected,
     Disconnected
+}
+
+internal sealed class MatchMove
+{
+    public int MoveNumber { get; set; }
+    public int SeatNumber { get; set; }
+    public int Row { get; set; }
+    public int Column { get; set; }
+    public DateTime PlayedAtUtc { get; set; }
+    public int FlippedPieceCount { get; set; }
+    public bool IsAutomatic { get; set; }
 }

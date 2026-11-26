@@ -66,6 +66,12 @@ public interface IGameplayMatchService
     [FaultContract(typeof(ServiceFault), Namespace = ContractNamespaces.Diagnostics)]
     public MatchInformation GetMatchInformation(string sessionToken, long matchId);
 
+    [OperationContract]
+    [FaultContract(typeof(MatchFault), Namespace = ContractNamespaces.Data)]
+    [FaultContract(typeof(SessionFault), Namespace = ContractNamespaces.Data)]
+    [FaultContract(typeof(ServiceFault), Namespace = ContractNamespaces.Diagnostics)]
+    public MatchInformation[] GetObservableMatches(string sessionToken);
+
     /// <summary>
     /// Retrieves a complete confirmed dynamic match state without registering a channel.
     /// </summary>

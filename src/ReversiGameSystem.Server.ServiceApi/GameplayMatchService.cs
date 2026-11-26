@@ -97,15 +97,10 @@ public sealed class GameplayMatchService : IGameplayMatchService
     public MatchInformation GetMatchInformation(string sessionToken, long matchId)
     {
         Match match = RequireAuthorizedMatch(sessionToken, matchId);
-        MatchParticipant participant = RequireParticipant(sessionToken, matchId);
-
-        return new MatchInformation
-        {
-            MatchId = match.Id,
-            Participants = MatchContractMapper.MapParticipants(match),
-            TurnDurationSeconds = match.TurnDurationSeconds,
-            AssignedSeatNumber = participant.SeatNumber
-        };
+        MatchResult<long> account = _applicationService.GetSessionAccountId(sessionToken);
+        ThrowFaultIfFailed(account.Status);
+        long accountId = account.Value;
+        return MapInformation(match, accountId);
     }
 
     /// <summary>
@@ -296,6 +291,41 @@ public sealed class GameplayMatchService : IGameplayMatchService
 
         MatchMove[] moves = RequireValue(result);
         return moves.Select(MatchContractMapper.MapMove).ToArray();
+    }
+
+    /// <summary>
+    /// Returns all current observable matches for an authenticated active account.
+    /// </summary>
+    /// <param name="sessionToken">The opaque session token identifying the caller.</param>
+    /// <returns>The complete current match list, including private and system matches.</returns>
+    /// <exception cref="FaultException{SessionFault}">The session was rejected.</exception>
+    /// <exception cref="FaultException{MatchFault}">The account was rejected.</exception>
+    /// <exception cref="FaultException{ServiceFault}">
+    /// The complete list could not be loaded.
+    /// </exception>
+    public MatchInformation[] GetObservableMatches(string sessionToken)
+    {
+        MatchResult<Match[]> result = _applicationService.GetObservableMatches(sessionToken);
+        ThrowFaultIfFailed(result.Status);
+        Match[] matches = RequireValue(result);
+        MatchResult<long> account = _applicationService.GetSessionAccountId(sessionToken);
+        ThrowFaultIfFailed(account.Status);
+        long accountId = account.Value;
+        return matches.Select(match => MapInformation(match, accountId)).ToArray();
+    }
+
+    private static MatchInformation MapInformation(Match match, long accountId)
+    {
+        MatchParticipant? participant = Array.Find(
+            match.Participants,
+            candidate => candidate.AccountId == accountId);
+        return new MatchInformation
+        {
+            MatchId = match.Id,
+            Participants = MatchContractMapper.MapParticipants(match),
+            TurnDurationSeconds = match.TurnDurationSeconds,
+            AssignedSeatNumber = participant?.SeatNumber
+        };
     }
 
     private void PublishMatchStateChanged(long matchId, MatchStateSnapshot snapshot)

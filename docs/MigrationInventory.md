@@ -32,6 +32,20 @@ y registros sin datos sensibles. Incluir fallos durante la reconexión y al escr
 La ampliación a todas las preferencias queda pendiente de validar el diseño antes de implementar.
 La comprobación con Hamachi sigue pendiente.
 
+## Observación de partidas
+
+- Cuentas autenticadas: listar todas las partidas en curso, incluidas partidas por
+  invitación y contra el sistema; los invitados no consultan ni muestran esta sección.
+- `GetObservableMatches` completa la consulta ausente en el catálogo. No altera la
+  consulta de salas en espera para unirse.
+- `MatchInformationPage` conserva su modo de espectador: tablero y movimientos vigentes,
+  sin jugadas, chat ni abandono. Reutiliza callbacks y la recuperación de 30 segundos.
+- La presencia y los plazos de abandono corresponden exclusivamente a participantes.
+- Recorrido manual de observación comprobado; recuperación del espectador ante un corte
+  pendiente de prueba manual. Las pruebas automatizadas de reconexión están aprobadas.
+- Pendiente habilitar las funcionalidades permitidas para invitados en el cliente.
+  La observación seguirá excluida para invitados.
+
 ## Criterio de finalización
 
 Un servicio queda migrado cuando su flujo es legible, sigue la estructura descrita en

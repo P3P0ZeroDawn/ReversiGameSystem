@@ -731,6 +731,24 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
             });
     }
 
+    public MatchResult<Match[]> GetObservableMatches(long accountId)
+    {
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        if (!IsActiveAccount(context, accountId))
+        {
+            return new MatchResult<Match[]>(MatchStatus.InactiveAccount);
+        }
+
+        GameMatch[] matches = context.GameMatch
+            .Include(candidate => candidate.MatchParticipant1)
+            .Include(candidate => candidate.GameMove)
+            .Where(candidate => candidate.statusCode == "IN_PROGRESS")
+            .OrderBy(candidate => candidate.matchId)
+            .ToArray();
+        Match[] snapshots = matches.Select(MatchDatabase.Map).ToArray();
+        return new MatchResult<Match[]>(snapshots);
+    }
+
     public MatchResult<Match[]> LoadMatchHistory(long accountId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();

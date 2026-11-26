@@ -143,6 +143,21 @@ internal sealed class DuplexChannel<TClient, TContract> : IDisposable
         }
     }
 
+    internal void ResetConnection()
+    {
+        TClient? client;
+        lock (_channelLock)
+        {
+            client = _client;
+            _client = null;
+            if (client != null)
+            {
+                client.InnerChannel.Faulted -= OnChannelFaulted;
+            }
+        }
+        client?.Abort();
+    }
+
     public void Dispose()
     {
         TClient? client;

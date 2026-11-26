@@ -113,10 +113,101 @@ public sealed class GameplayClientTransportTests
         }
     }
 
+    [TestMethod]
+    public void LoadObservableMatches_RemoteList_StoresConfirmedMatchInformation()
+    {
+        using GameplayHost host = new GameplayHost();
+        using GameplayClient client = host.CreateClient();
+
+        MatchStatus status = client.LoadObservableMatches().GetAwaiter().GetResult();
+
+        Assert.AreEqual(MatchStatus.Success, status);
+        Assert.AreEqual(MatchId, client.ReadObservableMatches()[0].MatchId);
+    }
+
+    [TestMethod]
+    public void ObserveMatch_ReadOnlyEntry_DoesNotOpenParticipantPresenceChannel()
+    {
+        using GameplayHost host = new GameplayHost();
+        using GameplayClient client = host.CreateClient();
+
+        MatchStatus status = client.ObserveMatch(MatchId).GetAwaiter().GetResult();
+
+        Assert.AreEqual(MatchStatus.Success, status);
+        Assert.AreEqual(1, host.Service.ObservationCalls);
+        Assert.AreEqual(0, host.Service.ParticipantChannelCalls);
+        Assert.IsNull(client.ReadMatchInformation(MatchId).AssignedSeatNumber);
+    }
+
+    [TestMethod]
+    public void LoadMoveHistory_ConfirmedMoves_MapsDomainMoves()
+    {
+        using GameplayHost host = new GameplayHost();
+        using GameplayClient client = host.CreateClient();
+
+        MatchStatus status = client.LoadMoveHistory(MatchId).GetAwaiter().GetResult();
+
+        Assert.AreEqual(MatchStatus.Success, status);
+        Assert.AreEqual(StateVersion, client.ReadMoveHistory(MatchId)[0].MoveNumber);
+        Assert.IsTrue(client.ReadMoveHistory(MatchId)[0].IsAutomatic);
+    }
+
+    [TestMethod]
+    public void RestoreMatchConnection_ObserverReconnect_ReopensObservationOnly()
+    {
+        using GameplayHost host = new GameplayHost();
+        using GameplayClient client = host.CreateClient();
+        using ManualResetEventSlim disconnected = new ManualResetEventSlim();
+        client.ConnectionLost += disconnected.Set;
+        Assert.AreEqual(MatchStatus.Success, client.ObserveMatch(MatchId).GetAwaiter().GetResult());
+        host.Service.AbortObserverChannel();
+        Assert.IsTrue(disconnected.Wait(TestTimeout));
+
+        MatchStatus status = client.RestoreMatchConnection(MatchId, CancellationToken.None)
+            .GetAwaiter().GetResult();
+
+        Assert.AreEqual(MatchStatus.Success, status);
+        Assert.AreEqual(2, host.Service.ObservationCalls);
+        Assert.AreEqual(0, host.Service.ParticipantChannelCalls);
+    }
+
+    [TestMethod]
+    public void RestoreMatchConnection_ObservedMatchFinished_LoadsFinalState()
+    {
+        using GameplayHost host = new GameplayHost();
+        using GameplayClient client = host.CreateClient();
+        using ManualResetEventSlim disconnected = new ManualResetEventSlim();
+        client.ConnectionLost += disconnected.Set;
+        Assert.AreEqual(MatchStatus.Success, client.ObserveMatch(MatchId).GetAwaiter().GetResult());
+        host.Service.IsFinished = true;
+        host.Service.AbortObserverChannel();
+        Assert.IsTrue(disconnected.Wait(TestTimeout));
+
+        MatchStatus status = client.RestoreMatchConnection(MatchId, CancellationToken.None)
+            .GetAwaiter().GetResult();
+
+        Assert.AreEqual(MatchStatus.Success, status);
+        Assert.AreEqual(ConfirmedMatchState.Finished, client.ReadMatchState(MatchId).State);
+        Assert.AreEqual(0, host.Service.ParticipantChannelCalls);
+    }
+
     [ServiceContract(Name = "IGameplayMatchService", Namespace = "urn:reversi:services:v1",
         CallbackContract = typeof(Proxy.IGameplayMatchServiceCallback))]
     internal interface IGameplayTestService
     {
+        [OperationContract]
+        Proxy.MatchInformation[] GetObservableMatches(string sessionToken);
+
+        [OperationContract]
+        [FaultContract(typeof(Proxy.MatchFault), Namespace = "urn:reversi:contracts:v1")]
+        Proxy.MatchStateSnapshot ObserveMatch(string sessionToken, long matchId);
+
+        [OperationContract]
+        Proxy.MatchInformation GetMatchInformation(string sessionToken, long matchId);
+
+        [OperationContract]
+        Proxy.MoveRecord[] GetMoveHistory(string sessionToken, long matchId);
+
         [OperationContract]
         [FaultContract(typeof(Proxy.MatchFault), Namespace = "urn:reversi:contracts:v1")]
         void OpenMatchChannel(string sessionToken, long matchId);
@@ -132,6 +223,10 @@ public sealed class GameplayClientTransportTests
         ConcurrencyMode = ConcurrencyMode.Multiple, UseSynchronizationContext = false)]
     internal sealed class GameplayService : IGameplayTestService, IDisposable
     {
+        private ICommunicationObject? _observerChannel;
+
+        internal int ObservationCalls { get; private set; }
+        internal int ParticipantChannelCalls { get; private set; }
         internal bool IsFinished { get; set; }
         internal bool PublishInvalidCallback { get; set; }
         internal volatile bool DelayStateRead;
@@ -139,8 +234,56 @@ public sealed class GameplayClientTransportTests
         internal ManualResetEventSlim StateReadStarted { get; } = new ManualResetEventSlim();
         internal ManualResetEventSlim ContinueStateRead { get; } = new ManualResetEventSlim();
 
+        public Proxy.MatchInformation[] GetObservableMatches(string sessionToken)
+        {
+            return new[] { GetMatchInformation(sessionToken, MatchId) };
+        }
+
+        public Proxy.MatchInformation GetMatchInformation(string sessionToken, long matchId)
+        {
+            return new Proxy.MatchInformation
+            {
+                MatchId = matchId,
+                TurnDurationSeconds = 30,
+                AssignedSeatNumber = null,
+                Participants = Array.Empty<Proxy.MatchParticipantSummary>()
+            };
+        }
+
+        public Proxy.MoveRecord[] GetMoveHistory(string sessionToken, long matchId)
+        {
+            return new[]
+            {
+                new Proxy.MoveRecord
+                {
+                    MoveNumber = (int)StateVersion,
+                    Origin = Proxy.MoveOrigin.System
+                }
+            };
+        }
+
+        public Proxy.MatchStateSnapshot ObserveMatch(string sessionToken, long matchId)
+        {
+            ObservationCalls++;
+            _observerChannel = OperationContext.Current.Channel;
+            if (IsFinished)
+            {
+                throw new FaultException<Proxy.MatchFault>(new Proxy.MatchFault
+                {
+                    Reason = Proxy.MatchFailure.SpectatingUnavailable
+                });
+            }
+            return GetMatchState(sessionToken, matchId);
+        }
+
+        internal void AbortObserverChannel()
+        {
+            _observerChannel?.Abort();
+        }
+
         public void OpenMatchChannel(string sessionToken, long matchId)
         {
+            ParticipantChannelCalls++;
             if (PublishInvalidCallback)
             {
                 OperationContext.Current.GetCallbackChannel<Proxy.IGameplayMatchServiceCallback>()
@@ -168,7 +311,7 @@ public sealed class GameplayClientTransportTests
             return new Proxy.MatchStateSnapshot
             {
                 MatchId = matchId,
-                MatchStateVersion = StateVersion,
+                MatchStateVersion = IsFinished ? StateVersion + 1 : StateVersion,
                 State = IsFinished ? Proxy.MatchState.Finished : Proxy.MatchState.InProgress,
                 Board = Array.Empty<Proxy.BoardCellState>()
             };
