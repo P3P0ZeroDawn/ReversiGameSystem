@@ -13,7 +13,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ReversiGameSystem.Server.Tests;
 
-internal sealed class ReviewAccountDatabaseTests : IEmailSender
+internal sealed class ReviewAccountDatabaseTests : ITemplatedEmailSender, IEmailSender
 {
     private const string DatabasePrefix = "ReversiReviewAccountTests_";
     private const string ConnectionVariable = "REVERSI_DB_CONNECTION_STRING";
@@ -32,12 +32,26 @@ internal sealed class ReviewAccountDatabaseTests : IEmailSender
     private ReviewAccountDatabaseTests()
     {
         _sessions = new SessionStore(_clock);
-        VerificationCodeIssuer issuer = new VerificationCodeIssuer(this,
-            new VerificationCodeProtector(new byte[32]), _clock);
         _applicationService = new SessionApplicationService(
             new AccountRepository(_clock),
-            new VerificationCodeService(issuer, new VerificationCodeRepository(), _clock),
+            new VerificationCodeService(
+                new VerificationCodeProtector(new byte[32]),
+                new VerificationCodeRepository(),
+                this,
+                _clock),
             _sessions);
+    }
+
+    public void SendTemplatedEmail(
+        string recipientAddress,
+        string templateName,
+        IReadOnlyDictionary<string, string> templateValues)
+    {
+        ReversiGameSystem.Server.Persistence.Mail.TemplatedEmailSender sender =
+            new ReversiGameSystem.Server.Persistence.Mail.TemplatedEmailSender(
+                new ReversiGameSystem.Server.Persistence.Mail.HtmlEmailTemplateRenderer(),
+                this);
+        sender.SendTemplatedEmail(recipientAddress, templateName, templateValues);
     }
 
     public void Send(EmailMessage email) => _mail[email.RecipientAddress] = email;
@@ -69,14 +83,14 @@ internal sealed class ReviewAccountDatabaseTests : IEmailSender
             .FindByLogin(username).Value!;
         VerificationIdentity identity = VerificationIdentity.ForLogin(
             account.AccountId, account.EmailAddress);
-        new VerificationCodeRepository().Replace(new PendingVerificationCode
+        new VerificationCodeRepository().SavePendingCode(new PendingVerificationCode
         {
             IdentityKey = identity.Key,
             RecipientAddress = identity.RecipientAddress,
             Purpose = identity.Purpose,
             CreatedAtUtc = _clock.UtcNow,
             ExpiresAtUtc = _clock.UtcNow.AddMinutes(5),
-            Digest = new VerificationCodeProtector(new byte[32]).Protect(identity.Key, code)
+            Digest = new VerificationCodeProtector(new byte[32]).ComputeCodeDigest(identity.Key, code)
         });
     }
 

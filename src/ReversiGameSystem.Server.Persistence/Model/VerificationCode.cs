@@ -22,5 +22,7 @@ namespace ReversiGameSystem.Server.Persistence.Model
         public System.DateTime expiresAtUtc { get; set; }
         public Nullable<System.DateTime> usedAtUtc { get; set; }
         public Nullable<System.DateTime> invalidatedAtUtc { get; set; }
+        public string identityKey { get; set; }
+        public int failedAttempts { get; set; }
     }
 }

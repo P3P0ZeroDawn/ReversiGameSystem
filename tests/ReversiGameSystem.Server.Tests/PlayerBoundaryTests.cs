@@ -24,8 +24,11 @@ public sealed class PlayerBoundaryTests
         // Arrange
         AccountServiceBoundaryStub stub = new AccountServiceBoundaryStub();
         VerificationCodeProtector protector = new VerificationCodeProtector(new byte[32]);
-        VerificationCodeIssuer issuer = new VerificationCodeIssuer(stub, protector, stub);
-        VerificationCodeService verificationCodes = new VerificationCodeService(issuer, stub, stub);
+        VerificationCodeService verificationCodes = new VerificationCodeService(
+            protector,
+            stub,
+            stub,
+            stub);
         SessionStore sessions = new SessionStore(stub);
         AccountApplicationService applicationService = new AccountApplicationService(
             stub,
@@ -336,7 +339,7 @@ public sealed class PlayerBoundaryTests
         IAccountRepository,
         IPlayerImageRepository,
         IVerificationCodeRepository,
-        IEmailSender,
+        ITemplatedEmailSender,
         IUtcClock
     {
         public DateTime UtcNow { get; set; } = new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc);
@@ -379,14 +382,19 @@ public sealed class PlayerBoundaryTests
         {
         }
 
-        public void Replace(PendingVerificationCode code)
+        public void SavePendingCode(PendingVerificationCode pendingCode)
         {
         }
 
-        public VerificationStatus Consume(VerificationAttempt attempt) =>
+        public VerificationStatus ProcessVerificationAttempt(
+            string identityKey,
+            Func<StoredVerificationCode, VerificationEvaluationResult> evaluateAttempt) =>
             VerificationStatus.Accepted;
 
-        public void Send(EmailMessage message)
+        public void SendTemplatedEmail(
+            string recipientAddress,
+            string templateName,
+            System.Collections.Generic.IReadOnlyDictionary<string, string> templateValues)
         {
         }
     }

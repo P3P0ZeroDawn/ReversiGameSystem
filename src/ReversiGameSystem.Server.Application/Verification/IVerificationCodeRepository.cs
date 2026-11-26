@@ -1,8 +1,12 @@
+using System;
+
 namespace ReversiGameSystem.Server.Application.Verification;
 
 public interface IVerificationCodeRepository
 {
-    public void Replace(PendingVerificationCode code);
+    void SavePendingCode(PendingVerificationCode pendingCode);
 
-    public VerificationStatus Consume(VerificationAttempt attempt);
+    VerificationStatus ProcessVerificationAttempt(
+        string identityKey,
+        Func<StoredVerificationCode, VerificationEvaluationResult> evaluateAttempt);
 }

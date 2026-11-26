@@ -56,7 +56,7 @@ public sealed class AccountApplicationService
         VerificationIdentity identity = VerificationIdentity.ForRegistration(
             normalizedUsername,
             normalizedEmail);
-        DateTime expiresAtUtc = _verificationCodes.Request(identity);
+        DateTime expiresAtUtc = _verificationCodes.IssueVerificationCode(identity);
         AccountResult<DateTime> result = new AccountResult<DateTime>(expiresAtUtc);
         return result;
     }
@@ -148,12 +148,13 @@ public sealed class AccountApplicationService
             LoginAccount account = accountResult.Value;
             VerificationIdentity identity = VerificationIdentity.ForPasswordReset(
                 account.AccountId,
-                account.EmailAddress);
-            DateTime expiresAtUtc = _verificationCodes.Request(identity);
+                account.EmailAddress,
+                account.PreferredLocaleCode);
+            DateTime expiresAtUtc = _verificationCodes.IssueVerificationCode(identity);
             return new AccountResult<DateTime>(expiresAtUtc);
         }
 
-        DateTime plausibleExpiryUtc = _verificationCodes.CalculatePlausibleExpiry();
+        DateTime plausibleExpiryUtc = _verificationCodes.CalculatePlausibleExpirationUtc();
         AccountResult<DateTime> hiddenResult = new AccountResult<DateTime>(plausibleExpiryUtc);
         return hiddenResult;
     }
@@ -328,7 +329,7 @@ public sealed class AccountApplicationService
         VerificationIdentity identity,
         string verificationCode)
     {
-        VerificationStatus status = _verificationCodes.Consume(identity, verificationCode);
+        VerificationStatus status = _verificationCodes.VerifyCode(identity, verificationCode);
         if (status == VerificationStatus.Accepted)
         {
             return AccountStatus.Success;

@@ -83,9 +83,13 @@ internal static class Program
                     SystemUtcClock clock = new SystemUtcClock();
                     SessionStore sessions = new SessionStore(clock);
                     SmtpEmailSender emailSender = new SmtpEmailSender(MailSettings.Load());
+                    HtmlEmailTemplateRenderer templateRenderer = new HtmlEmailTemplateRenderer();
+                    TemplatedEmailSender templatedEmailSender = new TemplatedEmailSender(
+                        templateRenderer,
+                        emailSender);
                     AccountRepository accountRepository = new AccountRepository(clock);
                     VerificationCodeService verificationCodes = CreateVerificationCodeService(
-                        emailSender, clock);
+                        templatedEmailSender, clock);
                     AccountPresenceRegistry presenceRegistry = new AccountPresenceRegistry();
                     using (FriendshipSubscriptions friendshipSubscriptions =
                         new FriendshipSubscriptions(
@@ -111,7 +115,7 @@ internal static class Program
                                 sessions,
                                 matchRepository,
                                 clock,
-                                emailSender);
+                                templatedEmailSender);
                         GameplayMatchApplicationService gameplayMatchApplicationService =
                             new GameplayMatchApplicationService(
                                 sessions,
@@ -294,7 +298,7 @@ internal static class Program
     }
 
     private static VerificationCodeService CreateVerificationCodeService(
-        IEmailSender emailSender,
+        ITemplatedEmailSender emailSender,
         IUtcClock clock)
     {
         byte[] secret = Convert.FromBase64String(
@@ -309,9 +313,11 @@ internal static class Program
             Array.Clear(secret, 0, secret.Length);
         }
 
-        VerificationCodeIssuer issuer = new VerificationCodeIssuer(emailSender, protector, clock);
         VerificationCodeService verification = new VerificationCodeService(
-            issuer, new VerificationCodeRepository(), clock);
+            protector,
+            new VerificationCodeRepository(),
+            emailSender,
+            clock);
         return verification;
     }
 
