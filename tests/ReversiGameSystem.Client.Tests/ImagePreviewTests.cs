@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -88,16 +89,16 @@ public sealed class ImagePreviewTests
     }
 
     [TestMethod]
-    public void Decode_ReturnedProfile_Preserves256Pixels()
+    public async Task Decode_ReturnedProfile_Preserves256Pixels()
     {
         string path = WriteImage(256, 256, new byte[256 * 256 * 4]);
         try
         {
-            ProfileImageContent content = ProfileImageModificationService.ReadImageFile(path);
+            PlayerImageContent content = await PlayerImageService.ReadImageFile(path);
             byte[] original = File.ReadAllBytes(path);
             Assert.AreEqual(Convert.ToBase64String(original),
                 Convert.ToBase64String(content.Content));
-            BitmapSource? preview = ProfileImageModificationService.CreateProfilePreview(content);
+            BitmapSource? preview = PlayerImageService.CreatePreview(content);
             Assert.IsNotNull(preview);
             Assert.AreEqual(256, preview.PixelWidth);
             Assert.AreEqual(256, preview.PixelHeight);
@@ -109,15 +110,15 @@ public sealed class ImagePreviewTests
     }
 
     [TestMethod]
-    public void CreatePreview_OversizedDimensions_RejectsImage()
+    public async Task CreatePreview_OversizedDimensions_RejectsImage()
     {
         string path = WriteImage(4097, 1, new byte[4097 * 4]);
         try
         {
             Assert.IsNull(ProfilePicturePolicy.CreatePreview(path));
-            ProfileImageContent content = ProfileImageModificationService.ReadImageFile(path);
+            PlayerImageContent content = await PlayerImageService.ReadImageFile(path);
             Assert.ThrowsExactly<InvalidOperationException>(() =>
-                ProfileImageModificationService.CreateProfilePreview(content));
+                PlayerImageService.CreatePreview(content));
         }
         finally
         {

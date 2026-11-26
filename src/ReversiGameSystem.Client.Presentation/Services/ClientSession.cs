@@ -1,9 +1,12 @@
+using System;
 using System.Windows.Media.Imaging;
 
 namespace ReversiGameSystem.Services;
 
 internal sealed class ClientSession
 {
+    internal event Action? SessionChanged;
+
     internal string? Username { get; private set; }
 
     internal string? Email { get; private set; }
@@ -32,6 +35,7 @@ internal sealed class ClientSession
         GuestName = null;
         ProfilePicture = profilePicture;
         UserPreferencesState.Reset();
+        SessionChanged?.Invoke();
     }
 
     internal void StartGuest(GuestAccountSession session)
@@ -44,6 +48,7 @@ internal sealed class ClientSession
         ProfilePicture = null;
         UserPreferencesState.Reset();
         FriendshipPreviewState.Reset();
+        SessionChanged?.Invoke();
     }
 
     internal void UpdateUsername(string username)
@@ -66,5 +71,6 @@ internal sealed class ClientSession
         ProfilePicture = null;
         UserPreferencesState.Reset();
         FriendshipPreviewState.Reset();
+        SessionChanged?.Invoke();
     }
 }

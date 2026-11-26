@@ -24,7 +24,7 @@ internal sealed class AccountCreationViewModel
 
     internal string LocaleCode { get; set; } = string.Empty;
 
-    internal ProfileImageContent? ProfileImage { get; set; }
+    internal PlayerImageContent? ProfileImage { get; set; }
 
     internal bool IsSubmitting { get; private set; }
 

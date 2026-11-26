@@ -7,98 +7,49 @@ namespace ReversiGameSystem.Services;
 
 internal static class ClientRuntime
 {
-    internal static ClientSession CurrentSession { get; } = new ClientSession();
+    private static MatchLobbyClient? s_lobby;
 
-    private static MatchLobbyClient? _lobby;
-    private static GameplayClient? _gameplay;
-    private static MatchChatClient? _chat;
-    private static string? _matchToken;
+    private static GameplayClient? s_gameplay;
 
-    internal static MatchLobbyClient GetMatchLobbyClient(bool guest)
-    {
-        string token = ValidateMatchSession(guest);
-        if (_lobby == null)
-        {
-            _lobby = new MatchLobbyClient(token, Logging.Value.CreateLogger<MatchLobbyClient>());
-        }
-        return _lobby;
-    }
+    private static MatchChatClient? s_chat;
 
-    internal static GameplayClient GetGameplayClient(bool guest)
-    {
-        string token = ValidateMatchSession(guest);
-        if (_gameplay == null)
-        {
-            _gameplay = new GameplayClient(token, Logging.Value.CreateLogger<GameplayClient>());
-        }
-        return _gameplay;
-    }
-
-    internal static MatchChatClient GetMatchChatClient(bool guest)
-    {
-        string token = ValidateMatchSession(guest);
-        if (_chat == null)
-        {
-            _chat = new MatchChatClient(token, Logging.Value.CreateLogger<MatchChatClient>());
-        }
-        return _chat;
-    }
-
-    private static string ValidateMatchSession(bool guest)
-    {
-        string token = CurrentSession.SessionToken
-            ?? throw new InvalidOperationException("A player session is required.");
-        if (string.IsNullOrWhiteSpace(token) || CurrentSession.IsGuest != guest)
-        {
-            throw new InvalidOperationException("The requested player session is invalid.");
-        }
-        if (_matchToken != token)
-        {
-            _lobby?.Dispose();
-            _gameplay?.Dispose();
-            _chat?.Dispose();
-            _lobby = null;
-            _gameplay = null;
-            _chat = null;
-            _matchToken = token;
-        }
-        return token;
-    }
+    private static string? s_matchToken;
 
     private static readonly Lazy<ILoggerFactory> Logging =
         new Lazy<ILoggerFactory>(CreateLoggerFactory);
+
     private static readonly Lazy<SessionClient> Session =
         new Lazy<SessionClient>(CreateSessionService);
+
     private static readonly Lazy<FriendshipClient> Friendship =
         new Lazy<FriendshipClient>(CreateFriendshipService);
+
     private static readonly Lazy<AccountClient> Account =
         new Lazy<AccountClient>(CreateAccountService);
+
     private static readonly Lazy<PlayerProfileClient> Profile =
         new Lazy<PlayerProfileClient>(CreateProfileService);
+
     private static readonly Lazy<LeaderboardClient> Leaderboard =
         new Lazy<LeaderboardClient>(CreateLeaderboardService);
 
-    private static readonly Lazy<PlayerPreferencesClient> Preferences =
-        new Lazy<PlayerPreferencesClient>(CreatePreferencesService);
+    private static PlayerPreferencesClient? s_preferences;
 
-    internal static ClientErrorHandler Errors { get; } = new ClientErrorHandler(
-        Logging.Value.CreateLogger<ClientErrorHandler>(), ShowErrorMessage);
-
-    private static void ShowErrorMessage(string title, string message)
+    static ClientRuntime()
     {
-        MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+        CurrentSession.SessionChanged += OnSessionChanged;
     }
 
     internal static PlayerPreferencesClient PreferencesService
     {
-        get { return Preferences.Value; }
-    }
-
-    private static PlayerPreferencesClient CreatePreferencesService()
-    {
-        return new PlayerPreferencesClient(
-            Logging.Value.CreateLogger<PlayerPreferencesClient>(),
-            ServerConnectionFactory.CreatePreferencesClient);
+        get
+        {
+            if (s_preferences == null)
+            {
+                s_preferences = CreatePreferencesService();
+            }
+            return s_preferences;
+        }
     }
 
     internal static FriendshipClient FriendshipService
@@ -126,11 +77,86 @@ internal static class ClientRuntime
         get { return Session.Value; }
     }
 
+    internal static ClientSession CurrentSession { get; } = new ClientSession();
+
+    internal static ClientErrorHandler Errors { get; } = new ClientErrorHandler(
+        Logging.Value.CreateLogger<ClientErrorHandler>(), ShowErrorMessage);
+
+    internal static MatchLobbyClient GetMatchLobbyClient(bool guest)
+    {
+        string token = ValidateMatchSession(guest);
+        if (s_lobby == null)
+        {
+            s_lobby = new MatchLobbyClient(token, Logging.Value.CreateLogger<MatchLobbyClient>());
+        }
+        return s_lobby;
+    }
+
+    internal static GameplayClient GetGameplayClient(bool guest)
+    {
+        string token = ValidateMatchSession(guest);
+        if (s_gameplay == null)
+        {
+            s_gameplay = new GameplayClient(token, Logging.Value.CreateLogger<GameplayClient>());
+        }
+        return s_gameplay;
+    }
+
+    internal static MatchChatClient GetMatchChatClient(bool guest)
+    {
+        string token = ValidateMatchSession(guest);
+        if (s_chat == null)
+        {
+            s_chat = new MatchChatClient(token, Logging.Value.CreateLogger<MatchChatClient>());
+        }
+        return s_chat;
+    }
+
+    private static string ValidateMatchSession(bool guest)
+    {
+        string token = CurrentSession.SessionToken
+            ?? throw new InvalidOperationException("A player session is required.");
+        if (string.IsNullOrWhiteSpace(token) || CurrentSession.IsGuest != guest)
+        {
+            throw new InvalidOperationException("The requested player session is invalid.");
+        }
+        if (s_matchToken != token)
+        {
+            s_lobby?.Dispose();
+            s_gameplay?.Dispose();
+            s_chat?.Dispose();
+            s_lobby = null;
+            s_gameplay = null;
+            s_chat = null;
+            s_matchToken = token;
+        }
+        return token;
+    }
+
+    private static void OnSessionChanged()
+    {
+        s_preferences?.DiscardSession();
+        s_preferences = null;
+    }
+
+    private static void ShowErrorMessage(string title, string message)
+    {
+        MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+    }
+
+    private static PlayerPreferencesClient CreatePreferencesService()
+    {
+        return new PlayerPreferencesClient(
+            Logging.Value.CreateLogger<PlayerPreferencesClient>(),
+            ServerConnectionFactory.CreatePreferencesClient);
+    }
+
     internal static void Dispose()
     {
-        _lobby?.Dispose();
-        _gameplay?.Dispose();
-        _chat?.Dispose();
+        OnSessionChanged();
+        s_lobby?.Dispose();
+        s_gameplay?.Dispose();
+        s_chat?.Dispose();
         if (Friendship.IsValueCreated)
         {
             Friendship.Value.Dispose();

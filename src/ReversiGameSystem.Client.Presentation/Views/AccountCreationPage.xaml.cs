@@ -64,7 +64,8 @@ public partial class AccountCreationPage : Page
             or UnauthorizedAccessException or NotSupportedException)
         {
             _dialogService.ShowWarning(
-                this, "AccountCreation_ImageNotSupportedTitle", "AccountCreation_ImageNotSupportedMessage");
+                this, "AccountCreation_ImageNotSupportedTitle",
+                    "AccountCreation_ImageNotSupportedMessage");
         }
         finally
         {
@@ -81,7 +82,7 @@ public partial class AccountCreationPage : Page
         _viewModel.LocaleCode = LocalizationManager.Instance.CultureName;
     }
 
-    private async System.Threading.Tasks.Task<ProfileImageContent?> CreateProfileImageUpload()
+    private async System.Threading.Tasks.Task<PlayerImageContent?> CreateProfileImageUpload()
     {
         string? imagePath = _pendingProfileImage?.FilePath;
         if (imagePath == null)
@@ -89,8 +90,7 @@ public partial class AccountCreationPage : Page
             return null;
         }
 
-        ProfileImageContent upload = await System.Threading.Tasks.Task.Run(
-            () => ProfileImageModificationService.ReadImageFile(imagePath));
+        PlayerImageContent upload = await PlayerImageService.ReadImageFile(imagePath);
         return upload;
     }
 
@@ -139,7 +139,8 @@ public partial class AccountCreationPage : Page
                 ShowValidationWarning("PasswordMismatch");
                 break;
             case AccountCreationStatus.InvalidProfileImage:
-                _dialogService.ShowWarning(this, "AccountCreation_ImageNotSupportedTitle", "AccountCreation_ImageNotSupportedMessage");
+                _dialogService.ShowWarning(this, "AccountCreation_ImageNotSupportedTitle",
+                    "AccountCreation_ImageNotSupportedMessage");
                 break;
             case AccountCreationStatus.PasswordTooShort:
                 ShowPasswordValidationWarning("AccountCreation_PasswordTooShortMessage");
@@ -160,7 +161,8 @@ public partial class AccountCreationPage : Page
                 ShowPasswordValidationWarning("AccountCreation_PasswordMissingSymbolMessage");
                 break;
             case AccountCreationStatus.PasswordUnsupportedCharacters:
-                ShowPasswordValidationWarning("AccountCreation_PasswordUnsupportedCharactersMessage");
+                ShowPasswordValidationWarning(
+                    "AccountCreation_PasswordUnsupportedCharactersMessage");
                 break;
             case AccountCreationStatus.ServiceUnavailable:
                 ShowServiceUnavailable();

@@ -1,88 +1,141 @@
+using System;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media.Imaging;
+using System.Windows.Data;
+using Microsoft.Win32;
+using ReversiGameSystem.Features.Preferences;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
+using ReversiGameSystem.Validation;
 
 namespace ReversiGameSystem.Views;
 
 public partial class SettingsPage : Page
 {
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
-    private readonly BoardBackgroundSelectionService _selectionService;
-    private readonly IBoardBackgroundService _backgroundService = new BoardBackgroundService();
+    private readonly SettingsViewModel _viewModel;
 
     public SettingsPage()
     {
+        _viewModel = new SettingsViewModel(ClientRuntime.PreferencesService,
+            ClientRuntime.CurrentSession);
         InitializeComponent();
-        _selectionService = new BoardBackgroundSelectionService(
-            LocalizationManager.Instance, _dialogService);
-        profilePicturesCheckBox.IsChecked = UserPreferencesState.UseProfilePicturesOnPieces;
-        customBackgroundCheckBox.IsChecked = UserPreferencesState.UseCustomBoardBackground;
-        profilePicturesCheckBox.Checked += OnProfilePicturesPreferenceChanged;
-        profilePicturesCheckBox.Unchecked += OnProfilePicturesPreferenceChanged;
-        customBackgroundCheckBox.Checked += OnCustomBackgroundPreferenceChanged;
-        customBackgroundCheckBox.Unchecked += OnCustomBackgroundPreferenceChanged;
-        ShowBackgroundPreview();
+        DataContext = _viewModel;
+        _viewModel.PropertyChanged += OnViewModelChanged;
     }
 
-    private void OnProfilePicturesPreferenceChanged(object sender, RoutedEventArgs e)
+    private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        UserPreferencesState.UseProfilePicturesOnPieces = profilePicturesCheckBox.IsChecked == true;
+        if (!_viewModel.IsLoaded)
+        {
+            ShowFailure(await _viewModel.LoadPreferences());
+        }
     }
 
-    private void OnCustomBackgroundPreferenceChanged(object sender, RoutedEventArgs e)
+    private async void OnProfilePicturesPreferenceChanged(object sender, RoutedEventArgs e)
     {
-        UserPreferencesState.UseCustomBoardBackground = customBackgroundCheckBox.IsChecked == true;
+        try
+        {
+            ShowFailure(await _viewModel.ChangePieceStyle(
+                profilePicturesCheckBox.IsChecked == true));
+        }
+        finally
+        {
+            BindingOperations.GetBindingExpression(profilePicturesCheckBox,
+                CheckBox.IsCheckedProperty)
+                ?.UpdateTarget();
+        }
     }
 
-    private void OnChangeBackgroundClick(object sender, RoutedEventArgs e)
+    private async void OnCustomBackgroundPreferenceChanged(object sender, RoutedEventArgs e)
     {
-        if (!_selectionService.TrySelect(
-            this, out string imagePath, out BitmapSource? preview)
-            || preview == null)
+        try
+        {
+            ShowFailure(await _viewModel.ChangeCustomBackground(
+                customBackgroundCheckBox.IsChecked == true));
+        }
+        finally
+        {
+            BindingOperations.GetBindingExpression(customBackgroundCheckBox,
+                CheckBox.IsCheckedProperty)
+                ?.UpdateTarget();
+        }
+    }
+
+    private async void OnChangeBackgroundClick(object sender, RoutedEventArgs e)
+    {
+        OpenFileDialog picker = new OpenFileDialog
+        {
+            Title = LocalizationManager.Instance["BoardBackground_SelectImageTitle"],
+            Filter = LocalizationManager.Instance["BoardBackground_ImageFilterLabel"]
+                + "|*.png;*.jpg;*.jpeg",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+        Window? owner = Window.GetWindow(this);
+        bool? selected = owner == null ? picker.ShowDialog() : picker.ShowDialog(owner);
+        if (selected != true)
         {
             return;
         }
-
-        BoardBackgroundSaveResult result = _backgroundService.SaveForCurrentPlayer(imagePath);
-        if (result == BoardBackgroundSaveResult.ServerConnectionFailed)
+        if (BoardBackgroundPolicy.CreatePreview(picker.FileName) == null)
         {
-            _dialogService.ShowError(
-                this,
-                "BoardBackground_ServerConnectionFailedTitle",
-                "BoardBackground_ServerConnectionFailedMessage");
+            ShowInvalidImage();
             return;
         }
-
-        if (result == BoardBackgroundSaveResult.PersistenceError)
+        if (!_dialogService.Confirm(this,
+            "BoardBackground_ConfirmationTitle", "BoardBackground_ConfirmationMessage"))
         {
-            _dialogService.ShowError(
-                this,
-                "BoardBackground_PersistenceErrorTitle",
-                "BoardBackground_PersistenceErrorMessage");
             return;
         }
-
-        UserPreferencesState.SetBoardBackground(preview);
-        customBackgroundCheckBox.IsChecked = true;
-        ShowBackgroundPreview();
-        _dialogService.ShowInformation(
-            this,
-            "BoardBackground_SuccessTitle",
-            "BoardBackground_SuccessMessage");
+        PlayerImageContent image;
+        try
+        {
+            image = await PlayerImageService.ReadImageFile(picker.FileName);
+        }
+        catch (IOException)
+        {
+            ShowInvalidImage();
+            return;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            ShowInvalidImage();
+            return;
+        }
+        PreferencesStatus status = await _viewModel.ChangeBoardBackground(image);
+        ShowFailure(status);
+        if (status == PreferencesStatus.Success)
+        {
+            _dialogService.ShowInformation(this,
+                "BoardBackground_SuccessTitle", "BoardBackground_SuccessMessage");
+        }
     }
 
-    private void ShowBackgroundPreview()
+    private void ShowInvalidImage()
     {
-        BitmapSource? preview = UserPreferencesState.BoardBackgroundPreview;
-        backgroundPreviewImage.Source = preview;
-        backgroundPreviewImage.Visibility = preview == null
-            ? Visibility.Collapsed : Visibility.Visible;
-        backgroundMaskImage.Visibility = preview == null
-            ? Visibility.Collapsed : Visibility.Visible;
-        noBackgroundTextBlock.Visibility = preview == null
-            ? Visibility.Visible : Visibility.Collapsed;
+        _dialogService.ShowWarning(this,
+            "BoardBackground_ImageNotSupportedTitle", "BoardBackground_ImageNotSupportedMessage");
+    }
+
+    private void ShowFailure(PreferencesStatus status)
+    {
+        if (status != PreferencesStatus.Success && status != PreferencesStatus.OperationInProgress)
+        {
+            string prefix = status == PreferencesStatus.ServiceUnavailable
+                ? "Settings_ServerConnectionFailed" : "Settings_PersistenceError";
+            _dialogService.ShowError(this, prefix + "Title", prefix + "Message");
+        }
+    }
+
+    private void OnViewModelChanged(object? sender,
+        System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        bool hasPreview = _viewModel.BackgroundPreview != null;
+        backgroundPreviewImage.Visibility = hasPreview ? Visibility.Visible : Visibility.Collapsed;
+        backgroundMaskImage.Visibility = hasPreview ? Visibility.Visible : Visibility.Collapsed;
+        noBackgroundTextBlock.Visibility = hasPreview ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void OnBackToMenuClick(object sender, RoutedEventArgs e)
@@ -92,6 +145,10 @@ public partial class SettingsPage : Page
 
     private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        await LanguageChangeService.ConfirmSelection((ComboBox)sender);
+        if (DataContext == _viewModel && _viewModel.CanEdit)
+        {
+            await LanguageChangeService.ConfirmSelection((ComboBox)sender,
+                _viewModel.ChangeLanguage);
+        }
     }
 }

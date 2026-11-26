@@ -77,7 +77,8 @@ public partial class AccountInformationPage : Page
 
         if (ClientRuntime.CurrentSession.ProfilePicture != null)
         {
-            profilePictureButton.Background = new ImageBrush(ClientRuntime.CurrentSession.ProfilePicture)
+            profilePictureButton.Background = new ImageBrush(
+                ClientRuntime.CurrentSession.ProfilePicture)
             {
                 Stretch = Stretch.UniformToFill
             };
@@ -111,7 +112,7 @@ public partial class AccountInformationPage : Page
         {
             return;
         }
-        ProfileResult<ProfileImageContent> imageResult =
+        ProfileResult<PlayerImageContent> imageResult =
             await ClientRuntime.ProfileService.GetProfileImage(sessionToken);
         if (imageResult.Status != ProfileStatus.Success)
         {
@@ -121,7 +122,7 @@ public partial class AccountInformationPage : Page
         try
         {
             System.Windows.Media.Imaging.BitmapSource? bitmap =
-                ProfileImageModificationService.CreateProfilePreview(imageResult.Value);
+                PlayerImageService.CreatePreview(imageResult.Value);
             if (bitmap != null)
             {
                 ClientRuntime.CurrentSession.UpdateProfilePicture(bitmap);
@@ -216,7 +217,8 @@ public partial class AccountInformationPage : Page
                     || status == ProfileStatus.InvalidUsername)
                 {
                     string prefix = status == ProfileStatus.UsernameUnavailable
-                        ? "AccountCreation_UsernameAlreadyTaken" : "UsernameModification_InvalidFormat";
+                        ? "AccountCreation_UsernameAlreadyTaken"
+                            : "UsernameModification_InvalidFormat";
                     _dialogService.ShowWarning(this, prefix + "Title", prefix + "Message");
                 }
                 else
@@ -269,7 +271,7 @@ public partial class AccountInformationPage : Page
         try
         {
             profilePictureButton.IsEnabled = false;
-            ProfileStatus status = await ProfileImageModificationService.ChangeProfileImage(
+            ProfileStatus status = await PlayerImageService.ChangeProfileImage(
                 ClientRuntime.CurrentSession.SessionToken ?? string.Empty,
                 selection.FilePath);
             if (status != ProfileStatus.Success)

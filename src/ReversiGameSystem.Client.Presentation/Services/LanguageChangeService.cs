@@ -18,6 +18,15 @@ internal static class LanguageChangeService
 
     internal static async Task ConfirmSelection(ComboBox languageComboBox)
     {
+        Features.Preferences.SettingsViewModel viewModel
+            = new Features.Preferences.SettingsViewModel(
+            ClientRuntime.PreferencesService, ClientRuntime.CurrentSession);
+        await ConfirmSelection(languageComboBox, viewModel.ChangeLanguage);
+    }
+
+    internal static async Task ConfirmSelection(ComboBox languageComboBox,
+        Func<string, Task<PreferencesStatus>> changeLanguage)
+    {
         LocalizationManager localization = LocalizationManager.Instance;
         if (localization.IsChangingCulture)
         {
@@ -45,9 +54,12 @@ internal static class LanguageChangeService
             if (!session.IsGuest && sessionToken != null
                 && !string.IsNullOrWhiteSpace(sessionToken))
             {
-                PreferencesStatus status = await ClientRuntime.PreferencesService.ChangeLanguage(
-                    sessionToken, selectedCulture);
+                PreferencesStatus status = await changeLanguage(selectedCulture);
                 if (sessionToken != ClientRuntime.CurrentSession.SessionToken)
+                {
+                    return;
+                }
+                if (status == PreferencesStatus.OperationInProgress)
                 {
                     return;
                 }

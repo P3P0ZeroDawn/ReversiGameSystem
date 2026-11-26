@@ -47,27 +47,27 @@ internal sealed class PlayerProfileClient
         return result;
     }
 
-    internal async Task<ProfileResult<ProfileImageContent>> GetProfileImage(
+    internal async Task<ProfileResult<PlayerImageContent>> GetProfileImage(
         string sessionToken,
         long? targetAccountId = null)
     {
-        ProfileResult<ProfileImageContent> result;
+        ProfileResult<PlayerImageContent> result;
         try
         {
             Proxy.ImageContent image = await SendProfileOperation(
                 client => client.GetProfileImageAsync(sessionToken, targetAccountId));
-            ProfileImageContent content = new ProfileImageContent(image.Content, image.MediaType);
-            result = new ProfileResult<ProfileImageContent>(ProfileStatus.Success, content);
+            PlayerImageContent content = new PlayerImageContent(image.Content, image.MediaType);
+            result = new ProfileResult<PlayerImageContent>(ProfileStatus.Success, content);
         }
         catch (FaultException<Proxy.ProfileFault> fault)
             when (Enum.IsDefined(typeof(Proxy.ProfileFailure), fault.Detail.Reason))
         {
-            result = new ProfileResult<ProfileImageContent>(
+            result = new ProfileResult<PlayerImageContent>(
                 MapProfileStatus(fault.Detail.Reason), null);
         }
         catch (Exception exception) when (RemoteCall.IsConnectionFailure(exception))
         {
-            result = new ProfileResult<ProfileImageContent>(ProfileStatus.ServiceUnavailable, null);
+            result = new ProfileResult<PlayerImageContent>(ProfileStatus.ServiceUnavailable, null);
         }
         return result;
     }
