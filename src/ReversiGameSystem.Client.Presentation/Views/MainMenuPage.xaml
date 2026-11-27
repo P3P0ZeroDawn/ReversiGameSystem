@@ -59,7 +59,7 @@
                 </Grid.ColumnDefinitions>
 
                 <Border Grid.Column="0" Style="{StaticResource MainMenuCardStyle}"
-                        VerticalAlignment="Top">
+                        VerticalAlignment="Stretch">
                     <StackPanel>
                         <TextBlock x:Name="topWinnersTitleTextBlock"
                                    Text="{Binding [MainMenu_TopWinnersTitle]}"
@@ -145,9 +145,16 @@
 
                 <Border x:Name="friendsCardBorder" Grid.Column="4"
                         Style="{StaticResource MainMenuCardStyle}"
-                        VerticalAlignment="Top">
-                    <StackPanel>
-                        <Grid>
+                        VerticalAlignment="Stretch">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
@@ -161,7 +168,7 @@
                                     Click="OnRefreshFriendsClick"
                                     Style="{StaticResource AuthenticationLinkButtonStyle}" />
                         </Grid>
-                        <StackPanel Margin="0,16,0,16">
+                        <StackPanel Grid.Row="1" Margin="0,16,0,16">
                             <Button Content="{Binding [AddFriends_Title]}" Click="OnAddFriendsClick"
                                     Style="{StaticResource AuthenticationPrimaryButtonStyle}"
                                     Margin="0,0,0,10" />
@@ -170,17 +177,21 @@
                                     Style="{StaticResource AuthenticationSecondaryButtonStyle}"
                                     Margin="0" />
                         </StackPanel>
-                        <Border BorderBrush="#D8E5DC" BorderThickness="0,1,0,0" Margin="0,0,0,16" />
-                        <TextBlock x:Name="friendsStatusTextBlock" TextWrapping="Wrap"
+                        <Border Grid.Row="2" BorderBrush="#D8E5DC" BorderThickness="0,1,0,0"
+                                Margin="0,0,0,16" />
+                        <TextBlock x:Name="friendsStatusTextBlock" Grid.Row="3" TextWrapping="Wrap"
                                    Style="{StaticResource MainMenuEmptyTextStyle}" />
-                        <StackPanel x:Name="friendsListPanel" Margin="0,4,0,0">
+                        <Grid x:Name="friendsListPanel" Grid.Row="4" Margin="0,4,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
                             <TextBlock x:Name="friendsEmptyTextBlock"
                                        Text="{Binding [MainMenu_FriendsEmptyMessage]}"
                                        Style="{StaticResource MainMenuEmptyTextStyle}"
                                        Visibility="Collapsed" />
-                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
                                           HorizontalScrollBarVisibility="Disabled"
-                                          MaxHeight="280"
                                           CanContentScroll="False">
                                 <ItemsControl x:Name="friendsItemsControl">
                                     <ItemsControl.ItemTemplate>
@@ -244,8 +255,8 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </ScrollViewer>
-                        </StackPanel>
-                    </StackPanel>
+                        </Grid>
+                    </Grid>
                 </Border>
             </Grid>
         </Grid>
