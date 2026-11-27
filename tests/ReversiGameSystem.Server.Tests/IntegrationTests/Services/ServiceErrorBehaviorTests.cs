@@ -9,76 +9,97 @@ using ReversiGameSystem.Server.Contracts.Common;
 using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.ServiceApi;
 
-namespace ReversiGameSystem.Server.Tests;
+namespace ReversiGameSystem.Server.Tests.IntegrationTests.Services;
 
 [TestClass]
+[TestCategory("Integration")]
 public sealed class ServiceErrorBehaviorTests
 {
+    private const string UnexpectedFailureCode = "UNEXPECTED_SERVICE_FAILURE";
+    internal const string PrivateProviderMessage = "private-provider-message";
+    internal const string CorrelationHeaderName = "CorrelationId";
+
     [TestMethod]
     public void UnexpectedFailure_ThroughWcf_ReturnsSanitizedFaultAndLogsOnce()
     {
         RecordingErrorLogger logger = new RecordingErrorLogger();
+        string expectedFailureCode = UnexpectedFailureCode;
+        int expectedErrorCount = 1;
+        bool expectedContainsSecret = false;
+        Action action = () => Invoke(logger, null, channel => channel.FailUnexpectedly());
 
         FaultException<ServiceFault> fault =
-            Assert.Throws<FaultException<ServiceFault>>(() =>
-                Invoke(logger, null, channel => channel.FailUnexpectedly()));
+            Assert.Throws<FaultException<ServiceFault>>(action);
+        string actualFailureCode = fault.Detail.FailureCode;
+        bool actualIsGuid = Guid.TryParse(fault.Detail.CorrelationId, out _);
+        int actualErrorCount = logger.ErrorCount;
+        bool actualLogHasCorrelation = logger.Message.Contains(fault.Detail.CorrelationId);
+        bool actualContainsSecret = fault.ToString().Contains(PrivateProviderMessage);
 
-        Assert.AreEqual("UNEXPECTED_SERVICE_FAILURE", fault.Detail.FailureCode);
-        Assert.IsTrue(Guid.TryParse(fault.Detail.CorrelationId, out Guid unused),
-            "The generated correlation identifier must be a GUID.");
-        Assert.AreEqual(1, logger.ErrorCount);
-        Assert.IsTrue(logger.Message.Contains(fault.Detail.CorrelationId),
-            "The fault and diagnostic entry must use the same correlation identifier.");
-        Assert.IsTrue(logger.Exception is InvalidOperationException,
-            "The logger must receive the original technical exception.");
-        Assert.IsTrue(!fault.ToString().Contains("private-provider-message"),
-            "The remote fault must not expose the provider message.");
+        Assert.AreEqual(expectedFailureCode, actualFailureCode);
+        Assert.IsTrue(actualIsGuid);
+        Assert.AreEqual(expectedErrorCount, actualErrorCount);
+        Assert.IsTrue(actualLogHasCorrelation);
+        Assert.IsInstanceOfType(logger.Exception, typeof(InvalidOperationException));
+        Assert.AreEqual(expectedContainsSecret, actualContainsSecret);
     }
 
     [TestMethod]
     public void UnexpectedFailure_WithIncomingCorrelation_PreservesIdentifier()
     {
         RecordingErrorLogger logger = new RecordingErrorLogger();
-        string correlationId = Guid.NewGuid().ToString("D");
+        string expectedCorrelationId = Guid.NewGuid().ToString("D");
+        Action action = () => Invoke(
+            logger,
+            expectedCorrelationId,
+            channel => channel.FailUnexpectedly());
 
         FaultException<ServiceFault> fault =
-            Assert.Throws<FaultException<ServiceFault>>(() =>
-                Invoke(logger, correlationId, channel => channel.FailUnexpectedly()));
+            Assert.Throws<FaultException<ServiceFault>>(action);
+        string actualCorrelationId = fault.Detail.CorrelationId;
+        bool actualLogHasCorrelation = logger.Message.Contains(expectedCorrelationId);
 
-        Assert.AreEqual(correlationId, fault.Detail.CorrelationId);
-        Assert.IsTrue(logger.Message.Contains(correlationId),
-            "The incoming correlation identifier must be preserved in diagnostics.");
+        Assert.AreEqual(expectedCorrelationId, actualCorrelationId);
+        Assert.IsTrue(actualLogHasCorrelation);
     }
 
     [TestMethod]
     public void UnexpectedFailure_AfterCorrelationWasCreated_ReusesIdentifier()
     {
         RecordingErrorLogger logger = new RecordingErrorLogger();
-        string correlationId = Guid.NewGuid().ToString("D");
+        string expectedCorrelationId = Guid.NewGuid().ToString("D");
+        Action action = () => Invoke(
+            logger,
+            null,
+            channel => channel.FailAfterCreatingCorrelation(expectedCorrelationId));
 
         FaultException<ServiceFault> fault =
-            Assert.Throws<FaultException<ServiceFault>>(() =>
-                Invoke(logger, null, channel =>
-                    channel.FailAfterCreatingCorrelation(correlationId)));
+            Assert.Throws<FaultException<ServiceFault>>(action);
+        string actualCorrelationId = fault.Detail.CorrelationId;
+        bool actualLogHasCorrelation = logger.Message.Contains(expectedCorrelationId);
 
-        Assert.AreEqual(correlationId, fault.Detail.CorrelationId);
-        Assert.IsTrue(logger.Message.Contains(correlationId),
-            "The previously created correlation identifier must be reused.");
+        Assert.AreEqual(expectedCorrelationId, actualCorrelationId);
+        Assert.IsTrue(actualLogHasCorrelation);
     }
 
     [TestMethod]
     public void UndeclaredFault_ThroughWcf_IsSanitizedAndLogged()
     {
         RecordingErrorLogger logger = new RecordingErrorLogger();
+        string expectedFailureCode = UnexpectedFailureCode;
+        int expectedErrorCount = 1;
+        bool expectedContainsSecret = false;
+        Action action = () => Invoke(logger, null, channel => channel.ThrowUndeclaredFault());
 
         FaultException<ServiceFault> fault =
-            Assert.Throws<FaultException<ServiceFault>>(() =>
-                Invoke(logger, null, channel => channel.ThrowUndeclaredFault()));
+            Assert.Throws<FaultException<ServiceFault>>(action);
+        string actualFailureCode = fault.Detail.FailureCode;
+        int actualErrorCount = logger.ErrorCount;
+        bool actualContainsSecret = fault.ToString().Contains(PrivateProviderMessage);
 
-        Assert.AreEqual("UNEXPECTED_SERVICE_FAILURE", fault.Detail.FailureCode);
-        Assert.AreEqual(1, logger.ErrorCount);
-        Assert.IsTrue(!fault.ToString().Contains("private-provider-message"),
-            "An undeclared fault must not bypass sanitization.");
+        Assert.AreEqual(expectedFailureCode, actualFailureCode);
+        Assert.AreEqual(expectedErrorCount, actualErrorCount);
+        Assert.AreEqual(expectedContainsSecret, actualContainsSecret);
     }
 
     [TestMethod]
@@ -88,18 +109,22 @@ public sealed class ServiceErrorBehaviorTests
         {
             ThrowOnLog = true
         };
+        string expectedFailureCode = UnexpectedFailureCode;
+        bool expectedContainsSecret = false;
         TextWriter originalError = Console.Error;
         using StringWriter fallbackOutput = new StringWriter();
         try
         {
             Console.SetError(fallbackOutput);
-            FaultException<ServiceFault> fault =
-                Assert.Throws<FaultException<ServiceFault>>(() =>
-                    Invoke(logger, null, channel => channel.FailUnexpectedly()));
+            Action action = () => Invoke(logger, null, channel => channel.FailUnexpectedly());
 
-            Assert.AreEqual("UNEXPECTED_SERVICE_FAILURE", fault.Detail.FailureCode);
-            Assert.IsTrue(!fallbackOutput.ToString().Contains("private-"),
-                "Fallback diagnostics must not expose provider messages.");
+            FaultException<ServiceFault> fault =
+                Assert.Throws<FaultException<ServiceFault>>(action);
+            string actualFailureCode = fault.Detail.FailureCode;
+            bool actualContainsSecret = fallbackOutput.ToString().Contains("private-");
+
+            Assert.AreEqual(expectedFailureCode, actualFailureCode);
+            Assert.AreEqual(expectedContainsSecret, actualContainsSecret);
         }
         finally
         {
@@ -111,15 +136,31 @@ public sealed class ServiceErrorBehaviorTests
     public void BusinessFault_ThroughWcf_PreservesTypeWithoutTechnicalLog()
     {
         RecordingErrorLogger logger = new RecordingErrorLogger();
+        LeaderboardFailure expectedReason = LeaderboardFailure.InvalidMaximumEntries;
+        int expectedErrorCount = 0;
+        CommunicationState expectedChannelState = CommunicationState.Opened;
+        CommunicationState actualChannelState = CommunicationState.Created;
+        Action action = () => Invoke(logger, null, channel =>
+        {
+            try
+            {
+                channel.RejectAsBusinessFault();
+            }
+            catch
+            {
+                actualChannelState = ((ICommunicationObject)channel).State;
+                throw;
+            }
+        });
 
         FaultException<LeaderboardFault> fault =
-            Assert.Throws<FaultException<LeaderboardFault>>(() =>
-                Invoke(logger, null, channel => channel.RejectAsBusinessFault()));
+            Assert.Throws<FaultException<LeaderboardFault>>(action);
+        LeaderboardFailure actualReason = fault.Detail.Reason;
+        int actualErrorCount = logger.ErrorCount;
 
-        Assert.AreEqual(
-            LeaderboardFailure.InvalidMaximumEntries,
-            fault.Detail.Reason);
-        Assert.AreEqual(0, logger.ErrorCount);
+        Assert.AreEqual(expectedReason, actualReason);
+        Assert.AreEqual(expectedErrorCount, actualErrorCount);
+        Assert.AreEqual(expectedChannelState, actualChannelState);
     }
 
     private static void Invoke(
@@ -127,7 +168,8 @@ public sealed class ServiceErrorBehaviorTests
         string? correlationId,
         Action<IErrorProbeService> action)
     {
-        Uri address = new Uri("net.pipe://localhost/ReversiGameSystem.ServiceErrorBehaviorTests/"
+        Uri address = new Uri(
+            "net.pipe://localhost/ReversiGameSystem.ServiceErrorBehaviorTests/"
             + Guid.NewGuid().ToString("N") + "/");
         NetNamedPipeBinding binding = new NetNamedPipeBinding(NetNamedPipeSecurityMode.None);
         ServiceHost host = new ServiceHost(new ErrorProbeService(), address);
@@ -136,7 +178,8 @@ public sealed class ServiceErrorBehaviorTests
         host.Open();
 
         ChannelFactory<IErrorProbeService> factory = new ChannelFactory<IErrorProbeService>(
-            binding, new EndpointAddress(new Uri(address, "Service")));
+            binding,
+            new EndpointAddress(new Uri(address, "Service")));
         IErrorProbeService channel = factory.CreateChannel();
         try
         {
@@ -146,7 +189,7 @@ public sealed class ServiceErrorBehaviorTests
                 if (correlationId != null)
                 {
                     MessageHeader header = MessageHeader.CreateHeader(
-                        "CorrelationId",
+                        CorrelationHeaderName,
                         ContractNamespaces.Diagnostics,
                         correlationId);
                     OperationContext.Current.OutgoingMessageHeaders.Add(header);
@@ -171,11 +214,15 @@ public sealed class ServiceErrorBehaviorTests
     private sealed class RecordingErrorLogger : ILogger<ServiceErrorBehavior>
     {
         internal int ErrorCount { get; private set; }
+
         internal Exception? Exception { get; private set; }
+
         internal string Message { get; private set; } = string.Empty;
+
         internal bool ThrowOnLog { get; set; }
 
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull
         {
             return null;
         }
@@ -234,29 +281,31 @@ internal sealed class ErrorProbeService : IErrorProbeService
 {
     public void FailUnexpectedly()
     {
-        throw new InvalidOperationException("private-provider-message");
+        throw new InvalidOperationException(ServiceErrorBehaviorTests.PrivateProviderMessage);
     }
 
     public void FailAfterCreatingCorrelation(string correlationId)
     {
         MessageHeader header = MessageHeader.CreateHeader(
-            "CorrelationId",
+            ServiceErrorBehaviorTests.CorrelationHeaderName,
             ContractNamespaces.Diagnostics,
             correlationId);
         OperationContext.Current.OutgoingMessageHeaders.Add(header);
-        throw new InvalidOperationException("private-provider-message");
+        throw new InvalidOperationException(ServiceErrorBehaviorTests.PrivateProviderMessage);
     }
 
     public void ThrowUndeclaredFault()
     {
-        throw new FaultException("private-provider-message");
+        throw new FaultException(ServiceErrorBehaviorTests.PrivateProviderMessage);
     }
 
     public void RejectAsBusinessFault()
     {
-        throw new FaultException<LeaderboardFault>(new LeaderboardFault
-        {
-            Reason = LeaderboardFailure.InvalidMaximumEntries
-        }, "The leaderboard request was rejected.");
+        throw new FaultException<LeaderboardFault>(
+            new LeaderboardFault
+            {
+                Reason = LeaderboardFailure.InvalidMaximumEntries
+            },
+            "The leaderboard request was rejected.");
     }
 }
