@@ -182,9 +182,14 @@ internal sealed class SystemTestHost : IDisposable
             sessions,
             matchRepository,
             clock,
-            _emailSender);
+            _emailSender,
+            NullLogger<MatchApplicationService>.Instance);
         GameplayMatchApplicationService gameplayApplicationService =
-            new GameplayMatchApplicationService(sessions, matchRepository, clock);
+            new GameplayMatchApplicationService(
+                sessions,
+                matchRepository,
+                clock,
+                NullLogger<GameplayMatchApplicationService>.Instance);
         MatchCallbackSubscriptions<IMatchLobbyServiceCallback> lobbySubscriptions =
             new MatchCallbackSubscriptions<IMatchLobbyServiceCallback>(
                 (token, _) => matchApplicationService.EvaluateLobbyAccess(token)
@@ -195,7 +200,7 @@ internal sealed class SystemTestHost : IDisposable
             matchApplicationService,
             lobbySubscriptions);
 
-        GameplayMatchPresence gameplayPresence = new GameplayMatchPresence();
+        GameplayMatchPresence gameplayPresence = new GameplayMatchPresence(NullLogger<GameplayMatchPresence>.Instance);
         MatchCallbackSubscriptions<IGameplayMatchServiceCallback> gameplaySubscriptions =
             new MatchCallbackSubscriptions<IGameplayMatchServiceCallback>(
                 (token, matchId) => gameplayApplicationService
@@ -205,7 +210,8 @@ internal sealed class SystemTestHost : IDisposable
         GameplayMatchService gameplayMatchService = new GameplayMatchService(
             gameplayApplicationService,
             gameplayPresence,
-            gameplaySubscriptions);
+            gameplaySubscriptions,
+            NullLogger<GameplayMatchService>.Instance);
 
         ChatApplicationService chatApplicationService = new ChatApplicationService(
             sessions,

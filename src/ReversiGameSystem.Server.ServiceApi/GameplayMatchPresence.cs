@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Application.Matches;
 
 namespace ReversiGameSystem.Server.ServiceApi;
@@ -16,8 +17,17 @@ public sealed class GameplayMatchPresence
         new Dictionary<(long MatchId, int SeatNumber), DateTime>();
     private readonly Dictionary<long, Dictionary<int, HashSet<string>>> _participantPresence =
         new Dictionary<long, Dictionary<int, HashSet<string>>>();
+    private readonly ILogger<GameplayMatchPresence> _logger;
 
-    internal KeyValuePair<int, bool>[]? RegisterConnection(
+    /// <summary>Initializes the match participant presence tracker.</summary>
+    /// <param name="logger">The presence audit logger.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="logger"/> is null.</exception>
+    public GameplayMatchPresence(ILogger<GameplayMatchPresence> logger)
+    {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    internal MatchConnectionState? RegisterConnection(
         Match match,
         int seatNumber,
         string sessionToken)
@@ -33,10 +43,12 @@ public sealed class GameplayMatchPresence
                 return null;
             }
 
-            _reconnectionDeadlines.Remove(key);
+            bool isReconnection = _reconnectionDeadlines.Remove(key);
             Dictionary<int, HashSet<string>> matchPresence = GetOrCreateMatchPresence(match);
             matchPresence[seatNumber].Add(sessionToken);
-            return CreatePresenceSnapshot(matchPresence);
+            return new MatchConnectionState(
+                CreatePresenceSnapshot(matchPresence),
+                isReconnection);
         }
     }
 
@@ -54,6 +66,8 @@ public sealed class GameplayMatchPresence
         long matchId,
         Func<string, long, bool> hasSubscription)
     {
+        KeyValuePair<int, bool>[] snapshot;
+        List<int>? disconnectedSeats = null;
         lock (_presenceSync)
         {
             if (hasSubscription(sessionToken, matchId))
@@ -74,17 +88,30 @@ public sealed class GameplayMatchPresence
                 {
                     _reconnectionDeadlines[(matchId, seat.Key)] =
                         DateTime.UtcNow.Add(ReconnectionWindow);
+                    disconnectedSeats ??= new List<int>();
+                    disconnectedSeats.Add(seat.Key);
                 }
             }
 
-            KeyValuePair<int, bool>[] snapshot = CreatePresenceSnapshot(matchPresence);
+            snapshot = CreatePresenceSnapshot(matchPresence);
             if (!matchPresence.Values.Any(tokens => tokens.Count > 0))
             {
                 _participantPresence.Remove(matchId);
             }
-
-            return snapshot;
         }
+
+        if (disconnectedSeats != null)
+        {
+            for (int index = 0; index < disconnectedSeats.Count; index++)
+            {
+                _logger.LogWarning(
+                    "Participant seat {SeatNumber} disconnected from match {MatchId}; 30s reconnection window started.",
+                    disconnectedSeats[index],
+                    matchId);
+            }
+        }
+
+        return snapshot;
     }
 
     /// <summary>
@@ -138,4 +165,19 @@ public sealed class GameplayMatchPresence
             .Select(entry => new KeyValuePair<int, bool>(entry.Key, entry.Value.Count > 0))
             .ToArray();
     }
+}
+
+internal sealed class MatchConnectionState
+{
+    public MatchConnectionState(
+        KeyValuePair<int, bool>[] seats,
+        bool isReconnection)
+    {
+        Seats = seats;
+        IsReconnection = isReconnection;
+    }
+
+    public KeyValuePair<int, bool>[] Seats { get; }
+
+    public bool IsReconnection { get; }
 }

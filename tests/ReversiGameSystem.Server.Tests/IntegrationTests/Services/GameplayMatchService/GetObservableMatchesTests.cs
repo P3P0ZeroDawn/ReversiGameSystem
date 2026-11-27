@@ -30,7 +30,10 @@ public sealed class GetObservableMatchesTests
             (_, _) => true, NullLogger.Instance);
         ReversiGameSystem.Server.ServiceApi.GameplayMatchService service =
             new ReversiGameSystem.Server.ServiceApi.GameplayMatchService(
-                _context.ApplicationService, new GameplayMatchPresence(), _subscriptions);
+                _context.ApplicationService,
+                new GameplayMatchPresence(NullLogger<GameplayMatchPresence>.Instance),
+                _subscriptions,
+                NullLogger<ReversiGameSystem.Server.ServiceApi.GameplayMatchService>.Instance);
         _address = new Uri("net.pipe://localhost/ReversiSpectatorTests/"
             + Guid.NewGuid().ToString("N") + "/Gameplay");
         _host = new ServiceHost(service);

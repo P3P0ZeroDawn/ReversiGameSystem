@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.ServiceModel;
+using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Contracts.Callbacks;
 using ReversiGameSystem.Server.Contracts.Faults;
@@ -23,6 +24,7 @@ public sealed class GameplayMatchService : IGameplayMatchService
     private readonly GameplayMatchPresence _presence;
     private readonly MatchCallbackSubscriptions<IGameplayMatchServiceCallback>
         _callbackSubscriptions;
+    private readonly ILogger<GameplayMatchService> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GameplayMatchService"/> class.
@@ -30,17 +32,20 @@ public sealed class GameplayMatchService : IGameplayMatchService
     /// <param name="applicationService">The gameplay application service.</param>
     /// <param name="presence">The active match participant presence tracker.</param>
     /// <param name="callbackSubscriptions">The gameplay duplex callback subscriptions.</param>
+    /// <param name="logger">The gameplay audit and diagnostic logger.</param>
     /// <exception cref="ArgumentNullException">A required dependency is null.</exception>
     public GameplayMatchService(
         GameplayMatchApplicationService applicationService,
         GameplayMatchPresence presence,
-        MatchCallbackSubscriptions<IGameplayMatchServiceCallback> callbackSubscriptions)
+        MatchCallbackSubscriptions<IGameplayMatchServiceCallback> callbackSubscriptions,
+        ILogger<GameplayMatchService> logger)
     {
         _applicationService = applicationService
             ?? throw new ArgumentNullException(nameof(applicationService));
         _presence = presence ?? throw new ArgumentNullException(nameof(presence));
         _callbackSubscriptions = callbackSubscriptions
             ?? throw new ArgumentNullException(nameof(callbackSubscriptions));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
@@ -67,16 +72,35 @@ public sealed class GameplayMatchService : IGameplayMatchService
         }
 
         _callbackSubscriptions.Register(sessionToken, matchId);
-        KeyValuePair<int, bool>[]? snapshot = _presence.RegisterConnection(
+        MatchConnectionState? connectionState = _presence.RegisterConnection(
             match,
             participant.SeatNumber,
             sessionToken);
-        if (snapshot == null)
+        if (connectionState == null)
         {
+            _logger.LogWarning(
+                "Participant seat {SeatNumber} failed to reconnect to match {MatchId} because the reconnection window expired.",
+                participant.SeatNumber,
+                matchId);
             throw ServiceFaultFactory.CreateMatchFault(MatchFailure.MatchNotInProgress);
         }
 
-        PublishPresence(matchId, snapshot);
+        if (connectionState.IsReconnection)
+        {
+            _logger.LogInformation(
+                "Participant seat {SeatNumber} reconnected to match {MatchId} within the reconnection window.",
+                participant.SeatNumber,
+                matchId);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "Participant seat {SeatNumber} connected to match {MatchId}.",
+                participant.SeatNumber,
+                matchId);
+        }
+
+        PublishPresence(matchId, connectionState.Seats);
     }
 
     /// <summary>
@@ -262,7 +286,16 @@ public sealed class GameplayMatchService : IGameplayMatchService
     /// </exception>
     public MatchDetails GetMatchDetails(string sessionToken, long matchId)
     {
-        ThrowFaultIfFailed(_applicationService.GetSessionAccountId(sessionToken).Status);
+        MatchResult<long> accountResult = _applicationService.GetSessionAccountId(sessionToken);
+        if (accountResult.Status != MatchStatus.Success)
+        {
+            _logger.LogWarning(
+                "Match details rejected for match {MatchId}: {Reason}.",
+                matchId,
+                accountResult.Status);
+            ThrowFaultIfFailed(accountResult.Status);
+        }
+
         MatchResult<Match> result = _applicationService.GetAuthorizedMatchSnapshot(
             sessionToken,
             matchId);

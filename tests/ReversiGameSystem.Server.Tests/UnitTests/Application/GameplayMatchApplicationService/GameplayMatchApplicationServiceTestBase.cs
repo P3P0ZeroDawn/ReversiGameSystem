@@ -22,7 +22,11 @@ public abstract class GameplayMatchApplicationServiceTestBase
         Clock = new UtcClockStub();
         Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         Matches = new GameplayRepositoryStub();
-        Service = new ApplicationService(Sessions, Matches, Clock);
+        Service = new ApplicationService(
+            Sessions,
+            Matches,
+            Clock,
+            NullLogger<ApplicationService>.Instance);
     }
 
     protected string AddAuthenticatedSession(

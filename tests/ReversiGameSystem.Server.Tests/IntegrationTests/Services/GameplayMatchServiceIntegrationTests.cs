@@ -39,14 +39,15 @@ public sealed class GameplayMatchServiceIntegrationTests
         _clock = new UtcClockStub();
         _sessions = new SessionStore(_clock, NullLogger<SessionStore>.Instance);
         _matches = new GameplayRepositoryStub();
-        _applicationService = new GameplayMatchApplicationService(_sessions, _matches, _clock);
+        _applicationService = new GameplayMatchApplicationService(_sessions, _matches, _clock, NullLogger<GameplayMatchApplicationService>.Instance);
         _subscriptions = new MatchCallbackSubscriptions<IGameplayMatchServiceCallback>(
             (_, _) => true,
             NullLogger.Instance);
         WcfGameplayMatchService service = new WcfGameplayMatchService(
             _applicationService,
-            new GameplayMatchPresence(),
-            _subscriptions);
+            new GameplayMatchPresence(NullLogger<GameplayMatchPresence>.Instance),
+            _subscriptions,
+            NullLogger<WcfGameplayMatchService>.Instance);
         _scope = WcfTestHostHelper
             .OpenDuplexChannel<IGameplayMatchService, IGameplayMatchServiceCallback>(
                 service,

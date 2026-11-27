@@ -29,7 +29,7 @@ public abstract class MatchLobbyServiceTestBase
         Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         Matches = new MatchRepositoryStub();
         EmailSender = new TemplatedEmailSenderStub();
-        ApplicationService = new MatchApplicationService(Sessions, Matches, Clock, EmailSender);
+        ApplicationService = new MatchApplicationService(Sessions, Matches, Clock, EmailSender, NullLogger<MatchApplicationService>.Instance);
         Subscriptions = new MatchCallbackSubscriptions<IMatchLobbyServiceCallback>(
             (_, _) => true,
             NullLogger<MatchCallbackSubscriptions<IMatchLobbyServiceCallback>>.Instance);

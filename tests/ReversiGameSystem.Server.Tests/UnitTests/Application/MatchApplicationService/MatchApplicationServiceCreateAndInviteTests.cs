@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Application.Matches;
@@ -15,7 +16,11 @@ public sealed class MatchApplicationServiceCreateAndInviteTests
     [TestMethod]
     public void Constructor_NullSessions_ThrowsArgumentNullException()
     {
-        Action action = () => _ = new ApplicationService(null!, Matches, Clock);
+        Action action = () => _ = new ApplicationService(
+            null!,
+            Matches,
+            Clock,
+            NullLogger<ApplicationService>.Instance);
 
         Assert.Throws<ArgumentNullException>(action);
     }
@@ -23,7 +28,11 @@ public sealed class MatchApplicationServiceCreateAndInviteTests
     [TestMethod]
     public void Constructor_NullMatches_ThrowsArgumentNullException()
     {
-        Action action = () => _ = new ApplicationService(Sessions, null!, Clock);
+        Action action = () => _ = new ApplicationService(
+            Sessions,
+            null!,
+            Clock,
+            NullLogger<ApplicationService>.Instance);
 
         Assert.Throws<ArgumentNullException>(action);
     }
@@ -31,7 +40,23 @@ public sealed class MatchApplicationServiceCreateAndInviteTests
     [TestMethod]
     public void Constructor_NullClock_ThrowsArgumentNullException()
     {
-        Action action = () => _ = new ApplicationService(Sessions, Matches, null!);
+        Action action = () => _ = new ApplicationService(
+            Sessions,
+            Matches,
+            null!,
+            NullLogger<ApplicationService>.Instance);
+
+        Assert.Throws<ArgumentNullException>(action);
+    }
+
+    [TestMethod]
+    public void Constructor_NullLogger_ThrowsArgumentNullException()
+    {
+        Action action = () => _ = new ApplicationService(
+            Sessions,
+            Matches,
+            Clock,
+            null!);
 
         Assert.Throws<ArgumentNullException>(action);
     }

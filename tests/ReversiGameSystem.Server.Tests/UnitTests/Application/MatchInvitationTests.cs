@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,7 +45,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         int expectedEmailCount = 1;
 
         Match result = TestAssert.IsNotNull(handler.InviteToMatch(
@@ -77,7 +78,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         int expectedEmailCount = 1;
 
         Match result = TestAssert.IsNotNull(handler.InviteToMatch(
@@ -103,7 +104,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         MatchStatus expectedStatus = MatchStatus.Unauthorized;
         int expectedEmailCount = 0;
 
@@ -127,7 +128,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         MatchStatus expectedStatus = MatchStatus.Unauthorized;
         int expectedEmailCount = 0;
 
@@ -151,7 +152,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         MatchStatus expectedStatus = MatchStatus.InvalidFriendAccountId;
 
         MatchStatus zeroStatus = handler.InviteToMatch(
@@ -178,7 +179,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         MatchStatus expectedStatus = MatchStatus.FriendAccountUnavailable;
         int expectedEmailCount = 0;
 
@@ -203,7 +204,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         MatchStatus expectedStatus = MatchStatus.FriendshipNotFound;
         int expectedEmailCount = 0;
 
@@ -232,7 +233,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         MatchStatus expectedStatus = MatchStatus.InactiveAccount;
         int expectedEmailCount = 0;
 
@@ -256,7 +257,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         MatchStatus expectedStatus = MatchStatus.InvalidTurnDuration;
 
         MatchStatus belowMin = handler.InviteToMatch(
@@ -283,7 +284,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         MatchStatus expectedStatus = MatchStatus.InvalidConfiguration;
 
         MatchResult<Match> result = handler.InviteToMatch(
@@ -305,7 +306,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         MatchStatus expectedStatus = MatchStatus.InvalidConfiguration;
 
         MatchResult<Match> result = handler.InviteToMatch(
@@ -328,7 +329,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         int expectedCancelCount = 1;
         int expectedConfirmedCount = 0;
 
@@ -351,7 +352,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         int expectedRowCount = 1;
 
         Assert.Throws<AggregateException>(() =>
@@ -374,7 +375,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         mailer.BeforeSendCallback = () =>
         {
             context.Sessions.RevokeSession(creator.SessionToken);
@@ -405,7 +406,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         _ = handler.InviteToMatch(creator.SessionToken, 20, new MatchSettings()).Value;
         AuthenticatedSession otherCreator = CreatePlayer(context, 88, "OtherCreator");
         _ = handler.CreateMatch(otherCreator.SessionToken, new MatchSettings()).Value;
@@ -439,7 +440,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         Match waiting = TestAssert.IsNotNull(handler.InviteToMatch(
             creator.SessionToken,
             20,
@@ -469,7 +470,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         Match waiting = TestAssert.IsNotNull(handler.InviteToMatch(
             creator.SessionToken,
             20,
@@ -495,7 +496,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         Match waiting = TestAssert.IsNotNull(handler.InviteToMatch(
             creator.SessionToken,
             20,
@@ -592,7 +593,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         Match waiting = TestAssert.IsNotNull(handler.InviteToMatch(
             creator.SessionToken,
             20,
@@ -624,7 +625,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         Match waiting = TestAssert.IsNotNull(handler.InviteToMatch(
             creator.SessionToken,
             20,
@@ -653,7 +654,7 @@ public sealed class MatchInvitationTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         Match waiting = TestAssert.IsNotNull(handler.InviteToMatch(
             creatorSession1.SessionToken,
             20,

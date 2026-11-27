@@ -117,7 +117,7 @@ public sealed class LobbyAuthorizationTests
             Sessions = new SessionTestContext();
             Player = TestSessionHelper.CreateSession(Sessions.Sessions, 42, "LobbyPlayer");
             Store = new AuthorizationStore();
-            Handler = new AppMatchService(Sessions.Sessions, Store, Sessions);
+            Handler = new AppMatchService(Sessions.Sessions, Store, Sessions, NullLogger<AppMatchService>.Instance);
         }
 
         internal SessionTestContext Sessions { get; }

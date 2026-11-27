@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -21,7 +22,7 @@ public sealed class MatchApplicationServiceLifecycleTests
         AppMatchService handler = new AppMatchService(
             context.Sessions,
             store,
-            context);
+            context, NullLogger<AppMatchService>.Instance);
         _ = handler.CreateMatch(player.SessionToken, new MatchSettings()).Value;
         int expectedCancelledCount = 1;
         long expectedMatchId = 7L;
@@ -46,7 +47,7 @@ public sealed class MatchApplicationServiceLifecycleTests
         AppMatchService handler = new AppMatchService(
             context.Sessions,
             store,
-            context);
+            context, NullLogger<AppMatchService>.Instance);
         _ = handler.CreateMatch(player.SessionToken, new MatchSettings()).Value;
         context.Sessions.RevokeSession(player.SessionToken);
         int expectedCancelledCount = 1;
@@ -74,7 +75,7 @@ public sealed class MatchApplicationServiceLifecycleTests
         AppMatchService handler = new AppMatchService(
             context.Sessions,
             store,
-            context);
+            context, NullLogger<AppMatchService>.Instance);
         _ = handler.CreateMatch(player.SessionToken, new MatchSettings()).Value;
         int expectedCancelledCount = 0;
         int expectedCancelAttempts = 1;
@@ -97,7 +98,7 @@ public sealed class MatchApplicationServiceLifecycleTests
         AppMatchService handler = new AppMatchService(
             context.Sessions,
             store,
-            context);
+            context, NullLogger<AppMatchService>.Instance);
         context.UtcNow = player.ExpiresAtUtc;
         int expectedCreateAttempts = 0;
         MatchStatus expectedStatus = MatchStatus.InvalidSession;
@@ -121,7 +122,7 @@ public sealed class MatchApplicationServiceLifecycleTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         int expectedCancelAttempts = 1;
 
         Assert.Throws<InvalidOperationException>(() =>
@@ -142,7 +143,7 @@ public sealed class MatchApplicationServiceLifecycleTests
             context.Sessions,
             store,
             context,
-            mailer);
+            mailer, NullLogger<AppMatchService>.Instance);
         MatchStatus expectedStatus = MatchStatus.Unauthorized;
 
         MatchResult<Match> result = handler.InviteToMatch(

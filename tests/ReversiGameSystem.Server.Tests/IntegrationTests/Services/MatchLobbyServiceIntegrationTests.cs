@@ -41,7 +41,8 @@ public sealed class MatchLobbyServiceIntegrationTests
             _sessions,
             _matches,
             _clock,
-            emailSender);
+            emailSender,
+            NullLogger<MatchApplicationService>.Instance);
         _subscriptions = new MatchCallbackSubscriptions<IMatchLobbyServiceCallback>(
             (_, _) => true,
             NullLogger.Instance);

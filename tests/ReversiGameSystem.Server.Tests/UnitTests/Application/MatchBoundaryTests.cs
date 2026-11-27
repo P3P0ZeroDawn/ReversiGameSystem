@@ -83,7 +83,8 @@ public sealed class MatchBoundaryTests
         AppMatchService handler = new AppMatchService(
             CreateValidSessionStore(),
             store,
-            new BoundaryClock());
+            new BoundaryClock(),
+            NullLogger<AppMatchService>.Instance);
         MatchLobbyService service = CreateLobby(handler);
 
         InvalidOperationException failure = Assert.Throws<InvalidOperationException>(
@@ -109,7 +110,8 @@ public sealed class MatchBoundaryTests
             sessions,
             store,
             clock,
-            new BoundaryMailer());
+            new BoundaryMailer(),
+            NullLogger<AppMatchService>.Instance);
         MatchLobbyService service = CreateLobby(handler);
         MatchFailure expectedReason = MatchFailure.Unauthorized;
 
@@ -131,7 +133,8 @@ public sealed class MatchBoundaryTests
             sessions,
             store,
             new BoundaryClock(),
-            new BoundaryMailer());
+            new BoundaryMailer(),
+            NullLogger<AppMatchService>.Instance);
         MatchLobbyService service = CreateLobby(handler);
         MatchFailure expectedReason = MatchFailure.Unauthorized;
 
@@ -153,7 +156,8 @@ public sealed class MatchBoundaryTests
             sessions,
             store,
             new BoundaryClock(),
-            new BoundaryMailer());
+            new BoundaryMailer(),
+            NullLogger<AppMatchService>.Instance);
         MatchLobbyService service = CreateLobby(handler);
         FriendshipFailure expectedReason = FriendshipFailure.InvalidAccountId;
 
@@ -175,7 +179,8 @@ public sealed class MatchBoundaryTests
             sessions,
             store,
             new BoundaryClock(),
-            new BoundaryMailer());
+            new BoundaryMailer(),
+            NullLogger<AppMatchService>.Instance);
         MatchLobbyService service = CreateLobby(handler);
         FriendshipFailure expectedReason = FriendshipFailure.AccountUnavailable;
 
@@ -197,7 +202,8 @@ public sealed class MatchBoundaryTests
             sessions,
             store,
             new BoundaryClock(),
-            new BoundaryMailer());
+            new BoundaryMailer(),
+            NullLogger<AppMatchService>.Instance);
         MatchLobbyService service = CreateLobby(handler);
         FriendshipFailure expectedReason = FriendshipFailure.FriendshipNotFound;
 
@@ -219,7 +225,8 @@ public sealed class MatchBoundaryTests
             sessions,
             store,
             new BoundaryClock(),
-            new BoundaryMailer());
+            new BoundaryMailer(),
+            NullLogger<AppMatchService>.Instance);
         MatchLobbyService service = CreateLobby(handler);
 
         InvalidOperationException failure = Assert.Throws<InvalidOperationException>(
@@ -237,15 +244,20 @@ public sealed class MatchBoundaryTests
     {
         SessionStore sessions = CreateValidSessionStore();
         AppGameplayMatchService applicationService =
-            new AppGameplayMatchService(sessions, store, new BoundaryClock());
+            new AppGameplayMatchService(
+                sessions,
+                store,
+                new BoundaryClock(),
+                NullLogger<AppGameplayMatchService>.Instance);
         MatchCallbackSubscriptions<IGameplayMatchServiceCallback> subscriptions =
             new MatchCallbackSubscriptions<IGameplayMatchServiceCallback>(
                 (_, _) => true,
                 NullLogger.Instance);
         return new GameplayMatchService(
             applicationService,
-            new GameplayMatchPresence(),
-            subscriptions);
+            new GameplayMatchPresence(NullLogger<GameplayMatchPresence>.Instance),
+            subscriptions,
+            NullLogger<GameplayMatchService>.Instance);
     }
 
     private static MatchLobbyService CreateLobby(AppMatchService handler)

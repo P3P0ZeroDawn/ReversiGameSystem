@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Common;
 
@@ -17,6 +18,7 @@ public sealed class MatchApplicationService
     private readonly IMatchRepository _matches;
     private readonly IUtcClock _clock;
     private readonly ITemplatedEmailSender? _emailSender;
+    private readonly ILogger<MatchApplicationService> _logger;
     private readonly Dictionary<string, Dictionary<long, MatchPlayer>> _createdMatches =
         new Dictionary<string, Dictionary<long, MatchPlayer>>(StringComparer.Ordinal);
     private readonly HashSet<string> _sessionsPendingLobbyCleanup =
@@ -28,8 +30,9 @@ public sealed class MatchApplicationService
     public MatchApplicationService(
         SessionStore sessions,
         IMatchRepository matches,
-        IUtcClock clock)
-        : this(sessions, matches, clock, null)
+        IUtcClock clock,
+        ILogger<MatchApplicationService> logger)
+        : this(sessions, matches, clock, null, logger)
     {
     }
 
@@ -37,12 +40,14 @@ public sealed class MatchApplicationService
         SessionStore sessions,
         IMatchRepository matches,
         IUtcClock clock,
-        ITemplatedEmailSender? emailSender)
+        ITemplatedEmailSender? emailSender,
+        ILogger<MatchApplicationService> logger)
     {
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
         _matches = matches ?? throw new ArgumentNullException(nameof(matches));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _emailSender = emailSender;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public MatchResult<Match> CreateMatch(string token, MatchSettings? settings)
@@ -75,6 +80,15 @@ public sealed class MatchApplicationService
             }
         }
 
+        if (creationResult.Value != null)
+        {
+            _logger.LogInformation(
+                "Match {MatchId} created by {Actor} with turn duration {TurnDurationSeconds}s.",
+                creationResult.Value.Id,
+                FormatActor(player),
+                settings.TurnDurationSeconds);
+        }
+
         return creationResult;
     }
 
@@ -85,6 +99,9 @@ public sealed class MatchApplicationService
     {
         if (_sessions.IsGuestActive(token))
         {
+            _logger.LogWarning(
+                "Private match invitation rejected for guest session: {Reason}.",
+                MatchStatus.Unauthorized);
             return new MatchResult<Match>(MatchStatus.Unauthorized);
         }
 
@@ -132,7 +149,17 @@ public sealed class MatchApplicationService
 
         MatchInvitationPreparation preparation = prepareResult.Value;
         SendInvitationOrCancel(token, player, preparation);
-        return FinalizeInvitationDelivery(token, player, preparation);
+        MatchResult<Match> invitationResult = FinalizeInvitationDelivery(token, player, preparation);
+        if (invitationResult.Status == MatchStatus.Success && invitationResult.Value != null)
+        {
+            _logger.LogInformation(
+                "Private match {MatchId} created by account {AccountId} for friend {FriendAccountId}.",
+                invitationResult.Value.Id,
+                player.AccountId,
+                friendAccountId);
+        }
+
+        return invitationResult;
     }
 
     public MatchStatus EvaluateLobbyAccess(string token)
@@ -185,6 +212,10 @@ public sealed class MatchApplicationService
         if (joinResult.Status == MatchStatus.Success && joinResult.Value != null)
         {
             playerResult.Value.RegisterParticipation(joinResult.Value);
+            _logger.LogInformation(
+                "Match {MatchId} joined by {Actor} and started.",
+                joinResult.Value.Id,
+                FormatActor(playerResult.Value));
             Action<Match>? handler = MatchStarted;
             if (handler != null)
             {
@@ -208,6 +239,10 @@ public sealed class MatchApplicationService
         if (result.Value != null)
         {
             RemoveTrackedMatch(token, matchId);
+            _logger.LogInformation(
+                "System match {MatchId} started by {Actor}.",
+                result.Value.Id,
+                FormatActor(session.Value));
             MatchStarted?.Invoke(result.Value);
         }
 
@@ -270,6 +305,11 @@ public sealed class MatchApplicationService
             {
                 RemoveTrackedMatch(token, matchId);
             }
+
+            _logger.LogInformation(
+                "Match {MatchId} cancelled by {Actor}.",
+                matchId,
+                FormatActor(playerResult.Value));
         }
 
         return status;
@@ -282,6 +322,13 @@ public sealed class MatchApplicationService
         {
             _sessionsPendingLobbyCleanup.Add(token);
             cancelledIds = CancelTrackedMatches(token);
+        }
+
+        if (cancelledIds.Length > 0)
+        {
+            _logger.LogInformation(
+                "Cancelled {MatchCount} waiting lobby match(es) for closed session.",
+                cancelledIds.Length);
         }
 
         return cancelledIds;
@@ -304,7 +351,22 @@ public sealed class MatchApplicationService
             }
         }
 
+        if (cancelled.Count > 0)
+        {
+            _logger.LogInformation(
+                "Cancelled {MatchCount} expired waiting lobby match(es).",
+                cancelled.Count);
+        }
+
         return cancelled.ToArray();
+    }
+
+    private static string FormatActor(MatchPlayer player)
+    {
+        return LogSanitizer.FormatMatchActor(
+            player.AccountId,
+            player.DisplayName,
+            player.IsGuest);
     }
 
     private MatchResult<AuthenticatedSession> ResolveActiveSession(string token)
