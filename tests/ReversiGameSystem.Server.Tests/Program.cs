@@ -56,7 +56,8 @@ internal static class Program
         MatchBoundaryTests matchBoundaryTests = new MatchBoundaryTests();
         MatchApplicationServiceLifecycleTests lifecycleTests = new MatchApplicationServiceLifecycleTests();
         LobbyAuthorizationTests lobbyAuthorizationTests = new LobbyAuthorizationTests();
-        ServiceErrorBehaviorTests errorBehaviorTests = new ServiceErrorBehaviorTests();
+        IntegrationTests.Services.ServiceErrorBehaviorTests errorBehaviorTests =
+            new IntegrationTests.Services.ServiceErrorBehaviorTests();
         GameplayMatchRulesTests gameplayRulesTests = new GameplayMatchRulesTests();
         GameplayApplicationServiceTests gameplayTests = new GameplayApplicationServiceTests();
         PlayerBoundaryTests playerBoundaryTests = new PlayerBoundaryTests();
@@ -167,7 +168,8 @@ internal static class Program
             codeTests.IssueVerificationCode_SpanishAndDefaultLocales_RenderSingleLanguageEmails,
             mailTests.Load_ConfiguredPort_ReturnsConfiguredPort,
             mailTests.Send_LocalServerWithheldBanner_CancelsWithinDeliveryBudget,
-            new FailureDiagnosticsTests().Describe_NestedProviderFailure_ExcludesPrivateData,
+            new UnitTests.Services.FailureDiagnosticsTests()
+                .Describe_NestedProviderFailure_ExcludesPrivateData,
             DiagnosticFormatterTests.Run,
             presenceTests.DuplexChannels_PublishPresenceAndOwnFriendSnapshot,
             presenceTests.MultipleSessions_StayOnlineUntilLastRevocation,

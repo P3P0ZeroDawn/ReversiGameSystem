@@ -2,10 +2,10 @@ using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.ServiceApi;
 
-namespace ReversiGameSystem.Server.Tests;
+namespace ReversiGameSystem.Server.Tests.UnitTests.Services;
 
-/// <summary>Checks that technical context survives without copying provider secrets.</summary>
 [TestClass]
+[TestCategory("Unit")]
 public sealed class FailureDiagnosticsTests
 {
     [TestMethod]
@@ -20,10 +20,7 @@ public sealed class FailureDiagnosticsTests
         string diagnostic = FailureDiagnostics.Describe(failure);
         bool actualContains = diagnostic.Contains(expectedToken);
 
-        Assert.AreEqual(
-            expectedContains,
-            actualContains,
-            $"Diagnostic text must include '{expectedToken}'.");
+        Assert.AreEqual(expectedContains, actualContains);
     }
 
     [TestMethod]
@@ -35,10 +32,7 @@ public sealed class FailureDiagnosticsTests
         string diagnostic = FailureDiagnostics.Describe(failure);
         bool actualContains = diagnostic.Contains("private-");
 
-        Assert.AreEqual(
-            expectedContains,
-            actualContains,
-            "Provider messages and private diagnostic data must not be copied.");
+        Assert.AreEqual(expectedContains, actualContains);
     }
 
     private static Exception CreateNestedFailure()
