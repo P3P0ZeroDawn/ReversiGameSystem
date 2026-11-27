@@ -25,7 +25,12 @@ internal enum AccountStatus
     InvalidVerificationCode,
     ExpiredVerificationCode,
     InvalidPassword,
-    SubmissionInProgress
+    SubmissionInProgress,
+    IncorrectCurrentPassword,
+    InactiveAccount,
+    ActiveMatchInProgress,
+    MissingSessionToken,
+    InvalidSession
 }
 
 internal sealed class NewAccount

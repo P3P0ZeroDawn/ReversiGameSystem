@@ -218,6 +218,28 @@ public sealed class AccountCreationViewModelTests
             return Task.FromResult(RegistrationStatus);
         }
 
+        public Task<AccountStatus> ChangePassword(
+            string sessionToken, string currentPassword, string newPassword)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<AccountStatus> RequestPasswordResetCode(string emailAddress)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<AccountStatus> ResetPassword(
+            string emailAddress, string verificationCode, string newPassword)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<AccountStatus> DeactivateAccount(string sessionToken, string currentPassword)
+        {
+            throw new NotSupportedException();
+        }
+
         internal void CompleteRequest(AccountStatus status)
         {
             _request.SetResult(status);

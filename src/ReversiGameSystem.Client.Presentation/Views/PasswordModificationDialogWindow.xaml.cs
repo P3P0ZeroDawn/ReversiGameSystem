@@ -1,28 +1,27 @@
 using System;
+using System.ServiceModel;
 using System.Windows;
 using System.Windows.Input;
-using ReversiGameSystem.Validation;
+using ReversiGameSystem.Features.Accounts;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
 
 namespace ReversiGameSystem.Views;
 
-/// <summary>
-/// Collects the current password and a validated replacement.
-/// </summary>
 internal partial class PasswordModificationDialogWindow : Window
 {
     private readonly DialogService _dialogService;
-    private readonly IPasswordModificationService _passwordService;
+    private readonly AccountViewModel _viewModel;
 
     internal PasswordModificationDialogWindow(
         LocalizationManager localization,
         DialogService dialogService,
-        IPasswordModificationService passwordService)
+        AccountViewModel viewModel)
     {
         InitializeComponent();
         _dialogService = dialogService;
-        _passwordService = passwordService;
+        _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+        Closing += OnDialogClosing;
 
         Title = localization["PasswordModification_DialogTitle"];
         dialogTitleTextBlock.Text = Title;
@@ -49,96 +48,50 @@ internal partial class PasswordModificationDialogWindow : Window
         }
     }
 
-    private void OnConfirmClick(object sender, RoutedEventArgs e)
+    private async void OnConfirmClick(object sender, RoutedEventArgs e)
     {
-        string currentPassword = currentPasswordBox.Password;
-        string newPassword = newPasswordBox.Password;
-        string confirmation = confirmationBox.Password;
-
-        if (string.IsNullOrWhiteSpace(currentPassword)
-            || string.IsNullOrWhiteSpace(newPassword)
-            || string.IsNullOrWhiteSpace(confirmation))
+        if (_viewModel.IsSubmitting)
         {
-            ShowWarning("MissingRequiredInformation");
             return;
         }
-
-        if (!string.Equals(newPassword, confirmation, StringComparison.Ordinal))
+        IsEnabled = false;
+        try
         {
-            ShowWarning("PasswordMismatch");
-            return;
-        }
-
-        PasswordValidationError error = PasswordPolicy.Validate(newPassword);
-        if (error != PasswordValidationError.None)
-        {
-            ShowPasswordPolicyWarning(error);
-            return;
-        }
-
-        HandleServiceResult(_passwordService.ChangePassword(currentPassword, newPassword));
-    }
-
-    private void HandleServiceResult(PasswordModificationResult result)
-    {
-        switch (result)
-        {
-            case PasswordModificationResult.Success:
+            AccountStatus status = await _viewModel.ChangePassword(
+                currentPasswordBox.Password, newPasswordBox.Password, confirmationBox.Password);
+            if (status == AccountStatus.Success)
+            {
                 DialogResult = true;
-                break;
-            case PasswordModificationResult.IncorrectCurrentPassword:
-                ShowWarning("CurrentPasswordIncorrect");
+            }
+            else
+            {
+                _dialogService.ShowAccountFailure(this, status);
                 currentPasswordBox.Clear();
-                currentPasswordBox.Focus();
-                break;
-            case PasswordModificationResult.BlockedNewPassword:
-                ShowWarning("BlockedPassword");
-                break;
-            case PasswordModificationResult.PersistenceError:
-                ShowError("PersistenceError");
-                DialogResult = false;
-                break;
-            default:
-                ShowError("ServerConnectionFailed");
-                DialogResult = false;
-                break;
+            }
+        }
+        catch (FaultException<ServerProxy.ServiceFault> exception)
+        {
+            ClientRuntime.Errors.ReportOperationFailure(
+                exception, nameof(PasswordModificationDialogWindow));
+        }
+        finally
+        {
+            currentPasswordBox.Clear();
+            newPasswordBox.Clear();
+            confirmationBox.Clear();
+            IsEnabled = true;
         }
     }
 
-    private void ShowPasswordPolicyWarning(PasswordValidationError error)
+    private void OnDialogClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
-        string messageKey = error switch
+        e.Cancel = _viewModel.IsSubmitting;
+        if (!e.Cancel)
         {
-            PasswordValidationError.TooShort => "PasswordModification_PasswordTooShortMessage",
-            PasswordValidationError.TooLong => "PasswordModification_PasswordTooLongMessage",
-            PasswordValidationError.MissingUppercaseLetter =>
-                "PasswordModification_PasswordMissingUppercaseMessage",
-            PasswordValidationError.MissingLowercaseLetter =>
-                "PasswordModification_PasswordMissingLowercaseMessage",
-            PasswordValidationError.MissingDigit =>
-                "PasswordModification_PasswordMissingDigitMessage",
-            PasswordValidationError.MissingSymbol =>
-                "PasswordModification_PasswordMissingSymbolMessage",
-            _ => "PasswordModification_PasswordUnsupportedCharactersMessage"
-        };
-
-        _dialogService.ShowWarning(this, "PasswordModification_InvalidPasswordTitle", messageKey);
-    }
-
-    private void ShowWarning(string resourceName)
-    {
-        _dialogService.ShowWarning(
-            this,
-            $"PasswordModification_{resourceName}Title",
-            $"PasswordModification_{resourceName}Message");
-    }
-
-    private void ShowError(string resourceName)
-    {
-        _dialogService.ShowError(
-            this,
-            $"PasswordModification_{resourceName}Title",
-            $"PasswordModification_{resourceName}Message");
+            currentPasswordBox.Clear();
+            newPasswordBox.Clear();
+            confirmationBox.Clear();
+        }
     }
 
     private void OnCancelClick(object sender, RoutedEventArgs e)

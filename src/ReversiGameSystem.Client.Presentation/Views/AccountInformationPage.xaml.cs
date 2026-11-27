@@ -1,5 +1,8 @@
 using System;
+using Microsoft.Extensions.Logging;
 using System.IO;
+using System.ServiceModel;
+using ReversiGameSystem.Features.Accounts;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -20,8 +23,8 @@ public partial class AccountInformationPage : Page
 {
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
     private readonly ProfileImageSelectionService _profileImageSelectionService;
-    private readonly IAccountDeactivationService _accountDeactivationService =
-        new AccountDeactivationService();
+    private readonly AccountViewModel _accountViewModel = new AccountViewModel(
+        ClientRuntime.AccountService, ClientRuntime.CurrentSession);
     private readonly AccountInformationReturnTarget _returnTarget;
     private readonly string _profileUsername;
     private readonly bool _isOwnProfile;
@@ -364,45 +367,60 @@ public partial class AccountInformationPage : Page
         _dialogService.ShowError(this, prefix + "Title", prefix + "Message");
     }
 
-    private void OnDeactivateAccountClick(object sender, RoutedEventArgs e)
+    private async void OnDeactivateAccountClick(object sender, RoutedEventArgs e)
     {
-        if (!_dialogService.Confirm(
-            this,
-            "AccountDeactivation_ConfirmationTitle",
+        if (_accountViewModel.IsSubmitting || !_isOwnProfile)
+        {
+            return;
+        }
+        if (!_dialogService.Confirm(this, "AccountDeactivation_ConfirmationTitle",
             "AccountDeactivation_ConfirmationMessage"))
         {
             return;
         }
-
-        AccountDeactivationResult result = _accountDeactivationService.DeactivateOwnAccount();
-        switch (result)
+        CurrentPasswordDialogWindow passwordDialog = new CurrentPasswordDialogWindow(
+            LocalizationManager.Instance) { Owner = Window.GetWindow(this) };
+        if (passwordDialog.ShowDialog() != true)
         {
-            case AccountDeactivationResult.Success:
-                ClientRuntime.CurrentSession.Clear();
-                _dialogService.ShowInformation(
-                    this,
-                    "AccountDeactivation_SuccessTitle",
+            return;
+        }
+        IsEnabled = false;
+        try
+        {
+            AccountStatus status = await _accountViewModel.DeactivateAccount(
+                passwordDialog.CurrentPassword);
+            if (!IsLoaded)
+            {
+                return;
+            }
+            if (status == AccountStatus.Success)
+            {
+                _dialogService.ShowInformation(this, "AccountDeactivation_SuccessTitle",
                     "AccountDeactivation_SuccessMessage");
                 NavigationService?.Navigate(new LoginScreenPage());
-                break;
-            case AccountDeactivationResult.ActiveMatch:
-                _dialogService.ShowWarning(
-                    this,
-                    "AccountDeactivation_ActiveMatchTitle",
-                    "AccountDeactivation_ActiveMatchMessage");
-                break;
-            case AccountDeactivationResult.PersistenceError:
-                _dialogService.ShowError(
-                    this,
-                    "AccountDeactivation_PersistenceErrorTitle",
-                    "AccountDeactivation_PersistenceErrorMessage");
-                break;
-            default:
-                _dialogService.ShowError(
-                    this,
-                    "AccountDeactivation_ServerConnectionFailedTitle",
-                    "AccountDeactivation_ServerConnectionFailedMessage");
-                break;
+            }
+            else
+            {
+                _dialogService.ShowAccountFailure(this, status);
+            }
+        }
+        catch (FaultException<ServerProxy.ServiceFault> exception)
+        {
+            if (IsLoaded)
+            {
+                ClientRuntime.Errors.ReportOperationFailure(
+                    exception, nameof(AccountInformationPage));
+            }
+            else
+            {
+                ClientRuntime.Errors.RecordFailure(
+                    exception, nameof(AccountInformationPage), LogLevel.Error);
+            }
+        }
+        finally
+        {
+            passwordDialog.ClearPassword();
+            IsEnabled = true;
         }
     }
 

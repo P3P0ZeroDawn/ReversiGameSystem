@@ -3377,7 +3377,17 @@ namespace ReversiGameSystem.ServerProxy
         [System.ServiceModel.OperationContractAttribute(Action="urn:reversi:services:v1/IAccountService/ChangePassword", ReplyAction="urn:reversi:services:v1/IAccountService/ChangePasswordResponse")]
         System.Threading.Tasks.Task ChangePasswordAsync(string sessionToken, string currentPassword, string newPassword);
         
-        [System.ServiceModel.OperationContractAttribute(Action="urn:reversi:services:v1/IAccountService/ResetPassword", ReplyAction="urn:reversi:services:v1/IAccountService/ResetPasswordResponse")]
+        [System.ServiceModel.OperationContractAttribute(Action="urn:reversi:services:v1/IAccountService/RequestPasswordResetCode", ReplyAction="urn:reversi:services:v1/IAccountService/RequestPasswordResetCodeResponse")]
+        [System.ServiceModel.FaultContractAttribute(typeof(ReversiGameSystem.ServerProxy.AccountFault), Action="urn:reversi:services:v1/IAccountService/RequestPasswordResetCodeAccountFaultFault" +
+            "", Name="AccountFault", Namespace="urn:reversi:contracts:v1")]
+        [System.ServiceModel.FaultContractAttribute(typeof(ReversiGameSystem.ServerProxy.ServiceFault), Action="urn:reversi:services:v1/IAccountService/RequestPasswordResetCodeServiceFaultFault" +
+            "", Name="ServiceFault", Namespace="urn:reversi:diagnostics:v1")]
+        System.DateTime RequestPasswordResetCode(string emailAddress);
+
+        [System.ServiceModel.OperationContractAttribute(Action="urn:reversi:services:v1/IAccountService/RequestPasswordResetCode", ReplyAction="urn:reversi:services:v1/IAccountService/RequestPasswordResetCodeResponse")]
+        System.Threading.Tasks.Task<System.DateTime> RequestPasswordResetCodeAsync(string emailAddress);
+
+[System.ServiceModel.OperationContractAttribute(Action="urn:reversi:services:v1/IAccountService/ResetPassword", ReplyAction="urn:reversi:services:v1/IAccountService/ResetPasswordResponse")]
         [System.ServiceModel.FaultContractAttribute(typeof(ReversiGameSystem.ServerProxy.AccountFault), Action="urn:reversi:services:v1/IAccountService/ResetPasswordAccountFaultFault", Name="AccountFault", Namespace="urn:reversi:contracts:v1")]
         [System.ServiceModel.FaultContractAttribute(typeof(ReversiGameSystem.ServerProxy.ServiceFault), Action="urn:reversi:services:v1/IAccountService/ResetPasswordServiceFaultFault", Name="ServiceFault", Namespace="urn:reversi:diagnostics:v1")]
         void ResetPassword(string emailAddress, string verificationCode, string newPassword);
@@ -3459,7 +3469,17 @@ namespace ReversiGameSystem.ServerProxy
             return base.Channel.ChangePasswordAsync(sessionToken, currentPassword, newPassword);
         }
         
-        public void ResetPassword(string emailAddress, string verificationCode, string newPassword)
+        public System.DateTime RequestPasswordResetCode(string emailAddress)
+        {
+            return base.Channel.RequestPasswordResetCode(emailAddress);
+        }
+
+        public System.Threading.Tasks.Task<System.DateTime> RequestPasswordResetCodeAsync(string emailAddress)
+        {
+            return base.Channel.RequestPasswordResetCodeAsync(emailAddress);
+        }
+
+public void ResetPassword(string emailAddress, string verificationCode, string newPassword)
         {
             base.Channel.ResetPassword(emailAddress, verificationCode, newPassword);
         }

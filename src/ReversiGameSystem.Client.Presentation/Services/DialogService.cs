@@ -1,12 +1,11 @@
+using System;
 using System.Windows;
+using ReversiGameSystem.Features.Accounts;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Views;
 
 namespace ReversiGameSystem.Services;
 
-/// <summary>
-/// Opens localized alerts owned by the current application window.
-/// </summary>
 internal sealed class DialogService
 {
     private readonly LocalizationManager _localization;
@@ -147,22 +146,27 @@ internal sealed class DialogService
         return accepted;
     }
 
-    internal bool TryGetNewPassword(DependencyObject source, out string password)
+    internal void ShowAccountFailure(DependencyObject source, AccountStatus status)
     {
-        NewPasswordDialogWindow dialog = new NewPasswordDialogWindow(_localization, this);
-        Window? owner = Window.GetWindow(source);
-        if (owner != null)
+        string resourcePrefix = status switch
         {
-            dialog.Owner = owner;
-        }
-        else
-        {
-            dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        }
-
-        bool accepted = dialog.ShowDialog() == true;
-        password = accepted ? dialog.NewPassword : string.Empty;
-        return accepted;
+            AccountStatus.MissingRequiredInformation =>
+                "PasswordModification_MissingRequiredInformation",
+            AccountStatus.PasswordMismatch => "PasswordModification_PasswordMismatch",
+            AccountStatus.InvalidPassword => "Account_InvalidPassword",
+            AccountStatus.IncorrectCurrentPassword =>
+                "PasswordModification_CurrentPasswordIncorrect",
+            AccountStatus.InvalidEmailFormat => "PasswordReset_InvalidEmail",
+            AccountStatus.InvalidVerificationCode => "LoginScreen_InvalidCode",
+            AccountStatus.ExpiredVerificationCode => "LoginScreen_ExpiredCode",
+            AccountStatus.ActiveMatchInProgress => "AccountDeactivation_ActiveMatch",
+            AccountStatus.InactiveAccount => "LoginScreen_AccountInactive",
+            AccountStatus.MissingSessionToken or AccountStatus.InvalidSession =>
+                "Account_SessionExpired",
+            AccountStatus.ServiceUnavailable => "Account_ServiceUnavailable",
+            _ => throw new ArgumentOutOfRangeException(nameof(status))
+        };
+        ShowWarning(source, resourcePrefix + "Title", resourcePrefix + "Message");
     }
 
     internal bool TryChangePassword(DependencyObject source)
@@ -170,7 +174,7 @@ internal sealed class DialogService
         PasswordModificationDialogWindow dialog = new PasswordModificationDialogWindow(
             _localization,
             this,
-            new PasswordModificationService());
+            new AccountViewModel(ClientRuntime.AccountService, ClientRuntime.CurrentSession));
         Window? owner = Window.GetWindow(source);
         if (owner != null)
         {

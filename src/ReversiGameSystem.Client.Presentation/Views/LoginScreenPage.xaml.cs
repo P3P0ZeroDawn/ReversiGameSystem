@@ -1,5 +1,8 @@
 using System;
+using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
+using System.ServiceModel;
+using ReversiGameSystem.Features.Accounts;
 using System.Windows;
 using System.Windows.Controls;
 using ReversiGameSystem.Features.Preferences;
@@ -16,6 +19,8 @@ public partial class LoginScreenPage : Page
         = "The saved language could not be applied.";
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
     private readonly LoginViewModel _viewModel;
+    private readonly AccountViewModel _accountViewModel = new AccountViewModel(
+        ClientRuntime.AccountService, ClientRuntime.CurrentSession);
 
     public LoginScreenPage() : this(new LoginViewModel(ClientRuntime.SessionService))
     {
@@ -192,35 +197,47 @@ public partial class LoginScreenPage : Page
         };
         ShowLoginError(title, message);
     }
-    private void OnForgotPasswordClick(object sender, RoutedEventArgs e)
+    private async void OnForgotPasswordClick(object sender, RoutedEventArgs e)
     {
-        if (!TryGetPasswordResetEmail(out string email))
+        if (_accountViewModel.IsSubmitting)
         {
             return;
         }
-
-        // TODO: Check the account and send a reset code from the server.
-        _dialogService.ShowInformation(
-            this, "PasswordReset_CodeSentTitle", "PasswordReset_CodeSentMessage");
-
-        if (!ConfirmPasswordResetCode(email)
-            || !_dialogService.TryGetNewPassword(this, out _))
+        SetSessionActionsEnabled(false);
+        try
         {
-            return;
+            string emailAddress = await BeginPasswordRecovery();
+            if (string.IsNullOrEmpty(emailAddress) || !IsLoaded)
+            {
+                return;
+            }
+            _dialogService.ShowInformation(
+                this, "PasswordReset_CodeSentTitle", "PasswordReset_CodeSentMessage");
+            await CompletePasswordRecovery(emailAddress);
         }
-
-        // TODO: Verify the reset code and persist the new password on the server.
-        _dialogService.ShowInformation(
-            this, "PasswordReset_SuccessTitle", "PasswordReset_SuccessMessage");
-        loginTextBox.Text = email;
-        passwordBox.Clear();
+        catch (FaultException<ServerProxy.ServiceFault> exception)
+        {
+            if (IsLoaded)
+            {
+                ClientRuntime.Errors.ReportOperationFailure(
+                    exception, nameof(LoginScreenPage));
+            }
+            else
+            {
+                ClientRuntime.Errors.RecordFailure(
+                    exception, nameof(LoginScreenPage), LogLevel.Error);
+            }
+        }
+        finally
+        {
+            SetSessionActionsEnabled(true);
+        }
     }
 
-    private bool TryGetPasswordResetEmail(out string email)
+    private async Task<string> BeginPasswordRecovery()
     {
         TextInputDialogOptions options = new TextInputDialogOptions(
-            "PasswordReset_EmailDialogTitle",
-            "PasswordReset_EmailDialogMessage",
+            "PasswordReset_EmailDialogTitle", "PasswordReset_EmailDialogMessage",
             "Common_EmailLabel")
         {
             ConfirmButtonKey = "PasswordReset_ContinueButton",
@@ -228,37 +245,78 @@ public partial class LoginScreenPage : Page
             RequireText = true,
             MaximumLength = EmailPolicy.MaximumAddressLength
         };
-
-        while (_dialogService.TryGetText(this, options, out string enteredEmail))
+        while (IsLoaded)
         {
-            email = enteredEmail.Trim();
-            if (EmailPolicy.Validate(email) == EmailValidationError.None)
+            TextInputDialogWindow dialog = new TextInputDialogWindow(
+                options, LocalizationManager.Instance) { Owner = Window.GetWindow(this) };
+            if (dialog.ShowDialog() != true)
             {
-                return true;
+                return string.Empty;
             }
-
-            _dialogService.ShowWarning(
-                this, "PasswordReset_InvalidEmailTitle", "PasswordReset_InvalidEmailMessage");
-            options.InitialText = email;
+            string emailAddress = dialog.EnteredText.Trim();
+            AccountStatus status = await _accountViewModel.RequestPasswordResetCode(emailAddress);
+            if (!IsLoaded)
+            {
+                return string.Empty;
+            }
+            if (status == AccountStatus.Success)
+            {
+                return emailAddress;
+            }
+            _dialogService.ShowAccountFailure(this, status);
+            if (status != AccountStatus.InvalidEmailFormat)
+            {
+                return string.Empty;
+            }
+            options.InitialText = emailAddress;
         }
-
-        email = string.Empty;
-        return false;
+        return string.Empty;
     }
 
-    private bool ConfirmPasswordResetCode(string email)
+    private async Task CompletePasswordRecovery(string emailAddress)
     {
         TextInputDialogOptions options = new TextInputDialogOptions(
-            "PasswordReset_CodeDialogTitle",
-            "PasswordReset_CodeDialogMessage",
+            "PasswordReset_CodeDialogTitle", "PasswordReset_CodeDialogMessage",
             "PasswordReset_CodeDialogLabel")
         {
             RequireText = true,
             ExactDigitCount = VerificationCodePolicy.Length,
-            MessageArguments = new object[] { email }
+            MessageArguments = new object[] { emailAddress }
         };
-
-        return _dialogService.TryGetText(this, options, out _);
+        while (IsLoaded)
+        {
+            TextInputDialogWindow codeDialog = new TextInputDialogWindow(
+                options, LocalizationManager.Instance) { Owner = Window.GetWindow(this) };
+            if (codeDialog.ShowDialog() != true)
+            {
+                return;
+            }
+            NewPasswordDialogWindow passwordDialog = new NewPasswordDialogWindow(
+                LocalizationManager.Instance, _dialogService) { Owner = Window.GetWindow(this) };
+            if (passwordDialog.ShowDialog() != true)
+            {
+                return;
+            }
+            AccountStatus status = await _accountViewModel.ResetPassword(
+                codeDialog.EnteredText, passwordDialog.NewPassword);
+            if (!IsLoaded)
+            {
+                return;
+            }
+            if (status == AccountStatus.Success)
+            {
+                _dialogService.ShowInformation(
+                    this, "PasswordReset_SuccessTitle", "PasswordReset_SuccessMessage");
+                loginTextBox.Text = emailAddress;
+                passwordBox.Clear();
+                return;
+            }
+            _dialogService.ShowAccountFailure(this, status);
+            if (status != AccountStatus.InvalidVerificationCode)
+            {
+                return;
+            }
+        }
     }
 
     private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)

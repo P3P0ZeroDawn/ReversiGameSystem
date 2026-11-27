@@ -490,7 +490,7 @@
     <value>Revisa tu correo</value>
   </data>
   <data name="PasswordReset_CodeSentMessage" xml:space="preserve">
-    <value>Si hay una cuenta activa asociada a este correo, se le ha enviado un código de verificación.</value>
+    <value>Si existe una cuenta activa con ese correo, recibirás un código de recuperación.</value>
   </data>
   <data name="PasswordReset_CodeDialogTitle" xml:space="preserve">
     <value>Ingresar código de verificación</value>
@@ -1374,5 +1374,29 @@
   </data>
   <data name="Game_PlayerPicturesUnavailableMessage" xml:space="preserve">
     <value>No se pudieron cargar todas las fotos. Puedes seguir jugando con las imágenes predeterminadas.</value>
+  </data>
+  <data name="Account_SessionExpiredTitle" xml:space="preserve">
+    <value>Sesión no disponible</value>
+  </data>
+  <data name="Account_SessionExpiredMessage" xml:space="preserve">
+    <value>Inicia sesión nuevamente para administrar tu cuenta.</value>
+  </data>
+  <data name="Account_ServiceUnavailableTitle" xml:space="preserve">
+    <value>Conexión no disponible</value>
+  </data>
+  <data name="Account_ServiceUnavailableMessage" xml:space="preserve">
+    <value>No se pudo confirmar la operación. Revisa tu conexión antes de intentarlo nuevamente.</value>
+  </data>
+  <data name="AccountDeactivation_PasswordTitle" xml:space="preserve">
+    <value>Confirmar desactivación de cuenta</value>
+  </data>
+  <data name="AccountDeactivation_PasswordMessage" xml:space="preserve">
+    <value>Escribe tu contraseña actual para desactivar tu cuenta.</value>
+  </data>
+  <data name="Account_InvalidPasswordTitle" xml:space="preserve">
+    <value>Revisa tu contraseña</value>
+  </data>
+  <data name="Account_InvalidPasswordMessage" xml:space="preserve">
+    <value>La nueva contraseña no cumple las reglas de contraseña. Revisa los requisitos e inténtalo nuevamente.</value>
   </data>
 </root>
