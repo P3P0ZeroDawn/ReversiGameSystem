@@ -1,5 +1,6 @@
-using ReversiGameSystem.Server.Domain.Accounts;
 using System;
+using System.Collections.Generic;
+using ReversiGameSystem.Server.Domain.Accounts;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Players;
 using ReversiGameSystem.Server.ServiceApi;
@@ -78,5 +79,98 @@ internal sealed class PlayerImageRepositoryStub : IPlayerImageRepository
             throw CleanupFailure;
         }
         Deleted = imageReference;
+    }
+}
+
+internal sealed class PlayerProfileRepositoryStub : IPlayerProfileRepository
+{
+    internal Dictionary<long, PlayerProfile> Profiles { get; } =
+        new Dictionary<long, PlayerProfile>();
+
+    internal List<long> AccountIds { get; } = new List<long>();
+
+    internal bool ThrowOnGet { get; set; }
+
+    internal bool ThrowOnSetImage { get; set; }
+
+    internal ProfileStatus ChangeUsernameStatus { get; set; } =
+        ProfileStatus.Success;
+
+    internal ProfileStatus SetImageStatus { get; set; } =
+        ProfileStatus.Success;
+
+    internal long? ChangedAccountId { get; private set; }
+
+    internal string? ChangedUsername { get; private set; }
+
+    internal long? ImageAccountId { get; private set; }
+
+    internal string? ImageReference { get; private set; }
+
+    internal int GetProfileCalls { get; private set; }
+
+    internal int GetImageReferenceCalls { get; private set; }
+
+    public ProfileResult<PlayerProfile> GetProfile(long accountId)
+    {
+        GetProfileCalls++;
+        AccountIds.Add(accountId);
+        if (ThrowOnGet)
+        {
+            throw new InvalidOperationException("private-provider-message");
+        }
+
+        if (!Profiles.TryGetValue(accountId, out PlayerProfile? profile))
+        {
+            return new ProfileResult<PlayerProfile>(ProfileStatus.AccountNotFound);
+        }
+
+        return new ProfileResult<PlayerProfile>(profile);
+    }
+
+    public ProfileResult<string> GetProfileImageReference(long accountId)
+    {
+        GetImageReferenceCalls++;
+        AccountIds.Add(accountId);
+        if (ThrowOnGet)
+        {
+            throw new InvalidOperationException("private-provider-message");
+        }
+
+        if (!Profiles.TryGetValue(accountId, out PlayerProfile? profile))
+        {
+            return new ProfileResult<string>(ProfileStatus.AccountNotFound);
+        }
+
+        return new ProfileResult<string>(profile.ProfileImageUri ?? string.Empty);
+    }
+
+    public bool IsActive(long accountId)
+    {
+        AccountIds.Add(accountId);
+        return Profiles.ContainsKey(accountId);
+    }
+
+    public ProfileStatus ChangeUsername(
+        long accountId,
+        string username)
+    {
+        ChangedAccountId = accountId;
+        ChangedUsername = username;
+        return ChangeUsernameStatus;
+    }
+
+    public ProfileStatus SetProfileImage(
+        long accountId,
+        string imageReference)
+    {
+        ImageAccountId = accountId;
+        ImageReference = imageReference;
+        if (ThrowOnSetImage)
+        {
+            throw new InvalidOperationException("private-provider-message");
+        }
+
+        return SetImageStatus;
     }
 }
