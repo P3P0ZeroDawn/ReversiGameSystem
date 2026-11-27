@@ -240,6 +240,79 @@ public sealed class MatchRepositoryIntegrationTests : RepositoryIntegrationTestB
         Assert.AreEqual(1, logger.WarningCount);
     }
 
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void CancelInterruptedMatches_UnfinishedMatch_CancelsWithoutResult(bool started)
+    {
+        long creatorId = SeedAccount(CreatorUsername, CreatorEmail);
+        MatchPlayer creator = CreatePlayer(creatorId, CreatorUsername);
+        MatchRepository repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
+        Match match = repository.CreateMatch(creator, new MatchSettings(), DateTime.UtcNow).Value!;
+        if (started)
+        {
+            repository.StartSystemMatch(creator, match.Id, DateTime.UtcNow);
+        }
+
+        repository.CancelInterruptedMatches();
+
+        using ReversiGameSystemEntities context = CreateFreshContext();
+        GameMatch persisted = context.GameMatch.Single(candidate => candidate.matchId == match.Id);
+        Assert.AreEqual("CANCELLED", persisted.statusCode);
+        Assert.IsNotNull(persisted.endedAtUtc);
+        Assert.IsNull(persisted.endReasonCode);
+        Assert.IsNull(persisted.currentTurnSeatNumber);
+        Assert.IsNull(persisted.turnStartedAtUtc);
+        Assert.IsFalse(persisted.countsTowardStatistics);
+        Assert.IsTrue(context.MatchParticipant.Where(participant => participant.matchId == match.Id)
+            .All(participant => participant.resultCode == null));
+    }
+
+    [TestMethod]
+    public void CancelInterruptedMatches_MatchWithMoves_PreservesRecordedMoves()
+    {
+        long creatorId = SeedAccount(CreatorUsername, CreatorEmail);
+        MatchRepository repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
+        Match match = CreateSystemMatch(repository, creatorId);
+        PlayHumanTurn(match);
+        repository.SynchronizeMatch(match);
+
+        repository.CancelInterruptedMatches();
+
+        using ReversiGameSystemEntities context = CreateFreshContext();
+        Assert.AreEqual(1, context.GameMove.Count(move => move.matchId == match.Id));
+    }
+
+    [TestMethod]
+    public void CancelInterruptedMatches_FinishedMatch_PreservesConclusion()
+    {
+        long creatorId = SeedAccount(CreatorUsername, CreatorEmail);
+        MatchRepository repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
+        Match match = CreateSystemMatch(repository, creatorId);
+        GameplayMatchRules.ForfeitByParticipant(match, ReversiEngine.Black, DateTime.UtcNow);
+        repository.SynchronizeMatch(match);
+
+        repository.CancelInterruptedMatches();
+
+        using ReversiGameSystemEntities context = CreateFreshContext();
+        GameMatch persisted = context.GameMatch.Single(candidate => candidate.matchId == match.Id);
+        Assert.AreEqual("FINISHED", persisted.statusCode);
+        Assert.AreEqual("ABANDONMENT", persisted.endReasonCode);
+    }
+
+    [TestMethod]
+    public void CancelInterruptedMatches_SecondExecution_DoesNotCancelAgain()
+    {
+        long creatorId = SeedAccount(CreatorUsername, CreatorEmail);
+        MatchRepository repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
+        CreateSystemMatch(repository, creatorId);
+        repository.CancelInterruptedMatches();
+
+        int cancelledAgain = repository.CancelInterruptedMatches();
+
+        Assert.AreEqual(0, cancelledAgain);
+    }
+
     private static Match CreateSystemMatch(MatchRepository repository, long creatorId)
     {
         DateTime now = DateTime.UtcNow;

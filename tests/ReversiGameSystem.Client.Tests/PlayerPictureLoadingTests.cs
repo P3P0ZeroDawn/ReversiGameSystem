@@ -190,6 +190,28 @@ public sealed class PlayerPictureLoadingTests
         }
     }
 
+    [TestMethod]
+    public async Task ActivateMatch_RegisteredPlayerAgainstGuest_DisablesChat()
+    {
+        using PictureHost host = new PictureHost();
+        host.Service.OpponentIsGuest = true;
+        using GameplayClient gameplay = host.CreateGameplay();
+        using MatchChatClient chat = host.CreateChat();
+        GameViewModel model = new GameViewModel(gameplay, chat, MatchId, false,
+            new SynchronizationContext());
+        try
+        {
+            await model.ActivateMatch();
+
+            Assert.IsFalse(model.IsChatVisible);
+            Assert.IsFalse(model.CanWriteMessage);
+        }
+        finally
+        {
+            await model.DeactivateMatch();
+        }
+    }
+
     private static MatchReplayViewModel CreateReplay(bool systemOpponent)
     {
         const int BlackSeat = 1;
@@ -262,6 +284,7 @@ public sealed class PlayerPictureLoadingTests
         : IPictureGameplay, IPictureChat, IPictureProfiles
     {
         internal bool OpponentHasImage { get; set; } = true;
+        internal bool OpponentIsGuest { get; set; }
         internal int ImageReads { get; private set; }
         internal Action? BeforeImageResponse { get; set; }
 
@@ -286,7 +309,11 @@ public sealed class PlayerPictureLoadingTests
                     },
                     new Proxy.MatchParticipantSummary
                     {
-                        SeatNumber = 2, AccountId = OpponentAccount, DisplayName = "Opponent"
+                        SeatNumber = 2,
+                        AccountId = OpponentIsGuest ? null : OpponentAccount,
+                        Kind = OpponentIsGuest
+                            ? Proxy.ParticipantKind.Guest : Proxy.ParticipantKind.Registered,
+                        DisplayName = "Opponent"
                     }
                 }
             };

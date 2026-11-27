@@ -25,6 +25,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
     private const string Alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private const string ActiveAccountStatusCode = "ACTIVE";
     private const string FinishedMatchStatusCode = "FINISHED";
+    private const string CancelledMatchStatusCode = "CANCELLED";
     private const string InProgressMatchStatusCode = "IN_PROGRESS";
     private const string WaitingMatchStatusCode = "WAITING";
     private const string RegisteredParticipantType = "REGISTERED";
@@ -101,15 +102,19 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         return MatchStatus.Success;
     }
 
-    public int CancelAbandonedWaitingMatches()
+    public int CancelInterruptedMatches()
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction =
             context.Database.BeginTransaction(IsolationLevel.Serializable);
         MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
         int cancelled = context.Database.ExecuteSqlCommand(
-            "UPDATE dbo.GameMatch SET statusCode = 'CANCELLED', endedAtUtc = SYSUTCDATETIME() "
-            + "WHERE statusCode = 'WAITING';");
+            "UPDATE dbo.GameMatch SET statusCode = @cancelled, endedAtUtc = SYSUTCDATETIME(), "
+            + "endReasonCode = NULL, currentTurnSeatNumber = NULL, turnStartedAtUtc = NULL, "
+            + "countsTowardStatistics = 0 WHERE statusCode IN (@waiting, @inProgress);",
+            new SqlParameter("@cancelled", CancelledMatchStatusCode),
+            new SqlParameter("@waiting", WaitingMatchStatusCode),
+            new SqlParameter("@inProgress", InProgressMatchStatusCode));
         transaction.Commit();
         return cancelled;
     }

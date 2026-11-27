@@ -180,7 +180,8 @@ internal sealed class GameViewModel : INotifyPropertyChanged
     {
         get
         {
-            return IsReady && !_isGuest && !Information.Participants.Any(player => player.IsSystem);
+            return IsReady && !_isGuest
+                && !Information.Participants.Any(player => player.IsSystem || player.IsGuest);
         }
     }
     public bool CanWriteMessage

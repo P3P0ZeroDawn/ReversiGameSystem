@@ -5,6 +5,8 @@ using System.ServiceModel;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Chat;
+using ReversiGameSystem.Server.Persistence.Chat;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Domain.Matches;
 using ReversiGameSystem.Server.Persistence.Matches;
@@ -346,6 +348,23 @@ public sealed class GuestMatchIntegrationTests : RepositoryIntegrationTestBase
         public void OnParticipantConnectionChanged(long matchId, int seatNumber, bool isConnected)
         {
         }
+    }
+
+    [TestMethod]
+    public void EvaluateChatAccess_RegisteredPlayerAgainstGuest_IsRejected()
+    {
+        const string Username = "ChatPlayer";
+        long accountId = SeedAccount(Username, "chatplayer@example.test");
+        AuthenticatedSession account = new AuthenticatedSession("chat-session", accountId,
+            Username, "chatplayer@example.test", "en-US", _clock.UtcNow.AddHours(1));
+        _sessions.TryAddAuthenticated(account);
+        GuestSession guest = AddGuest("GuestPlayer");
+        Match match = StartMatch(account.SessionToken, guest.SessionToken);
+        ChatRepository chat = new ChatRepository(_clock);
+
+        ChatStatus status = chat.EvaluateParticipantAccess(accountId, match.Id);
+
+        Assert.AreEqual(ChatStatus.Unauthorized, status);
     }
 
     private GuestSession AddGuest(string name)
