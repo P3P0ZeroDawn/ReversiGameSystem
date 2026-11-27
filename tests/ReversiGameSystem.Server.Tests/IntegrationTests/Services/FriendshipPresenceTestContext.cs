@@ -13,29 +13,109 @@ using ReversiGameSystem.Server.Contracts.Friendships;
 using ReversiGameSystem.Server.Contracts.Services;
 using ReversiGameSystem.Server.ServiceApi;
 
-namespace ReversiGameSystem.Server.Tests;
+namespace ReversiGameSystem.Server.Tests.IntegrationTests.Services;
 
 internal sealed class FriendshipPresenceTestContext : IDisposable, IFriendshipRepository
 {
+    private const string PrivateRelationshipDiagnostic =
+        "Private relationship provider diagnostic";
     private readonly SessionStore _sessions = new SessionStore(new TestUtcClock());
-    private readonly List<FriendshipPresenceTestClient> _clients = new List<FriendshipPresenceTestClient>();
+    private readonly List<FriendshipPresenceTestClient> _clients =
+        new List<FriendshipPresenceTestClient>();
     private readonly ServiceHost _host;
     private readonly Timer _sweepTimer;
     private readonly Uri _address = new Uri("net.pipe://localhost/ReversiFriendshipTests/"
         + Guid.NewGuid().ToString("N") + "/Friendship");
-    internal bool Inactive;
-    internal bool FailRepository;
-    internal volatile bool FailRelationshipChecks;
-    internal int FriendshipReads;
-    internal bool FriendshipActive = true;
-    internal int RelationshipChecks;
-    internal int FailedRelationshipChecks;
-    internal readonly Exception RepositoryFailure =
+    private volatile bool _inactive = false;
+    private volatile bool _failRepository = false;
+    private volatile bool _failRelationshipChecks;
+    private int _friendshipReads;
+    private volatile bool _friendshipActive = true;
+    private int _relationshipChecks;
+    private int _failedRelationshipChecks;
+
+    internal bool Inactive
+    {
+        get
+        {
+            return _inactive;
+        }
+        set
+        {
+            _inactive = value;
+        }
+    }
+
+    internal bool FailRepository
+    {
+        get
+        {
+            return _failRepository;
+        }
+        set
+        {
+            _failRepository = value;
+        }
+    }
+
+    internal bool FailRelationshipChecks
+    {
+        get
+        {
+            return _failRelationshipChecks;
+        }
+        set
+        {
+            _failRelationshipChecks = value;
+        }
+    }
+
+    internal int FriendshipReads
+    {
+        get
+        {
+            return Volatile.Read(ref _friendshipReads);
+        }
+    }
+
+    internal bool FriendshipActive
+    {
+        get
+        {
+            return _friendshipActive;
+        }
+        set
+        {
+            _friendshipActive = value;
+        }
+    }
+
+    internal int RelationshipChecks
+    {
+        get
+        {
+            return Volatile.Read(ref _relationshipChecks);
+        }
+    }
+
+    internal int FailedRelationshipChecks
+    {
+        get
+        {
+            return Volatile.Read(ref _failedRelationshipChecks);
+        }
+    }
+
+    internal Exception RepositoryFailure { get; } =
         new InvalidOperationException("private-provider-diagnostic");
-    internal readonly FriendshipService Service;
-    internal readonly AccountPresenceRegistry PresenceRegistry;
-    internal readonly FriendshipSubscriptions Subscriptions;
-    internal readonly FriendshipApplicationService ApplicationService;
+
+    internal FriendshipService Service { get; }
+
+    internal AccountPresenceRegistry PresenceRegistry { get; }
+
+    internal FriendshipSubscriptions Subscriptions { get; }
+
+    internal FriendshipApplicationService ApplicationService { get; }
 
     internal FriendshipPresenceTestContext()
         : this(NullLogger<FriendshipSubscriptions>.Instance)
@@ -134,7 +214,7 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, IFriendshipRe
 
     public FriendAccount[] GetFriends(long accountId)
     {
-        System.Threading.Interlocked.Increment(ref FriendshipReads);
+        Interlocked.Increment(ref _friendshipReads);
         if (FailRepository)
         {
             throw RepositoryFailure;
@@ -155,11 +235,11 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, IFriendshipRe
 
     public bool AreFriends(long accountId, long friendAccountId)
     {
-        System.Threading.Interlocked.Increment(ref RelationshipChecks);
+        Interlocked.Increment(ref _relationshipChecks);
         if (FailRelationshipChecks && accountId == 1 && friendAccountId == 2)
         {
-            System.Threading.Interlocked.Increment(ref FailedRelationshipChecks);
-            throw new InvalidOperationException("Private relationship provider diagnostic");
+            Interlocked.Increment(ref _failedRelationshipChecks);
+            throw new InvalidOperationException(PrivateRelationshipDiagnostic);
         }
 
         return FriendshipActive && !Inactive && ((accountId == 1 && friendAccountId == 2)
@@ -168,11 +248,11 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, IFriendshipRe
 
     public long[] ReadConfirmedFriendIds(long accountId)
     {
-        System.Threading.Interlocked.Increment(ref RelationshipChecks);
+        Interlocked.Increment(ref _relationshipChecks);
         if (FailRelationshipChecks)
         {
-            System.Threading.Interlocked.Increment(ref FailedRelationshipChecks);
-            throw new InvalidOperationException("Private relationship provider diagnostic");
+            Interlocked.Increment(ref _failedRelationshipChecks);
+            throw new InvalidOperationException(PrivateRelationshipDiagnostic);
         }
 
         if (!FriendshipActive || Inactive)
@@ -215,17 +295,29 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, IFriendshipRe
     }
 }
 
+internal interface IFriendshipServiceChannel : IFriendshipService, IClientChannel
+{
+}
+
 [CallbackBehavior(ConcurrencyMode = ConcurrencyMode.Multiple, UseSynchronizationContext = false)]
 internal sealed class FriendshipPresenceTestClient : IFriendshipServiceCallback, IDisposable
 {
-    private readonly DuplexChannelFactory<IFriendshipService> _factory;
+    private readonly DuplexChannelFactory<IFriendshipServiceChannel> _factory;
     private readonly ConcurrentQueue<Tuple<long, FriendChange>> _changes =
         new ConcurrentQueue<Tuple<long, FriendChange>>();
-    internal IFriendshipService Channel { get; }
+    internal IFriendshipServiceChannel Channel { get; }
+
+    internal CommunicationState ChannelState
+    {
+        get
+        {
+            return Channel.State;
+        }
+    }
 
     internal FriendshipPresenceTestClient(Uri address)
     {
-        _factory = new DuplexChannelFactory<IFriendshipService>(new InstanceContext(this),
+        _factory = new DuplexChannelFactory<IFriendshipServiceChannel>(new InstanceContext(this),
             FriendshipPresenceTestContext.Binding(), new EndpointAddress(address));
         Channel = _factory.CreateChannel();
     }
@@ -237,7 +329,7 @@ internal sealed class FriendshipPresenceTestClient : IFriendshipServiceCallback,
 
     internal void Close()
     {
-        ((ICommunicationObject)Channel).Close();
+        Channel.Close();
     }
 
     public void OnFriendRequestReceived(FriendRequest request)
@@ -255,7 +347,7 @@ internal sealed class FriendshipPresenceTestClient : IFriendshipServiceCallback,
 
     public void Dispose()
     {
-        ((ICommunicationObject)Channel).Abort();
+        Channel.Abort();
         _factory.Abort();
     }
 }

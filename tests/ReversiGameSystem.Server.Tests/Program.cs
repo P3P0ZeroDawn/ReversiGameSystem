@@ -51,7 +51,6 @@ internal static class Program
         CommunicationSerializationTests communicationTests = new CommunicationSerializationTests();
         VerificationCodeServiceTests codeTests = new VerificationCodeServiceTests();
         VerificationEmailSenderTests mailTests = new VerificationEmailSenderTests();
-        FriendshipPresenceTests presenceTests = new FriendshipPresenceTests();
         MatchBoundaryTests matchBoundaryTests = new MatchBoundaryTests();
         MatchApplicationServiceLifecycleTests lifecycleTests = new MatchApplicationServiceLifecycleTests();
         LobbyAuthorizationTests lobbyAuthorizationTests = new LobbyAuthorizationTests();
@@ -157,17 +156,6 @@ internal static class Program
             new UnitTests.Services.FailureDiagnosticsTests()
                 .Describe_NestedProviderFailure_ExcludesPrivateData,
             DiagnosticFormatterTests.Run,
-            presenceTests.DuplexChannels_PublishPresenceAndOwnFriendSnapshot,
-            presenceTests.MultipleSessions_StayOnlineUntilLastRevocation,
-            presenceTests.ClosedAndReplacementChannels_PreservePresence,
-            presenceTests.RelationshipFailure_PreservesHealthyChannelAndAllowsPresenceRecovery,
-            presenceTests.RepositoryFailure_LogsOriginalExceptionAndReturnsDeclaredFault,
-            presenceTests.LoggerFailure_ReportsBothFailuresWithoutExposingProviderMessages,
-            presenceTests.InvalidInactiveAndExpiredSessions_ReturnTypedFaults,
-            presenceTests.UnsupportedOperations_ReturnDeclaredServiceFaultWithoutRepositoryAccess,
-            presenceTests.ExpiredReceiver_ReceivesNoCallbacks,
-            presenceTests.ExpirySweep_PublishesDisconnection,
-            presenceTests.EndedFriendship_ReceivesNoPresenceCallbacks,
             () => new ModelResourcesTests().Assembly_RequiredRuntimeModel_IsEmbedded("Model.Database_model.csdl"),
             () => new ModelResourcesTests().Assembly_RequiredRuntimeModel_IsEmbedded("Model.Database_model.ssdl"),
             () => new ModelResourcesTests().Assembly_RequiredRuntimeModel_IsEmbedded("Model.Database_model.msl")
