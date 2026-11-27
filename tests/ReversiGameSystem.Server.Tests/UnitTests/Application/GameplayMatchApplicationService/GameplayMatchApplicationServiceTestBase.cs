@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Tests.TestDoubles;
@@ -19,7 +20,7 @@ public abstract class GameplayMatchApplicationServiceTestBase
     protected GameplayMatchApplicationServiceTestBase()
     {
         Clock = new UtcClockStub();
-        Sessions = new SessionStore(Clock);
+        Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         Matches = new GameplayRepositoryStub();
         Service = new ApplicationService(Sessions, Matches, Clock);
     }

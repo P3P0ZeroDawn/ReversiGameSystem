@@ -26,7 +26,7 @@ public abstract class GameplayMatchServiceTestBase
     protected GameplayMatchServiceTestBase()
     {
         Clock = new UtcClockStub();
-        Sessions = new SessionStore(Clock);
+        Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         Matches = new GameplayRepositoryStub();
         ApplicationService = new GameplayMatchApplicationService(Sessions, Matches, Clock);
         Presence = new GameplayMatchPresence();

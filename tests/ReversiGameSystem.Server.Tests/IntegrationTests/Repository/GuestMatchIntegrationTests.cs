@@ -52,7 +52,7 @@ public sealed class GuestMatchIntegrationTests : RepositoryIntegrationTestBase
     {
         _database!.ResetMutableTables();
         _clock = new TestUtcClock();
-        _sessions = new SessionStore(_clock);
+        _sessions = new SessionStore(_clock, NullLogger<SessionStore>.Instance);
         _repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
         _lobby = new MatchApplicationService(_sessions, _repository, _clock);
         _gameplay = new GameplayMatchApplicationService(_sessions, _repository, _clock);

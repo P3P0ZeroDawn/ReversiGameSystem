@@ -15,7 +15,7 @@ public abstract class MatchChatServiceTestBase : IDisposable
     protected MatchChatServiceTestBase()
     {
         Clock = new UtcClockStub();
-        Sessions = new SessionStore(Clock);
+        Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         Repository = new ChatRepositoryStub();
         FirstSession = TestSessionHelper.CreateSession(Sessions, 1L, "PlayerOne");
         ApplicationService = new ChatApplicationService(Sessions, Repository, Clock);

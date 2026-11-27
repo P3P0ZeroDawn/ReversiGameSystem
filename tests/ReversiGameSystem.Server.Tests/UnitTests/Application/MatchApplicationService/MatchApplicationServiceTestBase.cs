@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Tests.TestDoubles;
 using ApplicationService =
@@ -20,7 +21,7 @@ public abstract class MatchApplicationServiceTestBase
     protected MatchApplicationServiceTestBase()
     {
         Clock = new UtcClockStub();
-        Sessions = new SessionStore(Clock);
+        Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         Matches = new MatchRepositoryStub();
         EmailSender = new TemplatedEmailSenderStub();
         Service = new ApplicationService(Sessions, Matches, Clock, EmailSender);

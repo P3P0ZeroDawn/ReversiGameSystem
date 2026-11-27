@@ -1,7 +1,10 @@
 using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Extensions.Logging;
+using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Services;
 
@@ -14,6 +17,8 @@ internal static class ClientRuntime
     private static MatchChatClient? s_chat;
 
     private static string? s_matchToken;
+
+    private static int s_sessionChannelWarmedUp;
 
     private static readonly Lazy<ILoggerFactory> Logging =
         new Lazy<ILoggerFactory>(CreateLoggerFactory);
@@ -75,6 +80,33 @@ internal static class ClientRuntime
     internal static SessionClient SessionService
     {
         get { return Session.Value; }
+    }
+
+    internal static void WarmUpSessionChannel()
+    {
+        if (Interlocked.Exchange(ref s_sessionChannelWarmedUp, 1) != 0)
+        {
+            return;
+        }
+
+        _ = Task.Run(() =>
+        {
+            Proxy.SessionServiceClient? client = null;
+            try
+            {
+                client = ServerConnectionFactory.CreateSessionClient();
+                _ = client.ChannelFactory;
+            }
+            catch (Exception exception)
+            {
+                Logging.Value.CreateLogger(typeof(ClientRuntime).FullName ?? nameof(ClientRuntime))
+                    .LogDebug(exception, "Local session channel warm-up did not complete.");
+            }
+            finally
+            {
+                client?.Abort();
+            }
+        });
     }
 
     internal static ClientSession CurrentSession { get; } = new ClientSession();

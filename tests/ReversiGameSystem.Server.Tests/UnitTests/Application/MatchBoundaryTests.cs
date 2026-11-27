@@ -99,7 +99,7 @@ public sealed class MatchBoundaryTests
     {
         BoundaryStore store = new BoundaryStore();
         BoundaryClock clock = new BoundaryClock();
-        SessionStore sessions = new SessionStore(clock);
+        SessionStore sessions = new SessionStore(clock, NullLogger<SessionStore>.Instance);
         GuestSession guest = new GuestSession(
             "guest-token",
             "Guest-GuestBoundary",
@@ -259,7 +259,9 @@ public sealed class MatchBoundaryTests
 
     private static SessionStore CreateValidSessionStore()
     {
-        SessionStore sessions = new SessionStore(new BoundaryClock());
+        SessionStore sessions = new SessionStore(
+            new BoundaryClock(),
+            NullLogger<SessionStore>.Instance);
         sessions.TryAddAuthenticated(new AuthenticatedSession(
             ValidToken,
             1,

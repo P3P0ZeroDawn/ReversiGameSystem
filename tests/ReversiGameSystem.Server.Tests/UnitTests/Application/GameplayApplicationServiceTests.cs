@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -578,7 +579,7 @@ internal sealed class GameplayTestContext
     internal GameplayTestContext()
     {
         Clock = new MutableTestClock(new DateTime(2026, 11, 11, 20, 0, 0, DateTimeKind.Utc));
-        Sessions = new SessionStore(Clock);
+        Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         Repository = new MockGameplayMatchRepository();
         ApplicationService = new AppGameplayMatchService(Sessions, Repository, Clock);
 

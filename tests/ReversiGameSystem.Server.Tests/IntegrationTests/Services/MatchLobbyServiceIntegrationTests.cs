@@ -34,7 +34,7 @@ public sealed class MatchLobbyServiceIntegrationTests
     public void Initialize()
     {
         _clock = new UtcClockStub();
-        _sessions = new SessionStore(_clock);
+        _sessions = new SessionStore(_clock, NullLogger<SessionStore>.Instance);
         _matches = new MatchRepositoryStub();
         TemplatedEmailSenderStub emailSender = new TemplatedEmailSenderStub();
         MatchApplicationService applicationService = new MatchApplicationService(

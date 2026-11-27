@@ -19,7 +19,9 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, IFriendshipRe
 {
     private const string PrivateRelationshipDiagnostic =
         "Private relationship provider diagnostic";
-    private readonly SessionStore _sessions = new SessionStore(new TestUtcClock());
+    private readonly SessionStore _sessions = new SessionStore(
+        new TestUtcClock(),
+        NullLogger<SessionStore>.Instance);
     private readonly List<FriendshipPresenceTestClient> _clients =
         new List<FriendshipPresenceTestClient>();
     private readonly ServiceHost _host;

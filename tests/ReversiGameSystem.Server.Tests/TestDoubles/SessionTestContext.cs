@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Generic;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Common;
@@ -18,11 +19,12 @@ internal sealed class SessionTestContext : IUtcClock, IEmailSender, ITemplatedEm
         _templatedSender = new TemplatedEmailSender(new HtmlEmailTemplateRenderer(), this);
         Protector = new VerificationCodeProtector(new byte[32]);
         Codes = new VerificationCodeService(Protector, this, this, this);
-        Sessions = new SessionStore(this);
+        Sessions = new SessionStore(this, NullLogger<SessionStore>.Instance);
         ApplicationService = new SessionApplicationService(
             this,
             Codes,
-            Sessions);
+            Sessions,
+            NullLogger<SessionApplicationService>.Instance);
     }
 
     public DateTime UtcNow { get; set; } = new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc);

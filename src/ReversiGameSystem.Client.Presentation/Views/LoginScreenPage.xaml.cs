@@ -24,6 +24,7 @@ public partial class LoginScreenPage : Page
 
     public LoginScreenPage() : this(new LoginViewModel(ClientRuntime.SessionService))
     {
+        Loaded += (_, _) => ClientRuntime.WarmUpSessionChannel();
     }
 
     internal LoginScreenPage(LoginViewModel viewModel)

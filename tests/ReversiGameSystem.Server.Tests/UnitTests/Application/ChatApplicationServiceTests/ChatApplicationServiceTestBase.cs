@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Chat;
 using ReversiGameSystem.Server.Tests.TestDoubles;
@@ -10,7 +11,7 @@ public abstract class ChatApplicationServiceTestBase
     protected ChatApplicationServiceTestBase()
     {
         Clock = new UtcClockStub();
-        Sessions = new SessionStore(Clock);
+        Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         Repository = new ChatRepositoryStub();
         FirstSession = CreateSession(1L, "PlayerOne");
         Service = new ChatApplicationService(Sessions, Repository, Clock);

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Preferences;
 using ReversiGameSystem.Server.Contracts.Common;
@@ -25,7 +26,7 @@ public abstract class PlayerPreferencesServiceTestBase
     protected PlayerPreferencesServiceTestBase()
     {
         Clock = new UtcClockStub();
-        Sessions = new SessionStore(Clock);
+        Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         Repository = new PreferencesRepositoryStub();
         Images = new TestDoubles.PlayerImageRepositoryStub();
         Session = TestSessionHelper.CreateSession(Sessions, 1, "PreferencesPlayer", "es-MX");

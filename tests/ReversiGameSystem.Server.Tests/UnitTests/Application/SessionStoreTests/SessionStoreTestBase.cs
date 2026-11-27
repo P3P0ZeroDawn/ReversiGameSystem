@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Tests.TestDoubles;
@@ -15,7 +16,7 @@ public abstract class SessionStoreTestBase
     public void SetUp()
     {
         Clock = new UtcClockStub(new DateTime(2026, 9, 26, 12, 0, 0, DateTimeKind.Utc));
-        Store = new SessionStore(Clock, TimeSpan.FromMinutes(30));
+        Store = new SessionStore(Clock, TimeSpan.FromMinutes(30), NullLogger<SessionStore>.Instance);
     }
 
     private protected AuthenticatedSession CreateAuthenticatedSession(

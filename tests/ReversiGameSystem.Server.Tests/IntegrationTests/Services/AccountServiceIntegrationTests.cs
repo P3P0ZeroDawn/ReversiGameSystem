@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Generic;
 using System.ServiceModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -35,7 +36,7 @@ public sealed class AccountServiceIntegrationTests
             _stub,
             _stub,
             _stub);
-        SessionStore sessions = new SessionStore(_stub);
+        SessionStore sessions = new SessionStore(_stub, NullLogger<SessionStore>.Instance);
         AccountApplicationService applicationService = new AccountApplicationService(
             _stub,
             _stub,

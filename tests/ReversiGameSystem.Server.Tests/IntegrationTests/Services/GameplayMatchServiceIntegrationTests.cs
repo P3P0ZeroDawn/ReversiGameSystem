@@ -37,7 +37,7 @@ public sealed class GameplayMatchServiceIntegrationTests
     public void Initialize()
     {
         _clock = new UtcClockStub();
-        _sessions = new SessionStore(_clock);
+        _sessions = new SessionStore(_clock, NullLogger<SessionStore>.Instance);
         _matches = new GameplayRepositoryStub();
         _applicationService = new GameplayMatchApplicationService(_sessions, _matches, _clock);
         _subscriptions = new MatchCallbackSubscriptions<IGameplayMatchServiceCallback>(

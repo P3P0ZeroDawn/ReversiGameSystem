@@ -24,6 +24,7 @@ using ReversiGameSystem.Server.Persistence.Friendships;
 using ReversiGameSystem.Server.Persistence.Leaderboards;
 using ReversiGameSystem.Server.Persistence.Mail;
 using ReversiGameSystem.Server.Persistence.Matches;
+using ReversiGameSystem.Server.Persistence.Model;
 using ReversiGameSystem.Server.Persistence.Players;
 using ReversiGameSystem.Server.Persistence.Preferences;
 using ReversiGameSystem.Server.Persistence.Verification;
@@ -94,7 +95,9 @@ internal static class Program
                 try
                 {
                     SystemUtcClock clock = new SystemUtcClock();
-                    SessionStore sessions = new SessionStore(clock);
+                    SessionStore sessions = new SessionStore(
+                        clock,
+                        loggerFactory.CreateLogger<SessionStore>());
                     SmtpEmailSender emailSender = new SmtpEmailSender(MailSettings.Load());
                     HtmlEmailTemplateRenderer templateRenderer = new HtmlEmailTemplateRenderer();
                     TemplatedEmailSender templatedEmailSender = new TemplatedEmailSender(
@@ -130,6 +133,7 @@ internal static class Program
                                 "Cancelled {MatchCount} unfinished matches from a previous server run.",
                                 interruptedMatches);
                         }
+                        ReversiGameSystemEntities.WarmUp();
                         MatchApplicationService matchApplicationService =
                             new MatchApplicationService(
                                 sessions,
@@ -216,7 +220,8 @@ internal static class Program
                                     new SessionApplicationService(
                                         accountRepository,
                                         verificationCodes,
-                                        sessions),
+                                        sessions,
+                                        loggerFactory.CreateLogger<SessionApplicationService>()),
                                     loggerFactory.CreateLogger<SessionService>());
                                 AccountService accountService = CreateAccountService(
                                     accountRepository,

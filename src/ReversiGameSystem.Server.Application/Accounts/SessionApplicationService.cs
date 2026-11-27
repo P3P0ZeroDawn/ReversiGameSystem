@@ -1,6 +1,8 @@
 using System;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Logging;
+using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Application.Verification;
 using ReversiGameSystem.Server.Domain.Accounts;
 
@@ -16,16 +18,19 @@ public sealed class SessionApplicationService
     private readonly IAccountRepository _accounts;
     private readonly VerificationCodeService _verificationCodes;
     private readonly SessionStore _sessions;
+    private readonly ILogger<SessionApplicationService> _logger;
 
     public SessionApplicationService(
         IAccountRepository accounts,
         VerificationCodeService verificationCodes,
-        SessionStore sessions)
+        SessionStore sessions,
+        ILogger<SessionApplicationService> logger)
     {
         _accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
         _verificationCodes = verificationCodes
             ?? throw new ArgumentNullException(nameof(verificationCodes));
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public SessionResult<DateTime> RequestLoginCode(
@@ -46,6 +51,9 @@ public sealed class SessionApplicationService
                 account.AccountId,
                 account.EmailAddress,
                 account.PreferredLocaleCode));
+        _logger.LogInformation(
+            "Login verification code issued for account {AccountId}.",
+            account.AccountId);
         return new SessionResult<DateTime>(expiresAtUtc);
     }
 
@@ -58,6 +66,10 @@ public sealed class SessionApplicationService
             SessionStatus.InvalidVerificationCode);
         if (initialResult.Status != SessionStatus.Success || initialResult.Value == null)
         {
+            _logger.LogWarning(
+                "Login completion rejected for {LoginIdentifier}: {Reason}.",
+                LogSanitizer.MaskIdentifier(loginIdentifier),
+                initialResult.Status);
             return new SessionResult<AuthenticatedSession>(initialResult.Status);
         }
 
@@ -74,6 +86,10 @@ public sealed class SessionApplicationService
                 verification == VerificationStatus.Expired
                     ? SessionStatus.ExpiredVerificationCode
                     : SessionStatus.InvalidVerificationCode;
+            _logger.LogWarning(
+                "Login completion rejected for account {AccountId}: {Reason}.",
+                initialAccount.AccountId,
+                failureStatus);
             return new SessionResult<AuthenticatedSession>(failureStatus);
         }
 
@@ -85,6 +101,10 @@ public sealed class SessionApplicationService
         string normalizedName = displayName?.Trim() ?? string.Empty;
         if (UsernamePolicy.Validate(normalizedName) != UsernameValidationStatus.Success)
         {
+            _logger.LogWarning(
+                "Guest session rejected for {GuestDisplayName}: {Reason}.",
+                LogSanitizer.SanitizeText(displayName),
+                SessionStatus.InvalidGuestName);
             return new SessionResult<GuestSession>(SessionStatus.InvalidGuestName);
         }
 
@@ -94,9 +114,17 @@ public sealed class SessionApplicationService
             _sessions.CalculateExpirationUtc());
         if (!_sessions.TryReserveGuest(guestSession))
         {
+            _logger.LogWarning(
+                "Guest session rejected for {GuestDisplayName}: {Reason}.",
+                LogSanitizer.SanitizeText(guestSession.DisplayName),
+                SessionStatus.GuestNameUnavailable);
             return new SessionResult<GuestSession>(SessionStatus.GuestNameUnavailable);
         }
 
+        _logger.LogInformation(
+            "Guest session opened for {GuestDisplayName}, expires at {ExpiresAtUtc:O}.",
+            LogSanitizer.SanitizeText(guestSession.DisplayName),
+            guestSession.ExpiresAtUtc);
         return new SessionResult<GuestSession>(guestSession);
     }
 
@@ -104,6 +132,9 @@ public sealed class SessionApplicationService
     {
         if (string.IsNullOrWhiteSpace(sessionToken))
         {
+            _logger.LogWarning(
+                "Session close rejected: {Reason}.",
+                SessionStatus.MissingSessionToken);
             return SessionStatus.MissingSessionToken;
         }
 
@@ -120,6 +151,10 @@ public sealed class SessionApplicationService
             SessionStatus.InvalidCredentials);
         if (result.Status != SessionStatus.Success || result.Value == null)
         {
+            _logger.LogWarning(
+                "Login code request rejected for {LoginIdentifier}: {Reason}.",
+                LogSanitizer.MaskIdentifier(loginIdentifier),
+                result.Status);
             return result;
         }
 
@@ -131,11 +166,19 @@ public sealed class SessionApplicationService
                 account.PasswordHash);
         if (!isPasswordValid)
         {
+            _logger.LogWarning(
+                "Login code request rejected for account {AccountId}: {Reason}.",
+                account.AccountId,
+                SessionStatus.InvalidCredentials);
             return new SessionResult<LoginAccount>(SessionStatus.InvalidCredentials);
         }
 
         if (!string.Equals(account.StatusCode, ActiveStatusCode, StringComparison.Ordinal))
         {
+            _logger.LogWarning(
+                "Login code request rejected for account {AccountId}: {Reason}.",
+                account.AccountId,
+                SessionStatus.InactiveAccount);
             return new SessionResult<LoginAccount>(SessionStatus.InactiveAccount);
         }
 
@@ -170,6 +213,10 @@ public sealed class SessionApplicationService
             SessionStatus.InvalidVerificationCode);
         if (currentResult.Status != SessionStatus.Success || currentResult.Value == null)
         {
+            _logger.LogWarning(
+                "Login completion rejected for {LoginIdentifier}: {Reason}.",
+                LogSanitizer.MaskIdentifier(loginIdentifier),
+                currentResult.Status);
             return new SessionResult<AuthenticatedSession>(currentResult.Status);
         }
 
@@ -183,17 +230,29 @@ public sealed class SessionApplicationService
             StringComparison.Ordinal);
         if (!sameIdentity)
         {
+            _logger.LogWarning(
+                "Login completion rejected for account {AccountId}: {Reason}.",
+                currentAccount.AccountId,
+                SessionStatus.InvalidVerificationCode);
             return new SessionResult<AuthenticatedSession>(
                 SessionStatus.InvalidVerificationCode);
         }
 
         if (!string.Equals(currentAccount.StatusCode, ActiveStatusCode, StringComparison.Ordinal))
         {
+            _logger.LogWarning(
+                "Login completion rejected for account {AccountId}: {Reason}.",
+                currentAccount.AccountId,
+                SessionStatus.InactiveAccount);
             return new SessionResult<AuthenticatedSession>(
                 SessionStatus.InactiveAccount);
         }
 
         AuthenticatedSession session = StoreNewAuthenticatedSession(currentAccount);
+        _logger.LogInformation(
+            "Authenticated session opened for account {AccountId}, expires at {ExpiresAtUtc:O}.",
+            session.AccountId,
+            session.ExpiresAtUtc);
         return new SessionResult<AuthenticatedSession>(session);
     }
 
