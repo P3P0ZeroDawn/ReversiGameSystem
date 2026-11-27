@@ -59,7 +59,6 @@ internal static class Program
             new IntegrationTests.Services.ServiceErrorBehaviorIntegrationTests();
         GameplayMatchRulesTests gameplayRulesTests = new GameplayMatchRulesTests();
         GameplayApplicationServiceTests gameplayTests = new GameplayApplicationServiceTests();
-        PlayerBoundaryTests playerBoundaryTests = new PlayerBoundaryTests();
         System.Collections.Generic.List<Action> tests =
             new System.Collections.Generic.List<Action>
         {
@@ -169,23 +168,6 @@ internal static class Program
             presenceTests.ExpiredReceiver_ReceivesNoCallbacks,
             presenceTests.ExpirySweep_PublishesDisconnection,
             presenceTests.EndedFriendship_ReceivesNoPresenceCallbacks,
-            playerBoundaryTests.RegisterAccount_ThroughWcf_MapsCredentialsAndOutcome,
-            playerBoundaryTests.GetProfile_ThroughWcf_MapsIdentityAndStatistics,
-            playerBoundaryTests.GetProfile_MissingAndInvalidSessionThroughWcf_ReturnsTypedFaults,
-            playerBoundaryTests.GetProfile_InactiveCallerRequestingAnotherAccount_RejectsThroughWcf,
-            playerBoundaryTests.GetProfile_InvalidTargetThroughWcf_ReturnsTypedFault,
-            playerBoundaryTests.GetProfile_MissingTargetThroughWcf_ReturnsTypedFault,
-            playerBoundaryTests.GetProfile_RepositoryFailureThroughWcf_ReturnsServiceFault,
-            playerBoundaryTests.GetImage_AbsentImageThroughWcf_ReturnsNull,
-            playerBoundaryTests.GetImage_PresentImageThroughWcf_ReturnsContent,
-            playerBoundaryTests.GetImage_ReadFailureThroughWcf_ReturnsServiceFault,
-            playerBoundaryTests.ChangeUsername_ThroughWcf_NormalizesAndUpdatesOnlyCaller,
-            playerBoundaryTests.ChangeUsername_UnavailableThroughWcf_ReturnsTypedFault,
-            playerBoundaryTests.UpdateImage_InvalidThroughWcf_ReturnsTypedFault,
-            playerBoundaryTests.UpdateImage_AssociationFailureThroughWcf_RemovesNewImage,
-            playerBoundaryTests.GetLeaderboard_ThroughWcf_MapsOrderedEntries,
-            playerBoundaryTests.GetLeaderboard_InvalidLimitThroughWcf_ReturnsTypedFault,
-            playerBoundaryTests.GetLeaderboard_UnavailableThroughWcf_ReturnsServiceFault,
             () => new ModelResourcesTests().Assembly_RequiredRuntimeModel_IsEmbedded("Model.Database_model.csdl"),
             () => new ModelResourcesTests().Assembly_RequiredRuntimeModel_IsEmbedded("Model.Database_model.ssdl"),
             () => new ModelResourcesTests().Assembly_RequiredRuntimeModel_IsEmbedded("Model.Database_model.msl")

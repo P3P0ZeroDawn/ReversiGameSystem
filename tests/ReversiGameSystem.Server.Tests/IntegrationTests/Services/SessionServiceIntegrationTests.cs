@@ -98,7 +98,7 @@ public sealed class SessionServiceIntegrationTests
         FaultException<SessionFault> fault =
             Assert.Throws<FaultException<SessionFault>>(action);
         SessionFailure actualReason = fault.Detail.Reason;
-        CommunicationState actualChannelState = ((ICommunicationObject)_channel).State;
+        CommunicationState actualChannelState = _scope.ChannelState;
 
         Assert.AreEqual(expectedReason, actualReason);
         Assert.AreEqual(expectedChannelState, actualChannelState);
@@ -131,7 +131,7 @@ public sealed class SessionServiceIntegrationTests
         FaultException<SessionFault> fault =
             Assert.Throws<FaultException<SessionFault>>(action);
         SessionFailure actualReason = fault.Detail.Reason;
-        CommunicationState actualChannelState = ((ICommunicationObject)_channel).State;
+        CommunicationState actualChannelState = _scope.ChannelState;
 
         Assert.AreEqual(expectedReason, actualReason);
         Assert.AreEqual(expectedChannelState, actualChannelState);
@@ -173,7 +173,7 @@ public sealed class SessionServiceIntegrationTests
         FaultException<SessionFault> fault =
             Assert.Throws<FaultException<SessionFault>>(action);
         SessionFailure actualReason = fault.Detail.Reason;
-        CommunicationState actualChannelState = ((ICommunicationObject)_channel).State;
+        CommunicationState actualChannelState = _scope.ChannelState;
 
         Assert.AreEqual(expectedReason, actualReason);
         Assert.AreEqual(expectedChannelState, actualChannelState);

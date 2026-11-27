@@ -14,18 +14,16 @@ internal static class WcfTestHostHelper
         ILogger<ServiceErrorBehavior>? errorLogger = null)
         where TContract : class
     {
-        ServiceHost host = OpenHost(
+        OpenedHost opened = OpenHost(
             serviceInstance,
             typeof(TContract),
             endpointName,
-            errorLogger,
-            out Uri endpointAddress,
-            out NetNamedPipeBinding binding);
+            errorLogger);
         ChannelFactory<TContract> factory = new ChannelFactory<TContract>(
-            binding,
-            new EndpointAddress(endpointAddress));
+            opened.Binding,
+            new EndpointAddress(opened.EndpointAddress));
         TContract channel = factory.CreateChannel();
-        return new WcfChannelScope<TContract>(host, factory, channel);
+        return new WcfChannelScope<TContract>(opened.Host, factory, channel);
     }
 
     internal static WcfChannelScope<TContract> OpenDuplexChannel<TContract, TCallback>(
@@ -36,40 +34,17 @@ internal static class WcfTestHostHelper
         where TContract : class
         where TCallback : class
     {
-        ServiceHost host = OpenHost(
+        OpenedHost opened = OpenHost(
             serviceInstance,
             typeof(TContract),
             endpointName,
-            errorLogger,
-            out Uri endpointAddress,
-            out NetNamedPipeBinding binding);
+            errorLogger);
         DuplexChannelFactory<TContract> factory = new DuplexChannelFactory<TContract>(
             new InstanceContext(callback),
-            binding,
-            new EndpointAddress(endpointAddress));
+            opened.Binding,
+            new EndpointAddress(opened.EndpointAddress));
         TContract channel = factory.CreateChannel();
-        return new WcfChannelScope<TContract>(host, factory, channel);
-    }
-
-    internal static ServiceHost OpenHost(
-        object serviceInstance,
-        Type contractType,
-        string endpointName,
-        ILogger<ServiceErrorBehavior>? errorLogger,
-        out Uri endpointAddress,
-        out NetNamedPipeBinding binding)
-    {
-        Uri baseAddress = new Uri(
-            "net.pipe://localhost/ReversiGameSystem.Tests/"
-            + Guid.NewGuid().ToString("N") + "/");
-        binding = new NetNamedPipeBinding(NetNamedPipeSecurityMode.None);
-        ServiceHost host = new ServiceHost(serviceInstance, baseAddress);
-        host.Description.Behaviors.Add(new ServiceErrorBehavior(
-            errorLogger ?? NullLogger<ServiceErrorBehavior>.Instance));
-        host.AddServiceEndpoint(contractType, binding, endpointName);
-        host.Open();
-        endpointAddress = new Uri(baseAddress, endpointName);
-        return host;
+        return new WcfChannelScope<TContract>(opened.Host, factory, channel);
     }
 
     internal static void CloseOrAbort(ICommunicationObject? communicationObject)
@@ -96,6 +71,43 @@ internal static class WcfTestHostHelper
             communicationObject.Abort();
         }
     }
+
+    private static OpenedHost OpenHost(
+        object serviceInstance,
+        Type contractType,
+        string endpointName,
+        ILogger<ServiceErrorBehavior>? errorLogger)
+    {
+        Uri baseAddress = new Uri(
+            "net.pipe://localhost/ReversiGameSystem.Tests/"
+            + Guid.NewGuid().ToString("N") + "/");
+        NetNamedPipeBinding binding = new NetNamedPipeBinding(NetNamedPipeSecurityMode.None);
+        ServiceHost host = new ServiceHost(serviceInstance, baseAddress);
+        host.Description.Behaviors.Add(new ServiceErrorBehavior(
+            errorLogger ?? NullLogger<ServiceErrorBehavior>.Instance));
+        host.AddServiceEndpoint(contractType, binding, endpointName);
+        host.Open();
+        return new OpenedHost(host, new Uri(baseAddress, endpointName), binding);
+    }
+
+    private sealed class OpenedHost
+    {
+        internal OpenedHost(
+            ServiceHost host,
+            Uri endpointAddress,
+            NetNamedPipeBinding binding)
+        {
+            Host = host;
+            EndpointAddress = endpointAddress;
+            Binding = binding;
+        }
+
+        internal ServiceHost Host { get; }
+
+        internal Uri EndpointAddress { get; }
+
+        internal NetNamedPipeBinding Binding { get; }
+    }
 }
 
 internal sealed class WcfChannelScope<TContract> : IDisposable
@@ -116,6 +128,14 @@ internal sealed class WcfChannelScope<TContract> : IDisposable
     internal ChannelFactory<TContract> Factory { get; }
 
     internal TContract Channel { get; }
+
+    internal CommunicationState ChannelState
+    {
+        get
+        {
+            return ((ICommunicationObject)Channel).State;
+        }
+    }
 
     public void Dispose()
     {
