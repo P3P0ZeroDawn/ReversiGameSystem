@@ -230,7 +230,8 @@ internal static class Program
                                 AccountService accountService = CreateAccountService(
                                     accountRepository,
                                     verificationCodes,
-                                    sessions);
+                                    sessions,
+                                    loggerFactory.CreateLogger<AccountApplicationService>());
                                 sessions.SessionRevoked += friendshipSubscriptions.Remove;
                                 sessions.SessionRevoked += sessionToken =>
                                 {
@@ -247,7 +248,10 @@ internal static class Program
                                     CreateServiceHost(accountService, loggerFactory),
                                     CreateServiceHost(sessionService, loggerFactory),
                                     CreateServiceHost(
-                                        CreatePlayerProfileService(sessions),
+                                        CreatePlayerProfileService(
+                                            sessions,
+                                            loggerFactory.CreateLogger<
+                                                PlayerProfileApplicationService>()),
                                         loggerFactory),
                                     CreateServiceHost(
                                         CreateLeaderboardService(),
@@ -315,14 +319,16 @@ internal static class Program
     private static AccountService CreateAccountService(
         AccountRepository accounts,
         VerificationCodeService verificationCodes,
-        SessionStore sessions)
+        SessionStore sessions,
+        ILogger<AccountApplicationService> logger)
     {
         PlayerImageRepository images = new PlayerImageRepository(GetProfileImageDirectory());
         AccountApplicationService applicationService = new AccountApplicationService(
             accounts,
             images,
             verificationCodes,
-            sessions);
+            sessions,
+            logger);
         return new AccountService(applicationService);
     }
 
@@ -351,7 +357,8 @@ internal static class Program
     }
 
     private static PlayerProfileService CreatePlayerProfileService(
-        SessionStore sessions)
+        SessionStore sessions,
+        ILogger<PlayerProfileApplicationService> logger)
     {
         PlayerProfileRepository profiles = new PlayerProfileRepository();
         PlayerImageRepository images = new PlayerImageRepository(GetProfileImageDirectory());
@@ -359,7 +366,8 @@ internal static class Program
             new PlayerProfileApplicationService(
             sessions,
             profiles,
-            images);
+            images,
+            logger);
         return new PlayerProfileService(applicationService);
     }
 

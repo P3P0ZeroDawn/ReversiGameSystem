@@ -25,7 +25,11 @@ public abstract class PlayerProfileServiceTestBase
         Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         Profiles = new TestDoubles.PlayerProfileRepositoryStub();
         Images = new TestDoubles.PlayerImageRepositoryStub();
-        ApplicationService = new PlayerProfileApplicationService(Sessions, Profiles, Images);
+        ApplicationService = new PlayerProfileApplicationService(
+            Sessions,
+            Profiles,
+            Images,
+            NullLogger<PlayerProfileApplicationService>.Instance);
         Service = new Server.ServiceApi.PlayerProfileService(ApplicationService);
     }
 

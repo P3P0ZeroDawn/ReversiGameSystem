@@ -1,5 +1,7 @@
 using System;
 using System.Text;
+using Microsoft.Extensions.Logging;
+using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Application.Players;
 using ReversiGameSystem.Server.Application.Verification;
 using ReversiGameSystem.Server.Domain.Accounts;
@@ -15,18 +17,21 @@ public sealed class AccountApplicationService
     private readonly IPlayerImageRepository _images;
     private readonly VerificationCodeService _verificationCodes;
     private readonly SessionStore _sessions;
+    private readonly ILogger<AccountApplicationService> _logger;
 
     public AccountApplicationService(
         IAccountRepository accounts,
         IPlayerImageRepository images,
         VerificationCodeService verificationCodes,
-        SessionStore sessions)
+        SessionStore sessions,
+        ILogger<AccountApplicationService> logger)
     {
         _accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
         _images = images ?? throw new ArgumentNullException(nameof(images));
         _verificationCodes = verificationCodes
             ?? throw new ArgumentNullException(nameof(verificationCodes));
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public AccountResult<DateTime> RequestRegistrationCode(
@@ -84,6 +89,10 @@ public sealed class AccountApplicationService
             verificationCode);
         if (codeStatus != AccountStatus.Success)
         {
+            _logger.LogWarning(
+                "Account registration rejected for {EmailAddress}: {Reason}.",
+                LogSanitizer.MaskEmail(emailAddress),
+                codeStatus);
             return new AccountResult<AccountSummary>(codeStatus);
         }
 
@@ -124,11 +133,29 @@ public sealed class AccountApplicationService
         LoginAccount account = accountResult.Value;
         if (!VerifyPassword(currentPassword, account.PasswordHash))
         {
+            _logger.LogWarning(
+                "Password change rejected for account {AccountId}: {Reason}.",
+                account.AccountId,
+                AccountStatus.IncorrectCurrentPassword);
             return AccountStatus.IncorrectCurrentPassword;
         }
 
         string newHash = HashPassword(candidateNewPassword);
         AccountStatus updateStatus = _accounts.UpdatePasswordHash(account.AccountId, newHash);
+        if (updateStatus == AccountStatus.Success)
+        {
+            _logger.LogInformation(
+                "Password changed for account {AccountId}.",
+                account.AccountId);
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Password change failed for account {AccountId}: {Reason}.",
+                account.AccountId,
+                updateStatus);
+        }
+
         return updateStatus;
     }
 
@@ -151,9 +178,15 @@ public sealed class AccountApplicationService
                 account.EmailAddress,
                 account.PreferredLocaleCode);
             DateTime expiresAtUtc = _verificationCodes.IssueVerificationCode(identity);
+            _logger.LogInformation(
+                "Password reset code issued for account {AccountId}.",
+                account.AccountId);
             return new AccountResult<DateTime>(expiresAtUtc);
         }
 
+        _logger.LogInformation(
+            "Password reset requested for {EmailAddress} with no active account.",
+            LogSanitizer.MaskEmail(normalizedEmail));
         DateTime plausibleExpiryUtc = _verificationCodes.CalculatePlausibleExpirationUtc();
         AccountResult<DateTime> hiddenResult = new AccountResult<DateTime>(plausibleExpiryUtc);
         return hiddenResult;
@@ -179,12 +212,20 @@ public sealed class AccountApplicationService
         AccountResult<LoginAccount> accountResult = _accounts.FindByEmail(normalizedEmail);
         if (accountResult.Status != AccountStatus.Success || accountResult.Value == null)
         {
+            _logger.LogWarning(
+                "Password reset rejected for {EmailAddress}: {Reason}.",
+                LogSanitizer.MaskEmail(normalizedEmail),
+                AccountStatus.InvalidVerificationCode);
             return AccountStatus.InvalidVerificationCode;
         }
 
         LoginAccount account = accountResult.Value;
         if (account.StatusCode != ActiveStatusCode)
         {
+            _logger.LogWarning(
+                "Password reset rejected for account {AccountId}: {Reason}.",
+                account.AccountId,
+                AccountStatus.InactiveAccount);
             return AccountStatus.InactiveAccount;
         }
 
@@ -193,6 +234,10 @@ public sealed class AccountApplicationService
             verificationCode?.Trim() ?? string.Empty);
         if (codeStatus != AccountStatus.Success)
         {
+            _logger.LogWarning(
+                "Password reset rejected for account {AccountId}: {Reason}.",
+                account.AccountId,
+                codeStatus);
             return codeStatus;
         }
 
@@ -200,7 +245,17 @@ public sealed class AccountApplicationService
         AccountStatus updateStatus = _accounts.UpdatePasswordHash(account.AccountId, newHash);
         if (updateStatus == AccountStatus.Success)
         {
+            _logger.LogInformation(
+                "Password reset completed for account {AccountId}.",
+                account.AccountId);
             _sessions.RevokeAccountSessions(account.AccountId);
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Password reset failed for account {AccountId}: {Reason}.",
+                account.AccountId,
+                updateStatus);
         }
 
         return updateStatus;
@@ -231,13 +286,27 @@ public sealed class AccountApplicationService
         LoginAccount account = accountResult.Value;
         if (!VerifyPassword(currentPassword, account.PasswordHash))
         {
+            _logger.LogWarning(
+                "Account deactivation rejected for account {AccountId}: {Reason}.",
+                account.AccountId,
+                AccountStatus.IncorrectCurrentPassword);
             return AccountStatus.IncorrectCurrentPassword;
         }
 
         AccountStatus deactivationStatus = _accounts.DeactivateAccount(account.AccountId);
         if (deactivationStatus == AccountStatus.Success)
         {
+            _logger.LogInformation(
+                "Account {AccountId} deactivated.",
+                account.AccountId);
             _sessions.RevokeAccountSessions(account.AccountId);
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Account deactivation rejected for account {AccountId}: {Reason}.",
+                account.AccountId,
+                deactivationStatus);
         }
 
         return deactivationStatus;
@@ -279,9 +348,17 @@ public sealed class AccountApplicationService
                 _images.DeleteImage(imageUri);
             }
 
+            _logger.LogWarning(
+                "Account registration rejected for {EmailAddress}: {Reason}.",
+                LogSanitizer.MaskEmail(emailAddress),
+                createResult.Status);
             return new AccountResult<AccountSummary>(createResult.Status);
         }
 
+        _logger.LogInformation(
+            "Account {AccountId} registered for {EmailAddress}.",
+            createResult.Value,
+            LogSanitizer.MaskEmail(emailAddress));
         AccountSummary summary = new AccountSummary(createResult.Value, username);
         AccountResult<AccountSummary> result = new AccountResult<AccountSummary>(summary);
         return result;

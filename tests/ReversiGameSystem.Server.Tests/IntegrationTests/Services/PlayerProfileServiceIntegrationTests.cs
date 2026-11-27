@@ -311,7 +311,11 @@ public sealed class PlayerProfileServiceIntegrationTests
             get
             {
                 PlayerProfileApplicationService applicationService =
-                    new PlayerProfileApplicationService(Sessions, Profiles, Images);
+                    new PlayerProfileApplicationService(
+                        Sessions,
+                        Profiles,
+                        Images,
+                        NullLogger<PlayerProfileApplicationService>.Instance);
                 return new PlayerProfileService(applicationService);
             }
         }

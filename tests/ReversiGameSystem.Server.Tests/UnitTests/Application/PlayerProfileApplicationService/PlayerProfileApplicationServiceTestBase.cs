@@ -24,7 +24,11 @@ public abstract class PlayerProfileApplicationServiceTestBase
         Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         Profiles = new TestDoubles.PlayerProfileRepositoryStub();
         Images = new TestDoubles.PlayerImageRepositoryStub();
-        Service = new ApplicationService(Sessions, Profiles, Images);
+        Service = new ApplicationService(
+            Sessions,
+            Profiles,
+            Images,
+            NullLogger<ApplicationService>.Instance);
     }
 
     protected string AddAuthenticatedSession(
