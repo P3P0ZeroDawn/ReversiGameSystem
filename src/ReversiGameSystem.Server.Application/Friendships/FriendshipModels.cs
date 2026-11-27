@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 
 namespace ReversiGameSystem.Server.Application.Friendships;
 
@@ -32,7 +33,43 @@ public enum FriendshipStatus
 
     AccountNotFound,
 
-    FriendshipNotFound
+    FriendshipNotFound,
+
+    CannotSendRequestToSelf,
+
+    FriendshipAlreadyExists,
+
+    RequestAlreadyPending,
+
+    MissingRequestId,
+
+    RequestUnavailable,
+
+    UnauthorizedRequest
+}
+
+public sealed class PendingFriendRequest
+{
+    private const string RequestIdFormat = "{0}:{1}:{2}";
+
+    public PendingFriendRequest(
+        FriendAccount sender, FriendAccount recipient, DateTime createdAtUtc)
+    {
+        Sender = sender ?? throw new ArgumentNullException(nameof(sender));
+        Recipient = recipient ?? throw new ArgumentNullException(nameof(recipient));
+        CreatedAtUtc = DateTime.SpecifyKind(createdAtUtc, DateTimeKind.Utc);
+        RequestId = string.Format(CultureInfo.InvariantCulture, RequestIdFormat,
+            Math.Min(sender.AccountId, recipient.AccountId),
+            Math.Max(sender.AccountId, recipient.AccountId), CreatedAtUtc.Ticks);
+    }
+
+    public string RequestId { get; }
+
+    public FriendAccount Sender { get; }
+
+    public FriendAccount Recipient { get; }
+
+    public DateTime CreatedAtUtc { get; }
 }
 
 public sealed class FriendshipResult<T>

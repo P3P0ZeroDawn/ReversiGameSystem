@@ -1,8 +1,5 @@
 namespace ReversiGameSystem.Services;
 
-/// <summary>
-/// Accepts or rejects a pending request addressed to the authenticated player.
-/// </summary>
 internal sealed class FriendRequestResponseService
 {
     private readonly string _recipientUsername;

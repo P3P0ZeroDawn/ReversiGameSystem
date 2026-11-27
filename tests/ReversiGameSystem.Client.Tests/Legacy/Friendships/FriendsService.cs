@@ -9,9 +9,6 @@ internal enum FriendsRetrievalResult
     RetrievalError
 }
 
-/// <summary>
-/// Retrieves active accounts with an accepted friendship relationship.
-/// </summary>
 internal sealed class FriendsService
 {
     private readonly string _username;

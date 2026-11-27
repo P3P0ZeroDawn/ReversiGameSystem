@@ -1,5 +1,7 @@
 using System;
+using Microsoft.Extensions.Logging;
 using System.ComponentModel;
+using System.ServiceModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -8,39 +10,29 @@ using ReversiGameSystem.Services;
 
 namespace ReversiGameSystem.Views;
 
-/// <summary>
-/// Shows statistics within a player's profile.
-/// </summary>
 public partial class PlayerStatisticsControl : UserControl
 {
     private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
     private ProfileStatistics? _statistics;
-    private string? _playerId;
+    private long? _accountId;
 
-    /// <summary>
-    /// Initializes the statistics section.
-    /// </summary>
     public PlayerStatisticsControl()
     {
         InitializeComponent();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
-
-    /// <summary>
-    /// Gets or sets the selected player's identifier; null selects the signed-in player.
-    /// </summary>
-    public string? PlayerId
+    public long? AccountId
     {
-        get { return _playerId; }
+        get { return _accountId; }
         set
         {
-            if (_playerId == value)
+            if (_accountId == value)
             {
                 return;
             }
 
-            _playerId = value;
+            _accountId = value;
             ClearStatistics();
         }
     }
@@ -71,42 +63,55 @@ public partial class PlayerStatisticsControl : UserControl
 
     private async void OnShowStatisticsClick(object sender, RoutedEventArgs e)
     {
-        if (PlayerId != null)
-        {
-            _dialogService.ShowError(
-                this,
-                "PlayerStatistics_RetrievalErrorTitle",
-                "PlayerStatistics_RetrievalErrorMessage");
-            return;
-        }
-
         string? sessionToken = ClientRuntime.CurrentSession.SessionToken;
-        if (sessionToken == null || string.IsNullOrWhiteSpace(sessionToken))
+        if (ClientRuntime.CurrentSession.IsGuest || string.IsNullOrWhiteSpace(sessionToken))
         {
-            _dialogService.ShowError(
-                this,
-                "PlayerStatistics_RetrievalErrorTitle",
+            _dialogService.ShowError(this, "PlayerStatistics_RetrievalErrorTitle",
                 "PlayerStatistics_RetrievalErrorMessage");
             return;
         }
-
-        ClearStatistics();
+        long? accountId = AccountId;
         IsEnabled = false;
-        ProfileResult<PlayerProfile> result =
-            await ClientRuntime.ProfileService.GetPlayerProfile(sessionToken);
-        IsEnabled = true;
-        if (result.Status == ProfileStatus.Success)
+        try
         {
-            PlayerProfile profile = result.Value
-                ?? throw new InvalidOperationException(
-                    "A successful profile result must contain its value.");
-            SetStatistics(profile.Statistics);
-            return;
+            ProfileResult<PlayerProfile> result =
+                await ClientRuntime.ProfileService.GetPlayerProfile(sessionToken!, accountId);
+            if (!IsLoaded || ClientRuntime.CurrentSession.SessionToken != sessionToken
+                || AccountId != accountId)
+            {
+                return;
+            }
+            if (result.Status == ProfileStatus.Success)
+            {
+                PlayerProfile profile = result.Value
+                    ?? throw new InvalidOperationException(
+                        "A successful profile must contain data.");
+                SetStatistics(profile.Statistics);
+            }
+            else
+            {
+                string prefix = result.Status == ProfileStatus.ServiceUnavailable
+                    ? "PlayerStatistics_ServerConnectionFailed" : "PlayerStatistics_RetrievalError";
+                _dialogService.ShowError(this, prefix + "Title", prefix + "Message");
+            }
         }
-        string resourcePrefix = result.Status == ProfileStatus.ServiceUnavailable
-            ? "PlayerStatistics_ServerConnectionFailed"
-            : "PlayerStatistics_RetrievalError";
-        _dialogService.ShowError(this, resourcePrefix + "Title", resourcePrefix + "Message");
+        catch (FaultException<ServerProxy.ServiceFault> exception)
+        {
+            if (IsLoaded)
+            {
+                ClientRuntime.Errors.ReportOperationFailure(
+                    exception, nameof(PlayerStatisticsControl));
+            }
+            else
+            {
+                ClientRuntime.Errors.RecordFailure(
+                    exception, nameof(PlayerStatisticsControl), LogLevel.Error);
+            }
+        }
+        finally
+        {
+            IsEnabled = true;
+        }
     }
 
     private void ClearStatistics()

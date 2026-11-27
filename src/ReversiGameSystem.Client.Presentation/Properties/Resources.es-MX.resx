@@ -1399,4 +1399,19 @@
   <data name="Account_InvalidPasswordMessage" xml:space="preserve">
     <value>La nueva contraseña no cumple las reglas de contraseña. Revisa los requisitos e inténtalo nuevamente.</value>
   </data>
+  <data name="Friendship_ServiceUnavailableTitle" xml:space="preserve">
+    <value>Conexión no disponible</value>
+  </data>
+  <data name="Friendship_ServiceUnavailableMessage" xml:space="preserve">
+    <value>No se pudo confirmar la operación. Revisa tu conexión y actualiza la información antes de intentarlo nuevamente.</value>
+  </data>
+  <data name="FriendRequests_ReviewButton" xml:space="preserve">
+    <value>Revisar solicitud</value>
+  </data>
+  <data name="AddFriends_SearchPromptMessage" xml:space="preserve">
+    <value>Escribe un nombre de usuario para buscar jugadores.</value>
+  </data>
+  <data name="AddFriends_CloseButton" xml:space="preserve">
+    <value>Cerrar</value>
+  </data>
 </root>

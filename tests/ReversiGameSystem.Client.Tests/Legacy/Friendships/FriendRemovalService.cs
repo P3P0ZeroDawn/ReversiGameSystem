@@ -8,9 +8,6 @@ internal enum FriendRemovalResult
     PersistenceError
 }
 
-/// <summary>
-/// Ends an accepted friendship for the authenticated player.
-/// </summary>
 internal sealed class FriendRemovalService
 {
     private readonly string _username;

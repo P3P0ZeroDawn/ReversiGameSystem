@@ -47,7 +47,6 @@ internal sealed class ClientSession
         GuestName = session.DisplayName;
         ProfilePicture = null;
         UserPreferencesState.Reset();
-        FriendshipPreviewState.Reset();
         SessionChanged?.Invoke();
     }
 
@@ -70,7 +69,6 @@ internal sealed class ClientSession
         GuestName = null;
         ProfilePicture = null;
         UserPreferencesState.Reset();
-        FriendshipPreviewState.Reset();
         SessionChanged?.Invoke();
     }
 }

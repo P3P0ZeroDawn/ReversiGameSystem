@@ -2,7 +2,7 @@ using System.Windows.Media;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
 
-namespace ReversiGameSystem.Views;
+namespace ReversiGameSystem.Features.Friendships;
 
 internal sealed class FriendItem
 {
@@ -11,11 +11,13 @@ internal sealed class FriendItem
         AccountId = friend.AccountId;
         Username = friend.Username;
         IsOnline = friend.IsOnline;
+        HasProfileImage = friend.HasProfileImage;
     }
 
     public long AccountId { get; }
     public string Username { get; }
     public bool IsOnline { get; }
+    public bool HasProfileImage { get; }
     public string PresenceText
     {
         get
