@@ -1,4 +1,5 @@
 using System;
+using System.ServiceModel;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Proxy = ReversiGameSystem.ServerProxy;
@@ -7,6 +8,7 @@ namespace ReversiGameSystem.Services;
 
 internal sealed class LeaderboardClient
 {
+    private LeaderboardEntry[] _entries = Array.Empty<LeaderboardEntry>();
     private readonly ILogger<LeaderboardClient> _logger;
     private readonly Func<Proxy.LeaderboardServiceClient> _createClient;
 
@@ -23,33 +25,48 @@ internal sealed class LeaderboardClient
         _createClient = createClient ?? throw new ArgumentNullException(nameof(createClient));
     }
 
-    internal async Task<LeaderboardResult> GetLeaderboard(int maximumEntries)
+    internal LeaderboardEntry[] ReadLeaderboard()
+    {
+        return (LeaderboardEntry[])_entries.Clone();
+    }
+
+    internal async Task<LeaderboardStatus> LoadLeaderboard(int maximumEntries)
     {
         Proxy.LeaderboardEntry[] remoteEntries;
         try
         {
-            remoteEntries = await Execute(
+            remoteEntries = await SendLeaderboardOperation(
                 client => client.GetLeaderboardAsync(maximumEntries));
         }
-        catch (Exception exception) when (RemoteCall.IsConnectionFailure(exception))
+        catch (FaultException<Proxy.LeaderboardFault> fault)
+            when (fault.Detail.Reason == Proxy.LeaderboardFailure.InvalidMaximumEntries)
         {
-            return new LeaderboardResult(
-                LeaderboardStatus.ServiceUnavailable, Array.Empty<LeaderboardEntry>());
+            return LeaderboardStatus.InvalidMaximumEntries;
+        }
+        catch (CommunicationException exception) when (RemoteCall.IsConnectionFailure(exception))
+        {
+            return LeaderboardStatus.ServiceUnavailable;
+        }
+        catch (TimeoutException)
+        {
+            return LeaderboardStatus.ServiceUnavailable;
         }
         LeaderboardEntry[] entries = new LeaderboardEntry[remoteEntries.Length];
         for (int index = 0; index < remoteEntries.Length; index++)
         {
             Proxy.LeaderboardEntry remoteEntry = remoteEntries[index];
             entries[index] = new LeaderboardEntry(
+                remoteEntry.Account.AccountId,
                 remoteEntry.Position,
                 remoteEntry.Account.Username,
                 remoteEntry.Wins);
         }
 
-        return new LeaderboardResult(LeaderboardStatus.Success, entries);
+        _entries = entries;
+        return LeaderboardStatus.Success;
     }
 
-    private Task<TResult> Execute<TResult>(
+    private Task<TResult> SendLeaderboardOperation<TResult>(
         Func<Proxy.LeaderboardServiceClient, Task<TResult>> operation)
     {
         Proxy.LeaderboardServiceClient client = _createClient();

@@ -25,9 +25,18 @@ El guardado del idioma y su recuperación al iniciar sesión están comprobados 
    e informar los fallos sin cerrar la aplicación, restaurar controles y conservar el
    estado confirmado. Mantener el cierre global para errores no recuperados.
 
+6. Al finalizar las migraciones y la revisión de pruebas, revisar y corregir SonarCloud.
+   Resolver los problemas del análisis y del quality gate, verificando que la cobertura
+   y las exclusiones de código generado representen correctamente el proyecto.
+
 La verificación debe cubrir gameplay/MVVM, rival automático e inactividad, reconexión de 30 segundos,
 chat (muteo y límite de mensajes), idioma persistente, cierre de sesión, clasificación de excepciones
 y registros sin datos sensibles. Incluir fallos durante la reconexión y al escribir los logs.
+
+7. Revisar declaraciones duplicadas entre capas, incluidas constantes y límites.
+   Distinguir valores que representan una misma regla de aquellos con responsabilidades
+   independientes. Diseñar su ubicación y forma de reutilización antes de modificar código,
+   evitando dependencias entre capas o abstracciones creadas solo para compartir literales.
 
 La ampliación a todas las preferencias queda pendiente de validar el diseño antes de implementar.
 La comprobación con Hamachi sigue pendiente.

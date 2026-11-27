@@ -10,14 +10,6 @@ internal static class PlayerImageService
 {
     private const int FileBufferSize = 81920;
 
-    internal static async Task<ProfileStatus> ChangeProfileImage(string sessionToken,
-        string imagePath)
-    {
-        PlayerImageContent image = await ReadImageFile(imagePath);
-        return await ClientRuntime.ProfileService.UpdateProfileImage(
-            sessionToken, image.Content, image.MediaType);
-    }
-
     internal static async Task<PlayerImageContent> ReadImageFile(string imagePath)
     {
         using (FileStream stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read,
@@ -48,14 +40,13 @@ internal static class PlayerImageService
     internal static BitmapSource? CreatePreview(
         PlayerImageContent? content, int maximumSize = ProfilePicturePolicy.ProfilePreviewSize)
     {
-        if (content == null)
+        if (content == null || content.Content.Length == 0)
         {
             return null;
         }
-        if (content.Content == null || content.Content.Length == 0
-            || content.Content.Length > ProfilePicturePolicy.MaximumFileBytes)
+        if (content.Content.Length > ProfilePicturePolicy.MaximumFileBytes)
         {
-            throw new InvalidOperationException("The service returned invalid image content.");
+            throw new InvalidDataException("The service returned invalid image content.");
         }
         using (MemoryStream stream = new MemoryStream(content.Content, false))
         {
@@ -64,7 +55,7 @@ internal static class PlayerImageService
             if (!(decoder is PngBitmapDecoder || decoder is JpegBitmapDecoder)
                 || decoder.Frames.Count == 0)
             {
-                throw new InvalidOperationException("The service returned an unsupported image.");
+                throw new InvalidDataException("The service returned an unsupported image.");
             }
 
             BitmapFrame frame = decoder.Frames[0];
@@ -72,7 +63,7 @@ internal static class PlayerImageService
                 || frame.PixelWidth > ProfilePicturePolicy.MaximumDimension
                 || frame.PixelHeight > ProfilePicturePolicy.MaximumDimension)
             {
-                throw new InvalidOperationException(
+                throw new InvalidDataException(
                     "The service returned invalid image dimensions.");
             }
 

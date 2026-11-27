@@ -51,5 +51,8 @@
     <None Include="..\..\database\migrations\20261127_GuestMatchParticipants.sql"
           Link="migrations\20261127_GuestMatchParticipants.sql"
           CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\database\migrations\20261127_MatchStatisticsEligibility.sql"
+          Link="migrations\20261127_MatchStatisticsEligibility.sql"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

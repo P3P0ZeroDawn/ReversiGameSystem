@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -93,6 +94,75 @@ public sealed class MatchRepositoryIntegrationTests : RepositoryIntegrationTestB
         Assert.AreEqual(expectedCreatorMatchCount, actualCreatorList.Value?.Length);
         Assert.AreEqual(expectedOpponentMatchCount, actualOpponentList.Value?.Length);
         Assert.AreEqual(expectedMatchId, actualOpponentList.Value?[0].Id);
+    }
+
+    [TestMethod]
+    public void JoinMatch_TwoRegisteredPlayers_EnablesStatistics()
+    {
+        long creatorId = SeedAccount(CreatorUsername, CreatorEmail);
+        long opponentId = SeedAccount(OpponentUsername, OpponentEmail);
+        MatchRepository repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
+        MatchResult<Match> created = repository.CreateMatch(
+            CreatePlayer(creatorId, CreatorUsername), new MatchSettings(), DateTime.UtcNow);
+        Assert.IsNotNull(created.Value);
+        Assert.IsNotNull(created.Value.Code);
+
+        MatchResult<Match> joined = repository.JoinMatch(
+            CreatePlayer(opponentId, OpponentUsername), created.Value.Code, DateTime.UtcNow);
+
+        Assert.AreEqual(MatchStatus.Success, joined.Status);
+        Assert.IsNotNull(joined.Value);
+        Assert.IsTrue(joined.Value.CountsTowardStatistics);
+        using ReversiGameSystemEntities context = CreateFreshContext();
+        Assert.IsTrue(context.GameMatch.Single(
+            match => match.matchId == created.Value.Id).countsTowardStatistics);
+    }
+
+    [TestMethod]
+    [DataRow("FINISHED", "REGISTERED", "LOSS", false, true)]
+    [DataRow("FINISHED", "SYSTEM", "LOSS", true, false)]
+    [DataRow("FINISHED", "GUEST", "LOSS", true, false)]
+    [DataRow("FINISHED", "REGISTERED", "", true, false)]
+    [DataRow("FINISHED", "REGISTERED", "WIN", true, false)]
+    [DataRow("CANCELLED", "REGISTERED", "LOSS", true, false)]
+    [DataRow("IN_PROGRESS", "REGISTERED", "LOSS", true, true)]
+    [DataRow("IN_PROGRESS", "REGISTERED", "LOSS", false, false)]
+    public void StatisticsMigration_HistoricalParticipants_PreservesEligibleResults(
+        string status, string participantType, string opponentResult,
+        bool originalEligibility, bool expectedEligibility)
+    {
+        long creatorId = SeedAccount(CreatorUsername, CreatorEmail);
+        long opponentId = SeedAccount(OpponentUsername, OpponentEmail);
+        MatchRepository repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
+        MatchResult<Match> created = repository.CreateMatch(
+            CreatePlayer(creatorId, CreatorUsername), new MatchSettings(), DateTime.UtcNow);
+        Assert.IsNotNull(created.Value);
+        Assert.IsNotNull(created.Value.Code);
+        repository.JoinMatch(CreatePlayer(opponentId, OpponentUsername),
+            created.Value.Code, DateTime.UtcNow);
+        using ReversiGameSystemEntities context = CreateFreshContext();
+        context.Database.ExecuteSqlCommand(
+            "UPDATE dbo.GameMatch SET statusCode = @p0, endedAtUtc = SYSUTCDATETIME(), "
+            + "countsTowardStatistics = @p1 WHERE matchId = @p2; "
+            + "UPDATE dbo.MatchParticipant SET finalPieceCount = 32, resultCode = 'WIN' "
+            + "WHERE matchId = @p2; "
+            + "UPDATE dbo.MatchParticipant SET participantTypeCode = @p3, "
+            + "resultCode = NULLIF(@p4, ''), accountId = CASE "
+            + "WHEN @p3 = 'REGISTERED' THEN accountId ELSE NULL END "
+            + "WHERE matchId = @p2 AND seatNumber = 2;",
+            status, originalEligibility, created.Value.Id, participantType, opponentResult);
+        string migration = File.ReadAllText(Path.Combine(AppContext.BaseDirectory,
+            "migrations", "20261127_MatchStatisticsEligibility.sql"));
+
+        context.Database.ExecuteSqlCommand(migration);
+        context.Database.ExecuteSqlCommand(migration);
+
+        using ReversiGameSystemEntities verification = CreateFreshContext();
+        Assert.AreEqual(expectedEligibility, verification.GameMatch.Single(
+            game => game.matchId == created.Value.Id).countsTowardStatistics);
+        Assert.AreEqual(opponentResult, verification.MatchParticipant.Single(
+            participant => participant.matchId == created.Value.Id && participant.seatNumber == 2)
+            .resultCode ?? string.Empty);
     }
 
     [TestMethod]
