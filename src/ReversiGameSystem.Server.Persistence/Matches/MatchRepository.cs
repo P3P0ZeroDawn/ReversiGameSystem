@@ -361,8 +361,8 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         }
 
         match.MatchParticipant1.Add(CreateParticipant(player, 2, now));
-        match.countsTowardStatistics = match.countsTowardStatistics
-            && !player.IsGuest && creator.participantTypeCode == RegisteredParticipantType;
+        match.countsTowardStatistics =
+            !player.IsGuest && creator.participantTypeCode == RegisteredParticipantType;
         match.statusCode = "IN_PROGRESS";
         match.startedAtUtc = now;
         match.currentTurnSeatNumber = CreatorSeatNumber;

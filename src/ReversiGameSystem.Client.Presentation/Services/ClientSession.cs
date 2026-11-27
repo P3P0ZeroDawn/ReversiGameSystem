@@ -55,7 +55,7 @@ internal sealed class ClientSession
         Username = username;
     }
 
-    internal void UpdateProfilePicture(BitmapSource profilePicture)
+    internal void UpdateProfilePicture(BitmapSource? profilePicture)
     {
         ProfilePicture = profilePicture;
     }

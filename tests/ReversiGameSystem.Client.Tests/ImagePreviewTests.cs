@@ -117,7 +117,7 @@ public sealed class ImagePreviewTests
         {
             Assert.IsNull(ProfilePicturePolicy.CreatePreview(path));
             PlayerImageContent content = await PlayerImageService.ReadImageFile(path);
-            Assert.ThrowsExactly<InvalidOperationException>(() =>
+            Assert.ThrowsExactly<InvalidDataException>(() =>
                 PlayerImageService.CreatePreview(content));
         }
         finally

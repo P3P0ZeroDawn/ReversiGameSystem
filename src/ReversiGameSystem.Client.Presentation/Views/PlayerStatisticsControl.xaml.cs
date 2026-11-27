@@ -1,7 +1,5 @@
 using System;
-using Microsoft.Extensions.Logging;
 using System.ComponentModel;
-using System.ServiceModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -12,31 +10,15 @@ namespace ReversiGameSystem.Views;
 
 public partial class PlayerStatisticsControl : UserControl
 {
-    private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
     private ProfileStatistics? _statistics;
-    private long? _accountId;
 
     public PlayerStatisticsControl()
     {
         InitializeComponent();
+        ClearStatistics();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
-    public long? AccountId
-    {
-        get { return _accountId; }
-        set
-        {
-            if (_accountId == value)
-            {
-                return;
-            }
-
-            _accountId = value;
-            ClearStatistics();
-        }
-    }
-
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         LocalizationManager.Instance.PropertyChanged += OnLocalizationChanged;
@@ -58,65 +40,19 @@ public partial class PlayerStatisticsControl : UserControl
     internal void SetStatistics(ProfileStatistics statistics)
     {
         _statistics = statistics ?? throw new ArgumentNullException(nameof(statistics));
+        showStatisticsButton.IsEnabled = true;
         ShowStatistics();
     }
 
-    private async void OnShowStatisticsClick(object sender, RoutedEventArgs e)
+    private void OnShowStatisticsClick(object sender, RoutedEventArgs e)
     {
-        string? sessionToken = ClientRuntime.CurrentSession.SessionToken;
-        if (ClientRuntime.CurrentSession.IsGuest || string.IsNullOrWhiteSpace(sessionToken))
-        {
-            _dialogService.ShowError(this, "PlayerStatistics_RetrievalErrorTitle",
-                "PlayerStatistics_RetrievalErrorMessage");
-            return;
-        }
-        long? accountId = AccountId;
-        IsEnabled = false;
-        try
-        {
-            ProfileResult<PlayerProfile> result =
-                await ClientRuntime.ProfileService.GetPlayerProfile(sessionToken!, accountId);
-            if (!IsLoaded || ClientRuntime.CurrentSession.SessionToken != sessionToken
-                || AccountId != accountId)
-            {
-                return;
-            }
-            if (result.Status == ProfileStatus.Success)
-            {
-                PlayerProfile profile = result.Value
-                    ?? throw new InvalidOperationException(
-                        "A successful profile must contain data.");
-                SetStatistics(profile.Statistics);
-            }
-            else
-            {
-                string prefix = result.Status == ProfileStatus.ServiceUnavailable
-                    ? "PlayerStatistics_ServerConnectionFailed" : "PlayerStatistics_RetrievalError";
-                _dialogService.ShowError(this, prefix + "Title", prefix + "Message");
-            }
-        }
-        catch (FaultException<ServerProxy.ServiceFault> exception)
-        {
-            if (IsLoaded)
-            {
-                ClientRuntime.Errors.ReportOperationFailure(
-                    exception, nameof(PlayerStatisticsControl));
-            }
-            else
-            {
-                ClientRuntime.Errors.RecordFailure(
-                    exception, nameof(PlayerStatisticsControl), LogLevel.Error);
-            }
-        }
-        finally
-        {
-            IsEnabled = true;
-        }
+        ShowStatistics();
     }
 
-    private void ClearStatistics()
+    internal void ClearStatistics()
     {
         _statistics = null;
+        showStatisticsButton.IsEnabled = false;
         string unavailable = LocalizationManager.Instance["AccountInformation_UnavailableValue"];
         winsValueTextBlock.Text = unavailable;
         matchesPlayedValueTextBlock.Text = unavailable;

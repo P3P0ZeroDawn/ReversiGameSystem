@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.ServiceModel;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -8,133 +10,229 @@ namespace ReversiGameSystem.Services;
 
 internal sealed class PlayerProfileClient
 {
+    private readonly string _sessionToken;
     private readonly ILogger<PlayerProfileClient> _logger;
     private readonly Func<Proxy.PlayerProfileServiceClient> _createClient;
+    private readonly object _profileDataLock = new object();
+    private readonly Dictionary<long, PlayerProfile> _profiles =
+        new Dictionary<long, PlayerProfile>();
+    private readonly Dictionary<long, PlayerImageContent> _images =
+        new Dictionary<long, PlayerImageContent>();
+    private PlayerProfile? _ownProfile;
+    private PlayerImageContent? _ownImage;
+    private bool _discarded;
 
-    internal PlayerProfileClient(ILogger<PlayerProfileClient> logger)
-        : this(logger, ServerConnectionFactory.CreateProfileClient)
+    internal PlayerProfileClient(string sessionToken, ILogger<PlayerProfileClient> logger)
+        : this(sessionToken, logger, ServerConnectionFactory.CreateProfileClient)
     {
     }
 
-    internal PlayerProfileClient(
-        ILogger<PlayerProfileClient> logger,
+    internal PlayerProfileClient(string sessionToken, ILogger<PlayerProfileClient> logger,
         Func<Proxy.PlayerProfileServiceClient> createClient)
     {
+        _sessionToken = sessionToken ?? throw new ArgumentNullException(nameof(sessionToken));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _createClient = createClient ?? throw new ArgumentNullException(nameof(createClient));
     }
 
-    internal async Task<ProfileResult<PlayerProfile>> GetPlayerProfile(
-        string sessionToken,
-        long? targetAccountId = null)
+    internal Task<ProfileStatus> LoadProfile(long? targetAccountId = null)
     {
-        ProfileResult<PlayerProfile> result;
-        try
+        async Task LoadAccountProfile(Proxy.PlayerProfileServiceClient client)
         {
-            Proxy.PlayerProfile profile = await SendProfileOperation(
-                client => client.GetPlayerProfileAsync(sessionToken, targetAccountId));
-            result = new ProfileResult<PlayerProfile>(ProfileStatus.Success, MapProfile(profile));
+            Proxy.PlayerProfile profile = await client.GetPlayerProfileAsync(
+                _sessionToken, targetAccountId).ConfigureAwait(false);
+            PlayerProfile confirmed = MapProfile(profile);
+            if (targetAccountId.HasValue && confirmed.Account.AccountId != targetAccountId.Value)
+            {
+                throw new InvalidDataException("The service returned another account profile.");
+            }
+            lock (_profileDataLock)
+            {
+                if (!_discarded)
+                {
+                    if (targetAccountId.HasValue)
+                    {
+                        _profiles[targetAccountId.Value] = confirmed;
+                    }
+                    else
+                    {
+                        _ownProfile = confirmed;
+                    }
+                }
+            }
         }
-        catch (FaultException<Proxy.ProfileFault> fault)
-            when (Enum.IsDefined(typeof(Proxy.ProfileFailure), fault.Detail.Reason))
-        {
-            result = new ProfileResult<PlayerProfile>(MapProfileStatus(fault.Detail.Reason), null);
-        }
-        catch (Exception exception) when (RemoteCall.IsConnectionFailure(exception))
-        {
-            result = new ProfileResult<PlayerProfile>(ProfileStatus.ServiceUnavailable, null);
-        }
-        return result;
+        return SendProfileOperation(LoadAccountProfile);
     }
 
-    internal async Task<ProfileResult<PlayerImageContent>> GetProfileImage(
-        string sessionToken,
-        long? targetAccountId = null)
+    internal PlayerProfile ReadProfile(long? targetAccountId = null)
     {
-        ProfileResult<PlayerImageContent> result;
-        try
+        lock (_profileDataLock)
         {
-            Proxy.ImageContent image = await SendProfileOperation(
-                client => client.GetProfileImageAsync(sessionToken, targetAccountId));
-            PlayerImageContent content = new PlayerImageContent(image.Content, image.MediaType);
-            result = new ProfileResult<PlayerImageContent>(ProfileStatus.Success, content);
+            if (targetAccountId.HasValue && _profiles.ContainsKey(targetAccountId.Value))
+            {
+                return _profiles[targetAccountId.Value];
+            }
+            if (!targetAccountId.HasValue && _ownProfile != null)
+            {
+                return _ownProfile;
+            }
+            throw new InvalidOperationException("The requested profile has not been loaded.");
         }
-        catch (FaultException<Proxy.ProfileFault> fault)
-            when (Enum.IsDefined(typeof(Proxy.ProfileFailure), fault.Detail.Reason))
-        {
-            result = new ProfileResult<PlayerImageContent>(
-                MapProfileStatus(fault.Detail.Reason), null);
-        }
-        catch (Exception exception) when (RemoteCall.IsConnectionFailure(exception))
-        {
-            result = new ProfileResult<PlayerImageContent>(ProfileStatus.ServiceUnavailable, null);
-        }
-        return result;
     }
 
-    internal Task<ProfileStatus> ChangeUsername(string sessionToken, string username)
+    internal Task<ProfileStatus> LoadProfileImage(long? targetAccountId = null)
     {
-        return ExecuteStatus(client => client.ChangeUsernameAsync(sessionToken, username));
+        async Task LoadAccountImage(Proxy.PlayerProfileServiceClient client)
+        {
+            Proxy.ImageContent? image = await client.GetProfileImageAsync(
+                _sessionToken, targetAccountId).ConfigureAwait(false);
+            if (image != null && (image.Content == null || image.Content.Length == 0))
+            {
+                throw new InvalidDataException("The service returned image content without bytes.");
+            }
+            PlayerImageContent confirmed = image == null
+                ? new PlayerImageContent(Array.Empty<byte>(), string.Empty)
+                : new PlayerImageContent(image.Content, image.MediaType);
+            lock (_profileDataLock)
+            {
+                if (!_discarded)
+                {
+                    if (targetAccountId.HasValue)
+                    {
+                        _images[targetAccountId.Value] = confirmed;
+                    }
+                    else
+                    {
+                        _ownImage = confirmed;
+                    }
+                }
+            }
+        }
+        return SendProfileOperation(LoadAccountImage);
     }
 
-    internal Task<ProfileStatus> UpdateProfileImage(
-        string sessionToken,
-        byte[] content,
-        string mediaType)
+    internal PlayerImageContent ReadProfileImage(long? targetAccountId = null)
     {
-        Proxy.ImageContent image = new Proxy.ImageContent
+        lock (_profileDataLock)
         {
-            Content = content,
-            MediaType = mediaType
+            if (targetAccountId.HasValue && _images.ContainsKey(targetAccountId.Value))
+            {
+                return _images[targetAccountId.Value];
+            }
+            if (!targetAccountId.HasValue && _ownImage != null)
+            {
+                return _ownImage;
+            }
+            throw new InvalidOperationException("The requested profile image has not been loaded.");
+        }
+    }
+
+    internal Task<ProfileStatus> ChangeUsername(string username)
+    {
+        async Task SaveUsername(Proxy.PlayerProfileServiceClient client)
+        {
+            await client.ChangeUsernameAsync(_sessionToken, username).ConfigureAwait(false);
+            lock (_profileDataLock)
+            {
+                _ownProfile = null;
+                _profiles.Clear();
+            }
+        }
+        return SendProfileOperation(SaveUsername);
+    }
+
+    internal Task<ProfileStatus> UpdateProfileImage(PlayerImageContent image)
+    {
+        if (image == null)
+        {
+            throw new ArgumentNullException(nameof(image));
+        }
+        Proxy.ImageContent content = new Proxy.ImageContent
+        {
+            Content = image.Content,
+            MediaType = image.MediaType
         };
-        return ExecuteStatus(client => client.UpdateProfileImageAsync(sessionToken, image));
+        async Task SaveProfileImage(Proxy.PlayerProfileServiceClient client)
+        {
+            await client.UpdateProfileImageAsync(_sessionToken, content).ConfigureAwait(false);
+            lock (_profileDataLock)
+            {
+                _ownProfile = null;
+                _ownImage = null;
+                _profiles.Clear();
+                _images.Clear();
+            }
+        }
+        return SendProfileOperation(SaveProfileImage);
     }
 
-    private async Task<ProfileStatus> ExecuteStatus(
+    internal void DiscardSession()
+    {
+        lock (_profileDataLock)
+        {
+            _discarded = true;
+            _ownProfile = null;
+            _ownImage = null;
+            _profiles.Clear();
+            _images.Clear();
+        }
+    }
+
+    private async Task<ProfileStatus> SendProfileOperation(
         Func<Proxy.PlayerProfileServiceClient, Task> operation)
     {
+        lock (_profileDataLock)
+        {
+            if (_discarded)
+            {
+                return ProfileStatus.InvalidSession;
+            }
+        }
         ProfileStatus status;
+        Proxy.PlayerProfileServiceClient client = _createClient();
         try
         {
-            await SendProfileOperation(async client =>
+            await RemoteCall.SendServiceCall(client, () => operation(client), _logger)
+                .ConfigureAwait(false);
+            lock (_profileDataLock)
             {
-                await operation(client);
-                return true;
-            });
-            status = ProfileStatus.Success;
+                status = _discarded ? ProfileStatus.InvalidSession : ProfileStatus.Success;
+            }
         }
         catch (FaultException<Proxy.ProfileFault> fault)
             when (Enum.IsDefined(typeof(Proxy.ProfileFailure), fault.Detail.Reason))
         {
             status = MapProfileStatus(fault.Detail.Reason);
         }
-        catch (Exception exception) when (RemoteCall.IsConnectionFailure(exception))
+        catch (FaultException<Proxy.SessionFault> fault)
+            when (fault.Detail.Reason is Proxy.SessionFailure.MissingSessionToken
+                or Proxy.SessionFailure.InvalidSession)
+        {
+            status = ProfileStatus.InvalidSession;
+        }
+        catch (CommunicationException exception) when (RemoteCall.IsConnectionFailure(exception))
+        {
+            status = ProfileStatus.ServiceUnavailable;
+        }
+        catch (TimeoutException)
         {
             status = ProfileStatus.ServiceUnavailable;
         }
         return status;
     }
 
-    private Task<TResult> SendProfileOperation<TResult>(
-        Func<Proxy.PlayerProfileServiceClient, Task<TResult>> operation)
-    {
-        Proxy.PlayerProfileServiceClient client = _createClient();
-        return RemoteCall.SendServiceCall(client, () => operation(client), _logger);
-    }
-
     private static PlayerProfile MapProfile(Proxy.PlayerProfile profile)
     {
+        if (profile == null || profile.Account == null || profile.Statistics == null)
+        {
+            throw new InvalidDataException("The service returned incomplete profile information.");
+        }
         Proxy.PlayerStatistics statistics = profile.Statistics;
-        ProfileStatistics mappedStatistics = new ProfileStatistics(
-            statistics.MatchesPlayed,
-            statistics.Wins,
-            statistics.Losses,
-            statistics.Draws,
-            statistics.WinRate);
-        return new PlayerProfile(
-            profile.Account.Username,
-            profile.HasProfileImage,
-            mappedStatistics);
+        ProfileStatistics confirmed = new ProfileStatistics(statistics.MatchesPlayed,
+            statistics.Wins, statistics.Losses, statistics.Draws, statistics.WinRate);
+        PlayerAccount account = new PlayerAccount(profile.Account.AccountId,
+            profile.Account.Username, profile.HasProfileImage);
+        return new PlayerProfile(account, confirmed);
     }
 
     private static ProfileStatus MapProfileStatus(Proxy.ProfileFailure failure)
@@ -146,7 +244,8 @@ internal sealed class PlayerProfileClient
             Proxy.ProfileFailure.InvalidUsername => ProfileStatus.InvalidUsername,
             Proxy.ProfileFailure.UsernameUnavailable => ProfileStatus.UsernameUnavailable,
             Proxy.ProfileFailure.InvalidImage => ProfileStatus.InvalidImage,
-            _ => ProfileStatus.InactiveAccount
+            Proxy.ProfileFailure.InactiveAccount => ProfileStatus.InactiveAccount,
+            _ => throw new ArgumentOutOfRangeException(nameof(failure))
         };
         return status;
     }

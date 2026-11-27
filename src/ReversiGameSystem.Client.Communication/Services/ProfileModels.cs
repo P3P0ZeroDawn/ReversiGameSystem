@@ -1,5 +1,3 @@
-using System;
-
 namespace ReversiGameSystem.Services;
 
 internal enum ProfileStatus
@@ -12,44 +10,21 @@ internal enum ProfileStatus
     InvalidImage,
     InactiveAccount,
     InvalidSession,
-    ServiceUnavailable
-}
-
-internal sealed class ProfileResult<T> where T : class
-{
-    internal ProfileResult(ProfileStatus status, T? value)
-    {
-        if (status == ProfileStatus.Success && value == null)
-        {
-            throw new ArgumentNullException(nameof(value));
-        }
-        if (status != ProfileStatus.Success && value != null)
-        {
-            throw new ArgumentException("A failed result cannot contain a value.", nameof(value));
-        }
-        Status = status;
-        Value = value;
-    }
-
-    internal ProfileStatus Status { get; }
-
-    internal T? Value { get; }
+    ServiceUnavailable,
+    Unauthorized,
+    SubmissionInProgress
 }
 
 internal sealed class PlayerProfile
 {
-    internal PlayerProfile(string username, bool hasProfileImage, ProfileStatistics statistics)
+    internal PlayerProfile(PlayerAccount account, ProfileStatistics statistics)
     {
-        Username = username;
-        HasProfileImage = hasProfileImage;
+        Account = account;
         Statistics = statistics;
     }
 
-    internal string Username { get; }
-
-    internal bool HasProfileImage { get; }
-
-    internal ProfileStatistics Statistics { get; }
+    public PlayerAccount Account { get; }
+    public ProfileStatistics Statistics { get; }
 }
 
 internal sealed class ProfileStatistics

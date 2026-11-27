@@ -3,29 +3,23 @@ namespace ReversiGameSystem.Services;
 internal enum LeaderboardStatus
 {
     Success,
+    Inactive,
+    Busy,
+    InvalidMaximumEntries,
     ServiceUnavailable
-}
-
-internal sealed class LeaderboardResult
-{
-    internal LeaderboardResult(LeaderboardStatus status, LeaderboardEntry[] entries)
-    {
-        Status = status;
-        Entries = entries;
-    }
-
-    internal LeaderboardStatus Status { get; }
-    internal LeaderboardEntry[] Entries { get; }
 }
 
 internal sealed class LeaderboardEntry
 {
-    internal LeaderboardEntry(int position, string username, int wins)
+    internal LeaderboardEntry(long accountId, int position, string username, int wins)
     {
+        AccountId = accountId;
         Position = position;
         Username = username;
         Wins = wins;
     }
+
+    internal long AccountId { get; }
 
     internal int Position { get; }
 

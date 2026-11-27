@@ -49,24 +49,19 @@ public partial class LoginScreenPage : Page
         SetSessionActionsEnabled(false);
         try
         {
-            SessionStatus status = await _viewModel.RequestLoginCode(
-                login,
-                passwordBox.Password);
-            if (status == SessionStatus.Success)
+            Task<SessionStatus> request = _viewModel.RequestLoginCode(login, passwordBox.Password);
+            await ConfirmLogin(login, request);
+        }
+        catch (FaultException<ServerProxy.ServiceFault> exception)
+        {
+            if (IsLoaded)
             {
-                passwordBox.Clear();
-                await ConfirmLogin(login);
-            }
-            else if (status == SessionStatus.MissingCredentials)
-            {
-                _dialogService.ShowWarning(
-                    this,
-                    "LoginScreen_MissingCredentialsTitle",
-                    "LoginScreen_MissingCredentialsMessage");
+                ClientRuntime.Errors.ReportOperationFailure(exception, nameof(LoginScreenPage));
             }
             else
             {
-                ShowSessionRejection(status);
+                ClientRuntime.Errors.RecordFailure(
+                    exception, nameof(LoginScreenPage), LogLevel.Error);
             }
         }
         finally
@@ -75,7 +70,7 @@ public partial class LoginScreenPage : Page
         }
     }
 
-    private async Task ConfirmLogin(string login)
+    private async Task ConfirmLogin(string login, Task<SessionStatus> request)
     {
         TextInputDialogOptions options = new TextInputDialogOptions(
             "LoginScreen_VerificationCodeDialogTitle",
@@ -85,8 +80,43 @@ public partial class LoginScreenPage : Page
             RequireText = true,
             ExactDigitCount = VerificationCodePolicy.Length
         };
-        while (_dialogService.TryGetText(this, options, out string code))
+        bool firstAttempt = true;
+        while (IsLoaded)
         {
+            TextInputDialogWindow dialog = new TextInputDialogWindow(
+                options, LocalizationManager.Instance) { Owner = Window.GetWindow(this) };
+            bool? confirmed;
+            if (firstAttempt)
+            {
+                firstAttempt = false;
+                confirmed = await dialog.ShowDuringRequest(request, SessionStatus.Success);
+                SessionStatus requested = await request;
+                if (!IsLoaded)
+                {
+                    return;
+                }
+                if (requested == SessionStatus.MissingCredentials)
+                {
+                    _dialogService.ShowWarning(this, "LoginScreen_MissingCredentialsTitle",
+                        "LoginScreen_MissingCredentialsMessage");
+                    return;
+                }
+                if (requested != SessionStatus.Success)
+                {
+                    ShowSessionRejection(requested);
+                    return;
+                }
+                passwordBox.Clear();
+            }
+            else
+            {
+                confirmed = dialog.ShowDialog();
+            }
+            if (confirmed != true)
+            {
+                return;
+            }
+            string code = dialog.EnteredText;
             SessionResult<AuthenticatedAccountSession> result =
                 await _viewModel.CompleteLogin(login, code);
             if (result.Status == SessionStatus.Success)
@@ -212,8 +242,6 @@ public partial class LoginScreenPage : Page
             {
                 return;
             }
-            _dialogService.ShowInformation(
-                this, "PasswordReset_CodeSentTitle", "PasswordReset_CodeSentMessage");
             await CompletePasswordRecovery(emailAddress);
         }
         catch (FaultException<ServerProxy.ServiceFault> exception)
@@ -255,7 +283,8 @@ public partial class LoginScreenPage : Page
                 return string.Empty;
             }
             string emailAddress = dialog.EnteredText.Trim();
-            AccountStatus status = await _accountViewModel.RequestPasswordResetCode(emailAddress);
+            AccountStatus status = EmailPolicy.Validate(emailAddress) == EmailValidationError.None
+                ? AccountStatus.Success : AccountStatus.InvalidEmailFormat;
             if (!IsLoaded)
             {
                 return string.Empty;
@@ -284,11 +313,33 @@ public partial class LoginScreenPage : Page
             ExactDigitCount = VerificationCodePolicy.Length,
             MessageArguments = new object[] { emailAddress }
         };
+        Task<AccountStatus> request = _accountViewModel.RequestPasswordResetCode(emailAddress);
+        bool firstAttempt = true;
         while (IsLoaded)
         {
             TextInputDialogWindow codeDialog = new TextInputDialogWindow(
                 options, LocalizationManager.Instance) { Owner = Window.GetWindow(this) };
-            if (codeDialog.ShowDialog() != true)
+            bool? confirmed;
+            if (firstAttempt)
+            {
+                firstAttempt = false;
+                confirmed = await codeDialog.ShowDuringRequest(request, AccountStatus.Success);
+                AccountStatus requested = await request;
+                if (!IsLoaded)
+                {
+                    return;
+                }
+                if (requested != AccountStatus.Success)
+                {
+                    _dialogService.ShowAccountFailure(this, requested);
+                    return;
+                }
+            }
+            else
+            {
+                confirmed = codeDialog.ShowDialog();
+            }
+            if (confirmed != true)
             {
                 return;
             }

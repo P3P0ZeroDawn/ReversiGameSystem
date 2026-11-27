@@ -1414,4 +1414,7 @@
   <data name="AddFriends_CloseButton" xml:space="preserve">
     <value>Cerrar</value>
   </data>
+  <data name="Common_RequestingCodeMessage" xml:space="preserve">
+    <value>Solicitando código…</value>
+  </data>
 </root>

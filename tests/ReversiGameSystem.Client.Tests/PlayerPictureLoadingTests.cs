@@ -407,7 +407,7 @@ public sealed class PlayerPictureLoadingTests
 
         internal PlayerProfileClient CreateProfiles()
         {
-            return new PlayerProfileClient(NullLogger<PlayerProfileClient>.Instance,
+            return new PlayerProfileClient(SessionToken, NullLogger<PlayerProfileClient>.Instance,
                 () => new Proxy.PlayerProfileServiceClient(new NetTcpBinding(SecurityMode.None),
                     new EndpointAddress(_address + "Profiles")));
         }

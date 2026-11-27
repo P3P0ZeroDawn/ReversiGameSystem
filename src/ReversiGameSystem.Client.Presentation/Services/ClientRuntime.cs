@@ -32,8 +32,7 @@ internal static class ClientRuntime
     private static readonly Lazy<AccountClient> Account =
         new Lazy<AccountClient>(CreateAccountService);
 
-    private static readonly Lazy<PlayerProfileClient> Profile =
-        new Lazy<PlayerProfileClient>(CreateProfileService);
+    private static PlayerProfileClient? s_profile;
 
     private static readonly Lazy<LeaderboardClient> Leaderboard =
         new Lazy<LeaderboardClient>(CreateLeaderboardService);
@@ -69,7 +68,14 @@ internal static class ClientRuntime
 
     internal static PlayerProfileClient ProfileService
     {
-        get { return Profile.Value; }
+        get
+        {
+            if (s_profile == null)
+            {
+                s_profile = CreateProfileService();
+            }
+            return s_profile;
+        }
     }
 
     internal static LeaderboardClient LeaderboardService
@@ -171,6 +177,8 @@ internal static class ClientRuntime
         {
             Friendship.Value.Close();
         }
+        s_profile?.DiscardSession();
+        s_profile = null;
         s_preferences?.DiscardSession();
         s_preferences = null;
     }
@@ -228,7 +236,9 @@ internal static class ClientRuntime
 
     private static PlayerProfileClient CreateProfileService()
     {
-        return new PlayerProfileClient(
+        string token = CurrentSession.SessionToken
+            ?? throw new InvalidOperationException("A profile client requires a player session.");
+        return new PlayerProfileClient(token,
             Logging.Value.CreateLogger<PlayerProfileClient>(),
             ServerConnectionFactory.CreateProfileClient);
     }

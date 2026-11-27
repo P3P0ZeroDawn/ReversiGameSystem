@@ -1,14 +1,15 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Resources;
 using System.ServiceModel;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Features.Friendships;
-using System.Resources;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Windows;
-using System.Windows.Controls;
+using ReversiGameSystem.Features.Leaderboards;
 using ReversiGameSystem.Game;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Matches;
@@ -28,7 +29,8 @@ public partial class MainMenuPage : Page
     private readonly FriendshipViewModel _friendsViewModel = new FriendshipViewModel(
         ClientRuntime.FriendshipService, ClientRuntime.CurrentSession);
     private bool _friendsSubscribed;
-    private bool _leaderboardLoaded;
+    private readonly LeaderboardViewModel _leaderboardViewModel =
+        new LeaderboardViewModel(ClientRuntime.LeaderboardService);
 
     public MainMenuPage()
     {
@@ -50,6 +52,7 @@ public partial class MainMenuPage : Page
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
+        _leaderboardViewModel.Activate();
         if (_guestName == null)
         {
             _friendsViewModel.IsActive = true;
@@ -57,7 +60,7 @@ public partial class MainMenuPage : Page
             await LoadFriends();
         }
 
-        if (!_leaderboardLoaded)
+        if (IsLoaded && !_leaderboardViewModel.IsLoaded)
         {
             await LoadLeaderboard();
         }
@@ -65,44 +68,53 @@ public partial class MainMenuPage : Page
 
     private async System.Threading.Tasks.Task LoadLeaderboard()
     {
-        LeaderboardResult result = await ClientRuntime.LeaderboardService.GetLeaderboard(
-            LeaderboardEntryLimit);
-        if (result.Status != LeaderboardStatus.Success)
+        try
         {
-            _leaderboardLoaded = false;
-            ShowLeaderboardError();
-            return;
+            LeaderboardStatus status = await _leaderboardViewModel.LoadLeaderboard(
+                LeaderboardEntryLimit);
+            if (!IsLoaded)
+            {
+                return;
+            }
+            if (status is LeaderboardStatus.Inactive or LeaderboardStatus.Busy)
+            {
+                return;
+            }
+            if (status != LeaderboardStatus.Success)
+            {
+                ShowLeaderboardError();
+                return;
+            }
+            RenderLeaderboard();
         }
-        LeaderboardEntry[] entries = result.Entries;
-
-        CultureInfo culture = CultureInfo.GetCultureInfo(
-            LocalizationManager.Instance.CultureName);
-        List<LeaderboardItem> items = new List<LeaderboardItem>();
-        foreach (LeaderboardEntry entry in entries)
+        catch (CommunicationException exception)
         {
-            items.Add(CreateLeaderboardItem(entry, culture));
+            ReportLeaderboardFailure(exception);
         }
-
-        _leaderboardLoaded = true;
-        topWinnersItemsControl.ItemsSource = items;
-        topWinnersEmptyTextBlock.Visibility = items.Count == 0
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        catch (TimeoutException exception)
+        {
+            ReportLeaderboardFailure(exception);
+        }
     }
 
-    private static LeaderboardItem CreateLeaderboardItem(
-        LeaderboardEntry entry,
-        CultureInfo culture)
+    private void ReportLeaderboardFailure(Exception exception)
     {
-        return new LeaderboardItem
+        if (IsLoaded)
         {
-            Position = "#" + entry.Position.ToString("N0", culture),
-            Username = entry.Username,
-            WinsText = string.Format(
-                culture,
-                LocalizationManager.Instance["MainMenu_TopWinnersWinsFormat"],
-                entry.Wins)
-        };
+            ClientRuntime.Errors.ReportOperationFailure(exception, nameof(LeaderboardViewModel));
+        }
+        else
+        {
+            ClientRuntime.Errors.RecordFailure(
+                exception, nameof(LeaderboardViewModel), LogLevel.Error);
+        }
+    }
+
+    private void RenderLeaderboard()
+    {
+        topWinnersItemsControl.ItemsSource = _leaderboardViewModel.Rows;
+        topWinnersEmptyTextBlock.Visibility = _leaderboardViewModel.IsLoaded
+            && _leaderboardViewModel.Rows.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void ShowLeaderboardError()
@@ -129,6 +141,7 @@ public partial class MainMenuPage : Page
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        _leaderboardViewModel.Deactivate();
         _friendsViewModel.IsActive = false;
         if (_friendsSubscribed)
         {
@@ -480,7 +493,8 @@ public partial class MainMenuPage : Page
             {
                 RenderFriends();
             }
-            await LoadLeaderboard();
+            _leaderboardViewModel.RefreshLanguage();
+            RenderLeaderboard();
         }
     }
 
@@ -496,12 +510,4 @@ public partial class MainMenuPage : Page
         guestNameTextBlock.ToolTip = displayName;
     }
 
-    private sealed class LeaderboardItem
-    {
-        public string Position { get; set; } = string.Empty;
-
-        public string Username { get; set; } = string.Empty;
-
-        public string WinsText { get; set; } = string.Empty;
-    }
 }

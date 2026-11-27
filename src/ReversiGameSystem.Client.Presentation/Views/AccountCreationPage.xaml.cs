@@ -75,19 +75,8 @@ public partial class AccountCreationPage : Page
                     return;
                 }
             }
-            AccountStatus status = await _viewModel.RequestRegistrationCode();
-            if (!IsLoaded)
-            {
-                return;
-            }
-            if (status == AccountStatus.Success)
-            {
-                await ConfirmRegistration();
-            }
-            else
-            {
-                ShowRegistrationStatus(status, _viewModel.EmailAddress);
-            }
+            Task<AccountStatus> request = _viewModel.RequestRegistrationCode();
+            await ConfirmRegistration(request);
         }
         catch (FaultException<ServerProxy.ServiceFault> exception)
         {
@@ -108,7 +97,7 @@ public partial class AccountCreationPage : Page
         }
     }
 
-    private async Task ConfirmRegistration()
+    private async Task ConfirmRegistration(Task<AccountStatus> request)
     {
         TextInputDialogOptions options = new TextInputDialogOptions(
             "AccountCreation_VerificationCodeDialogTitle",
@@ -119,8 +108,36 @@ public partial class AccountCreationPage : Page
             ExactDigitCount = VerificationCodePolicy.Length,
             MessageArguments = new object[] { _viewModel.EmailAddress }
         };
-        while (_dialogService.TryGetText(this, options, out string verificationCode))
+        bool firstAttempt = true;
+        while (IsLoaded)
         {
+            TextInputDialogWindow dialog = new TextInputDialogWindow(
+                options, LocalizationManager.Instance) { Owner = Window.GetWindow(this) };
+            bool? confirmed;
+            if (firstAttempt)
+            {
+                firstAttempt = false;
+                confirmed = await dialog.ShowDuringRequest(request, AccountStatus.Success);
+                AccountStatus requested = await request;
+                if (!IsLoaded)
+                {
+                    return;
+                }
+                if (requested != AccountStatus.Success)
+                {
+                    ShowRegistrationStatus(requested, _viewModel.EmailAddress);
+                    return;
+                }
+            }
+            else
+            {
+                confirmed = dialog.ShowDialog();
+            }
+            if (confirmed != true)
+            {
+                return;
+            }
+            string verificationCode = dialog.EnteredText;
             AccountStatus status = await _viewModel.CompleteRegistration(verificationCode);
             if (!IsLoaded)
             {

@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 using ReversiGameSystem.Game;
@@ -52,33 +51,31 @@ internal sealed class MatchPlayerPictures
             BitmapSource? picture = session.ProfilePicture;
             if (participant.AccountId != session.AccountId || picture == null)
             {
-                ProfileResult<PlayerProfile> profile = await profiles.GetPlayerProfile(
-                    sessionToken, participant.AccountId);
+                ProfileStatus profileStatus = await profiles.LoadProfile(participant.AccountId);
                 if (!_active || session.SessionToken != sessionToken)
                 {
                     return ProfileStatus.InvalidSession;
                 }
-                if (profile.Status != ProfileStatus.Success)
+                if (profileStatus != ProfileStatus.Success)
                 {
-                    return profile.Status;
+                    return profileStatus;
                 }
-                PlayerProfile player = profile.Value
-                    ?? throw new InvalidOperationException("The confirmed profile is unavailable.");
-                if (!player.HasProfileImage)
+                PlayerProfile player = profiles.ReadProfile(participant.AccountId);
+                if (!player.Account.HasProfileImage)
                 {
                     continue;
                 }
-                ProfileResult<PlayerImageContent> image = await profiles.GetProfileImage(
-                    sessionToken, participant.AccountId);
+                ProfileStatus imageStatus = await profiles.LoadProfileImage(participant.AccountId);
                 if (!_active || session.SessionToken != sessionToken)
                 {
                     return ProfileStatus.InvalidSession;
                 }
-                if (image.Status != ProfileStatus.Success)
+                if (imageStatus != ProfileStatus.Success)
                 {
-                    return image.Status;
+                    return imageStatus;
                 }
-                picture = PlayerImageService.CreatePreview(image.Value);
+                PlayerImageContent confirmedImage = profiles.ReadProfileImage(participant.AccountId);
+                picture = PlayerImageService.CreatePreview(confirmedImage);
             }
             if (participant.SeatNumber == BlackSeatNumber)
             {

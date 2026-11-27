@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Linq;
 using System.Windows;
 using System.Windows.Automation;
@@ -8,11 +10,9 @@ using ReversiGameSystem.Services;
 
 namespace ReversiGameSystem.Views;
 
-/// <summary>
-/// Collects one text value using labels supplied by the dialog service.
-/// </summary>
 internal partial class TextInputDialogWindow : Window
 {
+    private bool _requestPending;
     private readonly bool _requireText;
     private readonly int _exactDigitCount;
 
@@ -39,6 +39,43 @@ internal partial class TextInputDialogWindow : Window
         UpdateConfirmButtonState();
 
         Loaded += OnDialogLoaded;
+    }
+
+    internal async Task<bool?> ShowDuringRequest<TStatus>(
+        Task<TStatus> request, TStatus acceptedStatus)
+    {
+        _requestPending = true;
+        UpdateConfirmButtonState();
+        string readyMessage = dialogMessageTextBlock.Text;
+        dialogMessageTextBlock.Text = LocalizationManager.Instance["Common_RequestingCodeMessage"];
+        Task preparation = PrepareConfirmation();
+        bool? confirmed = ShowDialog();
+        await preparation;
+        return confirmed;
+
+        async Task PrepareConfirmation()
+        {
+            await Task.Yield();
+            bool accepted = false;
+            try
+            {
+                TStatus status = await request;
+                accepted = EqualityComparer<TStatus>.Default.Equals(status, acceptedStatus);
+                if (accepted && IsVisible)
+                {
+                    _requestPending = false;
+                    dialogMessageTextBlock.Text = readyMessage;
+                    UpdateConfirmButtonState();
+                }
+            }
+            finally
+            {
+                if (!accepted && IsVisible)
+                {
+                    DialogResult = false;
+                }
+            }
+        }
     }
 
     internal string EnteredText { get; private set; } = string.Empty;
@@ -83,7 +120,7 @@ internal partial class TextInputDialogWindow : Window
         bool hasRequiredText = !_requireText || !string.IsNullOrWhiteSpace(text);
         bool hasExactDigits = _exactDigitCount == 0
             || (text.Length == _exactDigitCount && text.All(IsAsciiDigit));
-        confirmButton.IsEnabled = hasRequiredText && hasExactDigits;
+        confirmButton.IsEnabled = !_requestPending && hasRequiredText && hasExactDigits;
     }
 
     private static bool IsAsciiDigit(char character)
