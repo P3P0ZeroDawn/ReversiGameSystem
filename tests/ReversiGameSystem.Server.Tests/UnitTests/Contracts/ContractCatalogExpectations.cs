@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace ReversiGameSystem.Server.Tests;
+namespace ReversiGameSystem.Server.Tests.UnitTests.Contracts;
 
 /// <summary>
 /// Records the approved catalog independently of the implementation under test.

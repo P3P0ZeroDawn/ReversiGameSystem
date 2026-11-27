@@ -7,57 +7,54 @@ using Microsoft.Extensions.Logging.Console;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Host;
 
-namespace ReversiGameSystem.Server.Tests;
+namespace ReversiGameSystem.Server.Tests.UnitTests.Application;
 
 /// <summary>Verifies original exception delivery and private diagnostic rendering.</summary>
 [TestClass]
+[TestCategory("Unit")]
 public sealed class DiagnosticFormatterTests
 {
-    internal static void Run()
-    {
-        DiagnosticFormatterTests instance = new DiagnosticFormatterTests();
-        instance.LogError_OriginalProviderFailure_RendersSafeDiagnostics();
-        instance.LogInformation_StructuredScope_PreservesOperationalContext();
-        instance.ConsoleProvider_OriginalFailure_WritesOnlySafeDiagnostics();
-    }
-
     [TestMethod]
     public void LogError_OriginalProviderFailure_RendersSafeDiagnostics()
     {
-        // Arrange
         Exception failure = CaptureFailure();
         failure.Data["Credential"] = "private-credential";
         FormatterLogger logger = new FormatterLogger();
 
-        // Act
-        logger.LogError(failure, "The {Operation} operation failed. CorrelationId: {CorrelationId}",
-            "LoadProfile", "diagnostic-correlation");
+        logger.LogError(
+            failure,
+            "The {Operation} operation failed. CorrelationId: {CorrelationId}",
+            "LoadProfile",
+            "diagnostic-correlation");
         string output = logger.Output.ToString();
 
-        // Assert
-        Assert.IsTrue(ReferenceEquals(failure, logger.Exception),
+        Assert.IsTrue(
+            ReferenceEquals(failure, logger.Exception),
             "The logging provider must receive the original exception object.");
-        Assert.IsTrue(output.Contains("Error: DiagnosticTests[0]"),
+        Assert.IsTrue(
+            output.Contains("Error: DiagnosticTests[0]"),
             "The severity and category must remain available.");
-        Assert.IsTrue(output.Contains("LoadProfile") && output.Contains("diagnostic-correlation"),
+        Assert.IsTrue(
+            output.Contains("LoadProfile") && output.Contains("diagnostic-correlation"),
             "The operation and correlation must remain available.");
-        Assert.IsTrue(output.Contains(typeof(InvalidOperationException).FullName)
-            && output.Contains(typeof(TimeoutException).FullName),
+        Assert.IsTrue(
+            output.Contains(typeof(InvalidOperationException).FullName)
+                && output.Contains(typeof(TimeoutException).FullName),
             "The exception chain types must remain available.");
-        Assert.IsTrue(output.Contains("HResult=" + failure.HResult)
-            && output.Contains(nameof(CaptureFailure)),
+        Assert.IsTrue(
+            output.Contains("HResult=" + failure.HResult)
+                && output.Contains(nameof(CaptureFailure)),
             "The original status and stack location must remain available.");
-        Assert.IsTrue(!output.Contains("private-"),
+        Assert.IsFalse(
+            output.Contains("private-"),
             "Provider messages and exception data must never reach console output.");
     }
 
     [TestMethod]
     public void LogInformation_StructuredScope_PreservesOperationalContext()
     {
-        // Arrange
         FormatterLogger logger = new FormatterLogger();
 
-        // Act
         using (logger.BeginScope(new Dictionary<string, object>
         {
             ["CorrelationId"] = "scope-correlation"
@@ -65,40 +62,27 @@ public sealed class DiagnosticFormatterTests
         {
             logger.LogInformation("The server is listening.");
         }
+
         string output = logger.Output.ToString();
 
-        // Assert
-        Assert.IsTrue(output.Contains("Information: DiagnosticTests[0]"),
+        Assert.IsTrue(
+            output.Contains("Information: DiagnosticTests[0]"),
             "Normal information entries must retain their level and category.");
-        Assert.IsTrue(output.Contains("CorrelationId=scope-correlation")
-            && output.Contains("The server is listening."),
+        Assert.IsTrue(
+            output.Contains("CorrelationId=scope-correlation")
+                && output.Contains("The server is listening."),
             "Scope context and normal messages must remain available.");
-        Assert.AreEqual<Exception?>(null, logger.Exception);
-    }
-
-    private static Exception CaptureFailure()
-    {
-        try
-        {
-            throw new InvalidOperationException("private-provider-message",
-                new TimeoutException("private-inner-message"));
-        }
-        catch (InvalidOperationException exception)
-        {
-            return exception;
-        }
+        Assert.IsNull(logger.Exception);
     }
 
     [TestMethod]
     public void ConsoleProvider_OriginalFailure_WritesOnlySafeDiagnostics()
     {
-        // Arrange
         Exception failure = CaptureFailure();
         failure.Data["Credential"] = "private-credential";
         TextWriter originalOutput = Console.Out;
         StringWriter output = new StringWriter();
 
-        // Act
         try
         {
             Console.SetOut(output);
@@ -107,8 +91,10 @@ public sealed class DiagnosticFormatterTests
                 .AddConsole(options => options.FormatterName = SafeConsoleFormatter.FormatterName)
                 .AddConsoleFormatter<SafeConsoleFormatter, ConsoleFormatterOptions>()))
             {
-                factory.CreateLogger("ProviderIntegration").LogError(failure,
-                    "The provider operation failed. CorrelationId: {CorrelationId}", "provider-correlation");
+                factory.CreateLogger("ProviderIntegration").LogError(
+                    failure,
+                    "The provider operation failed. CorrelationId: {CorrelationId}",
+                    "provider-correlation");
             }
         }
         finally
@@ -116,16 +102,32 @@ public sealed class DiagnosticFormatterTests
             Console.SetOut(originalOutput);
         }
 
-        // Assert
         string rendered = output.ToString();
-        Assert.IsTrue(rendered.Contains("Error: ProviderIntegration[0]")
-            && rendered.Contains("provider-correlation"),
+        Assert.IsTrue(
+            rendered.Contains("Error: ProviderIntegration[0]")
+                && rendered.Contains("provider-correlation"),
             "The configured console provider must select the safe formatter and flush output.");
-        Assert.IsTrue(rendered.Contains(typeof(InvalidOperationException).FullName)
-            && rendered.Contains(nameof(CaptureFailure)),
+        Assert.IsTrue(
+            rendered.Contains(typeof(InvalidOperationException).FullName)
+                && rendered.Contains(nameof(CaptureFailure)),
             "The real console provider must retain safe exception diagnostics.");
-        Assert.IsTrue(!rendered.Contains("private-"),
+        Assert.IsFalse(
+            rendered.Contains("private-"),
             "The real console provider must suppress private provider messages and data.");
+    }
+
+    private static Exception CaptureFailure()
+    {
+        try
+        {
+            throw new InvalidOperationException(
+                "private-provider-message",
+                new TimeoutException("private-inner-message"));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return exception;
+        }
     }
 
     private sealed class FormatterLogger : ILogger
@@ -134,18 +136,35 @@ public sealed class DiagnosticFormatterTests
         private readonly LoggerExternalScopeProvider _scopes = new LoggerExternalScopeProvider();
 
         internal StringWriter Output { get; } = new StringWriter();
+
         internal Exception? Exception { get; private set; }
 
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => _scopes.Push(state);
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull
+        {
+            return _scopes.Push(state);
+        }
 
-        public bool IsEnabled(LogLevel logLevel) => true;
+        public bool IsEnabled(LogLevel logLevel)
+        {
+            return true;
+        }
 
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
-            Exception? exception, Func<TState, Exception?, string> formatter)
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
         {
             Exception = exception;
-            LogEntry<TState> entry = new LogEntry<TState>(logLevel, "DiagnosticTests",
-                eventId, state, exception, formatter);
+            LogEntry<TState> entry = new LogEntry<TState>(
+                logLevel,
+                "DiagnosticTests",
+                eventId,
+                state,
+                exception,
+                formatter);
             _formatter.Write(in entry, _scopes, Output);
         }
     }

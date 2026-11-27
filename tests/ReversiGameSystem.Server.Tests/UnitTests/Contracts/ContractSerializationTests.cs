@@ -7,86 +7,87 @@ using ReversiGameSystem.Server.Contracts.Common;
 using ReversiGameSystem.Server.Contracts.Leaderboards;
 using ReversiGameSystem.Server.Contracts.Players;
 
-namespace ReversiGameSystem.Server.Tests;
+namespace ReversiGameSystem.Server.Tests.UnitTests.Contracts;
 
 /// <summary>
 /// Verifies retained account access contracts and the revised profile and leaderboard data.
 /// </summary>
 [TestClass]
+[TestCategory("Unit")]
 public sealed class ContractSerializationTests
 {
+    private const long SampleAccountId = 42L;
+    private const string SampleUsername = "player_one";
+    private const string SampleSessionToken = "session-token";
+    private const string EnglishLocaleCode = "en-US";
+    private const string PngMediaType = "image/png";
+
     [TestMethod]
     public void AuthenticatedSession_RoundTrip_PreservesAccountAndExpiry()
     {
-        // Arrange
         AuthenticatedSession original = CreateAuthenticatedSession();
 
-        // Act
         AuthenticatedSession session = RoundTrip(original);
 
-        // Assert
-        Assert.AreEqual(42L, session.Account.AccountId);
-        Assert.AreEqual("player_one", session.Account.Username);
-        Assert.AreEqual("session-token", session.SessionToken);
-        Assert.AreEqual("en-US", session.PreferredLocaleCode);
+        Assert.AreEqual(SampleAccountId, session.Account.AccountId);
+        Assert.AreEqual(SampleUsername, session.Account.Username);
+        Assert.AreEqual(SampleSessionToken, session.SessionToken);
+        Assert.AreEqual(EnglishLocaleCode, session.PreferredLocaleCode);
         Assert.AreEqual(original.ExpiresAtUtc, session.ExpiresAtUtc);
     }
 
     [TestMethod]
     public void AccountRegistrationCredentials_RoundTrip_PreservesProfileImage()
     {
-        // Arrange
         AccountRegistrationCredentials credentials = CreateRegistrationCredentials();
+        int expectedContentLength = 3;
 
-        // Act
         AccountRegistrationCredentials result = RoundTrip(credentials);
 
-        // Assert
+        ProfileImageContent image = TestAssert.IsNotNull(result.ProfileImage);
         Assert.AreEqual(credentials.Username, result.Username);
         Assert.AreEqual(credentials.EmailAddress, result.EmailAddress);
         Assert.AreEqual(credentials.PreferredLocaleCode, result.PreferredLocaleCode);
-        ProfileImageContent image = TestAssert.IsNotNull(result.ProfileImage);
-        Assert.AreEqual("image/png", image.MediaType);
-        Assert.AreEqual(3, image.Content.Length);
+        Assert.AreEqual(PngMediaType, image.MediaType);
+        Assert.AreEqual(expectedContentLength, image.Content.Length);
     }
 
     [TestMethod]
     public void PlayerProfile_RoundTrip_PreservesStatistics()
     {
-        // Arrange
         PlayerProfile profile = CreatePlayerProfile();
+        int expectedMatchesPlayed = 10;
+        int expectedWins = 6;
+        double expectedWinRate = 0.6;
 
-        // Act
         PlayerProfile result = RoundTrip(profile);
 
-        // Assert
-        Assert.AreEqual(42L, result.Account.AccountId);
-        Assert.AreEqual(true, result.HasProfileImage);
-        Assert.AreEqual(10, result.Statistics.MatchesPlayed);
-        Assert.AreEqual(6, result.Statistics.Wins);
-        Assert.AreEqual(0.6, result.Statistics.WinRate);
+        Assert.AreEqual(SampleAccountId, result.Account.AccountId);
+        Assert.IsTrue(result.HasProfileImage);
+        Assert.AreEqual(expectedMatchesPlayed, result.Statistics.MatchesPlayed);
+        Assert.AreEqual(expectedWins, result.Statistics.Wins);
+        Assert.AreEqual(expectedWinRate, result.Statistics.WinRate);
     }
 
     [TestMethod]
     public void LeaderboardEntry_RoundTrip_PreservesPositions()
     {
-        // Arrange
         LeaderboardEntry[] standings = CreateLeaderboardEntries();
+        int expectedEntryCount = 1;
+        int expectedPosition = 1;
+        int expectedWins = 6;
 
-        // Act
         LeaderboardEntry[] result = RoundTrip(standings);
 
-        // Assert
-        Assert.AreEqual(1, result.Length);
-        Assert.AreEqual(1, result[0].Position);
-        Assert.AreEqual("player_one", result[0].Account.Username);
-        Assert.AreEqual(6, result[0].Wins);
+        Assert.AreEqual(expectedEntryCount, result.Length);
+        Assert.AreEqual(expectedPosition, result[0].Position);
+        Assert.AreEqual(SampleUsername, result[0].Account.Username);
+        Assert.AreEqual(expectedWins, result[0].Wins);
     }
 
     [TestMethod]
     public void ServiceFault_RoundTrip_PreservesDiagnosticData()
     {
-        // Arrange
         ServiceFault fault = new ServiceFault
         {
             FailureCode = "SERVER_UNAVAILABLE",
@@ -94,10 +95,8 @@ public sealed class ContractSerializationTests
             IsTransient = true
         };
 
-        // Act
         ServiceFault result = RoundTrip(fault);
 
-        // Assert
         Assert.AreEqual(fault.FailureCode, result.FailureCode);
         Assert.AreEqual(fault.CorrelationId, result.CorrelationId);
         Assert.AreEqual(fault.IsTransient, result.IsTransient);
@@ -107,10 +106,10 @@ public sealed class ContractSerializationTests
     {
         return new AuthenticatedSession
         {
-            SessionToken = "session-token",
+            SessionToken = SampleSessionToken,
             Account = CreateAccountReference(),
             EmailAddress = "player@example.com",
-            PreferredLocaleCode = "en-US",
+            PreferredLocaleCode = EnglishLocaleCode,
             ExpiresAtUtc = new DateTime(2026, 10, 15, 18, 0, 0, DateTimeKind.Utc)
         };
     }
@@ -119,13 +118,13 @@ public sealed class ContractSerializationTests
     {
         return new AccountRegistrationCredentials
         {
-            Username = "player_one",
+            Username = SampleUsername,
             EmailAddress = "player@example.com",
             Password = "ValidPassword1!",
-            PreferredLocaleCode = "en-US",
+            PreferredLocaleCode = EnglishLocaleCode,
             ProfileImage = new ProfileImageContent
             {
-                MediaType = "image/png",
+                MediaType = PngMediaType,
                 Content = new byte[] { 1, 2, 3 }
             }
         };
@@ -168,8 +167,8 @@ public sealed class ContractSerializationTests
     {
         return new AccountReference
         {
-            AccountId = 42,
-            Username = "player_one"
+            AccountId = SampleAccountId,
+            Username = SampleUsername
         };
     }
 
