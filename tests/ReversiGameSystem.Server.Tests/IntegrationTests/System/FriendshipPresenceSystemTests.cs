@@ -45,7 +45,7 @@ public sealed class FriendshipPresenceSystemTests
     }
 
     [TestMethod]
-    public void FriendPresence_ConnectAndCloseSession_DeliversConnectedAndDisconnectedCallbacks()
+    public void FriendshipJourney_RequestAcceptPresenceAndRemove_CompletesEndToEnd()
     {
         if (_host == null)
         {
@@ -61,9 +61,6 @@ public sealed class FriendshipPresenceSystemTests
             FriendTwoUsername,
             FriendTwoEmail,
             SharedPassword);
-        SystemTestHost.SeedAcceptedFriendship(
-            friendOne.Account.AccountId,
-            friendTwo.Account.AccountId);
 
         RecordingFriendshipCallback callbackOne = new RecordingFriendshipCallback();
         RecordingFriendshipCallback callbackTwo = new RecordingFriendshipCallback();
@@ -78,6 +75,27 @@ public sealed class FriendshipPresenceSystemTests
         channelOne.Channel.OpenFriendshipChannel(friendOne.SessionToken);
         channelTwo.Channel.OpenFriendshipChannel(friendTwo.SessionToken);
 
+        PlayerSummary[] searchResults = channelOne.Channel.FindPlayers(
+            friendOne.SessionToken,
+            FriendTwoUsername);
+        FriendRequest sentRequest = channelOne.Channel.SendFriendRequest(
+            friendOne.SessionToken,
+            searchResults[0].Account.AccountId);
+
+        bool requestReceived = SpinWait.SpinUntil(
+            () => callbackTwo.HasReceivedRequest(sentRequest.RequestId),
+            CallbackWaitMilliseconds);
+        FriendRequest[] pendingForTwo = channelTwo.Channel.GetPendingFriendRequests(
+            friendTwo.SessionToken);
+
+        channelTwo.Channel.RespondToFriendRequest(
+            friendTwo.SessionToken,
+            pendingForTwo[0].RequestId,
+            true);
+
+        bool responseReceived = SpinWait.SpinUntil(
+            () => callbackOne.HasAcceptedResponse(sentRequest.RequestId),
+            CallbackWaitMilliseconds);
         bool connectedReceived = SpinWait.SpinUntil(
             () => callbackOne.HasChange(friendTwo.Account.AccountId, FriendChange.Connected),
             CallbackWaitMilliseconds);
@@ -87,15 +105,23 @@ public sealed class FriendshipPresenceSystemTests
         bool disconnectedReceived = SpinWait.SpinUntil(
             () => callbackOne.HasChange(friendTwo.Account.AccountId, FriendChange.Disconnected),
             CallbackWaitMilliseconds);
-        FriendSummary[] friendsOffline = channelOne.Channel.GetFriends(friendOne.SessionToken);
-        int expectedFriendCount = 1;
 
+        channelOne.Channel.RemoveFriend(friendOne.SessionToken, friendTwo.Account.AccountId);
+        FriendSummary[] friendsAfterRemoval = channelOne.Channel.GetFriends(
+            friendOne.SessionToken);
+
+        int expectedCount = 1;
+        int expectedEmptyCount = 0;
+
+        Assert.AreEqual(expectedCount, searchResults.Length);
+        Assert.IsTrue(requestReceived);
+        Assert.AreEqual(expectedCount, pendingForTwo.Length);
+        Assert.IsTrue(responseReceived);
         Assert.IsTrue(connectedReceived);
-        Assert.AreEqual(expectedFriendCount, friendsOnline.Length);
+        Assert.AreEqual(expectedCount, friendsOnline.Length);
         Assert.IsTrue(friendsOnline[0].IsOnline);
         Assert.IsTrue(disconnectedReceived);
-        Assert.AreEqual(expectedFriendCount, friendsOffline.Length);
-        Assert.IsFalse(friendsOffline[0].IsOnline);
+        Assert.AreEqual(expectedEmptyCount, friendsAfterRemoval.Length);
     }
 
     [CallbackBehavior(
@@ -103,8 +129,22 @@ public sealed class FriendshipPresenceSystemTests
         UseSynchronizationContext = false)]
     private sealed class RecordingFriendshipCallback : IFriendshipServiceCallback
     {
+        private readonly ConcurrentQueue<string> _receivedRequestIds =
+            new ConcurrentQueue<string>();
+        private readonly ConcurrentQueue<(string RequestId, bool Accepted)> _responses =
+            new ConcurrentQueue<(string RequestId, bool Accepted)>();
         private readonly ConcurrentQueue<(long AccountId, FriendChange Change)> _changes =
             new ConcurrentQueue<(long AccountId, FriendChange Change)>();
+
+        internal bool HasReceivedRequest(string requestId)
+        {
+            return _receivedRequestIds.Contains(requestId);
+        }
+
+        internal bool HasAcceptedResponse(string requestId)
+        {
+            return _responses.Any(item => item.RequestId == requestId && item.Accepted);
+        }
 
         internal bool HasChange(long accountId, FriendChange change)
         {
@@ -113,10 +153,12 @@ public sealed class FriendshipPresenceSystemTests
 
         public void OnFriendRequestReceived(FriendRequest request)
         {
+            _receivedRequestIds.Enqueue(request.RequestId);
         }
 
         public void OnFriendRequestResponded(string requestId, bool accepted)
         {
+            _responses.Enqueue((requestId, accepted));
         }
 
         public void OnFriendChanged(long accountId, FriendChange change)

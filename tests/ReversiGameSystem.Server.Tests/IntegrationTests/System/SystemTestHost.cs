@@ -22,7 +22,6 @@ using ReversiGameSystem.Server.Persistence.Chat;
 using ReversiGameSystem.Server.Persistence.Friendships;
 using ReversiGameSystem.Server.Persistence.Leaderboards;
 using ReversiGameSystem.Server.Persistence.Matches;
-using ReversiGameSystem.Server.Persistence.Model;
 using ReversiGameSystem.Server.Persistence.Players;
 using ReversiGameSystem.Server.Persistence.Preferences;
 using ReversiGameSystem.Server.Persistence.Verification;
@@ -102,25 +101,6 @@ internal sealed class SystemTestHost : IDisposable
         sessionScope.Channel.RequestLoginCode(username, password);
         string loginCode = GetLatestVerificationCode(emailAddress);
         return sessionScope.Channel.CompleteLogin(username, loginCode);
-    }
-
-    internal static void SeedAcceptedFriendship(long firstAccountId, long secondAccountId)
-    {
-        long accountIdA = Math.Min(firstAccountId, secondAccountId);
-        long accountIdB = Math.Max(firstAccountId, secondAccountId);
-        DateTime nowUtc = DateTime.UtcNow;
-
-        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
-        context.Friendship.Add(new Friendship
-        {
-            accountIdA = accountIdA,
-            accountIdB = accountIdB,
-            requestedByAccountId = firstAccountId,
-            statusCode = "ACCEPTED",
-            requestedAtUtc = nowUtc.AddMinutes(-5),
-            respondedAtUtc = nowUtc
-        });
-        context.SaveChanges();
     }
 
     internal ClientChannelScope<TContract> OpenChannel<TContract>()
