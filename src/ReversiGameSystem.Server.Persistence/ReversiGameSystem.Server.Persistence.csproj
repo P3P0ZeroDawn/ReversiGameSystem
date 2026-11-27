@@ -6,6 +6,7 @@
     <RootNamespace>ReversiGameSystem.Server.Persistence</RootNamespace>
     <AssemblyName>ReversiGameSystem.Server.Persistence</AssemblyName>
     <ProjectGuid>{C0D97A3D-3CA3-45B0-89F9-E92230FBECDF}</ProjectGuid>
+    <IsTestProject>false</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.ComponentModel.DataAnnotations" />

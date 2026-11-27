@@ -6,6 +6,7 @@
     <RootNamespace>ReversiGameSystem.Server.Application</RootNamespace>
     <AssemblyName>ReversiGameSystem.Server.Application</AssemblyName>
     <ProjectGuid>{FE67E273-7E6A-4640-B804-37DD43ACCB7A}</ProjectGuid>
+    <IsTestProject>false</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\ReversiGameSystem.Server.Domain\ReversiGameSystem.Server.Domain.csproj" />

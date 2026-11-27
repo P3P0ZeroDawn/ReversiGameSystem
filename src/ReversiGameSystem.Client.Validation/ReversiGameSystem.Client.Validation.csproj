@@ -6,5 +6,6 @@
     <ProjectGuid>{A9C4A934-99C2-4D12-B962-35EE514AAE46}</ProjectGuid>
     <RootNamespace>ReversiGameSystem</RootNamespace>
     <AssemblyName>ReversiGameSystem.Client.Validation</AssemblyName>
+    <IsTestProject>false</IsTestProject>
   </PropertyGroup>
 </Project>
