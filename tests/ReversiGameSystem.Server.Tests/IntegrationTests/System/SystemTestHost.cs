@@ -5,14 +5,24 @@ using System.IO;
 using System.ServiceModel;
 using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Chat;
 using ReversiGameSystem.Server.Application.Common;
+using ReversiGameSystem.Server.Application.Friendships;
 using ReversiGameSystem.Server.Application.Leaderboards;
+using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Application.Players;
 using ReversiGameSystem.Server.Application.Preferences;
 using ReversiGameSystem.Server.Application.Verification;
+using ReversiGameSystem.Server.Contracts.Accounts;
+using ReversiGameSystem.Server.Contracts.Callbacks;
+using ReversiGameSystem.Server.Contracts.Friendships;
 using ReversiGameSystem.Server.Contracts.Services;
 using ReversiGameSystem.Server.Persistence.Accounts;
+using ReversiGameSystem.Server.Persistence.Chat;
+using ReversiGameSystem.Server.Persistence.Friendships;
 using ReversiGameSystem.Server.Persistence.Leaderboards;
+using ReversiGameSystem.Server.Persistence.Matches;
+using ReversiGameSystem.Server.Persistence.Model;
 using ReversiGameSystem.Server.Persistence.Players;
 using ReversiGameSystem.Server.Persistence.Preferences;
 using ReversiGameSystem.Server.Persistence.Verification;
@@ -20,6 +30,8 @@ using ReversiGameSystem.Server.ServiceApi;
 using ReversiGameSystem.Server.Tests.IntegrationTests.Repository;
 using ReversiGameSystem.Server.Tests.IntegrationTests.Services;
 using ReversiGameSystem.Server.Tests.TestDoubles;
+
+using ContractSession = ReversiGameSystem.Server.Contracts.Accounts.AuthenticatedSession;
 
 namespace ReversiGameSystem.Server.Tests.IntegrationTests.SystemTests;
 
@@ -37,6 +49,7 @@ internal sealed class SystemTestHost : IDisposable
     private readonly string _boardBackgroundsDirectory;
     private readonly CapturingTemplatedEmailSender _emailSender;
     private readonly List<ServiceHost> _hosts = new List<ServiceHost>();
+    private readonly List<IDisposable> _disposables = new List<IDisposable>();
     private readonly Dictionary<Type, Uri> _endpoints = new Dictionary<Type, Uri>();
 
     internal SystemTestHost()
@@ -55,7 +68,7 @@ internal sealed class SystemTestHost : IDisposable
 
     internal void ResetState()
     {
-        CloseHosts();
+        CloseHostsAndSubscriptions();
         _database.ResetMutableTables();
         _emailSender.Clear();
         RecreateDirectory(_profileImagesDirectory);
@@ -66,6 +79,48 @@ internal sealed class SystemTestHost : IDisposable
     internal string GetLatestVerificationCode(string emailAddress)
     {
         return _emailSender.GetLatestCode(emailAddress);
+    }
+
+    internal ContractSession RegisterAndLogin(
+        string username,
+        string emailAddress,
+        string password)
+    {
+        using ClientChannelScope<IAccountService> accountScope = OpenChannel<IAccountService>();
+        using ClientChannelScope<ISessionService> sessionScope = OpenChannel<ISessionService>();
+        accountScope.Channel.RequestRegistrationCode(username, emailAddress);
+        string registrationCode = GetLatestVerificationCode(emailAddress);
+        accountScope.Channel.CompleteRegistration(new NewAccount
+        {
+            Username = username,
+            EmailAddress = emailAddress,
+            Password = password,
+            PreferredLocaleCode = "en-US",
+            VerificationCode = registrationCode
+        });
+
+        sessionScope.Channel.RequestLoginCode(username, password);
+        string loginCode = GetLatestVerificationCode(emailAddress);
+        return sessionScope.Channel.CompleteLogin(username, loginCode);
+    }
+
+    internal static void SeedAcceptedFriendship(long firstAccountId, long secondAccountId)
+    {
+        long accountIdA = Math.Min(firstAccountId, secondAccountId);
+        long accountIdB = Math.Max(firstAccountId, secondAccountId);
+        DateTime nowUtc = DateTime.UtcNow;
+
+        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
+        context.Friendship.Add(new Friendship
+        {
+            accountIdA = accountIdA,
+            accountIdB = accountIdB,
+            requestedByAccountId = firstAccountId,
+            statusCode = "ACCEPTED",
+            requestedAtUtc = nowUtc.AddMinutes(-5),
+            respondedAtUtc = nowUtc
+        });
+        context.SaveChanges();
     }
 
     internal ClientChannelScope<TContract> OpenChannel<TContract>()
@@ -80,9 +135,23 @@ internal sealed class SystemTestHost : IDisposable
         return new ClientChannelScope<TContract>(factory, channel);
     }
 
+    internal ClientChannelScope<TContract> OpenDuplexChannel<TContract, TCallback>(
+        TCallback callback)
+        where TContract : class
+        where TCallback : class
+    {
+        Uri endpointAddress = _endpoints[typeof(TContract)];
+        DuplexChannelFactory<TContract> factory =
+            WcfTestHostHelper.CreateDuplexFactory<TContract, TCallback>(
+                endpointAddress,
+                callback);
+        TContract channel = factory.CreateChannel();
+        return new ClientChannelScope<TContract>(factory, channel);
+    }
+
     public void Dispose()
     {
-        CloseHosts();
+        CloseHostsAndSubscriptions();
         _database.Dispose();
         if (Directory.Exists(_tempRootDirectory))
         {
@@ -126,6 +195,56 @@ internal sealed class SystemTestHost : IDisposable
         LeaderboardService leaderboardService = new LeaderboardService(
             new LeaderboardApplicationService(new LeaderboardRepository()));
 
+        FriendshipService friendshipService = CreateFriendshipService(sessions);
+        MatchRepository matchRepository = new MatchRepository();
+        MatchApplicationService matchApplicationService = new MatchApplicationService(
+            sessions,
+            matchRepository,
+            clock,
+            _emailSender);
+        GameplayMatchApplicationService gameplayApplicationService =
+            new GameplayMatchApplicationService(sessions, matchRepository, clock);
+        MatchCallbackSubscriptions<IMatchLobbyServiceCallback> lobbySubscriptions =
+            new MatchCallbackSubscriptions<IMatchLobbyServiceCallback>(
+                (token, _) => matchApplicationService.EvaluateLobbyAccess(token)
+                    == MatchStatus.Success,
+                NullLogger<MatchCallbackSubscriptions<IMatchLobbyServiceCallback>>.Instance);
+        _disposables.Add(lobbySubscriptions);
+        MatchLobbyService matchLobbyService = new MatchLobbyService(
+            matchApplicationService,
+            lobbySubscriptions);
+
+        GameplayMatchPresence gameplayPresence = new GameplayMatchPresence();
+        MatchCallbackSubscriptions<IGameplayMatchServiceCallback> gameplaySubscriptions =
+            new MatchCallbackSubscriptions<IGameplayMatchServiceCallback>(
+                (token, matchId) => gameplayApplicationService
+                    .GetMatchState(token, matchId).Status == MatchStatus.Success,
+                NullLogger<MatchCallbackSubscriptions<IGameplayMatchServiceCallback>>.Instance);
+        _disposables.Add(gameplaySubscriptions);
+        GameplayMatchService gameplayMatchService = new GameplayMatchService(
+            gameplayApplicationService,
+            gameplayPresence,
+            gameplaySubscriptions);
+
+        ChatApplicationService chatApplicationService = new ChatApplicationService(
+            sessions,
+            new ChatRepository(clock),
+            clock);
+        MatchCallbackSubscriptions<IMatchChatServiceCallback> chatSubscriptions =
+            new MatchCallbackSubscriptions<IMatchChatServiceCallback>(
+                (token, matchId) => chatApplicationService
+                    .EvaluateParticipantAccess(token, matchId) == ChatStatus.Success,
+                NullLogger<MatchCallbackSubscriptions<IMatchChatServiceCallback>>.Instance);
+        _disposables.Add(chatSubscriptions);
+        MatchChatService matchChatService = new MatchChatService(
+            chatApplicationService,
+            chatSubscriptions);
+
+        matchApplicationService.MatchStarted += gameplayApplicationService.TrackStartedMatch;
+        sessions.SessionRevoked += lobbySubscriptions.RemoveSession;
+        sessions.SessionRevoked += gameplaySubscriptions.RemoveSession;
+        sessions.SessionRevoked += chatSubscriptions.RemoveSession;
+
         OpenServiceHost<IAccountService>(accountService, "AccountService");
         OpenServiceHost<ISessionService>(sessionService, "SessionService");
         OpenServiceHost<IPlayerProfileService>(playerProfileService, "PlayerProfileService");
@@ -133,6 +252,35 @@ internal sealed class SystemTestHost : IDisposable
             playerPreferencesService,
             "PlayerPreferencesService");
         OpenServiceHost<ILeaderboardService>(leaderboardService, "LeaderboardService");
+        OpenServiceHost<IFriendshipService>(friendshipService, "FriendshipService");
+        OpenServiceHost<IMatchLobbyService>(matchLobbyService, "MatchLobbyService");
+        OpenServiceHost<IGameplayMatchService>(gameplayMatchService, "GameplayMatchService");
+        OpenServiceHost<IMatchChatService>(matchChatService, "MatchChatService");
+    }
+
+    private FriendshipService CreateFriendshipService(SessionStore sessions)
+    {
+        AccountPresenceRegistry presenceRegistry = new AccountPresenceRegistry();
+        FriendshipSubscriptions subscriptions = new FriendshipSubscriptions(
+            NullLogger<FriendshipSubscriptions>.Instance);
+        _disposables.Add(subscriptions);
+        FriendshipApplicationService applicationService = new FriendshipApplicationService(
+            sessions,
+            new FriendRepository());
+        presenceRegistry.PresenceChanged += (accountId, isOnline) =>
+        {
+            FriendChange change = isOnline ? FriendChange.Connected : FriendChange.Disconnected;
+            HashSet<long> targets = new HashSet<long>(
+                applicationService.ReadConfirmedFriendIds(accountId));
+            if (targets.Count > 0)
+            {
+                subscriptions.PublishToAccounts(
+                    targets,
+                    callback => callback.OnFriendChanged(accountId, change));
+            }
+        };
+        sessions.SessionRevoked += subscriptions.Remove;
+        return new FriendshipService(applicationService, presenceRegistry, subscriptions);
     }
 
     private void OpenServiceHost<TContract>(object serviceInstance, string endpointName)
@@ -151,7 +299,7 @@ internal sealed class SystemTestHost : IDisposable
         _endpoints[typeof(TContract)] = new Uri(baseAddress, endpointName);
     }
 
-    private void CloseHosts()
+    private void CloseHostsAndSubscriptions()
     {
         for (int index = _hosts.Count - 1; index >= 0; index--)
         {
@@ -160,6 +308,13 @@ internal sealed class SystemTestHost : IDisposable
 
         _hosts.Clear();
         _endpoints.Clear();
+
+        for (int index = _disposables.Count - 1; index >= 0; index--)
+        {
+            _disposables[index].Dispose();
+        }
+
+        _disposables.Clear();
     }
 
     private static byte[] CreateHmacKey()
