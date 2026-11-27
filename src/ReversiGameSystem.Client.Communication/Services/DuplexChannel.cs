@@ -35,6 +35,22 @@ internal sealed class DuplexChannel<TClient, TContract> : IDisposable
     internal event Action? ConnectionLost;
     internal event Action? ChannelCreated;
 
+    internal static Binding CreateOverrideBinding(string endpoint)
+    {
+        if (!string.IsNullOrWhiteSpace(endpoint)
+            && endpoint.StartsWith("net.pipe://", StringComparison.OrdinalIgnoreCase))
+        {
+            return new NetNamedPipeBinding(NetNamedPipeSecurityMode.None)
+            {
+                ReceiveTimeout = TimeSpan.FromHours(ChannelReceiveTimeoutHours),
+                SendTimeout = TimeSpan.FromSeconds(ChannelSendTimeoutSeconds),
+                MaxReceivedMessageSize = MaximumMessageBytes
+            };
+        }
+
+        return CreateOverrideBinding();
+    }
+
     internal static NetTcpBinding CreateOverrideBinding()
     {
         return new NetTcpBinding(SecurityMode.None)

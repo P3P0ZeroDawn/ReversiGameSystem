@@ -40,7 +40,7 @@ internal sealed class MatchChatClient : IDisposable, Proxy.IMatchChatServiceCall
             {
                 client = new Proxy.MatchChatServiceClient(new InstanceContext(this),
                     DuplexChannel<Proxy.MatchChatServiceClient, Proxy.IMatchChatService>
-                        .CreateOverrideBinding(), new EndpointAddress(endpoint));
+                        .CreateOverrideBinding(endpoint), new EndpointAddress(endpoint));
             }
             return client;
         }

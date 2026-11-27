@@ -52,7 +52,7 @@ internal sealed class GameplayClient : IDisposable, Proxy.IGameplayMatchServiceC
             {
                 client = new Proxy.GameplayMatchServiceClient(new InstanceContext(this),
                     DuplexChannel<Proxy.GameplayMatchServiceClient, Proxy.IGameplayMatchService>
-                        .CreateOverrideBinding(), new EndpointAddress(endpoint));
+                        .CreateOverrideBinding(endpoint), new EndpointAddress(endpoint));
             }
             return client;
         }

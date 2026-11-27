@@ -20,7 +20,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace ReversiGameSystem.Client.Tests;
 
 [TestClass]
-[TestCategory("LiveIntegration")]
+[TestCategory("Integration")]
 public sealed class MatchScreenTests
 {
     [TestMethod]
@@ -54,19 +54,27 @@ public sealed class MatchScreenTests
     private static void RunScreen()
     {
         // Arrange: real generated consumers, synthetic accounts and a disposable database.
+        using InMemoryClientWcfHost host = new InMemoryClientWcfHost();
         App app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         app.InitializeComponent();
         SessionClient sessions = new SessionClient(NullLogger<SessionClient>.Instance,
-            () => new Proxy.SessionServiceClient(new NetTcpBinding(SecurityMode.None),
-                new EndpointAddress("net.tcp://localhost:18091/ReversiReview/Session")));
+            () => new Proxy.SessionServiceClient(
+                InMemoryClientWcfHost.CreateBinding(), host.SessionEndpoint));
         AuthenticatedAccountSession alpha = Authenticate(sessions, "ReviewAlpha", "000001");
         AuthenticatedAccountSession beta = Authenticate(sessions, "ReviewBeta", "000002");
-        using MatchLobbyClient firstLobby = MatchClientsTests.CreateLobby(alpha.SessionToken);
-        using GameplayClient first = MatchClientsTests.CreateGameplay(alpha.SessionToken);
-        using MatchChatClient firstChat = MatchClientsTests.CreateChat(alpha.SessionToken);
-        using MatchLobbyClient secondLobby = MatchClientsTests.CreateLobby(beta.SessionToken);
-        using GameplayClient second = MatchClientsTests.CreateGameplay(beta.SessionToken);
-        using MatchChatClient secondChat = MatchClientsTests.CreateChat(beta.SessionToken);
+        ClientRuntime.CurrentSession.StartAuthenticated(alpha);
+        using MatchLobbyClient firstLobby = new MatchLobbyClient(alpha.SessionToken,
+            host.MatchLobbyEndpoint.Uri.AbsoluteUri, NullLogger<MatchLobbyClient>.Instance);
+        using GameplayClient first = new GameplayClient(alpha.SessionToken,
+            host.GameplayMatchEndpoint.Uri.AbsoluteUri, NullLogger<GameplayClient>.Instance);
+        using MatchChatClient firstChat = new MatchChatClient(alpha.SessionToken,
+            host.MatchChatEndpoint.Uri.AbsoluteUri, NullLogger<MatchChatClient>.Instance);
+        using MatchLobbyClient secondLobby = new MatchLobbyClient(beta.SessionToken,
+            host.MatchLobbyEndpoint.Uri.AbsoluteUri, NullLogger<MatchLobbyClient>.Instance);
+        using GameplayClient second = new GameplayClient(beta.SessionToken,
+            host.GameplayMatchEndpoint.Uri.AbsoluteUri, NullLogger<GameplayClient>.Instance);
+        using MatchChatClient secondChat = new MatchChatClient(beta.SessionToken,
+            host.MatchChatEndpoint.Uri.AbsoluteUri, NullLogger<MatchChatClient>.Instance);
         Window window = new Window
         {
             Width = 1280,
@@ -104,8 +112,9 @@ public sealed class MatchScreenTests
                 == LocalizationManager.Instance["Game_PresenceConnected"]);
             ReversiBoardControl board = Control<ReversiBoardControl>(page, "gameBoardControl");
             Assert.AreEqual(4, Control<Grid>(board, "piecesGrid").Children.Count);
-            foreach (Image piece in Control<Grid>(board, "piecesGrid").Children)
+            foreach (Grid pieceContainer in Control<Grid>(board, "piecesGrid").Children)
             {
+                Image piece = pieceContainer.Children.OfType<Image>().Single();
                 Assert.AreEqual(true, ((BitmapSource)piece.Source).PixelWidth > 0);
             }
             Grid interaction = Control<Grid>(board, "interactionGrid");
@@ -163,8 +172,14 @@ public sealed class MatchScreenTests
         }
         finally
         {
+            if (window.Content is Frame frame && frame.Content is FrameworkElement activePage)
+            {
+                window.Content = null;
+                PumpUntil(() => !activePage.IsLoaded);
+            }
             window.Close();
             SynchronizationContext.SetSynchronizationContext(null);
+            ClientRuntime.CurrentSession.Clear();
             sessions.CloseSession(beta.SessionToken).GetAwaiter().GetResult();
             sessions.CloseSession(alpha.SessionToken).GetAwaiter().GetResult();
             app.Shutdown();

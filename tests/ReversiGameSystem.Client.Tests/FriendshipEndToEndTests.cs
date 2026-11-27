@@ -10,17 +10,17 @@ namespace ReversiGameSystem.Client.Tests;
 
 /// <summary>Checks generated consumers against the disposable real net.tcp host.</summary>
 [TestClass]
-[TestCategory("LiveIntegration")]
+[TestCategory("Integration")]
 public sealed class FriendshipEndToEndTests
 {
     [TestMethod]
     public void Presence_RealAccounts_ReceivesLoginAndSessionClosureCallbacks()
     {
-        // Arrange
-        SessionClient firstSession = CreateSessionClient();
-        SessionClient secondSession = CreateSessionClient();
-        using FriendshipClient first = CreateFriendshipClient();
-        using FriendshipClient second = CreateFriendshipClient();
+        using InMemoryClientWcfHost host = new InMemoryClientWcfHost();
+        SessionClient firstSession = CreateSessionClient(host);
+        SessionClient secondSession = CreateSessionClient(host);
+        using FriendshipClient first = CreateFriendshipClient(host);
+        using FriendshipClient second = CreateFriendshipClient(host);
         AuthenticatedAccountSession? alpha = null;
         AuthenticatedAccountSession? beta = null;
         try
@@ -40,7 +40,7 @@ public sealed class FriendshipEndToEndTests
             Assert.AreEqual(true, first.IsConnected);
             Assert.AreEqual(true, second.IsConnected);
             CloseSession_ActiveFriend_PublishesOffline(first, secondSession, beta.SessionToken);
-            InvalidToken_RealBoundary_RejectsSession();
+            InvalidToken_RealBoundary_RejectsSession(host);
         }
         finally
         {
@@ -77,10 +77,9 @@ public sealed class FriendshipEndToEndTests
         Assert.AreEqual(true, observer.IsConnected);
     }
 
-    private static void InvalidToken_RealBoundary_RejectsSession()
+    private static void InvalidToken_RealBoundary_RejectsSession(InMemoryClientWcfHost host)
     {
-        // Arrange
-        using FriendshipClient invalid = CreateFriendshipClient();
+        using FriendshipClient invalid = CreateFriendshipClient(host);
 
         // Act
         FriendshipStatus result = invalid.LoadFriends("synthetic-invalid-session")
@@ -111,23 +110,23 @@ public sealed class FriendshipEndToEndTests
         Assert.AreEqual(online, friends[0].IsOnline);
     }
 
-    private static SessionClient CreateSessionClient()
+    private static SessionClient CreateSessionClient(InMemoryClientWcfHost host)
     {
-        const int SessionPort = 18091;
-        Uri endpoint = new UriBuilder(Uri.UriSchemeNetTcp, "localhost", SessionPort,
-            "ReversiReview/Session").Uri;
-        return new SessionClient(NullLogger<SessionClient>.Instance,
-            () => new Proxy.SessionServiceClient(CreateBinding(), new EndpointAddress(endpoint)));
+        return new SessionClient(
+            NullLogger<SessionClient>.Instance,
+            () => new Proxy.SessionServiceClient(
+                InMemoryClientWcfHost.CreateBinding(),
+                host.SessionEndpoint));
     }
 
-    private static FriendshipClient CreateFriendshipClient()
+    private static FriendshipClient CreateFriendshipClient(InMemoryClientWcfHost host)
     {
-        const int FriendshipPort = 18094;
-        Uri endpoint = new UriBuilder(Uri.UriSchemeNetTcp, "localhost", FriendshipPort,
-            "ReversiReview/Friendship").Uri;
-        return new FriendshipClient(NullLogger<FriendshipClient>.Instance,
-            context => new Proxy.FriendshipServiceClient(context, CreateBinding(),
-                new EndpointAddress(endpoint)));
+        return new FriendshipClient(
+            NullLogger<FriendshipClient>.Instance,
+            context => new Proxy.FriendshipServiceClient(
+                context,
+                InMemoryClientWcfHost.CreateBinding(),
+                host.FriendshipEndpoint));
     }
 
     private static AuthenticatedAccountSession Authenticate(

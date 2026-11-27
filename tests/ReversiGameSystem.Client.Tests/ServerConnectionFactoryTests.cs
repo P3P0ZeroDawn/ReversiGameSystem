@@ -36,7 +36,7 @@ public sealed class ServerConnectionFactoryTests
                 null);
 
             // Act
-            string host = ServerConnectionFactory.GetServerHost();
+            string host = ServerConnectionFactory.GetServerHost(includeEnvironmentFile: false);
 
             // Assert
             Assert.AreEqual(ServerConnectionFactory.DefaultHost, host);
@@ -63,7 +63,7 @@ public sealed class ServerConnectionFactoryTests
                 configuredHost);
 
             // Act
-            string host = ServerConnectionFactory.GetServerHost();
+            string host = ServerConnectionFactory.GetServerHost(includeEnvironmentFile: false);
 
             // Assert
             Assert.AreEqual(configuredHost, host);

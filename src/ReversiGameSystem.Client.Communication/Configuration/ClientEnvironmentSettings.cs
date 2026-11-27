@@ -17,8 +17,12 @@ internal static class ClientEnvironmentSettings
     /// </summary>
     /// <param name="name">The configuration variable name.</param>
     /// <param name="defaultValue">The fallback value if absent or whitespace.</param>
+    /// <param name="includeEnvironmentFile">Whether to fall back to the local .env file.</param>
     /// <returns>The resolved configuration value or default value.</returns>
-    internal static string ReadOptional(string name, string defaultValue)
+    internal static string ReadOptional(
+        string name,
+        string defaultValue,
+        bool includeEnvironmentFile = true)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -33,7 +37,8 @@ internal static class ClientEnvironmentSettings
             return value;
         }
 
-        if (CachedFileValues.Value.TryGetValue(name, out string? fileValue))
+        if (includeEnvironmentFile
+            && CachedFileValues.Value.TryGetValue(name, out string? fileValue))
         {
             return fileValue;
         }

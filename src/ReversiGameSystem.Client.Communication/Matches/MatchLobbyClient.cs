@@ -41,7 +41,7 @@ internal sealed class MatchLobbyClient : IDisposable, Proxy.IMatchLobbyServiceCa
             {
                 client = new Proxy.MatchLobbyServiceClient(new InstanceContext(this),
                     DuplexChannel<Proxy.MatchLobbyServiceClient, Proxy.IMatchLobbyService>
-                        .CreateOverrideBinding(), new EndpointAddress(endpoint));
+                        .CreateOverrideBinding(endpoint), new EndpointAddress(endpoint));
             }
             return client;
         }

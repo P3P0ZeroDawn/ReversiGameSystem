@@ -13,28 +13,35 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace ReversiGameSystem.Client.Tests;
 
 [TestClass]
-[TestCategory("LiveIntegration")]
+[TestCategory("Integration")]
 public sealed class MatchEndToEndTests
 {
     [TestMethod]
     public void TwoPlayers_RealServer_StartsConfirmedBoardAndExchangesChat()
     {
+        using InMemoryClientWcfHost host = new InMemoryClientWcfHost();
         SessionClient sessions = new(NullLogger<SessionClient>.Instance, () => new Proxy.SessionServiceClient(
-            new NetTcpBinding(SecurityMode.None), new EndpointAddress("net.tcp://localhost:18091/ReversiReview/Session")));
+            InMemoryClientWcfHost.CreateBinding(), host.SessionEndpoint));
         AuthenticatedAccountSession alpha = Authenticate(sessions, "ReviewAlpha", "000001");
         AuthenticatedAccountSession? beta = null;
         GuestAccountSession? guest = null;
         try
         {
             beta = Authenticate(sessions, "ReviewBeta", "000002");
-            VerifyLanguagePersistence(alpha.SessionToken);
+            VerifyLanguagePersistence(host, alpha.SessionToken);
             Console.WriteLine("PASS: language persisted through the real preferences proxy.");
-            using MatchLobbyClient firstLobby = MatchClientsTests.CreateLobby(alpha.SessionToken);
-            using GameplayClient first = MatchClientsTests.CreateGameplay(alpha.SessionToken);
-            using MatchChatClient firstChat = MatchClientsTests.CreateChat(alpha.SessionToken);
-            using MatchLobbyClient secondLobby = MatchClientsTests.CreateLobby(beta.SessionToken);
-            using GameplayClient second = MatchClientsTests.CreateGameplay(beta.SessionToken);
-            using MatchChatClient secondChat = MatchClientsTests.CreateChat(beta.SessionToken);
+            using MatchLobbyClient firstLobby = new(alpha.SessionToken,
+                host.MatchLobbyEndpoint.Uri.AbsoluteUri, NullLogger<MatchLobbyClient>.Instance);
+            using GameplayClient first = new(alpha.SessionToken,
+                host.GameplayMatchEndpoint.Uri.AbsoluteUri, NullLogger<GameplayClient>.Instance);
+            using MatchChatClient firstChat = new(alpha.SessionToken,
+                host.MatchChatEndpoint.Uri.AbsoluteUri, NullLogger<MatchChatClient>.Instance);
+            using MatchLobbyClient secondLobby = new(beta.SessionToken,
+                host.MatchLobbyEndpoint.Uri.AbsoluteUri, NullLogger<MatchLobbyClient>.Instance);
+            using GameplayClient second = new(beta.SessionToken,
+                host.GameplayMatchEndpoint.Uri.AbsoluteUri, NullLogger<GameplayClient>.Instance);
+            using MatchChatClient secondChat = new(beta.SessionToken,
+                host.MatchChatEndpoint.Uri.AbsoluteUri, NullLogger<MatchChatClient>.Instance);
             CancelledCode_RemoteBoundary_RejectsJoin(firstLobby, secondLobby, second);
             Console.WriteLine("PASS: canceled code and registered outsider authorization.");
             int started = 0;
@@ -82,9 +89,12 @@ public sealed class MatchEndToEndTests
             guest = OpenGuest(
                 sessions,
                 "Outsider" + Guid.NewGuid().ToString("N").Substring(0, 6));
-            using MatchLobbyClient outsiderLobby = MatchClientsTests.CreateLobby(guest.SessionToken);
-            using GameplayClient outsider = MatchClientsTests.CreateGameplay(guest.SessionToken);
-            using MatchChatClient outsiderChat = MatchClientsTests.CreateChat(guest.SessionToken);
+            using MatchLobbyClient outsiderLobby = new(guest.SessionToken,
+                host.MatchLobbyEndpoint.Uri.AbsoluteUri, NullLogger<MatchLobbyClient>.Instance);
+            using GameplayClient outsider = new(guest.SessionToken,
+                host.GameplayMatchEndpoint.Uri.AbsoluteUri, NullLogger<GameplayClient>.Instance);
+            using MatchChatClient outsiderChat = new(guest.SessionToken,
+                host.MatchChatEndpoint.Uri.AbsoluteUri, NullLogger<MatchChatClient>.Instance);
             MatchStatus guestInformation = outsider
                 .LoadMatchInformation(waiting.MatchId).GetAwaiter().GetResult();
             Assert.AreEqual(MatchStatus.InvalidSession, guestInformation);
@@ -100,13 +110,13 @@ public sealed class MatchEndToEndTests
         }
     }
 
-    private static void VerifyLanguagePersistence(string token)
+    private static void VerifyLanguagePersistence(InMemoryClientWcfHost host, string token)
     {
-        const string Address = "net.tcp://localhost:18098/ReversiReview/PlayerPreferences";
         Proxy.PlayerPreferencesServiceClient CreateClient()
         {
-            return new Proxy.PlayerPreferencesServiceClient(new NetTcpBinding(SecurityMode.None),
-                new EndpointAddress(Address));
+            return new Proxy.PlayerPreferencesServiceClient(
+                InMemoryClientWcfHost.CreateBinding(),
+                host.PlayerPreferencesEndpoint);
         }
         PlayerPreferencesClient preferences = new PlayerPreferencesClient(
             NullLogger<PlayerPreferencesClient>.Instance, CreateClient);

@@ -33,9 +33,12 @@ internal static class ServerConnectionFactory
             [PreferencesEndpoint] = (PreferencesPort, PreferencesPath)
         };
 
-    internal static string GetServerHost()
+    internal static string GetServerHost(bool includeEnvironmentFile = true)
     {
-        string host = ClientEnvironmentSettings.ReadOptional(ServerHostVariable, DefaultHost);
+        string host = ClientEnvironmentSettings.ReadOptional(
+            ServerHostVariable,
+            DefaultHost,
+            includeEnvironmentFile);
         if (string.IsNullOrWhiteSpace(host))
         {
             throw new InvalidOperationException(

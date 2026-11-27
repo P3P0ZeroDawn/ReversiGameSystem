@@ -9,13 +9,18 @@ namespace ReversiGameSystem.Client.Tests;
 
 /// <summary>Checks the actual client adapter and generated proxy against a running host.</summary>
 [TestClass]
-[TestCategory("LiveIntegration")]
+[TestCategory("Integration")]
 public sealed class SessionConnectionTests
 {
     [TestMethod]
     public void GuestLifecycle_ThroughGeneratedProxy()
     {
-        SessionClient client = new SessionClient(NullLogger<SessionClient>.Instance, CreateProxy);
+        using InMemoryClientWcfHost host = new InMemoryClientWcfHost();
+        SessionClient client = new SessionClient(
+            NullLogger<SessionClient>.Instance,
+            () => new Proxy.SessionServiceClient(
+                InMemoryClientWcfHost.CreateBinding(),
+                host.SessionEndpoint));
         string name = "Test_" + Guid.NewGuid().ToString("N").Substring(0, 12);
         SessionResult<GuestAccountSession> firstResult =
             client.OpenGuestSession(name).GetAwaiter().GetResult();
@@ -53,12 +58,5 @@ public sealed class SessionConnectionTests
         SessionResult<GuestAccountSession> result =
             client.OpenGuestSession(name).GetAwaiter().GetResult();
         Assert.AreEqual(SessionStatus.GuestNameUnavailable, result.Status);
-    }
-
-    private static Proxy.SessionServiceClient CreateProxy()
-    {
-        NetTcpBinding binding = new NetTcpBinding(SecurityMode.None);
-        return new Proxy.SessionServiceClient(binding, new EndpointAddress(
-            "net.tcp://localhost:8091/ReversiGameSystem/Session"));
     }
 }
