@@ -48,6 +48,7 @@
     <None Include="..\..\database\migrations\20261121_CustomBoardBackgroundPreference.sql"
           Link="migrations\20261121_CustomBoardBackgroundPreference.sql"
           CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\RepositoryIntegrationSchema.sql" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\ReviewAccountSchema.sql" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\ReviewMatchSchema.sql" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\database\test-data\PrepareReviewFriendship.sql"
