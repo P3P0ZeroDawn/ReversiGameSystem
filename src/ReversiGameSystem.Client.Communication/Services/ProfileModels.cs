@@ -11,6 +11,7 @@ internal enum ProfileStatus
     UsernameUnavailable,
     InvalidImage,
     InactiveAccount,
+    InvalidSession,
     ServiceUnavailable
 }
 

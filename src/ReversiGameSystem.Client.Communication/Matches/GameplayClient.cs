@@ -369,6 +369,7 @@ internal sealed class GameplayClient : IDisposable, Proxy.IGameplayMatchServiceC
             .Select(participant => new MatchParticipant(
                 participant.SeatNumber, participant.DisplayName)
             {
+                AccountId = participant.AccountId,
                 IsSystem = participant.Kind == Proxy.ParticipantKind.System
             })
             .ToArray();

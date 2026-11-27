@@ -1,6 +1,7 @@
 <Page x:Class="ReversiGameSystem.Views.AccountCreationPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:validation="clr-namespace:ReversiGameSystem.Validation;assembly=ReversiGameSystem.Client.Validation"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:localization="clr-namespace:ReversiGameSystem.Localization"
@@ -68,6 +69,7 @@
                                        Text="{Binding [AccountCreation_UsernameLabel]}"
                                        Style="{StaticResource AuthenticationFieldCaptionStyle}" />
                             <TextBox x:Name="usernameTextBox"
+                             MaxLength="{x:Static validation:UsernamePolicy.MaximumLength}"
                                      Style="{StaticResource AuthenticationTextBoxStyle}" />
                         </StackPanel>
                     </Grid>
@@ -75,10 +77,12 @@
                     <Label x:Name="emailLabel" Content="{Binding [Common_EmailLabel]}"
                            Style="{StaticResource AuthenticationFieldLabelStyle}" />
                     <TextBox x:Name="emailTextBox"
+                             MaxLength="{x:Static validation:EmailPolicy.MaximumAddressLength}"
                              Style="{StaticResource AuthenticationTextBoxStyle}" />
                     <Label x:Name="passwordLabel" Content="{Binding [Common_PasswordLabel]}"
                            Style="{StaticResource AuthenticationFieldLabelStyle}" />
                     <PasswordBox x:Name="passwordBox"
+                             MaxLength="{x:Static validation:PasswordPolicy.MaximumInputLength}"
                                  Style="{StaticResource AuthenticationPasswordBoxStyle}" />
                     <TextBlock x:Name="passwordHintTextBlock"
                                Text="{Binding [AccountCreation_PasswordHint]}"
@@ -89,6 +93,7 @@
                            Content="{Binding [AccountCreation_ConfirmPasswordLabel]}"
                            Style="{StaticResource AuthenticationFieldLabelStyle}" />
                     <PasswordBox x:Name="confirmPasswordBox"
+                             MaxLength="{x:Static validation:PasswordPolicy.MaximumInputLength}"
                                  Style="{StaticResource AuthenticationPasswordBoxStyle}" />
 
                     <Button x:Name="createAccountButton"

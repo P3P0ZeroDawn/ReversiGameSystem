@@ -8,6 +8,7 @@ namespace ReversiGameSystem.Presentation.AccountCreation;
 internal sealed class AccountCreationViewModel
 {
     private readonly IAccountClient _accounts;
+    private NewAccount? _registration;
 
     internal AccountCreationViewModel(IAccountClient accounts)
     {
@@ -28,36 +29,83 @@ internal sealed class AccountCreationViewModel
 
     internal bool IsSubmitting { get; private set; }
 
-    internal async Task<AccountCreationStatus> CreateAccount()
+    internal async Task<AccountStatus> RequestRegistrationCode()
     {
         if (IsSubmitting)
         {
-            return AccountCreationStatus.SubmissionInProgress;
+            return AccountStatus.SubmissionInProgress;
         }
-
+        _registration = null;
         NormalizeInput();
-        AccountCreationStatus status = ValidateInput();
-        if (status != AccountCreationStatus.Success)
+        AccountStatus status = ValidateInput();
+        if (status != AccountStatus.Success)
         {
             return status;
         }
-
+        NewAccount registration = new NewAccount
+        {
+            Username = Username,
+            EmailAddress = EmailAddress,
+            Password = Password,
+            PreferredLocaleCode = LocaleCode,
+            ProfileImage = ProfileImage
+        };
         IsSubmitting = true;
         try
         {
-            status = await _accounts.CreateAccount(
-                Username,
-                EmailAddress,
-                Password,
-                LocaleCode,
-                ProfileImage?.Content,
-                ProfileImage?.MediaType);
+            status = await _accounts.RequestRegistrationCode(
+                registration.Username, registration.EmailAddress);
+            if (status == AccountStatus.Success)
+            {
+                _registration = registration;
+            }
         }
         finally
         {
             IsSubmitting = false;
         }
         return status;
+    }
+
+    internal async Task<AccountStatus> CompleteRegistration(string verificationCode)
+    {
+        if (IsSubmitting)
+        {
+            return AccountStatus.SubmissionInProgress;
+        }
+        if (_registration == null)
+        {
+            return AccountStatus.MissingRequiredInformation;
+        }
+        string code = verificationCode?.Trim() ?? string.Empty;
+        if (!VerificationCodePolicy.IsValid(code))
+        {
+            return AccountStatus.InvalidVerificationCode;
+        }
+        _registration.VerificationCode = code;
+        IsSubmitting = true;
+        AccountStatus status;
+        try
+        {
+            status = await _accounts.CompleteRegistration(_registration);
+            if (status == AccountStatus.Success || status == AccountStatus.ExpiredVerificationCode)
+            {
+                ClearRegistration();
+            }
+        }
+        finally
+        {
+            IsSubmitting = false;
+        }
+        return status;
+    }
+
+    internal void ClearRegistration()
+    {
+        _registration = null;
+        Password = string.Empty;
+        PasswordConfirmation = string.Empty;
+        ProfileImage = null;
     }
 
     private void NormalizeInput()
@@ -67,16 +115,16 @@ internal sealed class AccountCreationViewModel
         LocaleCode = LocaleCode.Trim();
     }
 
-    private AccountCreationStatus ValidateInput()
+    private AccountStatus ValidateInput()
     {
-        AccountCreationStatus status = AccountCreationStatus.Success;
+        AccountStatus status = AccountStatus.Success;
         if (HasMissingRequiredInformation())
         {
-            status = AccountCreationStatus.MissingRequiredInformation;
+            status = AccountStatus.MissingRequiredInformation;
         }
         else if (UsernamePolicy.Validate(Username) != UsernameValidationError.None)
         {
-            status = AccountCreationStatus.InvalidUsername;
+            status = AccountStatus.InvalidUsername;
         }
         else
         {
@@ -90,7 +138,7 @@ internal sealed class AccountCreationViewModel
                 PasswordConfirmation,
                 StringComparison.Ordinal))
             {
-                status = AccountCreationStatus.PasswordMismatch;
+                status = AccountStatus.PasswordMismatch;
             }
             else
             {
@@ -112,54 +160,32 @@ internal sealed class AccountCreationViewModel
             || string.IsNullOrWhiteSpace(PasswordConfirmation);
     }
 
-    private static AccountCreationStatus MapEmailError(EmailValidationError error)
+    private static AccountStatus MapEmailError(EmailValidationError error)
     {
-        AccountCreationStatus status;
-        switch (error)
+        AccountStatus status = error switch
         {
-            case EmailValidationError.TooLong:
-                status = AccountCreationStatus.EmailTooLong;
-                break;
-            case EmailValidationError.InvalidLocalPart:
-                status = AccountCreationStatus.InvalidEmailLocalPart;
-                break;
-            case EmailValidationError.InvalidDomain:
-                status = AccountCreationStatus.InvalidEmailDomain;
-                break;
-            default:
-                status = AccountCreationStatus.InvalidEmailFormat;
-                break;
-        }
+            EmailValidationError.TooLong => AccountStatus.EmailTooLong,
+            EmailValidationError.InvalidLocalPart => AccountStatus.InvalidEmailLocalPart,
+            EmailValidationError.InvalidDomain => AccountStatus.InvalidEmailDomain,
+            _ => AccountStatus.InvalidEmailFormat
+        };
         return status;
     }
 
-    private static AccountCreationStatus MapPasswordError(PasswordValidationError error)
+    private static AccountStatus MapPasswordError(PasswordValidationError error)
     {
-        AccountCreationStatus status;
-        switch (error)
+        AccountStatus status = error switch
         {
-            case PasswordValidationError.TooShort:
-                status = AccountCreationStatus.PasswordTooShort;
-                break;
-            case PasswordValidationError.TooLong:
-                status = AccountCreationStatus.PasswordTooLong;
-                break;
-            case PasswordValidationError.MissingUppercaseLetter:
-                status = AccountCreationStatus.PasswordMissingUppercase;
-                break;
-            case PasswordValidationError.MissingLowercaseLetter:
-                status = AccountCreationStatus.PasswordMissingLowercase;
-                break;
-            case PasswordValidationError.MissingDigit:
-                status = AccountCreationStatus.PasswordMissingDigit;
-                break;
-            case PasswordValidationError.MissingSymbol:
-                status = AccountCreationStatus.PasswordMissingSymbol;
-                break;
-            default:
-                status = AccountCreationStatus.PasswordUnsupportedCharacters;
-                break;
-        }
+            PasswordValidationError.TooShort => AccountStatus.PasswordTooShort,
+            PasswordValidationError.TooLong => AccountStatus.PasswordTooLong,
+            PasswordValidationError.MissingUppercaseLetter =>
+                AccountStatus.PasswordMissingUppercase,
+            PasswordValidationError.MissingLowercaseLetter =>
+                AccountStatus.PasswordMissingLowercase,
+            PasswordValidationError.MissingDigit => AccountStatus.PasswordMissingDigit,
+            PasswordValidationError.MissingSymbol => AccountStatus.PasswordMissingSymbol,
+            _ => AccountStatus.PasswordUnsupportedCharacters
+        };
         return status;
     }
 }

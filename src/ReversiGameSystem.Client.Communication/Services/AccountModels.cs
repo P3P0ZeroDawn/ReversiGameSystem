@@ -1,6 +1,6 @@
 namespace ReversiGameSystem.Services;
 
-internal enum AccountCreationStatus
+internal enum AccountStatus
 {
     Success,
     MissingRequiredInformation,
@@ -21,7 +21,24 @@ internal enum AccountCreationStatus
     PasswordUnsupportedCharacters,
     InvalidLocale,
     InvalidProfileImage,
-    PersistenceUnavailable,
     ServiceUnavailable,
+    InvalidVerificationCode,
+    ExpiredVerificationCode,
+    InvalidPassword,
     SubmissionInProgress
+}
+
+internal sealed class NewAccount
+{
+    internal string VerificationCode { get; set; } = string.Empty;
+
+    internal string Username { get; set; } = string.Empty;
+
+    internal string EmailAddress { get; set; } = string.Empty;
+
+    internal string Password { get; set; } = string.Empty;
+
+    internal string PreferredLocaleCode { get; set; } = string.Empty;
+
+    internal PlayerImageContent? ProfileImage { get; set; }
 }

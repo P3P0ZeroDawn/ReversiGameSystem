@@ -86,6 +86,7 @@ internal sealed class MatchParticipant
     }
 
     public int SeatNumber { get; }
+    public long? AccountId { get; set; }
     public string DisplayName { get; }
     public bool IsSystem { get; set; }
 }

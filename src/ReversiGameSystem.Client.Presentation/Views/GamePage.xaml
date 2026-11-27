@@ -77,8 +77,8 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <Ellipse Width="18" Height="18" Fill="#2E2E2E"
-                                     Stroke="#161616" StrokeThickness="1"
+                            <Viewbox x:Name="creatorPieceViewbox"
+                                     Width="28" Height="28" Stretch="Uniform"
                                      VerticalAlignment="Center" Margin="0,0,10,0" />
                             <TextBlock x:Name="creatorNameTextBlock" Grid.Column="1"
                                        Style="{StaticResource GamePlayerNameStyle}" />
@@ -97,8 +97,8 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <Ellipse Width="18" Height="18" Fill="White"
-                                     Stroke="#8CA095" StrokeThickness="1"
+                            <Viewbox x:Name="opponentPieceViewbox"
+                                     Width="28" Height="28" Stretch="Uniform"
                                      VerticalAlignment="Center" Margin="0,0,10,0" />
                             <TextBlock x:Name="opponentNameTextBlock" Grid.Column="1"
                                        Style="{StaticResource GamePlayerNameStyle}" />

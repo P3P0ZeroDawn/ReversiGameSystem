@@ -22,14 +22,26 @@ internal sealed class LoginViewModel
             return Task.FromResult(SessionStatus.MissingCredentials);
         }
 
-        return _sessions.RequestLoginCode(loginIdentifier.Trim(), password);
+        string identifier = loginIdentifier.Trim();
+        if (UsernamePolicy.Validate(identifier) != UsernameValidationError.None
+            && EmailPolicy.Validate(identifier) != EmailValidationError.None)
+        {
+            return Task.FromResult(SessionStatus.InvalidCredentials);
+        }
+        return _sessions.RequestLoginCode(identifier, password);
     }
 
     internal Task<SessionResult<AuthenticatedAccountSession>> CompleteLogin(
         string loginIdentifier,
         string verificationCode)
     {
-        return _sessions.CompleteLogin(loginIdentifier.Trim(), verificationCode.Trim());
+        string code = verificationCode.Trim();
+        if (!VerificationCodePolicy.IsValid(code))
+        {
+            return Task.FromResult(new SessionResult<AuthenticatedAccountSession>(
+                SessionStatus.InvalidVerificationCode));
+        }
+        return _sessions.CompleteLogin(loginIdentifier.Trim(), code);
     }
 
     internal Task<SessionResult<GuestAccountSession>> OpenGuestSession(string displayName)

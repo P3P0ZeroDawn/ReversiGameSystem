@@ -67,9 +67,10 @@ internal static class Program
             remoteMatchMessagesTests.MatchNotFound_ResolvesSpecificMessage,
             remoteMatchMessagesTests.UnknownMatchStatus_ThrowsInsteadOfInventingRejection,
             remoteMatchMessagesTests.UnknownChatStatus_ThrowsInsteadOfInventingRejection,
-            accountCreationTests.CreateAccount_MissingInformation_DoesNotCallServer,
-            accountCreationTests.CreateAccount_ValidInput_NormalizesAndCallsServer,
-            accountCreationTests.CreateAccount_ConcurrentSubmission_ReturnsSubmissionInProgress,
+            accountCreationTests.RequestRegistrationCode_MissingInformation_DoesNotCallServer,
+            accountCreationTests.RequestRegistrationCode_ValidInput_NormalizesAndCallsServer,
+            accountCreationTests
+                .RequestRegistrationCode_ConcurrentSubmission_ReturnsSubmissionInProgress,
             lobbySettingsTests.ChangeTurnDuration_UnreachableServer_ReturnsServiceUnavailable,
             lobbySettingsTests.RemoteMatchMessages_InvalidTurnDuration_ResolvesExpectedResourceKey,
             lobbySettingsTests.LocalizationResources_MatchSettingsKeys_ExistInSupportedCultures,

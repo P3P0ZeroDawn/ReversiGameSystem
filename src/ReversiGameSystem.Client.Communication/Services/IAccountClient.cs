@@ -4,11 +4,7 @@ namespace ReversiGameSystem.Services;
 
 internal interface IAccountClient
 {
-    Task<AccountCreationStatus> CreateAccount(
-        string username,
-        string emailAddress,
-        string password,
-        string localeCode,
-        byte[]? imageContent,
-        string? imageMediaType);
+    Task<AccountStatus> RequestRegistrationCode(string username, string emailAddress);
+
+    Task<AccountStatus> CompleteRegistration(NewAccount account);
 }

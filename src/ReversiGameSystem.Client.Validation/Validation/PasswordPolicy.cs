@@ -17,6 +17,8 @@ public static class PasswordPolicy
     /// </summary>
     public const int MaximumLength = 128;
 
+    public const int MaximumInputLength = MaximumLength * 2;
+
     /// <summary>
     /// Performs the validate operation.
     /// </summary>

@@ -1,6 +1,7 @@
 <Page x:Class="ReversiGameSystem.Views.LoginScreenPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:validation="clr-namespace:ReversiGameSystem.Validation;assembly=ReversiGameSystem.Client.Validation"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:localization="clr-namespace:ReversiGameSystem.Localization"
@@ -49,10 +50,12 @@
                     <Label x:Name="emailLabel" Content="{Binding [LoginScreen_LoginLabel]}"
                            Style="{StaticResource AuthenticationFieldLabelStyle}" />
                     <TextBox x:Name="loginTextBox"
+                             MaxLength="{x:Static validation:EmailPolicy.MaximumAddressLength}"
                              Style="{StaticResource AuthenticationTextBoxStyle}" />
                     <Label x:Name="passwordLabel" Content="{Binding [Common_PasswordLabel]}"
                            Style="{StaticResource AuthenticationFieldLabelStyle}" />
                     <PasswordBox x:Name="passwordBox"
+                             MaxLength="{x:Static validation:PasswordPolicy.MaximumInputLength}"
                                  Style="{StaticResource AuthenticationPasswordBoxStyle}" />
                     <Button x:Name="forgotPasswordButton"
                             Content="{Binding [LoginScreen_ForgotPasswordText]}"

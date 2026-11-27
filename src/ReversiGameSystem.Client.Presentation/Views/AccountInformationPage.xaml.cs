@@ -212,7 +212,8 @@ public partial class AccountInformationPage : Page
         {
             ConfirmButtonKey = "UsernameModification_ConfirmButton",
             MessageArguments = new object[] { currentUsername },
-            RequireText = false
+            RequireText = false,
+            MaximumLength = UsernamePolicy.MaximumLength
         };
 
         while (_dialogService.TryGetText(this, options, out string enteredUsername))

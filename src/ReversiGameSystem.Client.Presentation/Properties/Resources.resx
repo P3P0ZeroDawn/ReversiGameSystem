@@ -460,7 +460,7 @@
     <value>Verify your email</value>
   </data>
   <data name="AccountCreation_VerificationCodeDialogMessage" xml:space="preserve">
-    <value>Enter the six-digit verification code sent to your account email.</value>
+    <value>Enter the six-digit verification code sent to {0}.</value>
   </data>
   <data name="AccountCreation_VerificationCodeDialogLabel" xml:space="preserve">
     <value>Verification code</value>
@@ -1365,5 +1365,14 @@
   </data>
   <data name="Settings_PersistenceErrorMessage" xml:space="preserve">
     <value>The operation could not be confirmed. The previous local preferences were retained.</value>
+  </data>
+  <data name="AccountCreation_InvalidPasswordMessage" xml:space="preserve">
+    <value>Use between {0} and {1} characters, including uppercase and lowercase letters, numbers and symbols.</value>
+  </data>
+  <data name="Game_PlayerPicturesUnavailableTitle" xml:space="preserve">
+    <value>Player pictures unavailable</value>
+  </data>
+  <data name="Game_PlayerPicturesUnavailableMessage" xml:space="preserve">
+    <value>Some player pictures could not be loaded. You can keep playing with the default pictures.</value>
   </data>
 </root>

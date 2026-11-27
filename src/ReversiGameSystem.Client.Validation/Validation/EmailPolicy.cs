@@ -8,7 +8,7 @@ namespace ReversiGameSystem.Validation;
 /// </summary>
 public static class EmailPolicy
 {
-    private const int MaximumAddressLength = 254;
+    public const int MaximumAddressLength = 254;
     private const int MaximumLocalPartLength = 64;
     private const int MaximumDomainLength = 253;
     private const int MaximumDomainLabelLength = 63;

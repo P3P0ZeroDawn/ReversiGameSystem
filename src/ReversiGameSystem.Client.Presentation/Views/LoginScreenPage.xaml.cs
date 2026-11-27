@@ -77,7 +77,7 @@ public partial class LoginScreenPage : Page
             "LoginScreen_VerificationCodeDialogLabel")
         {
             RequireText = true,
-            ExactDigitCount = 6
+            ExactDigitCount = VerificationCodePolicy.Length
         };
         while (_dialogService.TryGetText(this, options, out string code))
         {
@@ -226,7 +226,7 @@ public partial class LoginScreenPage : Page
             ConfirmButtonKey = "PasswordReset_ContinueButton",
             InitialText = loginTextBox.Text.Trim(),
             RequireText = true,
-            MaximumLength = 0
+            MaximumLength = EmailPolicy.MaximumAddressLength
         };
 
         while (_dialogService.TryGetText(this, options, out string enteredEmail))
@@ -254,7 +254,7 @@ public partial class LoginScreenPage : Page
             "PasswordReset_CodeDialogLabel")
         {
             RequireText = true,
-            ExactDigitCount = 6,
+            ExactDigitCount = VerificationCodePolicy.Length,
             MessageArguments = new object[] { email }
         };
 

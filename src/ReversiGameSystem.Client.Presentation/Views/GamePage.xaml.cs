@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Resources;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Chat;
 using ReversiGameSystem.Features.Gameplay;
 using ReversiGameSystem.Game;
@@ -98,6 +100,34 @@ public partial class GamePage : Page
             RenderMessages();
             _clock.Start();
             _connectionCheck.Start();
+            try
+            {
+                ProfileStatus status = await _viewModel.LoadPlayerPictures(
+                    ClientRuntime.ProfileService, ClientRuntime.CurrentSession);
+                if (IsLoaded && status != ProfileStatus.Success)
+                {
+                    _dialogs.ShowWarning(this,
+                        "Game_PlayerPicturesUnavailableTitle", "Game_PlayerPicturesUnavailableMessage");
+                }
+                if (IsLoaded)
+                {
+                    RenderMatch();
+                }
+            }
+            catch (Exception exception) when (RemoteCall.IsDeclaredFault(exception)
+                || exception is IOException or NotSupportedException or FormatException)
+            {
+                if (IsLoaded)
+                {
+                    ClientRuntime.Errors.ReportOperationFailure(
+                        exception, nameof(GameViewModel.LoadPlayerPictures));
+                }
+                else
+                {
+                    ClientRuntime.Errors.RecordFailure(exception,
+                        nameof(GameViewModel.LoadPlayerPictures), LogLevel.Error);
+                }
+            }
         }
     }
 
@@ -189,6 +219,10 @@ public partial class GamePage : Page
             _viewModel.Information.AssignedSeatNumber == GameViewModel.OpponentSeat
             ? DiscColor.White : DiscColor.Black;
         gameBoardControl.SystemPlayerColor = _viewModel.SystemPlayerColor;
+        gameBoardControl.BlackPlayerPicture = _viewModel.BlackPlayerPicture;
+        gameBoardControl.WhitePlayerPicture = _viewModel.WhitePlayerPicture;
+        creatorPieceViewbox.Child = gameBoardControl.CreatePlayerPiece(DiscColor.Black, localColor);
+        opponentPieceViewbox.Child = gameBoardControl.CreatePlayerPiece(DiscColor.White, localColor);
         if (_viewModel.CanPlacePiece)
         {
             gameBoardControl.ShowInteractiveBoard(

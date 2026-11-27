@@ -22,7 +22,7 @@ internal static class ServerConnectionFactory
     private static readonly IReadOnlyDictionary<string, (int Port, string Path)> KnownEndpoints =
         new Dictionary<string, (int Port, string Path)>(StringComparer.OrdinalIgnoreCase)
         {
-            ["AccountAccessEndpoint"] = (8090, "/ReversiGameSystem/AccountAccess"),
+            ["AccountEndpoint"] = (8090, "/ReversiGameSystem/Account"),
             ["SessionEndpoint"] = (8091, "/ReversiGameSystem/Session"),
             ["PlayerProfileEndpoint"] = (8092, "/ReversiGameSystem/PlayerProfile"),
             ["LeaderboardEndpoint"] = (8093, "/ReversiGameSystem/Leaderboard"),
@@ -95,11 +95,11 @@ internal static class ServerConnectionFactory
             nameof(endpointConfigurationName));
     }
 
-    internal static Proxy.AccountAccessServiceClient CreateAccountClient()
+    internal static Proxy.AccountServiceClient CreateAccountClient()
     {
-        return new Proxy.AccountAccessServiceClient(
-            "AccountAccessEndpoint",
-            CreateEndpointAddress("AccountAccessEndpoint"));
+        return new Proxy.AccountServiceClient(
+            "AccountEndpoint",
+            CreateEndpointAddress("AccountEndpoint"));
     }
 
     internal static Proxy.SessionServiceClient CreateSessionClient()

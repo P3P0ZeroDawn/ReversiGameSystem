@@ -35,6 +35,10 @@ public partial class ReversiBoardControl : UserControl
 
     internal DiscColor SystemPlayerColor { get; set; } = DiscColor.Empty;
 
+    internal BitmapSource? BlackPlayerPicture { get; set; }
+
+    internal BitmapSource? WhitePlayerPicture { get; set; }
+
     internal void ShowBoard(ReversiBoard board)
     {
         ShowBoard(board, DiscColor.Black);
@@ -124,9 +128,7 @@ public partial class ReversiBoardControl : UserControl
                     continue;
                 }
 
-                FrameworkElement piece = UserPreferencesState.UseProfilePicturesOnPieces
-                    ? CreateProfilePiece(color, localPlayerColor)
-                    : CreateDefaultPiece(color);
+                FrameworkElement piece = CreatePlayerPiece(color, localPlayerColor);
                 Grid.SetRow(piece, row);
                 Grid.SetColumn(piece, column);
                 piecesGrid.Children.Add(piece);
@@ -192,6 +194,13 @@ public partial class ReversiBoardControl : UserControl
         }
     }
 
+    internal FrameworkElement CreatePlayerPiece(DiscColor color, DiscColor localPlayerColor)
+    {
+        FrameworkElement piece = UserPreferencesState.UseProfilePicturesOnPieces
+            ? CreateProfilePiece(color, localPlayerColor) : CreateDefaultPiece(color);
+        return piece;
+    }
+
     private static FrameworkElement CreateDefaultPiece(DiscColor color)
     {
         Grid piece = CreatePieceFrame(color);
@@ -214,6 +223,14 @@ public partial class ReversiBoardControl : UserControl
         if (color == SystemPlayerColor)
         {
             source = CreateImageSource("/Assets/Images/SystemProfilePicture.png");
+        }
+        else if (color == DiscColor.Black && BlackPlayerPicture != null)
+        {
+            source = BlackPlayerPicture;
+        }
+        else if (color == DiscColor.White && WhitePlayerPicture != null)
+        {
+            source = WhitePlayerPicture;
         }
         else if (color == localPlayerColor && ClientRuntime.CurrentSession.ProfilePicture != null)
         {
