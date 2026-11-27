@@ -44,6 +44,79 @@ internal static class MatchContractMapper
             (RemoteMatchEndReason)conclusion.Reason,
             conclusion.WinnerSeatNumber);
     }
+    internal static MatchParticipant MapParticipant(Proxy.MatchParticipantSummary participant)
+    {
+        return new MatchParticipant(participant.SeatNumber, participant.DisplayName)
+        {
+            AccountId = participant.AccountId,
+            IsSystem = participant.Kind == Proxy.ParticipantKind.System
+        };
+    }
+
+    internal static MatchMove MapMove(Proxy.MoveRecord move)
+    {
+        return new MatchMove
+        {
+            MoveNumber = move.MoveNumber,
+            SeatNumber = move.SeatNumber,
+            Row = move.Row,
+            Column = move.Column,
+            PlayedAtUtc = move.PlayedAtUtc,
+            FlippedPieceCount = move.FlippedPieceCount,
+            IsAutomatic = move.Origin != Proxy.MoveOrigin.Manual
+        };
+    }
+
+    internal static MatchRecord MapRecord(Proxy.MatchSummary match)
+    {
+        return new MatchRecord
+        {
+            MatchId = match.MatchId,
+            Participants = match.Participants.Select(MapParticipant).ToArray(),
+            AssignedSeatNumber = match.AssignedSeatNumber,
+            State = (ConfirmedMatchState)match.State,
+            RecordedAtUtc = match.RecordedAtUtc,
+            BlackPieceCount = match.BlackPieceCount,
+            WhitePieceCount = match.WhitePieceCount,
+            Conclusion = match.Conclusion == null ? null : MapConclusion(match.Conclusion)
+        };
+    }
+
+    internal static MatchRecording MapRecording(Proxy.MatchDetails details)
+    {
+        const int BoardCellCount = 64;
+        if (details.BoardFrames == null || details.Moves == null
+            || details.BoardFrames.Length != details.Moves.Length + 1)
+        {
+            throw new InvalidOperationException("The recorded match has incomplete board frames.");
+        }
+        ConfirmedBoardCell[][] frames = new ConfirmedBoardCell[details.BoardFrames.Length][];
+        for (int index = 0; index < frames.Length; index++)
+        {
+            Proxy.BoardCellState[] frame = details.BoardFrames[index];
+            if (frame == null || frame.Length != BoardCellCount)
+            {
+                throw new InvalidOperationException("The recorded board has an invalid size.");
+            }
+            frames[index] = frame.Select(MapBoardCell).ToArray();
+        }
+        ConfirmedBoardCell[] finalBoard = frames[frames.Length - 1];
+        MatchRecord match = new MatchRecord
+        {
+            MatchId = details.MatchId,
+            Participants = details.Participants.Select(MapParticipant).ToArray(),
+            State = (ConfirmedMatchState)details.State,
+            RecordedAtUtc = details.RecordedAtUtc,
+            BlackPieceCount = finalBoard.Count(cell => cell == ConfirmedBoardCell.Black),
+            WhitePieceCount = finalBoard.Count(cell => cell == ConfirmedBoardCell.White),
+            Conclusion = details.Conclusion == null ? null : MapConclusion(details.Conclusion)
+        };
+        return new MatchRecording(match, details.Moves.Select(MapMove).ToArray(), frames)
+        {
+            TurnDurationSeconds = details.TurnDurationSeconds
+        };
+    }
+
     internal static bool CanMapFailure(CommunicationException exception)
     {
         bool recognized = exception is FaultException<Proxy.SessionFault> session

@@ -18,6 +18,9 @@ internal sealed class GameplayClient : IDisposable, Proxy.IGameplayMatchServiceC
     private readonly DuplexChannel<Proxy.GameplayMatchServiceClient, Proxy.IGameplayMatchService>
         _channel;
 
+    private MatchRecord[] _matchHistory = Array.Empty<MatchRecord>();
+    private readonly Dictionary<long, MatchRecording> _recordings =
+        new Dictionary<long, MatchRecording>();
     private MatchInformation[] _observableMatches = Array.Empty<MatchInformation>();
     private readonly HashSet<long> _observedMatches = new HashSet<long>();
     private readonly Dictionary<long, MatchMove[]> _moves = new Dictionary<long, MatchMove[]>();
@@ -104,6 +107,57 @@ internal sealed class GameplayClient : IDisposable, Proxy.IGameplayMatchServiceC
         }
     }
 
+    internal Task<MatchStatus> LoadMatchHistory(CancellationToken cancellation = default)
+    {
+        async Task LoadHistory(Proxy.GameplayMatchServiceClient client)
+        {
+            Proxy.MatchSummary[] history = await client.GetMatchHistoryAsync(
+                _sessionToken).ConfigureAwait(false);
+            MatchRecord[] matches = history.Select(MatchContractMapper.MapRecord).ToArray();
+            lock (_matchDataLock)
+            {
+                _matchHistory = matches;
+            }
+        }
+        return SendMatchOperation(LoadHistory, cancellation);
+    }
+
+    internal MatchRecord[] ReadMatchHistory()
+    {
+        lock (_matchDataLock)
+        {
+            return (MatchRecord[])_matchHistory.Clone();
+        }
+    }
+
+    internal Task<MatchStatus> LoadMatchDetails(long matchId,
+        CancellationToken cancellation = default)
+    {
+        async Task LoadDetails(Proxy.GameplayMatchServiceClient client)
+        {
+            Proxy.MatchDetails details = await client.GetMatchDetailsAsync(
+                _sessionToken, matchId).ConfigureAwait(false);
+            MatchRecording recording = MatchContractMapper.MapRecording(details);
+            lock (_matchDataLock)
+            {
+                _recordings[matchId] = recording;
+            }
+        }
+        return SendMatchOperation(LoadDetails, cancellation);
+    }
+
+    internal MatchRecording ReadMatchDetails(long matchId)
+    {
+        lock (_matchDataLock)
+        {
+            if (!_recordings.ContainsKey(matchId))
+            {
+                throw new InvalidOperationException("The match recording has not been loaded.");
+            }
+            return _recordings[matchId];
+        }
+    }
+
     internal Task<MatchStatus> LoadObservableMatches(CancellationToken cancellation = default)
     {
         async Task LoadMatches(Proxy.GameplayMatchServiceClient client)
@@ -153,16 +207,7 @@ internal sealed class GameplayClient : IDisposable, Proxy.IGameplayMatchServiceC
         {
             Proxy.MoveRecord[] records = await client.GetMoveHistoryAsync(
                 _sessionToken, matchId).ConfigureAwait(false);
-            MatchMove[] moves = records.Select(record => new MatchMove
-            {
-                MoveNumber = record.MoveNumber,
-                SeatNumber = record.SeatNumber,
-                Row = record.Row,
-                Column = record.Column,
-                PlayedAtUtc = record.PlayedAtUtc,
-                FlippedPieceCount = record.FlippedPieceCount,
-                IsAutomatic = record.Origin != Proxy.MoveOrigin.Manual
-            }).ToArray();
+            MatchMove[] moves = records.Select(MatchContractMapper.MapMove).ToArray();
             lock (_matchDataLock)
             {
                 _moves[matchId] = moves;
@@ -366,13 +411,7 @@ internal sealed class GameplayClient : IDisposable, Proxy.IGameplayMatchServiceC
     private static MatchInformation MapInformation(Proxy.MatchInformation information)
     {
         MatchParticipant[] participants = information.Participants
-            .Select(participant => new MatchParticipant(
-                participant.SeatNumber, participant.DisplayName)
-            {
-                AccountId = participant.AccountId,
-                IsSystem = participant.Kind == Proxy.ParticipantKind.System
-            })
-            .ToArray();
+            .Select(MatchContractMapper.MapParticipant).ToArray();
         return new MatchInformation(
             information.MatchId,
             participants,

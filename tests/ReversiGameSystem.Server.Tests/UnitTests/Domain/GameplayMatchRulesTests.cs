@@ -20,6 +20,36 @@ public sealed class GameplayMatchRulesTests
         new DateTime(2026, 11, 15, 18, 0, 0, DateTimeKind.Utc);
 
     [TestMethod]
+    [DataRow(false, "NO_LEGAL_MOVES")]
+    [DataRow(true, "BOARD_FULL")]
+    public void ApplyPlayerMove_FinalPlacement_AssignsSupportedEndReason(
+        bool fillsBoard, string expectedReason)
+    {
+        const int TargetRow = 0;
+        const int TargetColumn = 0;
+        const int OpponentColumn = 1;
+        const int FriendlyColumn = 2;
+        Match match = CreateInProgressMatch(40);
+        match.Board = new int[ReversiEngine.CellCount];
+        if (fillsBoard)
+        {
+            for (int cell = 0; cell < match.Board.Length; cell++)
+            {
+                match.Board[cell] = ReversiEngine.Black;
+            }
+        }
+        match.Board[TargetColumn] = ReversiEngine.Empty;
+        match.Board[OpponentColumn] = ReversiEngine.White;
+        match.Board[FriendlyColumn] = ReversiEngine.Black;
+        MatchPlacement placement = new MatchPlacement(
+            match.Id, match.MatchStateVersion, TargetRow, TargetColumn);
+
+        GameplayMatchRules.ApplyPlayerMove(match, placement, BaseUtc);
+
+        Assert.AreEqual(expectedReason, match.EndReason);
+    }
+
+    [TestMethod]
     [DataRow(false)]
     [DataRow(true)]
     public void AutomaticMove_OpeningBoard_SelectsLegalPlacement(bool isSystem)

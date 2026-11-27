@@ -121,7 +121,8 @@ internal static class Program
                             friendshipApplicationService,
                             presenceRegistry,
                             friendshipSubscriptions);
-                        MatchRepository matchRepository = new MatchRepository();
+                        MatchRepository matchRepository = new MatchRepository(
+                            loggerFactory.CreateLogger<MatchRepository>());
                         matchRepository.CancelAbandonedWaitingMatches();
                         MatchApplicationService matchApplicationService =
                             new MatchApplicationService(

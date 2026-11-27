@@ -183,3 +183,31 @@ internal sealed class MatchMove
     public int FlippedPieceCount { get; set; }
     public bool IsAutomatic { get; set; }
 }
+
+internal sealed class MatchRecord
+{
+    public long MatchId { get; set; }
+    public MatchParticipant[] Participants { get; set; } = Array.Empty<MatchParticipant>();
+    public int? AssignedSeatNumber { get; set; }
+    public ConfirmedMatchState State { get; set; }
+    public DateTime RecordedAtUtc { get; set; }
+    public int BlackPieceCount { get; set; }
+    public int WhitePieceCount { get; set; }
+    public RemoteMatchConclusion? Conclusion { get; set; }
+}
+
+internal sealed class MatchRecording
+{
+    internal MatchRecording(MatchRecord match, MatchMove[] moves,
+        ConfirmedBoardCell[][] boardFrames)
+    {
+        Match = match;
+        Moves = moves;
+        BoardFrames = boardFrames;
+    }
+
+    internal MatchRecord Match { get; }
+    internal MatchMove[] Moves { get; }
+    internal ConfirmedBoardCell[][] BoardFrames { get; }
+    internal int TurnDurationSeconds { get; set; }
+}

@@ -1,6 +1,8 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
@@ -50,7 +52,7 @@ public sealed class MatchRepositoryIntegrationTests : RepositoryIntegrationTestB
     {
         long creatorId = SeedAccount(CreatorUsername, CreatorEmail);
         AuthenticatedSession creator = CreateSession(creatorId, CreatorUsername);
-        MatchRepository repository = new MatchRepository();
+        MatchRepository repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
         DateTime nowUtc = new DateTime(2026, 11, 2, 14, 0, 0, DateTimeKind.Utc);
         MatchStatus expectedStatus = MatchStatus.Success;
         int expectedParticipantCount = 1;
@@ -76,7 +78,7 @@ public sealed class MatchRepositoryIntegrationTests : RepositoryIntegrationTestB
     {
         long creatorId = SeedAccount(CreatorUsername, CreatorEmail);
         long opponentId = SeedAccount(OpponentUsername, OpponentEmail);
-        MatchRepository repository = new MatchRepository();
+        MatchRepository repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
         MatchResult<Match> created = repository.CreateMatch(
             CreateSession(creatorId, CreatorUsername),
             new MatchSettings(),
@@ -99,7 +101,7 @@ public sealed class MatchRepositoryIntegrationTests : RepositoryIntegrationTestB
         long creatorId = SeedAccount(CreatorUsername, CreatorEmail);
         long opponentId = SeedAccount(OpponentUsername, OpponentEmail);
         long rivalId = SeedAccount(RivalUsername, RivalEmail);
-        MatchRepository repository = new MatchRepository();
+        MatchRepository repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
         DateTime nowUtc = DateTime.UtcNow;
         MatchResult<Match> created = repository.CreateMatch(
             CreateSession(creatorId, CreatorUsername),
@@ -136,7 +138,7 @@ public sealed class MatchRepositoryIntegrationTests : RepositoryIntegrationTestB
     public void StartSystemMatch_WaitingMatch_TransitionsToInProgressWithSystemOpponent()
     {
         long creatorId = SeedAccount(CreatorUsername, CreatorEmail);
-        MatchRepository repository = new MatchRepository();
+        MatchRepository repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
         DateTime nowUtc = DateTime.UtcNow;
         MatchResult<Match> created = repository.CreateMatch(
             CreateSession(creatorId, CreatorUsername),
@@ -158,6 +160,137 @@ public sealed class MatchRepositoryIntegrationTests : RepositoryIntegrationTestB
         Assert.AreEqual(InProgressStatusCode, actualPersisted.statusCode);
         Assert.IsFalse(actualPersisted.countsTowardStatistics);
         Assert.AreEqual(expectedCurrentTurnSeat, actualPersisted.currentTurnSeatNumber);
+    }
+
+    [TestMethod]
+    public void SynchronizeMatch_SystemMove_PersistsSupportedSourceCode()
+    {
+        long creatorId = SeedAccount(CreatorUsername, CreatorEmail);
+        MatchRepository repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
+        Match match = CreateSystemMatch(repository, creatorId);
+        PlayHumanTurn(match);
+        GameplayMatchRules.ApplySystemMoveIfReady(match,
+            match.TurnStartedAtUtc!.Value.Add(GameplayMatchRules.SystemMoveDelay));
+
+        repository.SynchronizeMatch(match);
+
+        using ReversiGameSystemEntities context = CreateFreshContext();
+        string source = context.GameMove.Single(move => move.matchId == match.Id
+            && move.seatNumber == ReversiEngine.White).moveSourceCode;
+        Assert.AreEqual("SYSTEM", source);
+    }
+
+    [TestMethod]
+    public void LoadMatch_SavedSystemMove_PreservesAutomaticOrigin()
+    {
+        long creatorId = SeedAccount(CreatorUsername, CreatorEmail);
+        MatchRepository repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
+        Match match = CreateSystemMatch(repository, creatorId);
+        PlayHumanTurn(match);
+        GameplayMatchRules.ApplySystemMoveIfReady(match,
+            match.TurnStartedAtUtc!.Value.Add(GameplayMatchRules.SystemMoveDelay));
+        repository.SynchronizeMatch(match);
+
+        Match restored = repository.LoadMatch(match.Id).Value
+            ?? throw new InvalidOperationException("The system match was not saved.");
+
+        Assert.AreEqual("System", restored.Moves.Last().Origin);
+    }
+
+    [TestMethod]
+    public void LoadMatchHistory_CompletedSystemMatch_IncludesFinishedGame()
+    {
+        long creatorId = SeedAccount(CreatorUsername, CreatorEmail);
+        MatchRepository repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
+        Match match = CreateSystemMatch(repository, creatorId);
+        const int MaximumMoves = ReversiEngine.CellCount;
+        for (int turn = 0; turn < MaximumMoves && match.State == "InProgress"; turn++)
+        {
+            if (match.CurrentTurnSeatNumber == ReversiEngine.Black)
+            {
+                PlayHumanTurn(match);
+            }
+            else
+            {
+                GameplayMatchRules.ApplySystemMoveIfReady(match,
+                    match.TurnStartedAtUtc!.Value.Add(GameplayMatchRules.SystemMoveDelay));
+            }
+        }
+        repository.SynchronizeMatch(match);
+
+        Match[] history = repository.LoadMatchHistory(creatorId).Value
+            ?? throw new InvalidOperationException("The history query failed.");
+
+        Assert.AreEqual(match.Id, history.Single().Id);
+    }
+
+    [TestMethod]
+    public void SynchronizeMatch_RejectedMove_LogsRetryWarning()
+    {
+        long creatorId = SeedAccount(CreatorUsername, CreatorEmail);
+        PersistenceWarningLogger logger = new PersistenceWarningLogger();
+        MatchRepository repository = new MatchRepository(logger);
+        Match match = CreateSystemMatch(repository, creatorId);
+        PlayHumanTurn(match);
+        const int InvalidSeatNumber = 3;
+        match.Moves[0].SeatNumber = InvalidSeatNumber;
+
+        repository.SynchronizeMatch(match);
+
+        Assert.AreEqual(1, logger.WarningCount);
+    }
+
+    private static Match CreateSystemMatch(MatchRepository repository, long creatorId)
+    {
+        DateTime now = DateTime.UtcNow;
+        Match created = repository.CreateMatch(CreateSession(creatorId, CreatorUsername),
+            new MatchSettings(), now).Value
+            ?? throw new InvalidOperationException("The waiting match could not be created.");
+        return repository.StartSystemMatch(creatorId, created.Id, now).Value
+            ?? throw new InvalidOperationException("The system match could not be started.");
+    }
+
+    private static void PlayHumanTurn(Match match)
+    {
+        for (int row = 0; row < ReversiEngine.BoardSize; row++)
+        {
+            for (int column = 0; column < ReversiEngine.BoardSize; column++)
+            {
+                if (ReversiEngine.IsLegalMove(match.Board, row, column, ReversiEngine.Black))
+                {
+                    MatchPlacement placement = new MatchPlacement(
+                        match.Id, match.MatchStateVersion, row, column);
+                    GameplayMatchRules.ApplyPlayerMove(match, placement,
+                        match.TurnStartedAtUtc!.Value.AddSeconds(1));
+                    return;
+                }
+            }
+        }
+        throw new InvalidOperationException("The human player has no legal move.");
+    }
+
+    private sealed class PersistenceWarningLogger : ILogger<MatchRepository>
+    {
+        internal int WarningCount { get; private set; }
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+        {
+            return NullLogger.Instance.BeginScope(state);
+        }
+
+        public bool IsEnabled(LogLevel logLevel)
+        {
+            return logLevel == LogLevel.Warning;
+        }
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
+            Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (logLevel == LogLevel.Warning)
+            {
+                WarningCount++;
+            }
+        }
     }
 
     private static AuthenticatedSession CreateSession(long accountId, string username)

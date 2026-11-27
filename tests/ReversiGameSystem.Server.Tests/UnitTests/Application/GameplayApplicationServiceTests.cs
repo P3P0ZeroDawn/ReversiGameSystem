@@ -442,7 +442,7 @@ public sealed class GameplayApplicationServiceTests
         board[(0 * 8) + 2] = ReversiEngine.Black;
         match.Board = board;
         MatchStatus expectedStatus = MatchStatus.Success;
-        string expectedEndReason = "NORMAL";
+        string expectedEndReason = "NO_LEGAL_MOVES";
         int? expectedWinnerSeat = 1;
 
         MatchResult<Match> result = context.ApplicationService.PlacePiece(

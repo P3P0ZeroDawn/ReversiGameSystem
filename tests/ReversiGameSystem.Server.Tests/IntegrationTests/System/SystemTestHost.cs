@@ -176,7 +176,8 @@ internal sealed class SystemTestHost : IDisposable
             new LeaderboardApplicationService(new LeaderboardRepository()));
 
         FriendshipService friendshipService = CreateFriendshipService(sessions);
-        MatchRepository matchRepository = new MatchRepository();
+        MatchRepository matchRepository = new MatchRepository(
+            NullLogger<MatchRepository>.Instance);
         MatchApplicationService matchApplicationService = new MatchApplicationService(
             sessions,
             matchRepository,

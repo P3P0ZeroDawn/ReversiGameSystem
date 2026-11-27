@@ -1,83 +1,53 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.ServiceModel;
-using System.Threading.Tasks;
-using ReversiGameSystem.Features.Gameplay;
-using ReversiGameSystem.Features.Matches;
-using ReversiGameSystem.Matches;
-using MatchInformation = ReversiGameSystem.Game.MatchInformation;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using Microsoft.Extensions.Logging;
+using ReversiGameSystem.Features.Gameplay;
+using ReversiGameSystem.Features.Matches;
 using ReversiGameSystem.Game;
 using ReversiGameSystem.Localization;
+using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
 
 namespace ReversiGameSystem.Views;
-
-internal enum MatchInformationMode
-{
-    Spectator,
-    Replay
-}
-
-internal enum MatchInformationReturnTarget
-{
-    AvailableMatches,
-    History
-}
 
 public partial class MatchInformationPage : Page
 {
     private const int BlackSeatNumber = 1;
     private const int WhiteSeatNumber = 2;
-    private readonly MatchInformation? _match;
-    private readonly MatchInformationMode _mode;
-    private readonly MatchInformationReturnTarget _returnTarget;
-    private readonly string? _guestName;
+    private const int ReplayFrameIntervalMilliseconds = 900;
+    private readonly MatchReplayViewModel? _replay;
     private readonly DialogService _dialogService =
         new DialogService(LocalizationManager.Instance);
-    private readonly MovementHistoryService? _movementHistoryService;
     private readonly DispatcherTimer _replayTimer;
     private readonly MatchInformationViewModel? _spectator;
     private readonly DispatcherTimer? _connectionTimer;
     private bool _checkingConnection;
-    private MatchInformation LegacyMatch
+    private MatchReplayViewModel Replay
     {
         get
         {
-            return _match ?? throw new InvalidOperationException("Replay information is unavailable in spectator mode.");
+            return _replay ?? throw new InvalidOperationException(
+                "Replay information is unavailable in spectator mode.");
         }
     }
 
-    private int _frameIndex;
-    private bool _isPlaying;
-
-    internal MatchInformationPage(
-        MatchInformation match,
-        MatchInformationMode mode,
-        MatchInformationReturnTarget returnTarget,
-        string? guestName = null)
+    internal MatchInformationPage(MatchRecording recording)
     {
         InitializeComponent();
-        _match = match;
-        _mode = mode;
-        _returnTarget = returnTarget;
-        _guestName = guestName;
-        _movementHistoryService = new MovementHistoryService(new[] { match });
-        _frameIndex = mode == MatchInformationMode.Replay
-            ? 0
-            : match.BoardFrames.Count - 1;
+        _replay = new MatchReplayViewModel(recording);
         _replayTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(900)
+            Interval = TimeSpan.FromMilliseconds(ReplayFrameIntervalMilliseconds)
         };
         _replayTimer.Tick += OnReplayTimerTick;
+        Loaded += OnReplayLoaded;
         Unloaded += OnPageUnloaded;
-        replayControlsPanel.Visibility = mode == MatchInformationMode.Replay
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        replayControlsPanel.Visibility = Visibility.Visible;
         ShowLocalizedInformation();
         ShowFrame();
     }
@@ -85,17 +55,50 @@ public partial class MatchInformationPage : Page
     internal MatchInformationPage(GameplayClient gameplay, long matchId)
     {
         InitializeComponent();
-        _mode = MatchInformationMode.Spectator;
-        _returnTarget = MatchInformationReturnTarget.AvailableMatches;
         _replayTimer = new DispatcherTimer();
         _spectator = new MatchInformationViewModel(gameplay, ClientRuntime.CurrentSession, matchId);
-        _connectionTimer = new DispatcherTimer { Interval = MatchConnectionPolicy.ConnectionCheckInterval };
+        _connectionTimer = new DispatcherTimer
+        {
+            Interval = MatchConnectionPolicy.ConnectionCheckInterval
+        };
         _connectionTimer.Tick += OnConnectionCheck;
         replayControlsPanel.Visibility = Visibility.Collapsed;
         movementDetailsButton.Visibility = Visibility.Collapsed;
         _spectator.PropertyChanged += OnSpectatorChanged;
         Loaded += OnSpectatorLoaded;
         Unloaded += OnPageUnloaded;
+    }
+
+    private async void OnReplayLoaded(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            ProfileStatus status = await Replay.PlayerPictures.LoadPlayerPictures(
+                ClientRuntime.ProfileService, ClientRuntime.CurrentSession);
+            if (!IsLoaded || status == ProfileStatus.InvalidSession)
+            {
+                return;
+            }
+            ShowFrame();
+            if (status != ProfileStatus.Success)
+            {
+                _dialogService.ShowWarning(this,
+                    "Game_PlayerPicturesUnavailableTitle", "Game_PlayerPicturesUnavailableMessage");
+            }
+        }
+        catch (Exception exception) when (RemoteCall.IsDeclaredFault(exception)
+            || exception is IOException or NotSupportedException or FormatException)
+        {
+            if (IsLoaded)
+            {
+                ClientRuntime.Errors.ReportOperationFailure(exception, nameof(OnReplayLoaded));
+            }
+            else
+            {
+                ClientRuntime.Errors.RecordFailure(
+                    exception, nameof(OnReplayLoaded), LogLevel.Error);
+            }
+        }
     }
 
     private async void OnSpectatorLoaded(object sender, RoutedEventArgs e)
@@ -249,128 +252,76 @@ public partial class MatchInformationPage : Page
     private void ShowLocalizedInformation()
     {
         LocalizationManager localization = LocalizationManager.Instance;
-        modeTextBlock.Text = localization[_mode == MatchInformationMode.Replay
-            ? "MatchInformation_ReplayMode"
-            : "MatchInformation_SpectatorMode"];
+        modeTextBlock.Text = localization["MatchInformation_ReplayMode"];
         blackPlayerTextBlock.Text = string.Format(
-            localization["MatchInformation_BlackPlayerFormat"],
-            LegacyMatch.BlackPlayerName);
+            localization["MatchInformation_BlackPlayerFormat"], Replay.GetPlayerName(BlackSeatNumber));
         whitePlayerTextBlock.Text = string.Format(
-            localization["MatchInformation_WhitePlayerFormat"],
-            LegacyMatch.WhitePlayerName);
-        stateTextBlock.Text = string.Format(
-            localization["MatchInformation_StateFormat"],
-            localization[LegacyMatch.State == MatchRecordState.Finished
-                ? "MatchInformation_FinishedState"
+            localization["MatchInformation_WhitePlayerFormat"], Replay.GetPlayerName(WhiteSeatNumber));
+        stateTextBlock.Text = string.Format(localization["MatchInformation_StateFormat"],
+            localization[Replay.IsFinished ? "MatchInformation_FinishedState"
                 : "MatchInformation_InProgressState"]);
-        turnTimeTextBlock.Text = string.Format(
-            localization["MatchInformation_TurnTimeFormat"],
-            LegacyMatch.TurnTimeSeconds);
-        string resultText = localization["MatchInformation_NoFinalResult"];
-        if (LegacyMatch.State == MatchRecordState.Finished)
-        {
-            resultText = LegacyMatch.WinnerName == null
-                ? localization["MatchInformation_DrawResult"]
-                : string.Format(localization["MatchInformation_WinnerFormat"],
-                    LegacyMatch.WinnerName);
-        }
-        resultTextBlock.Text = resultText;
-        boardCaptionTextBlock.Text = localization[_mode == MatchInformationMode.Replay
-            ? "MatchInformation_ReplayBoardTitle"
-            : "MatchInformation_CurrentBoardTitle"];
-        RefreshMoveList();
+        turnTimeTextBlock.Text = string.Format(localization["MatchInformation_TurnTimeFormat"],
+            Replay.TurnDurationSeconds);
+        resultTextBlock.Text = Replay.FinalResult;
+        boardCaptionTextBlock.Text = localization["MatchInformation_ReplayBoardTitle"];
+        movesListBox.ItemsSource = Replay.ReadMoveDescriptions();
         UpdatePlayButton();
     }
 
     private void ShowFrame()
     {
-        ReversiBoard board = LegacyMatch.BoardFrames[_frameIndex];
+        ReversiBoard board = Replay.ReadBoard();
+        matchBoardControl.SystemPlayerColor = Replay.PlayerPictures.SystemPlayerColor;
+        matchBoardControl.BlackPlayerPicture = Replay.PlayerPictures.BlackPlayerPicture;
+        matchBoardControl.WhitePlayerPicture = Replay.PlayerPictures.WhitePlayerPicture;
         matchBoardControl.ShowBoard(board);
         LocalizationManager localization = LocalizationManager.Instance;
-        scoreTextBlock.Text = string.Format(
-            localization["MatchInformation_ScoreFormat"],
-            board.Count(DiscColor.Black),
-            board.Count(DiscColor.White));
-        framePositionTextBlock.Text = _mode == MatchInformationMode.Replay
-            ? string.Format(
-                localization["MatchInformation_FrameFormat"],
-                _frameIndex,
-                LegacyMatch.Moves.Count)
-            : string.Empty;
-        movesListBox.SelectedIndex = _frameIndex - 1;
+        scoreTextBlock.Text = string.Format(localization["MatchInformation_ScoreFormat"],
+            board.Count(DiscColor.Black), board.Count(DiscColor.White));
+        framePositionTextBlock.Text = string.Format(localization["MatchInformation_FrameFormat"],
+            Replay.FrameIndex, Replay.MoveCount);
+        movesListBox.SelectedIndex = Replay.FrameIndex - 1;
         if (movesListBox.SelectedItem != null)
         {
             movesListBox.ScrollIntoView(movesListBox.SelectedItem);
         }
     }
 
-    private void RefreshMoveList()
-    {
-        LocalizationManager localization = LocalizationManager.Instance;
-        List<string> moveDescriptions = new List<string>();
-        foreach (RecordedMove move in LegacyMatch.Moves)
-        {
-            moveDescriptions.Add(string.Format(
-                localization["MatchInformation_MoveFormat"],
-                move.Number,
-                move.PlayerName,
-                move.Coordinate));
-        }
-
-        movesListBox.ItemsSource = moveDescriptions;
-    }
-
     private void OnPreviousClick(object sender, RoutedEventArgs e)
     {
-        StopReplay();
-        if (_frameIndex > 0)
-        {
-            _frameIndex--;
-            ShowFrame();
-        }
+        Replay.PreviousFrame();
+        _replayTimer.Stop();
+        ShowFrame();
+        UpdatePlayButton();
     }
 
     private void OnNextClick(object sender, RoutedEventArgs e)
     {
         StopReplay();
-        AdvanceReplay();
+        Replay.NextFrame();
+        ShowFrame();
     }
 
     private void OnPlayPauseClick(object sender, RoutedEventArgs e)
     {
-        if (_isPlaying)
+        Replay.TogglePlayback();
+        ShowFrame();
+        if (Replay.IsPlaying)
         {
-            StopReplay();
-            return;
+            _replayTimer.Start();
         }
-
-        if (_frameIndex >= LegacyMatch.BoardFrames.Count - 1)
+        else
         {
-            _frameIndex = 0;
-            ShowFrame();
+            _replayTimer.Stop();
         }
-
-        _isPlaying = true;
-        _replayTimer.Start();
         UpdatePlayButton();
     }
 
     private void OnReplayTimerTick(object? sender, EventArgs e)
     {
-        AdvanceReplay();
-    }
-
-    private void AdvanceReplay()
-    {
-        if (_frameIndex >= LegacyMatch.BoardFrames.Count - 1)
-        {
-            StopReplay();
-            return;
-        }
-
-        _frameIndex++;
+        Replay.NextFrame();
         ShowFrame();
-        if (_frameIndex >= LegacyMatch.BoardFrames.Count - 1)
+        if (!Replay.IsPlaying)
         {
             StopReplay();
         }
@@ -379,58 +330,38 @@ public partial class MatchInformationPage : Page
     private void StopReplay()
     {
         _replayTimer.Stop();
-        _isPlaying = false;
+        _replay?.PausePlayback();
         UpdatePlayButton();
     }
 
     private void UpdatePlayButton()
     {
-        playPauseButton.Content = LocalizationManager.Instance[_isPlaying
-            ? "MatchInformation_PauseButton"
-            : "MatchInformation_PlayButton"];
+        playPauseButton.Content = LocalizationManager.Instance[_replay?.IsPlaying == true
+            ? "MatchInformation_PauseButton" : "MatchInformation_PlayButton"];
     }
 
     private void OnCloseClick(object sender, RoutedEventArgs e)
     {
         StopReplay();
-        if (_returnTarget == MatchInformationReturnTarget.History)
+        if (_replay != null)
         {
             NavigationService?.Navigate(new MatchHistoryPage());
-            return;
         }
-
-        NavigationService?.Navigate(_guestName == null
-            ? new AvailableMatchesPage()
-            : new AvailableMatchesPage(_guestName));
+        else
+        {
+            NavigationService?.Navigate(new AvailableMatchesPage());
+        }
     }
 
     private void OnViewMovementHistoryClick(object sender, RoutedEventArgs e)
     {
-        MovementHistoryService service = _movementHistoryService
-            ?? throw new InvalidOperationException("Legacy movements are unavailable in spectator mode.");
-        MovementHistoryRetrievalResult result =
-            service.TryGetMovements(
-                LegacyMatch.Id,
-                out IReadOnlyList<RecordedMove> movements);
-        if (result != MovementHistoryRetrievalResult.Success)
-        {
-            string prefix = result
-                == MovementHistoryRetrievalResult.ServerConnectionFailed
-                    ? "MovementHistory_ServerConnectionFailed"
-                    : "MovementHistory_RetrievalError";
-            _dialogService.ShowError(this, prefix + "Title", prefix + "Message");
-            return;
-        }
-
         MovementHistoryDialogWindow dialog = new MovementHistoryDialogWindow(
-            LocalizationManager.Instance,
-            movements);
+            LocalizationManager.Instance, Replay.ReadMovementDetails());
         Window? owner = Window.GetWindow(this);
         if (owner != null)
         {
             dialog.Owner = owner;
         }
-
         dialog.ShowDialog();
     }
 
@@ -456,6 +387,7 @@ public partial class MatchInformationPage : Page
     {
         _replayTimer.Stop();
         _connectionTimer?.Stop();
+        _replay?.PlayerPictures.Deactivate();
         if (_spectator != null)
         {
             _spectator.PropertyChanged -= OnSpectatorChanged;

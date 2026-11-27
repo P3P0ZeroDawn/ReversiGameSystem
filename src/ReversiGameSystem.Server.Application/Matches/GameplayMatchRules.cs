@@ -15,7 +15,8 @@ public static class GameplayMatchRules
     private const string MoveOriginPlayer = "Player";
     private const string MoveOriginTimeout = "Timeout";
     private const string MoveOriginSystem = "System";
-    private const string EndReasonNormal = "NORMAL";
+    private const string EndReasonBoardFull = "BOARD_FULL";
+    private const string EndReasonNoLegalMoves = "NO_LEGAL_MOVES";
     private const string EndReasonInactivity = "INACTIVITY";
     private const string EndReasonAbandonment = "ABANDONMENT";
     private static readonly object RandomSyncRoot = new object();
@@ -294,7 +295,9 @@ public static class GameplayMatchRules
         int whitePieceCount = CountPieces(match.Board, ReversiEngine.White);
         match.WinnerSeatNumber = DetermineWinner(blackPieceCount, whitePieceCount);
         match.AbandoningSeatNumber = null;
-        ConcludeMatch(match, EndReasonNormal, now);
+        string endReason = match.Board.Contains(ReversiEngine.Empty)
+            ? EndReasonNoLegalMoves : EndReasonBoardFull;
+        ConcludeMatch(match, endReason, now);
     }
 
     private static void ConcludeMatch(Match match, string endReason, DateTime endedAtUtc)

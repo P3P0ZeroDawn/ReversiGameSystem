@@ -7,6 +7,7 @@ using System.Data.Entity.Core;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Security.Cryptography;
+using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Domain.Matches;
@@ -31,6 +32,15 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
     private const int CreatorSeatNumber = 1;
     private const int WaitingParticipantCount = 1;
     private const byte OpponentSeatNumber = 2;
+
+    private const string SynchronizationFailureMessage =
+        "Match {MatchId} could not be persisted. Its state remains pending for retry.";
+    private readonly ILogger<MatchRepository> _logger;
+
+    public MatchRepository(ILogger<MatchRepository> logger)
+    {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
 
     public MatchResult<Match> StartSystemMatch(long accountId, long matchId, DateTime now)
     {
@@ -427,16 +437,19 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
             SynchronizeMatchState(match);
             synchronized = true;
         }
-        catch (DbException)
+        catch (DbException exception)
         {
+            _logger.LogWarning(exception, SynchronizationFailureMessage, match.Id);
             synchronized = false;
         }
-        catch (EntityException)
+        catch (EntityException exception)
         {
+            _logger.LogWarning(exception, SynchronizationFailureMessage, match.Id);
             synchronized = false;
         }
-        catch (TimeoutException)
+        catch (TimeoutException exception)
         {
+            _logger.LogWarning(exception, SynchronizationFailureMessage, match.Id);
             synchronized = false;
         }
 

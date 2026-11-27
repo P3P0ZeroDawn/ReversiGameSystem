@@ -14,6 +14,16 @@ namespace ReversiGameSystem.Client.Tests.TestDoubles;
 internal interface IObservableGameplayTestService
 {
     [OperationContract]
+    [FaultContract(typeof(Proxy.MatchFault))]
+    [FaultContract(typeof(Proxy.ServiceFault))]
+    Proxy.MatchSummary[] GetMatchHistory(string sessionToken);
+    [OperationContract]
+    [FaultContract(typeof(Proxy.MatchFault))]
+    [FaultContract(typeof(Proxy.ServiceFault))]
+    Proxy.MatchDetails GetMatchDetails(string sessionToken, long matchId);
+    [OperationContract]
+    void OpenMatchChannel(string sessionToken, long matchId);
+    [OperationContract]
     Proxy.MatchInformation[] GetObservableMatches(string sessionToken);
     [OperationContract]
     Proxy.MatchStateSnapshot ObserveMatch(string sessionToken, long matchId);
@@ -46,6 +56,28 @@ internal sealed class ObservableGameplayServiceStub : IObservableGameplayTestSer
     }
 
     internal GameplayClient Gameplay { get; }
+    internal int HistoryCalls { get; private set; }
+    internal int DetailsCalls { get; private set; }
+    internal int OpenCalls { get; private set; }
+    internal Proxy.MatchFailure? HistoryFailure { get; set; }
+    internal bool DetailsTechnicalFailure { get; set; }
+    internal Action? BeforeHistoryResponse { get; set; }
+    internal Action? BeforeDetailsResponse { get; set; }
+    internal Proxy.MatchSummary[] History { get; set; } = new[]
+    {
+        new Proxy.MatchSummary
+        {
+            MatchId = 19,
+            AssignedSeatNumber = 1,
+            Participants = CreateInformation(19).Participants,
+            State = Proxy.MatchState.Finished,
+            RecordedAtUtc = DateTime.UtcNow,
+            BlackPieceCount = 35,
+            WhitePieceCount = 29,
+            Conclusion = new Proxy.MatchConclusion { WinnerSeatNumber = 1 }
+        }
+    };
+    internal Proxy.MatchDetails Recording { get; set; } = CreateRecording();
     internal int ListCalls { get; private set; }
     internal int ObserveCalls { get; private set; }
     internal Action? BeforeListResponse { get; set; }
@@ -73,6 +105,62 @@ internal sealed class ObservableGameplayServiceStub : IObservableGameplayTestSer
                 new Proxy.MatchParticipantSummary { SeatNumber = 2, DisplayName = "Opponent" }
             }
         };
+    }
+
+    private static Proxy.MatchDetails CreateRecording()
+    {
+        const int BoardCellCount = 64;
+        const int RecordedCellIndex = 7;
+        Proxy.BoardCellState[] first = new Proxy.BoardCellState[BoardCellCount];
+        Proxy.BoardCellState[] final = new Proxy.BoardCellState[BoardCellCount];
+        final[RecordedCellIndex] = Proxy.BoardCellState.White;
+        return new Proxy.MatchDetails
+        {
+            MatchId = 19,
+            Participants = CreateInformation(19).Participants,
+            State = Proxy.MatchState.Finished,
+            TurnDurationSeconds = 40,
+            RecordedAtUtc = DateTime.UtcNow,
+            Conclusion = new Proxy.MatchConclusion { WinnerSeatNumber = 2 },
+            BoardFrames = new[] { first, final },
+            Moves = new[]
+            {
+                new Proxy.MoveRecord
+                {
+                    MoveNumber = 1, SeatNumber = 2, Row = 0, Column = RecordedCellIndex,
+                    PlayedAtUtc = DateTime.UtcNow, FlippedPieceCount = 1,
+                    Origin = Proxy.MoveOrigin.Timeout
+                }
+            }
+        };
+    }
+
+    public void OpenMatchChannel(string sessionToken, long matchId)
+    {
+        OpenCalls++;
+    }
+
+    public Proxy.MatchSummary[] GetMatchHistory(string sessionToken)
+    {
+        HistoryCalls++;
+        if (HistoryFailure.HasValue)
+        {
+            throw new FaultException<Proxy.MatchFault>(
+                new Proxy.MatchFault { Reason = HistoryFailure.Value });
+        }
+        BeforeHistoryResponse?.Invoke();
+        return History;
+    }
+
+    public Proxy.MatchDetails GetMatchDetails(string sessionToken, long matchId)
+    {
+        DetailsCalls++;
+        if (DetailsTechnicalFailure)
+        {
+            throw new FaultException<Proxy.ServiceFault>(new Proxy.ServiceFault());
+        }
+        BeforeDetailsResponse?.Invoke();
+        return Recording;
     }
 
     public Proxy.MatchInformation[] GetObservableMatches(string sessionToken)
