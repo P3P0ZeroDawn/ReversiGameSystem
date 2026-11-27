@@ -23,7 +23,11 @@ internal static class WcfTestHostHelper
             opened.Binding,
             new EndpointAddress(opened.EndpointAddress));
         TContract channel = factory.CreateChannel();
-        return new WcfChannelScope<TContract>(opened.Host, factory, channel);
+        return new WcfChannelScope<TContract>(
+            opened.Host,
+            factory,
+            channel,
+            opened.EndpointAddress);
     }
 
     internal static WcfChannelScope<TContract> OpenDuplexChannel<TContract, TCallback>(
@@ -44,12 +48,29 @@ internal static class WcfTestHostHelper
             opened.Binding,
             new EndpointAddress(opened.EndpointAddress));
         TContract channel = factory.CreateChannel();
-        return new WcfChannelScope<TContract>(opened.Host, factory, channel);
+        return new WcfChannelScope<TContract>(
+            opened.Host,
+            factory,
+            channel,
+            opened.EndpointAddress);
     }
 
-    internal static void CloseOrAbort(ICommunicationObject? communicationObject)
+    internal static DuplexChannelFactory<TContract> CreateDuplexFactory<TContract, TCallback>(
+        Uri endpointAddress,
+        TCallback callback)
+        where TContract : class
+        where TCallback : class
     {
-        if (communicationObject == null)
+        NetNamedPipeBinding binding = new NetNamedPipeBinding(NetNamedPipeSecurityMode.None);
+        return new DuplexChannelFactory<TContract>(
+            new InstanceContext(callback),
+            binding,
+            new EndpointAddress(endpointAddress));
+    }
+
+    internal static void CloseOrAbort(object? target)
+    {
+        if (target is not ICommunicationObject communicationObject)
         {
             return;
         }
@@ -116,11 +137,13 @@ internal sealed class WcfChannelScope<TContract> : IDisposable
     internal WcfChannelScope(
         ServiceHost host,
         ChannelFactory<TContract> factory,
-        TContract channel)
+        TContract channel,
+        Uri endpointAddress)
     {
         Host = host;
         Factory = factory;
         Channel = channel;
+        EndpointAddress = endpointAddress;
     }
 
     internal ServiceHost Host { get; }
@@ -128,6 +151,8 @@ internal sealed class WcfChannelScope<TContract> : IDisposable
     internal ChannelFactory<TContract> Factory { get; }
 
     internal TContract Channel { get; }
+
+    internal Uri EndpointAddress { get; }
 
     internal CommunicationState ChannelState
     {
@@ -139,7 +164,7 @@ internal sealed class WcfChannelScope<TContract> : IDisposable
 
     public void Dispose()
     {
-        WcfTestHostHelper.CloseOrAbort((ICommunicationObject)Channel);
+        WcfTestHostHelper.CloseOrAbort(Channel);
         WcfTestHostHelper.CloseOrAbort(Factory);
         WcfTestHostHelper.CloseOrAbort(Host);
     }

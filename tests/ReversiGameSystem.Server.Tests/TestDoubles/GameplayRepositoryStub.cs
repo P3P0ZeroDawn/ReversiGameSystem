@@ -39,6 +39,8 @@ internal sealed class GameplayRepositoryStub : IGameplayRepository
     internal MatchResult<Match> LoadMatchForObservationResult { get; set; } =
         new MatchResult<Match>(MatchStatus.MatchNotFound);
 
+    internal bool ThrowOnLoadMatch { get; set; }
+
     public MatchStatus EvaluateLobbyAccess(long accountId)
     {
         EvaluateLobbyAccessCalls++;
@@ -57,6 +59,11 @@ internal sealed class GameplayRepositoryStub : IGameplayRepository
     {
         LoadMatchCalls++;
         LastMatchId = matchId;
+        if (ThrowOnLoadMatch)
+        {
+            throw new InvalidOperationException("private-storage-failure");
+        }
+
         return LoadMatchResult;
     }
 

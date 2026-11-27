@@ -72,6 +72,8 @@ internal sealed class MatchRepositoryStub : IMatchRepository
     internal MatchResult<Match> MarkInvitationDeliveredResult { get; set; } =
         new MatchResult<Match>(MatchStatus.MatchNotFound);
 
+    internal bool ThrowOnGetAvailableMatches { get; set; }
+
     public MatchResult<Match> StartSystemMatch(long accountId, long matchId, DateTime now)
     {
         StartSystemMatchCalls++;
@@ -119,6 +121,11 @@ internal sealed class MatchRepositoryStub : IMatchRepository
     {
         GetAvailableMatchesCalls++;
         LastAccountId = accountId;
+        if (ThrowOnGetAvailableMatches)
+        {
+            throw new InvalidOperationException("private-storage-failure");
+        }
+
         return AvailableMatchesResult;
     }
 
