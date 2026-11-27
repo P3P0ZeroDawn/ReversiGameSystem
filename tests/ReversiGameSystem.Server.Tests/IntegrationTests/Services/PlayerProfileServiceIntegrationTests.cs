@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Generic;
 using System.ServiceModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -295,7 +296,9 @@ public sealed class PlayerProfileServiceIntegrationTests
                 1));
         }
 
-        internal SessionStore Sessions { get; } = new SessionStore(new TestUtcClock());
+        internal SessionStore Sessions { get; } = new SessionStore(
+            new TestUtcClock(),
+            NullLogger<SessionStore>.Instance);
 
         internal BoundaryProfileRepositoryStub Profiles { get; } =
             new BoundaryProfileRepositoryStub();

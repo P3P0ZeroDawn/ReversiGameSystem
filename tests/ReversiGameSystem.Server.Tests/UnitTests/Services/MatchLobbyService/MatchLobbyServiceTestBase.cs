@@ -26,7 +26,7 @@ public abstract class MatchLobbyServiceTestBase
     protected MatchLobbyServiceTestBase()
     {
         Clock = new UtcClockStub();
-        Sessions = new SessionStore(Clock);
+        Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         Matches = new MatchRepositoryStub();
         EmailSender = new TemplatedEmailSenderStub();
         ApplicationService = new MatchApplicationService(Sessions, Matches, Clock, EmailSender);

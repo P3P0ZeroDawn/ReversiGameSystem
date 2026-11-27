@@ -34,7 +34,7 @@ public sealed class MatchChatServiceIntegrationTests
     public void Initialize()
     {
         _clock = new UtcClockStub();
-        _sessions = new SessionStore(_clock);
+        _sessions = new SessionStore(_clock, NullLogger<SessionStore>.Instance);
         _chatRepository = new ChatRepositoryStub();
         ChatApplicationService applicationService =
             new ChatApplicationService(_sessions, _chatRepository, _clock);

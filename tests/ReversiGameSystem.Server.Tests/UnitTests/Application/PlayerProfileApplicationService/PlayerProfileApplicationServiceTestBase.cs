@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Tests.TestDoubles;
 using ApplicationService =
@@ -20,7 +21,7 @@ public abstract class PlayerProfileApplicationServiceTestBase
     protected PlayerProfileApplicationServiceTestBase()
     {
         Clock = new UtcClockStub();
-        Sessions = new SessionStore(Clock);
+        Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         Profiles = new TestDoubles.PlayerProfileRepositoryStub();
         Images = new TestDoubles.PlayerImageRepositoryStub();
         Service = new ApplicationService(Sessions, Profiles, Images);

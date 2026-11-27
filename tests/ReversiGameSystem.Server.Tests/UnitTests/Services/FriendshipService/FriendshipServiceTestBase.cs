@@ -25,7 +25,7 @@ public abstract class FriendshipServiceTestBase
     protected FriendshipServiceTestBase()
     {
         Clock = new UtcClockStub();
-        Sessions = new SessionStore(Clock);
+        Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         Friendships = new FriendshipRepositoryStub();
         ApplicationService = new FriendshipApplicationService(Sessions, Friendships);
         PresenceRegistry = new AccountPresenceRegistry();

@@ -38,7 +38,7 @@ public sealed class FriendshipServiceIntegrationTests
     public void Initialize()
     {
         UtcClockStub clock = new UtcClockStub();
-        _sessions = new SessionStore(clock);
+        _sessions = new SessionStore(clock, NullLogger<SessionStore>.Instance);
         _friendships = new FriendshipRepositoryStub();
         _presence = new AccountPresenceRegistry();
         _subscriptions = new FriendshipSubscriptions(

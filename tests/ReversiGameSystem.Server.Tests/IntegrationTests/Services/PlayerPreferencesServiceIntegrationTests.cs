@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.ServiceModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
@@ -31,7 +32,7 @@ public sealed class PlayerPreferencesServiceIntegrationTests
     public void Initialize()
     {
         _clock = new UtcClockStub();
-        _sessions = new SessionStore(_clock);
+        _sessions = new SessionStore(_clock, NullLogger<SessionStore>.Instance);
         _preferences = new PreferencesRepositoryStub();
         _images = new TestDoubles.PlayerImageRepositoryStub();
         PreferencesApplicationService applicationService =

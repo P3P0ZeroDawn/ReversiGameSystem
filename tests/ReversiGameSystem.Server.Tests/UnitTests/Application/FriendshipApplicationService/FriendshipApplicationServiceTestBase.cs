@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Tests.TestDoubles;
 
@@ -16,7 +17,7 @@ public abstract class FriendshipApplicationServiceTestBase
     protected FriendshipApplicationServiceTestBase()
     {
         Clock = new UtcClockStub();
-        Sessions = new SessionStore(Clock);
+        Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         Friendships = new FriendshipRepositoryStub();
         Service = new Server.Application.Friendships.FriendshipApplicationService(
             Sessions,

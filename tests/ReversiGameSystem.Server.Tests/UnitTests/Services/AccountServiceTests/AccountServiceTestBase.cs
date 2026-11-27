@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Verification;
@@ -37,7 +38,7 @@ public abstract class AccountServiceTestBase
         VerificationCodes = new TestDoubles.VerificationCodeRepositoryStub();
         EmailSender = new TemplatedEmailSenderStub();
         Clock = new UtcClockStub(new DateTime(2026, 9, 26, 12, 0, 0, DateTimeKind.Utc));
-        Sessions = new SessionStore(Clock);
+        Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         VerificationCodeService verificationService = new VerificationCodeService(
             new VerificationCodeProtector(new byte[32]),
             VerificationCodes,

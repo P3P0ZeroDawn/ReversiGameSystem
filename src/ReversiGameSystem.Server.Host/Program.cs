@@ -95,7 +95,9 @@ internal static class Program
                 try
                 {
                     SystemUtcClock clock = new SystemUtcClock();
-                    SessionStore sessions = new SessionStore(clock);
+                    SessionStore sessions = new SessionStore(
+                        clock,
+                        loggerFactory.CreateLogger<SessionStore>());
                     SmtpEmailSender emailSender = new SmtpEmailSender(MailSettings.Load());
                     HtmlEmailTemplateRenderer templateRenderer = new HtmlEmailTemplateRenderer();
                     TemplatedEmailSender templatedEmailSender = new TemplatedEmailSender(
@@ -212,7 +214,8 @@ internal static class Program
                                     new SessionApplicationService(
                                         accountRepository,
                                         verificationCodes,
-                                        sessions),
+                                        sessions,
+                                        loggerFactory.CreateLogger<SessionApplicationService>()),
                                     loggerFactory.CreateLogger<SessionService>());
                                 AccountService accountService = CreateAccountService(
                                     accountRepository,

@@ -142,7 +142,7 @@ internal sealed class SystemTestHost : IDisposable
     private void InitializeServices()
     {
         UtcClockStub clock = new UtcClockStub(DateTime.UtcNow);
-        SessionStore sessions = new SessionStore(clock);
+        SessionStore sessions = new SessionStore(clock, NullLogger<SessionStore>.Instance);
         AccountRepository accountRepository = new AccountRepository(clock);
         VerificationCodeService verificationCodes = new VerificationCodeService(
             new VerificationCodeProtector(CreateHmacKey()),
@@ -160,7 +160,7 @@ internal sealed class SystemTestHost : IDisposable
             verificationCodes,
             sessions));
         SessionService sessionService = new SessionService(
-            new SessionApplicationService(accountRepository, verificationCodes, sessions),
+            new SessionApplicationService(accountRepository, verificationCodes, sessions, NullLogger<SessionApplicationService>.Instance),
             NullLogger<SessionService>.Instance);
         PlayerProfileService playerProfileService = new PlayerProfileService(
             new PlayerProfileApplicationService(
