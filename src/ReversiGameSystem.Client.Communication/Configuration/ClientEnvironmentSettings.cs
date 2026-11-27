@@ -9,6 +9,9 @@ namespace ReversiGameSystem.Configuration;
 /// </summary>
 internal static class ClientEnvironmentSettings
 {
+    private static readonly Lazy<IReadOnlyDictionary<string, string>> CachedFileValues =
+        new Lazy<IReadOnlyDictionary<string, string>>(LoadFileValues);
+
     /// <summary>
     /// Reads an optional process variable or local .env file value, falling back to a default.
     /// </summary>
@@ -30,17 +33,43 @@ internal static class ClientEnvironmentSettings
             return value;
         }
 
-        string? path = FindFile();
-        if (path != null)
+        if (CachedFileValues.Value.TryGetValue(name, out string? fileValue))
         {
-            value = ReadFileValue(path, name);
-            if (value != null)
-            {
-                return value;
-            }
+            return fileValue;
         }
 
         return defaultValue;
+    }
+
+    private static IReadOnlyDictionary<string, string> LoadFileValues()
+    {
+        Dictionary<string, string> values = new Dictionary<string, string>(StringComparer.Ordinal);
+        string? path = FindFile();
+        if (path == null)
+        {
+            return values;
+        }
+
+        foreach (string rawLine in File.ReadLines(path))
+        {
+            string line = rawLine.Trim();
+            if (line.Length == 0 || line.StartsWith("#", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            int separator = line.IndexOf('=');
+            if (separator > 0)
+            {
+                string key = line.Substring(0, separator).Trim();
+                if (!values.ContainsKey(key))
+                {
+                    values[key] = Unquote(line.Substring(separator + 1).Trim());
+                }
+            }
+        }
+
+        return values;
     }
 
     private static string? FindFile()
@@ -62,29 +91,6 @@ internal static class ClientEnvironmentSettings
             }
 
             directory = directory.Parent;
-        }
-
-        return null;
-    }
-
-    private static string? ReadFileValue(string path, string name)
-    {
-        foreach (string rawLine in File.ReadLines(path))
-        {
-            string line = rawLine.Trim();
-            if (line.Length == 0 || line.StartsWith("#", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            int separator = line.IndexOf('=');
-            if (separator > 0 && string.Equals(
-                line.Substring(0, separator).Trim(),
-                name,
-                StringComparison.Ordinal))
-            {
-                return Unquote(line.Substring(separator + 1).Trim());
-            }
         }
 
         return null;

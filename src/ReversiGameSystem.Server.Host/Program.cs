@@ -24,6 +24,7 @@ using ReversiGameSystem.Server.Persistence.Friendships;
 using ReversiGameSystem.Server.Persistence.Leaderboards;
 using ReversiGameSystem.Server.Persistence.Mail;
 using ReversiGameSystem.Server.Persistence.Matches;
+using ReversiGameSystem.Server.Persistence.Model;
 using ReversiGameSystem.Server.Persistence.Players;
 using ReversiGameSystem.Server.Persistence.Preferences;
 using ReversiGameSystem.Server.Persistence.Verification;
@@ -124,6 +125,7 @@ internal static class Program
                         MatchRepository matchRepository = new MatchRepository(
                             loggerFactory.CreateLogger<MatchRepository>());
                         matchRepository.CancelAbandonedWaitingMatches();
+                        ReversiGameSystemEntities.WarmUp();
                         MatchApplicationService matchApplicationService =
                             new MatchApplicationService(
                                 sessions,
