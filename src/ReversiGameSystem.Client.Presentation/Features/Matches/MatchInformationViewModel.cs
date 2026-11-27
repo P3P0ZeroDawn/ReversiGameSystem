@@ -136,27 +136,13 @@ internal sealed class MatchInformationViewModel : INotifyPropertyChanged
 
     internal ReversiBoard ReadBoard()
     {
-        string[] rows = new string[ReversiBoard.Size];
-        for (int row = 0; row < rows.Length; row++)
-        {
-            char[] cells = new char[ReversiBoard.Size];
-            for (int column = 0; column < cells.Length; column++)
-            {
-                cells[column] = State.Board[row * ReversiBoard.Size + column] switch
-                {
-                    ConfirmedBoardCell.Black => 'B',
-                    ConfirmedBoardCell.White => 'W',
-                    _ => '.'
-                };
-            }
-            rows[row] = new string(cells);
-        }
-        return ReversiBoard.FromRows(rows);
+        return MatchBoardMapper.MapBoard(State.Board);
     }
 
     internal bool IsCurrentSession()
     {
-        return !_cancellationToken.IsCancellationRequested && _session.SessionToken == _sessionToken;
+        return !_cancellationToken.IsCancellationRequested
+            && _session.SessionToken == _sessionToken;
     }
 
     internal void Deactivate()

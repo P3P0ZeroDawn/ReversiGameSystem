@@ -19,7 +19,7 @@ public sealed class FriendRepositoryIntegrationTests : RepositoryIntegrationTest
     private const string ZedUsername = "zedFriend";
     private const string AcceptedStatus = "ACCEPTED";
     private const string PendingStatus = "PENDING";
-    private const string EndedStatus = "ENDED";
+    private const string RemovedStatus = "REMOVED";
 
     private static LocalDbTestDatabase? _database;
 
@@ -51,14 +51,14 @@ public sealed class FriendRepositoryIntegrationTests : RepositoryIntegrationTest
             "avatars/zed.png");
         long expectedAmyId = SeedAccount(AmyUsername, "amy@example.com");
         long pendingId = SeedAccount("pendingUser", "pending@example.com");
-        long endedId = SeedAccount("endedUser", "ended@example.com");
+        long removedId = SeedAccount("endedUser", "ended@example.com");
         long inactiveId = SeedAccount("inactiveUser", "inactive@example.com", "DEACTIVATED");
         int expectedFriendCount = 2;
 
         SeedFriendship(new FriendshipSeedData(callerId, expectedZedId, AcceptedStatus, null));
         SeedFriendship(new FriendshipSeedData(callerId, expectedAmyId, AcceptedStatus, null));
         SeedFriendship(new FriendshipSeedData(callerId, pendingId, PendingStatus, null));
-        SeedFriendship(new FriendshipSeedData(callerId, endedId, AcceptedStatus, DateTime.UtcNow));
+        SeedFriendship(new FriendshipSeedData(callerId, removedId, AcceptedStatus, DateTime.UtcNow));
         SeedFriendship(new FriendshipSeedData(callerId, inactiveId, AcceptedStatus, null));
         FriendRepository repository = new FriendRepository();
 
@@ -74,22 +74,22 @@ public sealed class FriendRepositoryIntegrationTests : RepositoryIntegrationTest
     }
 
     [TestMethod]
-    public void AreFriends_AcceptedAndEndedRelationships_EvaluatesBidirectionally()
+    public void AreFriends_AcceptedAndRemovedRelationships_EvaluatesBidirectionally()
     {
         long firstId = SeedAccount(CallerUsername, CallerEmail);
         long secondId = SeedAccount("secondFriend", "second@example.com");
-        long endedId = SeedAccount("formerFriend", "former@example.com");
+        long removedId = SeedAccount("formerFriend", "former@example.com");
         SeedFriendship(new FriendshipSeedData(firstId, secondId, AcceptedStatus, null));
-        SeedFriendship(new FriendshipSeedData(firstId, endedId, EndedStatus, DateTime.UtcNow));
+        SeedFriendship(new FriendshipSeedData(firstId, removedId, RemovedStatus, DateTime.UtcNow));
         FriendRepository repository = new FriendRepository();
 
         bool actualForward = repository.AreFriends(firstId, secondId);
         bool actualReverse = repository.AreFriends(secondId, firstId);
-        bool actualEnded = repository.AreFriends(firstId, endedId);
+        bool actualRemoved = repository.AreFriends(firstId, removedId);
 
         Assert.IsTrue(actualForward);
         Assert.IsTrue(actualReverse);
-        Assert.IsFalse(actualEnded);
+        Assert.IsFalse(actualRemoved);
     }
 
     [TestMethod]

@@ -20,7 +20,7 @@ CREATE TABLE dbo.Friendship (
  PRIMARY KEY(accountIdA,accountIdB),
  CONSTRAINT CK_Friendship_Order CHECK(accountIdA < accountIdB),
  CONSTRAINT CK_Friendship_Requester CHECK(requestedByAccountId IN (accountIdA,accountIdB)),
- CONSTRAINT CK_Friendship_Status CHECK(statusCode IN ('PENDING','ACCEPTED','REJECTED','ENDED')));
+ CONSTRAINT CK_Friendship_Status CHECK(statusCode IN ('PENDING','ACCEPTED','REJECTED','REMOVED')));
 CREATE TABLE dbo.VerificationCode (
  verificationCodeId bigint IDENTITY NOT NULL PRIMARY KEY,
  emailAddress nvarchar(254) NOT NULL, purposeCode varchar(30) NOT NULL,

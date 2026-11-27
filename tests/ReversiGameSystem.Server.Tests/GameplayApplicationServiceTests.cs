@@ -456,7 +456,7 @@ public sealed class GameplayApplicationServiceTests
         Assert.AreEqual(MatchStatus.Success, result.Status);
         Match concluded = result.Value ?? throw new InvalidOperationException("Value expected.");
         Assert.AreEqual("Finished", concluded.State);
-        Assert.AreEqual("NORMAL", concluded.EndReason);
+        Assert.AreEqual("NO_LEGAL_MOVES", concluded.EndReason);
         Assert.AreEqual<int?>(1, concluded.WinnerSeatNumber);
         Assert.AreEqual<int?>(null, concluded.CurrentTurnSeatNumber);
     }

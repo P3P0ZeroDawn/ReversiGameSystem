@@ -35,7 +35,7 @@ internal static class ReviewMatchHost
     {
         PrepareSchema();
         TestUtcClock clock = new TestUtcClock();
-        MatchRepository matchRepository = new MatchRepository();
+        MatchRepository matchRepository = new MatchRepository(NullLogger<MatchRepository>.Instance);
         MatchApplicationService matches = new MatchApplicationService(store, matchRepository, clock);
         GameplayMatchApplicationService gameplayMatches =
             new GameplayMatchApplicationService(store, matchRepository, clock);

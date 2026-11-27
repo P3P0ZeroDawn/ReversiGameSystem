@@ -2,6 +2,7 @@ using System;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging.Abstractions;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Chat;
 using ReversiGameSystem.Server.Application.Matches;
@@ -30,7 +31,9 @@ internal static class ReviewMatchDatabaseTests
         string alpha = alphaSession.SessionToken;
         long alphaAccountId = alphaSession.AccountId;
         string beta = sessions.CompleteLogin("ReviewBeta", "000002").Value!.SessionToken;
-        MatchApplicationService matches = new MatchApplicationService(store, new MatchRepository(), new TestUtcClock());
+        MatchRepository repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
+        MatchApplicationService matches = new MatchApplicationService(
+            store, repository, new TestUtcClock());
         DateTime now = DateTime.UtcNow;
         DateTime wholeSecondUtc = now.AddTicks(-(now.Ticks % TimeSpan.TicksPerSecond));
         MutableTestClock chatClock = new MutableTestClock(wholeSecondUtc);
@@ -62,7 +65,8 @@ internal static class ReviewMatchDatabaseTests
             ?? throw new InvalidOperationException("Matches expected.")).Length);
         Send_ConcurrentRequests_EnforcesAccountLimit(chat, chatClock, alpha, waiting.Id);
         Moderate_RepeatedMessages_CommitsAccountMute(chat, alpha, waiting.Id);
-        Gameplay_RealMovePersistence_UpdatesBoardAndHistory(new MatchRepository(), alphaAccountId, waiting.Id);
+        Gameplay_RealMovePersistence_UpdatesBoardAndHistory(
+            new MatchRepository(NullLogger<MatchRepository>.Instance), alphaAccountId, waiting.Id);
         Cancel_RepeatedRequest_InvalidatesCode(matches, alpha, beta);
         Restart_AbandonedWaitingMatch_InvalidatesCode(matches, alpha, beta);
         Join_InactiveCreator_RejectsWithoutOccupyingSecondSeat(matches, alpha, beta);
@@ -98,7 +102,7 @@ internal static class ReviewMatchDatabaseTests
         MatchMove systemMove = systemMatch.LastMove
             ?? throw new InvalidOperationException("A system move was expected.");
         Assert.AreEqual("System", systemMove.Origin);
-        Assert.AreEqual(true, new MatchRepository().SynchronizeMatch(systemMatch));
+        Assert.AreEqual(true, repository.SynchronizeMatch(systemMatch));
         Console.WriteLine("Passed real match SQL checks: atomic join, chat ordering, "
             + "moderation, authorization, cancellation and session revocation.");
     }
@@ -211,7 +215,7 @@ internal static class ReviewMatchDatabaseTests
         // Arrange
         Match abandoned = matches.CreateMatch(creator, new MatchSettings()).Value
             ?? throw new InvalidOperationException("Match expected.");
-        MatchRepository restartedStore = new MatchRepository();
+        MatchRepository restartedStore = new MatchRepository(NullLogger<MatchRepository>.Instance);
 
         // Act
         Assert.AreEqual(1, restartedStore.CancelAbandonedWaitingMatches());

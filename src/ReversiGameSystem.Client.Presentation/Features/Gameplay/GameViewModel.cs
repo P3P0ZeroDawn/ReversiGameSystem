@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 using ReversiGameSystem.Chat;
 using ReversiGameSystem.Game;
+using ReversiGameSystem.Features.Matches;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
@@ -26,6 +27,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
     private const string UnavailablePlayerNameKey = "AccountInformation_UnavailableValue";
     private const string SystemPlayerNameKey = "Game_SystemPlayerName";
     private const string GeneralDateTimeFormat = "g";
+    private MatchPlayerPictures? _playerPictures;
     private readonly GameplayClient _gameplay;
     private readonly MatchChatClient _chat;
     private readonly SynchronizationContext _presentationContext;
@@ -116,75 +118,27 @@ internal sealed class GameViewModel : INotifyPropertyChanged
             return _gameplay.HasMatchState(_matchId) && State.State == ConfirmedMatchState.Finished;
         }
     }
-    public BitmapSource? BlackPlayerPicture { get; private set; }
+    public BitmapSource? BlackPlayerPicture
+    {
+        get { return _playerPictures?.BlackPlayerPicture; }
+    }
 
-    public BitmapSource? WhitePlayerPicture { get; private set; }
+    public BitmapSource? WhitePlayerPicture
+    {
+        get { return _playerPictures?.WhitePlayerPicture; }
+    }
 
     internal async Task<ProfileStatus> LoadPlayerPictures(
         PlayerProfileClient profiles, ClientSession session)
     {
-        string? sessionToken = session.SessionToken;
-        if (!_active || !IsReady || sessionToken == null
-            || string.IsNullOrWhiteSpace(sessionToken))
+        if (!_active || !IsReady)
         {
             return ProfileStatus.InvalidSession;
         }
-        if (_isGuest || !UserPreferencesState.UseProfilePicturesOnPieces)
-        {
-            return ProfileStatus.Success;
-        }
-        foreach (MatchParticipant participant in Information.Participants)
-        {
-            if (participant.IsSystem || !participant.AccountId.HasValue)
-            {
-                continue;
-            }
-            BitmapSource? picture = session.ProfilePicture;
-            if (participant.AccountId != session.AccountId || picture == null)
-            {
-                ProfileResult<PlayerProfile> profile = await profiles.GetPlayerProfile(
-                    sessionToken, participant.AccountId);
-                if (!_active || session.SessionToken != sessionToken)
-                {
-                    return ProfileStatus.InvalidSession;
-                }
-                if (profile.Status != ProfileStatus.Success)
-                {
-                    return profile.Status;
-                }
-                PlayerProfile player = profile.Value
-                    ?? throw new InvalidOperationException("The confirmed profile is unavailable.");
-                if (!player.HasProfileImage)
-                {
-                    continue;
-                }
-                ProfileResult<PlayerImageContent> image = await profiles.GetProfileImage(
-                    sessionToken, participant.AccountId);
-                if (!_active || session.SessionToken != sessionToken)
-                {
-                    return ProfileStatus.InvalidSession;
-                }
-                if (image.Status != ProfileStatus.Success)
-                {
-                    return image.Status;
-                }
-                picture = PlayerImageService.CreatePreview(image.Value);
-            }
-            if (participant.SeatNumber == CreatorSeat)
-            {
-                BlackPlayerPicture = picture;
-            }
-            else if (participant.SeatNumber == OpponentSeat)
-            {
-                WhitePlayerPicture = picture;
-            }
-            if (participant.AccountId == session.AccountId && picture != null)
-            {
-                session.UpdateProfilePicture(picture);
-            }
-        }
+        _playerPictures = new MatchPlayerPictures(Information.Participants);
+        ProfileStatus status = await _playerPictures.LoadPlayerPictures(profiles, session);
         NotifyPropertyChanged();
-        return ProfileStatus.Success;
+        return status;
     }
 
     public bool IsParticipant
@@ -324,6 +278,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
     internal async Task DeactivateMatch()
     {
         _active = false;
+        _playerPictures?.Deactivate();
         _gameplay.StateChanged -= OnMatchStateChanged;
         _gameplay.ParticipantConnectionChanged -= OnParticipantConnectionChanged;
         _gameplay.ConnectionLost -= OnConnectionLost;
@@ -451,6 +406,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
         catch (Exception exception)
         {
             _active = false;
+            _playerPictures?.Deactivate();
             _chatReady = false;
             _recoveryFailed = false;
             _statusMessageResourceKey = string.Empty;

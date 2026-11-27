@@ -9,7 +9,9 @@ CREATE TABLE dbo.GameMatch (
  invitedAccountId bigint NULL CONSTRAINT FK_GameMatch_InvitedAccount REFERENCES dbo.Account(accountId),
  invitationConfirmedAtUtc datetime2(3) NULL,
  createdAtUtc datetime2(3) NOT NULL, startedAtUtc datetime2(3) NULL,
- endedAtUtc datetime2(3) NULL, endReasonCode varchar(30) NULL,
+ endedAtUtc datetime2(3) NULL,
+ endReasonCode varchar(30) NULL CHECK (endReasonCode IS NULL OR endReasonCode IN
+  ('BOARD_FULL','NO_LEGAL_MOVES','ABANDONMENT','INACTIVITY','CREATOR_CANCELLED')),
  currentTurnSeatNumber tinyint NULL, turnStartedAtUtc datetime2(3) NULL,
  CONSTRAINT CK_GameMatch_Privacy CHECK (
   (isPrivate = 0 AND invitedAccountId IS NULL AND invitationConfirmedAtUtc IS NULL)
@@ -31,7 +33,7 @@ CREATE TABLE dbo.GameMove (
  matchId bigint NOT NULL, moveNumber int NOT NULL,
  seatNumber tinyint NOT NULL, rowIndex tinyint NOT NULL, columnIndex tinyint NOT NULL,
  moveSourceCode varchar(30) NOT NULL CHECK(moveSourceCode IN
-  ('MANUAL','SYSTEM_AUTOMATIC','TIMEOUT_AUTOMATIC')),
+  ('MANUAL','SYSTEM','TIMEOUT_AUTOMATIC')),
  playedAtUtc datetime2(3) NOT NULL,
  PRIMARY KEY(matchId,moveNumber),
  FOREIGN KEY(matchId,seatNumber) REFERENCES dbo.MatchParticipant(matchId,seatNumber));

@@ -14,7 +14,7 @@ internal static class MatchDatabase
 {
     private const string ManualMoveSourceCode = "MANUAL";
     private const string SystemParticipantTypeCode = "SYSTEM";
-    private const string SystemMoveSourceCode = "SYSTEM_AUTOMATIC";
+    private const string SystemMoveSourceCode = "SYSTEM";
     private const string TimeoutMoveSourceCode = "TIMEOUT_AUTOMATIC";
     private const string WaitingStatusCode = "WAITING";
     private const string InProgressStatusCode = "IN_PROGRESS";

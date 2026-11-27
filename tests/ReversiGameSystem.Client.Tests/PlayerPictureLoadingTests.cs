@@ -11,6 +11,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Chat;
 using ReversiGameSystem.Features.Gameplay;
+using ReversiGameSystem.Features.Matches;
+using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
 using Proxy = ReversiGameSystem.ServerProxy;
 
@@ -103,6 +105,90 @@ public sealed class PlayerPictureLoadingTests
             await model.DeactivateMatch();
             UserPreferencesState.Reset();
         }
+    }
+
+    [TestMethod]
+    public async Task ReplayPlayerPictures_TwoAccounts_LoadsBothPhotos()
+    {
+        using PictureHost host = new PictureHost();
+        ClientSession session = CreateSession();
+        MatchReplayViewModel model = CreateReplay(false);
+        try
+        {
+            await model.PlayerPictures.LoadPlayerPictures(host.CreateProfiles(), session);
+
+            Assert.IsNotNull(model.PlayerPictures.BlackPlayerPicture);
+            Assert.IsNotNull(model.PlayerPictures.WhitePlayerPicture);
+        }
+        finally
+        {
+            model.PlayerPictures.Deactivate();
+            UserPreferencesState.Reset();
+        }
+    }
+
+    [TestMethod]
+    public async Task ReplayPlayerPictures_SystemOpponent_UsesRobotWithoutRemotePhotoQuery()
+    {
+        using PictureHost host = new PictureHost();
+        ClientSession session = CreateSession();
+        MatchReplayViewModel model = CreateReplay(true);
+        try
+        {
+            await model.PlayerPictures.LoadPlayerPictures(host.CreateProfiles(), session);
+
+            Assert.AreEqual(1, host.Service.ImageReads);
+            Assert.AreEqual(ReversiGameSystem.Game.DiscColor.White,
+                model.PlayerPictures.SystemPlayerColor);
+        }
+        finally
+        {
+            model.PlayerPictures.Deactivate();
+            UserPreferencesState.Reset();
+        }
+    }
+
+    [TestMethod]
+    public async Task ReplayPlayerPictures_PreferenceDisabled_DoesNotRequestPhotos()
+    {
+        using PictureHost host = new PictureHost();
+        ClientSession session = CreateSession();
+        UserPreferencesState.Reset();
+        MatchReplayViewModel model = CreateReplay(false);
+        try
+        {
+            await model.PlayerPictures.LoadPlayerPictures(host.CreateProfiles(), session);
+
+            Assert.AreEqual(0, host.Service.ImageReads);
+        }
+        finally
+        {
+            model.PlayerPictures.Deactivate();
+            UserPreferencesState.Reset();
+        }
+    }
+
+    private static MatchReplayViewModel CreateReplay(bool systemOpponent)
+    {
+        const int BlackSeat = 1;
+        const int WhiteSeat = 2;
+        const int BoardCellCount = 64;
+        MatchRecord match = new MatchRecord
+        {
+            MatchId = MatchId,
+            Participants = new[]
+            {
+                new MatchParticipant(BlackSeat, "Local") { AccountId = LocalAccount },
+                new MatchParticipant(WhiteSeat, "Opponent")
+                {
+                    AccountId = systemOpponent ? null : OpponentAccount,
+                    IsSystem = systemOpponent
+                }
+            }
+        };
+        MatchRecording recording = new MatchRecording(match, Array.Empty<MatchMove>(),
+            new[] { new ConfirmedBoardCell[BoardCellCount] });
+        return new MatchReplayViewModel(recording);
     }
 
     private static ClientSession CreateSession()

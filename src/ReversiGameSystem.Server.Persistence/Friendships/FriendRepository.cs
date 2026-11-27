@@ -14,7 +14,7 @@ public sealed class FriendRepository : IFriendshipRepository
     private const string AcceptedStatus = "ACCEPTED";
     private const string PendingStatus = "PENDING";
     private const string RejectedStatus = "REJECTED";
-    private const string EndedStatus = "ENDED";
+    private const string RemovedStatus = "REMOVED";
     private const string FirstAccountParameter = "@firstAccountId";
     private const string SecondAccountParameter = "@secondAccountId";
     private const int PairAccountCount = 2;
@@ -232,7 +232,7 @@ public sealed class FriendRepository : IFriendshipRepository
         {
             return FriendshipStatus.InactiveAccount;
         }
-        relationship.statusCode = EndedStatus;
+        relationship.statusCode = RemovedStatus;
         relationship.endedAtUtc = DateTime.UtcNow;
         context.SaveChanges();
         transaction.Commit();

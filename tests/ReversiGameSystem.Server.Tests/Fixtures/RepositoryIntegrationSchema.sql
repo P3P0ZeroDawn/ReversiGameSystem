@@ -38,7 +38,7 @@ CREATE TABLE dbo.Friendship (
     CONSTRAINT CK_Friendship_Order CHECK (accountIdA < accountIdB),
     CONSTRAINT CK_Friendship_Requester CHECK (requestedByAccountId IN (accountIdA, accountIdB)),
     CONSTRAINT CK_Friendship_Status CHECK (
-        statusCode IN ('PENDING', 'ACCEPTED', 'REJECTED', 'ENDED')
+        statusCode IN ('PENDING', 'ACCEPTED', 'REJECTED', 'REMOVED')
     )
 );
 
@@ -79,7 +79,10 @@ CREATE TABLE dbo.GameMatch (
     createdAtUtc datetime2(3) NOT NULL,
     startedAtUtc datetime2(3) NULL,
     endedAtUtc datetime2(3) NULL,
-    endReasonCode varchar(30) NULL,
+    endReasonCode varchar(30) NULL CONSTRAINT CK_GameMatch_EndReason CHECK (
+        endReasonCode IS NULL OR endReasonCode IN
+            ('BOARD_FULL', 'NO_LEGAL_MOVES', 'ABANDONMENT', 'INACTIVITY', 'CREATOR_CANCELLED')
+    ),
     currentTurnSeatNumber tinyint NULL,
     turnStartedAtUtc datetime2(3) NULL,
     CONSTRAINT CK_GameMatch_Privacy CHECK (
@@ -116,7 +119,7 @@ CREATE TABLE dbo.GameMove (
     rowIndex tinyint NOT NULL,
     columnIndex tinyint NOT NULL,
     moveSourceCode varchar(30) NOT NULL
-        CHECK (moveSourceCode IN ('MANUAL', 'SYSTEM_AUTOMATIC', 'TIMEOUT_AUTOMATIC')),
+        CHECK (moveSourceCode IN ('MANUAL', 'SYSTEM', 'TIMEOUT_AUTOMATIC')),
     playedAtUtc datetime2(3) NOT NULL,
     PRIMARY KEY (matchId, moveNumber),
     FOREIGN KEY (matchId, seatNumber) REFERENCES dbo.MatchParticipant(matchId, seatNumber)
