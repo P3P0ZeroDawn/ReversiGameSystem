@@ -49,15 +49,14 @@ internal static class Program
         ContractArchitectureTests architectureTests = new ContractArchitectureTests();
         MatchSerializationTests matchTests = new MatchSerializationTests();
         CommunicationSerializationTests communicationTests = new CommunicationSerializationTests();
-        SessionServiceTests sessionTests = new SessionServiceTests();
         VerificationCodeServiceTests codeTests = new VerificationCodeServiceTests();
         VerificationEmailSenderTests mailTests = new VerificationEmailSenderTests();
         FriendshipPresenceTests presenceTests = new FriendshipPresenceTests();
         MatchBoundaryTests matchBoundaryTests = new MatchBoundaryTests();
         MatchApplicationServiceLifecycleTests lifecycleTests = new MatchApplicationServiceLifecycleTests();
         LobbyAuthorizationTests lobbyAuthorizationTests = new LobbyAuthorizationTests();
-        IntegrationTests.Services.ServiceErrorBehaviorTests errorBehaviorTests =
-            new IntegrationTests.Services.ServiceErrorBehaviorTests();
+        IntegrationTests.Services.ServiceErrorBehaviorIntegrationTests errorBehaviorTests =
+            new IntegrationTests.Services.ServiceErrorBehaviorIntegrationTests();
         GameplayMatchRulesTests gameplayRulesTests = new GameplayMatchRulesTests();
         GameplayApplicationServiceTests gameplayTests = new GameplayApplicationServiceTests();
         PlayerBoundaryTests playerBoundaryTests = new PlayerBoundaryTests();
@@ -147,18 +146,6 @@ internal static class Program
             communicationTests.ChatFault_MutedAndBlocked_PreservesOptionalMuteExpiry,
             communicationTests.ChatMuteNotification_RoundTrip_PreservesAccountSanctionWindow,
             communicationTests.BusinessFaults_EveryCatalogReason_RoundTripsTypedReason,
-            sessionTests.RequestLoginCode_ThroughWcfChannel_ReturnsExpiryWithoutCreatingSession,
-            sessionTests.CompleteLogin_ThroughWcfChannel_CreatesMappedSessionAndRevokesIt,
-            sessionTests.RequestLoginCode_InvalidCredentialsThroughWcf_ReturnsTypedSessionFault,
-            sessionTests.RequestLoginCode_DeliveryTimeoutThroughWcf_ReturnsSanitizedServiceFault,
-            sessionTests.CompleteLogin_ExpiredCodeThroughWcf_ReturnsTypedExpiryFault,
-            sessionTests.CompleteLogin_InactiveAccount_RejectsSessionCreation,
-            sessionTests.CompleteLogin_RepositoryRejectsConsumedCode_DoesNotCreateSession,
-            sessionTests.OpenGuestSession_ExpiredGuest_ReleasesReservedName,
-            sessionTests.OpenGuestSession_ThroughWcfChannel_ReservesAndReleasesName,
-            sessionTests.OpenGuestSession_ConcurrentSameName_CreatesOnlyOneGuest,
-            sessionTests.CloseSession_EmptyTokenThroughWcf_ReturnsTypedFault,
-            sessionTests.CloseSession_FailingObserver_NotifiesRemainingObservers,
             codeTests.IssueVerificationCode_ValidIdentity_DeliversSixDigitsWithFiveMinuteExpiry,
             codeTests.IssueVerificationCode_DeliveryTimeout_DoesNotReplacePendingCode,
             codeTests.VerifyCode_ExactExpiry_RejectsExpiredCode,

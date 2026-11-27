@@ -13,7 +13,7 @@ namespace ReversiGameSystem.Server.Tests.IntegrationTests.Services;
 
 [TestClass]
 [TestCategory("Integration")]
-public sealed class ServiceErrorBehaviorTests
+public sealed class ServiceErrorBehaviorIntegrationTests
 {
     private const string UnexpectedFailureCode = "UNEXPECTED_SERVICE_FAILURE";
     internal const string PrivateProviderMessage = "private-provider-message";
@@ -281,22 +281,24 @@ internal sealed class ErrorProbeService : IErrorProbeService
 {
     public void FailUnexpectedly()
     {
-        throw new InvalidOperationException(ServiceErrorBehaviorTests.PrivateProviderMessage);
+        throw new InvalidOperationException(
+            ServiceErrorBehaviorIntegrationTests.PrivateProviderMessage);
     }
 
     public void FailAfterCreatingCorrelation(string correlationId)
     {
         MessageHeader header = MessageHeader.CreateHeader(
-            ServiceErrorBehaviorTests.CorrelationHeaderName,
+            ServiceErrorBehaviorIntegrationTests.CorrelationHeaderName,
             ContractNamespaces.Diagnostics,
             correlationId);
         OperationContext.Current.OutgoingMessageHeaders.Add(header);
-        throw new InvalidOperationException(ServiceErrorBehaviorTests.PrivateProviderMessage);
+        throw new InvalidOperationException(
+            ServiceErrorBehaviorIntegrationTests.PrivateProviderMessage);
     }
 
     public void ThrowUndeclaredFault()
     {
-        throw new FaultException(ServiceErrorBehaviorTests.PrivateProviderMessage);
+        throw new FaultException(ServiceErrorBehaviorIntegrationTests.PrivateProviderMessage);
     }
 
     public void RejectAsBusinessFault()
