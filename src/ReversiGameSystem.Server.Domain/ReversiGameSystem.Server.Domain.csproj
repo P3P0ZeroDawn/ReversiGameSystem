@@ -6,5 +6,6 @@
     <RootNamespace>ReversiGameSystem.Server.Domain</RootNamespace>
     <AssemblyName>ReversiGameSystem.Server.Domain</AssemblyName>
     <ProjectGuid>{26E704F1-4360-44FB-A725-C5FC02E03B2C}</ProjectGuid>
+    <IsTestProject>false</IsTestProject>
   </PropertyGroup>
 </Project>

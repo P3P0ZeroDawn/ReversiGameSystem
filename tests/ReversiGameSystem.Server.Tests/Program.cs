@@ -49,17 +49,14 @@ internal static class Program
         ContractArchitectureTests architectureTests = new ContractArchitectureTests();
         MatchSerializationTests matchTests = new MatchSerializationTests();
         CommunicationSerializationTests communicationTests = new CommunicationSerializationTests();
-        SessionServiceTests sessionTests = new SessionServiceTests();
         VerificationCodeServiceTests codeTests = new VerificationCodeServiceTests();
-        VerificationEmailSenderTests mailTests = new VerificationEmailSenderTests();
-        FriendshipPresenceTests presenceTests = new FriendshipPresenceTests();
         MatchBoundaryTests matchBoundaryTests = new MatchBoundaryTests();
         MatchApplicationServiceLifecycleTests lifecycleTests = new MatchApplicationServiceLifecycleTests();
         LobbyAuthorizationTests lobbyAuthorizationTests = new LobbyAuthorizationTests();
-        ServiceErrorBehaviorTests errorBehaviorTests = new ServiceErrorBehaviorTests();
+        IntegrationTests.Services.ServiceErrorBehaviorIntegrationTests errorBehaviorTests =
+            new IntegrationTests.Services.ServiceErrorBehaviorIntegrationTests();
         GameplayMatchRulesTests gameplayRulesTests = new GameplayMatchRulesTests();
         GameplayApplicationServiceTests gameplayTests = new GameplayApplicationServiceTests();
-        PlayerBoundaryTests playerBoundaryTests = new PlayerBoundaryTests();
         System.Collections.Generic.List<Action> tests =
             new System.Collections.Generic.List<Action>
         {
@@ -146,18 +143,6 @@ internal static class Program
             communicationTests.ChatFault_MutedAndBlocked_PreservesOptionalMuteExpiry,
             communicationTests.ChatMuteNotification_RoundTrip_PreservesAccountSanctionWindow,
             communicationTests.BusinessFaults_EveryCatalogReason_RoundTripsTypedReason,
-            sessionTests.RequestLoginCode_ThroughWcfChannel_ReturnsExpiryWithoutCreatingSession,
-            sessionTests.CompleteLogin_ThroughWcfChannel_CreatesMappedSessionAndRevokesIt,
-            sessionTests.RequestLoginCode_InvalidCredentialsThroughWcf_ReturnsTypedSessionFault,
-            sessionTests.RequestLoginCode_DeliveryTimeoutThroughWcf_ReturnsSanitizedServiceFault,
-            sessionTests.CompleteLogin_ExpiredCodeThroughWcf_ReturnsTypedExpiryFault,
-            sessionTests.CompleteLogin_InactiveAccount_RejectsSessionCreation,
-            sessionTests.CompleteLogin_RepositoryRejectsConsumedCode_DoesNotCreateSession,
-            sessionTests.OpenGuestSession_ExpiredGuest_ReleasesReservedName,
-            sessionTests.OpenGuestSession_ThroughWcfChannel_ReservesAndReleasesName,
-            sessionTests.OpenGuestSession_ConcurrentSameName_CreatesOnlyOneGuest,
-            sessionTests.CloseSession_EmptyTokenThroughWcf_ReturnsTypedFault,
-            sessionTests.CloseSession_FailingObserver_NotifiesRemainingObservers,
             codeTests.IssueVerificationCode_ValidIdentity_DeliversSixDigitsWithFiveMinuteExpiry,
             codeTests.IssueVerificationCode_DeliveryTimeout_DoesNotReplacePendingCode,
             codeTests.VerifyCode_ExactExpiry_RejectsExpiredCode,
@@ -165,41 +150,9 @@ internal static class Program
             codeTests.VerifyCode_ValidCodeUsedOnce_RejectsReuse,
             codeTests.ComputeCodeDigest_DifferentIdentity_BindsCodeToAccountAndPurpose,
             codeTests.IssueVerificationCode_SpanishAndDefaultLocales_RenderSingleLanguageEmails,
-            mailTests.Load_ConfiguredPort_ReturnsConfiguredPort,
-            mailTests.Send_LocalServerWithheldBanner_CancelsWithinDeliveryBudget,
-            new FailureDiagnosticsTests().Describe_NestedProviderFailure_ExcludesPrivateData,
-            DiagnosticFormatterTests.Run,
-            presenceTests.DuplexChannels_PublishPresenceAndOwnFriendSnapshot,
-            presenceTests.MultipleSessions_StayOnlineUntilLastRevocation,
-            presenceTests.ClosedAndReplacementChannels_PreservePresence,
-            presenceTests.RelationshipFailure_PreservesHealthyChannelAndAllowsPresenceRecovery,
-            presenceTests.RepositoryFailure_LogsOriginalExceptionAndReturnsDeclaredFault,
-            presenceTests.LoggerFailure_ReportsBothFailuresWithoutExposingProviderMessages,
-            presenceTests.InvalidInactiveAndExpiredSessions_ReturnTypedFaults,
-            presenceTests.UnsupportedOperations_ReturnDeclaredServiceFaultWithoutRepositoryAccess,
-            presenceTests.ExpiredReceiver_ReceivesNoCallbacks,
-            presenceTests.ExpirySweep_PublishesDisconnection,
-            presenceTests.EndedFriendship_ReceivesNoPresenceCallbacks,
-            playerBoundaryTests.RegisterAccount_ThroughWcf_MapsCredentialsAndOutcome,
-            playerBoundaryTests.GetProfile_ThroughWcf_MapsIdentityAndStatistics,
-            playerBoundaryTests.GetProfile_MissingAndInvalidSessionThroughWcf_ReturnsTypedFaults,
-            playerBoundaryTests.GetProfile_InactiveCallerRequestingAnotherAccount_RejectsThroughWcf,
-            playerBoundaryTests.GetProfile_InvalidTargetThroughWcf_ReturnsTypedFault,
-            playerBoundaryTests.GetProfile_MissingTargetThroughWcf_ReturnsTypedFault,
-            playerBoundaryTests.GetProfile_RepositoryFailureThroughWcf_ReturnsServiceFault,
-            playerBoundaryTests.GetImage_AbsentImageThroughWcf_ReturnsNull,
-            playerBoundaryTests.GetImage_PresentImageThroughWcf_ReturnsContent,
-            playerBoundaryTests.GetImage_ReadFailureThroughWcf_ReturnsServiceFault,
-            playerBoundaryTests.ChangeUsername_ThroughWcf_NormalizesAndUpdatesOnlyCaller,
-            playerBoundaryTests.ChangeUsername_UnavailableThroughWcf_ReturnsTypedFault,
-            playerBoundaryTests.UpdateImage_InvalidThroughWcf_ReturnsTypedFault,
-            playerBoundaryTests.UpdateImage_AssociationFailureThroughWcf_RemovesNewImage,
-            playerBoundaryTests.GetLeaderboard_ThroughWcf_MapsOrderedEntries,
-            playerBoundaryTests.GetLeaderboard_InvalidLimitThroughWcf_ReturnsTypedFault,
-            playerBoundaryTests.GetLeaderboard_UnavailableThroughWcf_ReturnsServiceFault,
-            () => new ModelResourcesTests().Assembly_RequiredRuntimeModel_IsEmbedded("Model.Database_model.csdl"),
-            () => new ModelResourcesTests().Assembly_RequiredRuntimeModel_IsEmbedded("Model.Database_model.ssdl"),
-            () => new ModelResourcesTests().Assembly_RequiredRuntimeModel_IsEmbedded("Model.Database_model.msl")
+            new UnitTests.Services.FailureDiagnosticsTests()
+                .Describe_NestedProviderFailure_ExcludesPrivateData,
+            DiagnosticFormatterTests.Run
         };
         tests.AddRange(MatchInvitationTests.CreateTests());
         return tests.ToArray();

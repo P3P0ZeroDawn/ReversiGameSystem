@@ -10,6 +10,7 @@
     <AssemblyName>ReversiGameSystem.Client.Presentation</AssemblyName>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <IsTestProject>false</IsTestProject>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
