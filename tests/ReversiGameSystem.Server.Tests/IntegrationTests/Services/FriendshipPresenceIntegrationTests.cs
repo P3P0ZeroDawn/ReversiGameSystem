@@ -300,7 +300,8 @@ public sealed class FriendshipPresenceIntegrationTests
             Console.SetError(fallback);
             Action action = () => client.Channel.GetFriends(TokenOne);
             Assert.Throws<FaultException<ServiceFault>>(action);
-            Wait(() => fallback.ToString().Contains(CorrelationPrefix));
+            Wait(() => fallback.ToString().Contains(CorrelationPrefix)
+                && fallback.ToString().Contains(nameof(IOException)));
         }
         finally
         {
