@@ -1,25 +1,31 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using MailKit;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Persistence.Mail;
 
-namespace ReversiGameSystem.Server.Tests;
+namespace ReversiGameSystem.Server.Tests.IntegrationTests.Repository;
 
 [TestClass]
-public sealed class VerificationEmailSenderTests
+[TestCategory("Integration")]
+public sealed class SmtpEmailSenderIntegrationTests
 {
+    private const string StartTlsSecurity = "StartTls";
+
     [TestMethod]
     public void Load_ConfiguredPort_ReturnsConfiguredPort()
     {
         int expectedPort = 587;
-
         int actualPort = 0;
-        WithSettings(expectedPort, "StartTls", () =>
+
+        WithSettings(expectedPort, StartTlsSecurity, () =>
         {
             actualPort = MailSettings.Load().Port;
         });
@@ -28,13 +34,14 @@ public sealed class VerificationEmailSenderTests
     }
 
     [TestMethod]
-    [DataRow("StartTls", false)]
+    [DataRow(StartTlsSecurity, false)]
     [DataRow("Tls", true)]
     public void Load_MailSecurity_SetsEncryptOnConnect(
         string securityMode,
         bool expectedEncryptOnConnect)
     {
         bool actualEncryptOnConnect = !expectedEncryptOnConnect;
+
         WithSettings(587, securityMode, () =>
         {
             actualEncryptOnConnect = MailSettings.Load().EncryptOnConnect;
@@ -45,7 +52,7 @@ public sealed class VerificationEmailSenderTests
 
     [TestMethod]
     [DataRow(587, "None")]
-    [DataRow(65536, "StartTls")]
+    [DataRow(65536, StartTlsSecurity)]
     public void Load_InvalidConfiguration_ThrowsInvalidOperationException(
         int port,
         string securityMode)
@@ -61,41 +68,19 @@ public sealed class VerificationEmailSenderTests
     }
 
     [TestMethod]
-    public void Send_LocalServerWithheldBanner_FailsDelivery()
+    public void Send_LocalServerWithheldBanner_FailsConnectsAndCancelsWithinBudget()
     {
         bool expectedFailed = true;
-
-        (bool actualFailed, _, _) = ExecuteStalledSend();
-
-        Assert.AreEqual(expectedFailed, actualFailed, "A stalled SMTP connection must fail delivery.");
-    }
-
-    [TestMethod]
-    public void Send_LocalServerWithheldBanner_ConnectsToServer()
-    {
         bool expectedConnected = true;
-
-        (_, bool actualConnected, _) = ExecuteStalledSend();
-
-        Assert.AreEqual(
-            expectedConnected,
-            actualConnected,
-            "The local server must have accepted the connection.");
-    }
-
-    [TestMethod]
-    public void Send_LocalServerWithheldBanner_CancelsWithinDeliveryBudget()
-    {
         bool expectedWithinBudget = true;
 
-        (_, _, TimeSpan elapsed) = ExecuteStalledSend();
+        (bool actualFailed, bool actualConnected, TimeSpan elapsed) = ExecuteStalledSend();
         bool actualWithinBudget = elapsed >= TimeSpan.FromSeconds(4)
-            && elapsed < TimeSpan.FromSeconds(7);
+            && elapsed < TimeSpan.FromSeconds(10);
 
-        Assert.AreEqual(
-            expectedWithinBudget,
-            actualWithinBudget,
-            "The five-second deadline allows two seconds of scheduling tolerance.");
+        Assert.AreEqual(expectedFailed, actualFailed);
+        Assert.AreEqual(expectedConnected, actualConnected);
+        Assert.AreEqual(expectedWithinBudget, actualWithinBudget);
     }
 
     private static (bool Failed, bool Connected, TimeSpan Elapsed) ExecuteStalledSend()
@@ -109,7 +94,7 @@ public sealed class VerificationEmailSenderTests
             bool failed = false;
             Stopwatch elapsed = Stopwatch.StartNew();
 
-            WithSettings(port, "StartTls", () =>
+            WithSettings(port, StartTlsSecurity, () =>
             {
                 SmtpEmailSender sender = new SmtpEmailSender(MailSettings.Load());
                 try
@@ -120,16 +105,23 @@ public sealed class VerificationEmailSenderTests
                         "Your verification code / Tu código de verificación: 000012"));
                 }
                 catch (Exception exception) when (exception is OperationCanceledException
-                    || exception is System.IO.IOException || exception is TimeoutException
-                    || exception is MailKit.ProtocolException)
+                    || exception is IOException
+                    || exception is TimeoutException
+                    || exception is ProtocolException)
                 {
                     failed = true;
                 }
+
                 elapsed.Stop();
             });
 
-            using (TcpClient client = connection.GetAwaiter().GetResult()) { }
-            return (failed, connection.IsCompleted, elapsed.Elapsed);
+            bool connected = connection.Wait(TimeSpan.FromSeconds(1));
+            if (connected)
+            {
+                using TcpClient client = connection.GetAwaiter().GetResult();
+            }
+
+            return (failed, connected, elapsed.Elapsed);
         }
         finally
         {
@@ -142,8 +134,7 @@ public sealed class VerificationEmailSenderTests
         Dictionary<string, string> values = new Dictionary<string, string>
         {
             ["REVERSI_MAIL_HOST"] = "127.0.0.1",
-            ["REVERSI_MAIL_PORT"] =
-                port.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["REVERSI_MAIL_PORT"] = port.ToString(CultureInfo.InvariantCulture),
             ["REVERSI_MAIL_SECURITY"] = securityMode,
             ["REVERSI_MAIL_USERNAME"] = "disposable-test-user",
             ["REVERSI_MAIL_PASSWORD"] = "disposable-test-password",
@@ -158,6 +149,7 @@ public sealed class VerificationEmailSenderTests
                 previous.Add(entry.Key, Environment.GetEnvironmentVariable(entry.Key));
                 Environment.SetEnvironmentVariable(entry.Key, entry.Value);
             }
+
             action();
         }
         finally

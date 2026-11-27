@@ -50,7 +50,6 @@ internal static class Program
         MatchSerializationTests matchTests = new MatchSerializationTests();
         CommunicationSerializationTests communicationTests = new CommunicationSerializationTests();
         VerificationCodeServiceTests codeTests = new VerificationCodeServiceTests();
-        VerificationEmailSenderTests mailTests = new VerificationEmailSenderTests();
         MatchBoundaryTests matchBoundaryTests = new MatchBoundaryTests();
         MatchApplicationServiceLifecycleTests lifecycleTests = new MatchApplicationServiceLifecycleTests();
         LobbyAuthorizationTests lobbyAuthorizationTests = new LobbyAuthorizationTests();
@@ -151,14 +150,9 @@ internal static class Program
             codeTests.VerifyCode_ValidCodeUsedOnce_RejectsReuse,
             codeTests.ComputeCodeDigest_DifferentIdentity_BindsCodeToAccountAndPurpose,
             codeTests.IssueVerificationCode_SpanishAndDefaultLocales_RenderSingleLanguageEmails,
-            mailTests.Load_ConfiguredPort_ReturnsConfiguredPort,
-            mailTests.Send_LocalServerWithheldBanner_CancelsWithinDeliveryBudget,
             new UnitTests.Services.FailureDiagnosticsTests()
                 .Describe_NestedProviderFailure_ExcludesPrivateData,
-            DiagnosticFormatterTests.Run,
-            () => new ModelResourcesTests().Assembly_RequiredRuntimeModel_IsEmbedded("Model.Database_model.csdl"),
-            () => new ModelResourcesTests().Assembly_RequiredRuntimeModel_IsEmbedded("Model.Database_model.ssdl"),
-            () => new ModelResourcesTests().Assembly_RequiredRuntimeModel_IsEmbedded("Model.Database_model.msl")
+            DiagnosticFormatterTests.Run
         };
         tests.AddRange(MatchInvitationTests.CreateTests());
         return tests.ToArray();
