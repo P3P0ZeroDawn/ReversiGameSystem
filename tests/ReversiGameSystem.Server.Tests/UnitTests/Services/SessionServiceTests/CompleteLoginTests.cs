@@ -4,7 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Verification;
 using ReversiGameSystem.Server.Contracts.Faults;
-using ContractAuthenticatedSession = ReversiGameSystem.Server.Contracts.Accounts.AuthenticatedSession;
+using ContractSession = ReversiGameSystem.Server.Contracts.Accounts.AuthenticatedSession;
 
 namespace ReversiGameSystem.Server.Tests.UnitTests.Services.SessionServiceTests;
 
@@ -33,7 +33,7 @@ public sealed class CompleteLoginTests : SessionServiceTestBase
             CreateLoginAccount(accountId: 42));
         long expectedAccountId = 42;
 
-        ContractAuthenticatedSession actualSession = Service.CompleteLogin("PlayerOne", "000001");
+        ContractSession actualSession = Service.CompleteLogin("PlayerOne", "000001");
 
         Assert.AreEqual(expectedAccountId, actualSession.Account.AccountId);
     }
@@ -44,7 +44,7 @@ public sealed class CompleteLoginTests : SessionServiceTestBase
         Accounts.FindByLoginResult = new AccountResult<LoginAccount>(CreateLoginAccount());
         string expectedLocaleCode = "en-US";
 
-        ContractAuthenticatedSession actualSession = Service.CompleteLogin("PlayerOne", "000001");
+        ContractSession actualSession = Service.CompleteLogin("PlayerOne", "000001");
 
         Assert.AreEqual(expectedLocaleCode, actualSession.PreferredLocaleCode);
     }

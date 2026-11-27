@@ -7,6 +7,10 @@ internal sealed class VerificationCodeRepositoryStub : IVerificationCodeReposito
 {
     internal VerificationStatus VerificationResult { get; set; } = VerificationStatus.Accepted;
 
+    internal StoredVerificationCode? StoredCode { get; set; }
+
+    internal VerificationEvaluationResult? LastEvaluationResult { get; private set; }
+
     internal Exception? SaveFailure { get; set; }
 
     internal Exception? VerificationFailure { get; set; }
@@ -38,6 +42,12 @@ internal sealed class VerificationCodeRepositoryStub : IVerificationCodeReposito
         if (VerificationFailure != null)
         {
             throw VerificationFailure;
+        }
+
+        if (StoredCode != null)
+        {
+            LastEvaluationResult = evaluateAttempt(StoredCode);
+            return LastEvaluationResult.Status;
         }
 
         return VerificationResult;
