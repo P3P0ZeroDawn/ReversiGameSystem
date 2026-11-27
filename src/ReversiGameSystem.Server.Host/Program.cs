@@ -126,7 +126,13 @@ internal static class Program
                             friendshipSubscriptions);
                         MatchRepository matchRepository = new MatchRepository(
                             loggerFactory.CreateLogger<MatchRepository>());
-                        matchRepository.CancelAbandonedWaitingMatches();
+                        int interruptedMatches = matchRepository.CancelInterruptedMatches();
+                        if (interruptedMatches > 0)
+                        {
+                            hostLogger.LogWarning(
+                                "Cancelled {MatchCount} unfinished matches from a previous server run.",
+                                interruptedMatches);
+                        }
                         ReversiGameSystemEntities.WarmUp();
                         MatchApplicationService matchApplicationService =
                             new MatchApplicationService(

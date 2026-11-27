@@ -19,6 +19,7 @@ public class ChatRepository : IChatRepository
     private const string ActiveAccountStatusCode = "ACTIVE";
     private const string InProgressMatchStatusCode = "IN_PROGRESS";
     private const string SystemParticipantTypeCode = "SYSTEM";
+    private const string GuestParticipantTypeCode = "GUEST";
     private const string AccountLockResourcePrefix = "chat-account:";
     private const string MatchLockResourcePrefix = "chat-match:";
     private readonly IUtcClock _clock;
@@ -194,7 +195,8 @@ public class ChatRepository : IChatRepository
             }
             else if (context.MatchParticipant.Any(participant =>
                 participant.matchId == matchId
-                && participant.participantTypeCode == SystemParticipantTypeCode))
+                && (participant.participantTypeCode == SystemParticipantTypeCode
+                    || participant.participantTypeCode == GuestParticipantTypeCode)))
             {
                 status = ChatStatus.Unauthorized;
             }
