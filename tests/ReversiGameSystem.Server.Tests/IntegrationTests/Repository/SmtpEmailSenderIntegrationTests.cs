@@ -14,6 +14,7 @@ using ReversiGameSystem.Server.Persistence.Mail;
 namespace ReversiGameSystem.Server.Tests.IntegrationTests.Repository;
 
 [TestClass]
+[DoNotParallelize]
 [TestCategory("Integration")]
 public sealed class SmtpEmailSenderIntegrationTests
 {

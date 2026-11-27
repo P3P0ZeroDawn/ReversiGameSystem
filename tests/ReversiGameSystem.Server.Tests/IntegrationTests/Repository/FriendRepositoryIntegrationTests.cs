@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Friendships;
 using ReversiGameSystem.Server.Persistence.Friendships;
@@ -9,226 +8,152 @@ using ReversiGameSystem.Server.Persistence.Model;
 namespace ReversiGameSystem.Server.Tests.IntegrationTests.Repository;
 
 [TestClass]
-[TestCategory("IntegrationSql")]
 [DoNotParallelize]
-public sealed class FriendRepositoryIntegrationTests
+[TestCategory("Integration")]
+[TestCategory("Database")]
+public sealed class FriendRepositoryIntegrationTests : RepositoryIntegrationTestBase
 {
-    private const long SenderId = 1;
-    private const long RecipientId = 2;
-    private const long OtherAccountId = 3;
-    private const string SeedAccountsSql =
-        "INSERT dbo.Account (username,emailAddress,passwordHash,statusCode,registeredAtUtc) "
-        + "VALUES ('Alpha','alpha@example.test','fixture-hash','ACTIVE',SYSUTCDATETIME()),"
-        + "('Beta','beta@example.test','fixture-hash','ACTIVE',SYSUTCDATETIME()),"
-        + "('Gamma','gamma@example.test','fixture-hash','ACTIVE',SYSUTCDATETIME())";
-    private const string DeactivateRecipientSql =
-        "UPDATE dbo.Account SET statusCode = 'INACTIVE' WHERE accountId = 2";
+    private const string CallerUsername = "callerUser";
+    private const string CallerEmail = "caller@example.com";
+    private const string AmyUsername = "amyFriend";
+    private const string ZedUsername = "zedFriend";
+    private const string AcceptedStatus = "ACCEPTED";
+    private const string PendingStatus = "PENDING";
+    private const string EndedStatus = "ENDED";
 
-    [TestMethod]
-    public void CreatePendingRequest_ReloadedFromDatabase_PreservesRequestId()
+    private static LocalDbTestDatabase? _database;
+
+    [ClassInitialize]
+    public static void ClassInitialize(TestContext context)
     {
-        ReviewAccountDatabaseTests.WithDisposableDatabase(() =>
-        {
-            FriendRepository repository = CreateRepository();
-            PendingFriendRequest created = repository.CreatePendingRequest(
-                SenderId, RecipientId).Value!;
+        _database = InitializeDatabase();
+    }
 
-            PendingFriendRequest reloaded = repository.ReadPendingRequests(RecipientId).Single();
+    [ClassCleanup]
+    public static void ClassCleanup()
+    {
+        CleanupDatabase(_database);
+    }
 
-            Assert.AreEqual(created.RequestId, reloaded.RequestId);
-        });
+    [TestInitialize]
+    public void TestInitialize()
+    {
+        _database?.ResetMutableTables();
     }
 
     [TestMethod]
-    public void CreatePendingRequest_ReversePendingRequest_ReturnsRequestAlreadyPending()
+    public void GetFriends_MixedStatusesAndInactiveAccounts_ReturnsActiveAcceptedSorted()
     {
-        ReviewAccountDatabaseTests.WithDisposableDatabase(() =>
-        {
-            FriendRepository repository = CreateRepository();
-            repository.CreatePendingRequest(SenderId, RecipientId);
+        long callerId = SeedAccount(CallerUsername, CallerEmail);
+        long expectedZedId = SeedAccountWithImage(
+            ZedUsername,
+            "zed@example.com",
+            "avatars/zed.png");
+        long expectedAmyId = SeedAccount(AmyUsername, "amy@example.com");
+        long pendingId = SeedAccount("pendingUser", "pending@example.com");
+        long endedId = SeedAccount("endedUser", "ended@example.com");
+        long inactiveId = SeedAccount("inactiveUser", "inactive@example.com", "DEACTIVATED");
+        int expectedFriendCount = 2;
 
-            FriendshipResult<PendingFriendRequest> result = repository.CreatePendingRequest(
-                RecipientId, SenderId);
+        SeedFriendship(new FriendshipSeedData(callerId, expectedZedId, AcceptedStatus, null));
+        SeedFriendship(new FriendshipSeedData(callerId, expectedAmyId, AcceptedStatus, null));
+        SeedFriendship(new FriendshipSeedData(callerId, pendingId, PendingStatus, null));
+        SeedFriendship(new FriendshipSeedData(callerId, endedId, AcceptedStatus, DateTime.UtcNow));
+        SeedFriendship(new FriendshipSeedData(callerId, inactiveId, AcceptedStatus, null));
+        FriendRepository repository = new FriendRepository();
 
-            Assert.AreEqual(FriendshipStatus.RequestAlreadyPending, result.Status);
-        });
+        FriendAccount[] actualFriends = repository.GetFriends(callerId);
+
+        Assert.AreEqual(expectedFriendCount, actualFriends.Length);
+        Assert.AreEqual(expectedAmyId, actualFriends[0].AccountId);
+        Assert.AreEqual(AmyUsername, actualFriends[0].Username);
+        Assert.IsFalse(actualFriends[0].HasProfileImage);
+        Assert.AreEqual(expectedZedId, actualFriends[1].AccountId);
+        Assert.AreEqual(ZedUsername, actualFriends[1].Username);
+        Assert.IsTrue(actualFriends[1].HasProfileImage);
     }
 
     [TestMethod]
-    public void CreatePendingRequest_ExistingFriendship_ReturnsFriendshipAlreadyExists()
+    public void AreFriends_AcceptedAndEndedRelationships_EvaluatesBidirectionally()
     {
-        ReviewAccountDatabaseTests.WithDisposableDatabase(() =>
-        {
-            FriendRepository repository = CreateRepository();
-            PendingFriendRequest request = repository.CreatePendingRequest(
-                SenderId, RecipientId).Value!;
-            repository.RespondToRequest(RecipientId, request, true);
+        long firstId = SeedAccount(CallerUsername, CallerEmail);
+        long secondId = SeedAccount("secondFriend", "second@example.com");
+        long endedId = SeedAccount("formerFriend", "former@example.com");
+        SeedFriendship(new FriendshipSeedData(firstId, secondId, AcceptedStatus, null));
+        SeedFriendship(new FriendshipSeedData(firstId, endedId, EndedStatus, DateTime.UtcNow));
+        FriendRepository repository = new FriendRepository();
 
-            FriendshipResult<PendingFriendRequest> result = repository.CreatePendingRequest(
-                SenderId, RecipientId);
+        bool actualForward = repository.AreFriends(firstId, secondId);
+        bool actualReverse = repository.AreFriends(secondId, firstId);
+        bool actualEnded = repository.AreFriends(firstId, endedId);
 
-            Assert.AreEqual(FriendshipStatus.FriendshipAlreadyExists, result.Status);
-        });
+        Assert.IsTrue(actualForward);
+        Assert.IsTrue(actualReverse);
+        Assert.IsFalse(actualEnded);
     }
 
     [TestMethod]
-    public void RespondToRequest_AcceptedRequest_CreatesConfirmedFriendship()
+    public void ReadConfirmedFriendIds_AcceptedFriendships_ReturnsConfirmedActiveIds()
     {
-        ReviewAccountDatabaseTests.WithDisposableDatabase(() =>
-        {
-            FriendRepository repository = CreateRepository();
-            PendingFriendRequest request = repository.CreatePendingRequest(
-                SenderId, RecipientId).Value!;
+        long callerId = SeedAccount(CallerUsername, CallerEmail);
+        long friendOneId = SeedAccount("friendOne", "one@example.com");
+        long friendTwoId = SeedAccount("friendTwo", "two@example.com");
+        long pendingId = SeedAccount("pendingFriend", "pend@example.com");
+        SeedFriendship(new FriendshipSeedData(callerId, friendOneId, AcceptedStatus, null));
+        SeedFriendship(new FriendshipSeedData(callerId, friendTwoId, AcceptedStatus, null));
+        SeedFriendship(new FriendshipSeedData(callerId, pendingId, PendingStatus, null));
+        FriendRepository repository = new FriendRepository();
 
-            repository.RespondToRequest(RecipientId, request, true);
+        long[] actualIds = repository.ReadConfirmedFriendIds(callerId)
+            .OrderBy(id => id)
+            .ToArray();
 
-            Assert.IsTrue(repository.AreFriends(SenderId, RecipientId));
-        });
+        long[] expectedIds = new[] { friendOneId, friendTwoId }
+            .OrderBy(id => id)
+            .ToArray();
+        CollectionAssert.AreEqual(expectedIds, actualIds);
     }
 
-    [TestMethod]
-    public void RespondToRequest_RejectedRequest_DisappearsFromPendingRequests()
+    private static void SeedFriendship(FriendshipSeedData seed)
     {
-        ReviewAccountDatabaseTests.WithDisposableDatabase(() =>
+        long accountIdA = Math.Min(seed.FirstAccountId, seed.SecondAccountId);
+        long accountIdB = Math.Max(seed.FirstAccountId, seed.SecondAccountId);
+        DateTime nowUtc = DateTime.UtcNow;
+
+        using ReversiGameSystemEntities context = CreateFreshContext();
+        context.Friendship.Add(new Friendship
         {
-            FriendRepository repository = CreateRepository();
-            PendingFriendRequest request = repository.CreatePendingRequest(
-                SenderId, RecipientId).Value!;
-
-            repository.RespondToRequest(RecipientId, request, false);
-
-            Assert.AreEqual(0, repository.ReadPendingRequests(SenderId).Length);
+            accountIdA = accountIdA,
+            accountIdB = accountIdB,
+            requestedByAccountId = seed.FirstAccountId,
+            statusCode = seed.StatusCode,
+            requestedAtUtc = nowUtc.AddMinutes(-10),
+            respondedAtUtc = seed.StatusCode == PendingStatus ? null : nowUtc.AddMinutes(-5),
+            endedAtUtc = seed.EndedAtUtc
         });
+        context.SaveChanges();
     }
 
-    [TestMethod]
-    public void RespondToRequest_SenderAttemptsResponse_ReturnsUnauthorizedRequest()
+    private sealed class FriendshipSeedData
     {
-        ReviewAccountDatabaseTests.WithDisposableDatabase(() =>
+        internal FriendshipSeedData(
+            long firstAccountId,
+            long secondAccountId,
+            string statusCode,
+            DateTime? endedAtUtc)
         {
-            FriendRepository repository = CreateRepository();
-            PendingFriendRequest request = repository.CreatePendingRequest(
-                SenderId, RecipientId).Value!;
+            FirstAccountId = firstAccountId;
+            SecondAccountId = secondAccountId;
+            StatusCode = statusCode;
+            EndedAtUtc = endedAtUtc;
+        }
 
-            FriendshipStatus status = repository.RespondToRequest(SenderId, request, true);
+        internal long FirstAccountId { get; }
 
-            Assert.AreEqual(FriendshipStatus.UnauthorizedRequest, status);
-        });
-    }
+        internal long SecondAccountId { get; }
 
-    [TestMethod]
-    public void RespondToRequest_StaleRequestCannotResolveReplacement_ReturnsRequestUnavailable()
-    {
-        ReviewAccountDatabaseTests.WithDisposableDatabase(() =>
-        {
-            FriendRepository repository = CreateRepository();
-            PendingFriendRequest original = repository.CreatePendingRequest(
-                SenderId, RecipientId).Value!;
-            repository.RespondToRequest(RecipientId, original, false);
-            repository.CreatePendingRequest(SenderId, RecipientId);
+        internal string StatusCode { get; }
 
-            FriendshipStatus status = repository.RespondToRequest(RecipientId, original, true);
-
-            Assert.AreEqual(FriendshipStatus.RequestUnavailable, status);
-        });
-    }
-
-    [TestMethod]
-    public void RemoveFriendship_ConfirmedRemoval_RemovesFriendFromBothAccounts()
-    {
-        ReviewAccountDatabaseTests.WithDisposableDatabase(() =>
-        {
-            FriendRepository repository = CreateRepository();
-            PendingFriendRequest request = repository.CreatePendingRequest(
-                SenderId, RecipientId).Value!;
-            repository.RespondToRequest(RecipientId, request, true);
-
-            repository.RemoveFriendship(SenderId, RecipientId);
-
-            Assert.AreEqual(0, repository.GetFriends(SenderId).Length
-                + repository.GetFriends(RecipientId).Length);
-        });
-    }
-
-    [TestMethod]
-    public void CreatePendingRequest_InactiveRecipient_ReturnsAccountNotFound()
-    {
-        ReviewAccountDatabaseTests.WithDisposableDatabase(() =>
-        {
-            FriendRepository repository = CreateRepository();
-            using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
-            context.Database.ExecuteSqlCommand(DeactivateRecipientSql);
-
-            FriendshipResult<PendingFriendRequest> result = repository.CreatePendingRequest(
-                SenderId, RecipientId);
-
-            Assert.AreEqual(FriendshipStatus.AccountNotFound, result.Status);
-        });
-    }
-
-    [TestMethod]
-    public void FindPlayers_UsernameSubstring_ExcludesCallerAndReturnsMatchingAccount()
-    {
-        ReviewAccountDatabaseTests.WithDisposableDatabase(() =>
-        {
-            FriendRepository repository = CreateRepository();
-
-            FriendAccount[] players = repository.FindPlayers(SenderId, "et");
-
-            Assert.AreEqual(RecipientId, players.Single().AccountId);
-        });
-    }
-
-    [TestMethod]
-    public void FindPlayers_LiteralWildcard_DoesNotMatchAllAccounts()
-    {
-        ReviewAccountDatabaseTests.WithDisposableDatabase(() =>
-        {
-            FriendRepository repository = CreateRepository();
-
-            FriendAccount[] players = repository.FindPlayers(SenderId, "%");
-
-            Assert.AreEqual(0, players.Length);
-        });
-    }
-
-    [TestMethod]
-    public void ReadPendingRequests_UnrelatedAccount_DoesNotExposePrivateRequest()
-    {
-        ReviewAccountDatabaseTests.WithDisposableDatabase(() =>
-        {
-            FriendRepository repository = CreateRepository();
-            repository.CreatePendingRequest(SenderId, RecipientId);
-
-            PendingFriendRequest[] requests = repository.ReadPendingRequests(OtherAccountId);
-
-            Assert.AreEqual(0, requests.Length);
-        });
-    }
-
-    [TestMethod]
-    public void CreatePendingRequest_ConcurrentOppositeRequests_CommitsOnlyOnePendingRequest()
-    {
-        ReviewAccountDatabaseTests.WithDisposableDatabase(() =>
-        {
-            FriendRepository repository = CreateRepository();
-            FriendshipStatus firstStatus = FriendshipStatus.RequestUnavailable;
-            FriendshipStatus secondStatus = FriendshipStatus.RequestUnavailable;
-
-            Parallel.Invoke(
-                () => firstStatus = repository.CreatePendingRequest(SenderId, RecipientId).Status,
-                () => secondStatus = repository.CreatePendingRequest(RecipientId, SenderId).Status);
-
-            CollectionAssert.AreEquivalent(
-                new[] { FriendshipStatus.Success, FriendshipStatus.RequestAlreadyPending },
-                new[] { firstStatus, secondStatus });
-        });
-    }
-
-    private static FriendRepository CreateRepository()
-    {
-        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
-        context.Database.ExecuteSqlCommand(SeedAccountsSql);
-        return new FriendRepository();
+        internal DateTime? EndedAtUtc { get; }
     }
 }
