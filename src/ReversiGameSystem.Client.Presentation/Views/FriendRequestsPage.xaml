@@ -44,7 +44,7 @@
             </Grid.RowDefinitions>
 
             <Border Grid.Row="0" Style="{StaticResource MainMenuCardStyle}"
-                    Padding="28,20" VerticalAlignment="Stretch">
+                    Padding="32,24" VerticalAlignment="Stretch">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -57,55 +57,52 @@
                                Margin="0,0,0,6" />
                     <TextBlock Grid.Row="1" Text="{Binding [FriendRequests_Description]}"
                                Style="{StaticResource AuthenticationSupportingTextStyle}"
-                               TextWrapping="Wrap" Margin="0,0,0,14" />
+                               TextWrapping="Wrap" Margin="0,0,0,20" />
 
                     <Grid Grid.Row="2">
-                        <ListBox x:Name="requestsListBox"
-                                 BorderThickness="0" Background="Transparent"
-                                 SelectionChanged="OnRequestSelectionChanged"
-                                 HorizontalContentAlignment="Stretch"
-                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                            <ListBox.ItemContainerStyle>
-                                <Style TargetType="ListBoxItem">
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                    <Setter Property="Cursor" Value="Hand" />
-                                    <Setter Property="Padding" Value="0" />
-                                    <Setter Property="Margin" Value="0,0,0,10" />
-                                </Style>
-                            </ListBox.ItemContainerStyle>
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="#F7FAF8" BorderBrush="#D8E5DC"
-                                            BorderThickness="1" CornerRadius="8"
-                                            Padding="14,10">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="48" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <Button Width="42" Height="42"
-                                                    IsHitTestVisible="False"
-                                                    Style="{StaticResource ProfilePictureButtonStyle}">
-                                                <Button.Background>
-                                                    <ImageBrush ImageSource="/Assets/Images/DefaultProfilePicture.png"
-                                                                Stretch="UniformToFill" />
-                                                </Button.Background>
-                                            </Button>
-                                            <StackPanel Grid.Column="1" Margin="12,0,0,0"
-                                                        VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding SenderUsername}"
-                                                           FontSize="15" FontWeight="SemiBold"
-                                                           Foreground="#20342A" />
-                                                <TextBlock Text="{Binding DateText}"
-                                                           Foreground="#52685B" FontSize="13"
-                                                           Margin="0,4,0,0" />
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      CanContentScroll="False">
+                            <ItemsControl x:Name="requestsItemsControl">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Style="{StaticResource FriendshipRowStyle}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="48" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Button Width="42" Height="42"
+                                                        IsHitTestVisible="False" Focusable="False"
+                                                        Style="{StaticResource ProfilePictureButtonStyle}">
+                                                    <Button.Background>
+                                                        <ImageBrush ImageSource="/Assets/Images/DefaultProfilePicture.png"
+                                                                    Stretch="UniformToFill" />
+                                                    </Button.Background>
+                                                </Button>
+                                                <StackPanel Grid.Column="1" Margin="12,0,20,0"
+                                                            VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Request.Sender.Username}"
+                                                               FontSize="15" FontWeight="SemiBold"
+                                                               Foreground="#20342A"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding Request.Sender.Username}" />
+                                                    <TextBlock Text="{Binding DateText}"
+                                                               Foreground="#52685B" FontSize="13"
+                                                               Margin="0,4,0,0" />
+                                                </StackPanel>
+                                                <Button Grid.Column="2"
+                                                    Content="{Binding [FriendRequests_ReviewButton],
+                                                        Source={x:Static localization:LocalizationManager.Instance}}"
+                                                    Click="OnReviewRequestClick"
+                                                    Style="{StaticResource FriendshipRowActionStyle}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
 
                         <TextBlock x:Name="emptyRequestsTextBlock"
                                    Text="{Binding [FriendRequests_EmptyMessage]}"
@@ -121,7 +118,7 @@
                     Click="OnBackClick"
                     Style="{StaticResource AuthenticationSecondaryButtonStyle}"
                     MinWidth="180" HorizontalAlignment="Left"
-                    Padding="14,8" Margin="0,10,0,0" />
+                    Padding="14,8" Margin="0,16,0,0" />
         </Grid>
     </Grid>
 </Page>

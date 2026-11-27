@@ -9,9 +9,6 @@ internal enum FriendRequestsRetrievalResult
     RetrievalError
 }
 
-/// <summary>
-/// Retrieves pending friendship requests received by the authenticated player.
-/// </summary>
 internal sealed class FriendRequestsService
 {
     private readonly string _recipientUsername;

@@ -27,12 +27,12 @@ public sealed class FriendshipEndToEndTests
         {
             alpha = Authenticate(firstSession, "ReviewAlpha", "000001");
             beta = Authenticate(secondSession, "ReviewBeta", "000002");
-            AssertSingleFriend(first.GetFriends(alpha.SessionToken)
-                .GetAwaiter().GetResult().Friends, "ReviewBeta", false);
+            first.LoadFriends(alpha.SessionToken).GetAwaiter().GetResult();
+            AssertSingleFriend(first.ReadFriends(), "ReviewBeta", false);
 
             // Act
-            FriendSummary[] betaFriends = second.GetFriends(beta.SessionToken)
-                .GetAwaiter().GetResult().Friends;
+            second.LoadFriends(beta.SessionToken).GetAwaiter().GetResult();
+            FriendSummary[] betaFriends = second.ReadFriends();
 
             // Assert
             AssertSingleFriend(betaFriends, "ReviewAlpha", true);
@@ -83,11 +83,11 @@ public sealed class FriendshipEndToEndTests
         using FriendshipClient invalid = CreateFriendshipClient();
 
         // Act
-        FriendshipResult result = invalid.GetFriends("synthetic-invalid-session")
+        FriendshipStatus result = invalid.LoadFriends("synthetic-invalid-session")
             .GetAwaiter().GetResult();
 
         // Assert
-        Assert.AreEqual(FriendshipStatus.InvalidSession, result.Status);
+        Assert.AreEqual(FriendshipStatus.InvalidSession, result);
         Assert.AreEqual(false, invalid.IsConnected);
     }
 

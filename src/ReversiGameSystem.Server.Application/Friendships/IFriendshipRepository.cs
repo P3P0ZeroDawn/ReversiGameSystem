@@ -9,4 +9,14 @@ public interface IFriendshipRepository
     bool AreFriends(long accountId, long friendAccountId);
 
     long[] ReadConfirmedFriendIds(long accountId);
+
+    FriendAccount[] FindPlayers(long accountId, string searchText);
+
+    FriendshipResult<PendingFriendRequest> CreatePendingRequest(long senderId, long recipientId);
+
+    PendingFriendRequest[] ReadPendingRequests(long accountId);
+
+    FriendshipStatus RespondToRequest(long accountId, PendingFriendRequest request, bool accept);
+
+    FriendshipStatus RemoveFriendship(long accountId, long friendAccountId);
 }

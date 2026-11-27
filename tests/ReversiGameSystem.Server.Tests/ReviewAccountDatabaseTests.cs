@@ -58,6 +58,12 @@ internal sealed class ReviewAccountDatabaseTests : ITemplatedEmailSender, IEmail
 
     internal static void RunDisposableDatabaseChecks() => new ReviewAccountDatabaseTests().Run();
 
+    internal static void WithDisposableDatabase(Action action)
+    {
+        ReviewAccountDatabaseTests fixture = new ReviewAccountDatabaseTests();
+        fixture.WithDatabase(action);
+    }
+
     private void Run() => WithDatabase(RunChecks);
 
     internal static void RunWithReviewAccounts(

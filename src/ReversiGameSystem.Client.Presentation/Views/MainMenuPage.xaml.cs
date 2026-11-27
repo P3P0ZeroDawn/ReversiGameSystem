@@ -1,4 +1,9 @@
 using System;
+using System.ServiceModel;
+using System.Threading.Tasks;
+using System.Windows.Data;
+using Microsoft.Extensions.Logging;
+using ReversiGameSystem.Features.Friendships;
 using System.Resources;
 using System.Collections.Generic;
 using System.Globalization;
@@ -20,13 +25,16 @@ public partial class MainMenuPage : Page
         new DialogService(LocalizationManager.Instance);
     private readonly InstructionsService _instructionsService =
         new InstructionsService(key => LocalizationManager.Instance[key]);
-    private bool _friendsLoading;
+    private readonly FriendshipViewModel _friendsViewModel = new FriendshipViewModel(
+        ClientRuntime.FriendshipService, ClientRuntime.CurrentSession);
     private bool _friendsSubscribed;
     private bool _leaderboardLoaded;
 
     public MainMenuPage()
     {
         InitializeComponent();
+        friendsItemsControl.SetBinding(ItemsControl.ItemsSourceProperty,
+            new Binding(nameof(FriendshipViewModel.Friends)) { Source = _friendsViewModel });
     }
 
     public MainMenuPage(string guestName) : this()
@@ -44,6 +52,7 @@ public partial class MainMenuPage : Page
     {
         if (_guestName == null)
         {
+            _friendsViewModel.IsActive = true;
             SubscribeFriends();
             await LoadFriends();
         }
@@ -114,49 +123,78 @@ public partial class MainMenuPage : Page
         }
         ClientRuntime.FriendshipService.FriendsChanged += OnFriendsChanged;
         ClientRuntime.FriendshipService.ConnectionLost += OnFriendshipConnectionLost;
+        ClientRuntime.FriendshipService.MembershipChanged += OnMembershipChanged;
         _friendsSubscribed = true;
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        _friendsViewModel.IsActive = false;
         if (_friendsSubscribed)
         {
             ClientRuntime.FriendshipService.FriendsChanged -= OnFriendsChanged;
             ClientRuntime.FriendshipService.ConnectionLost -= OnFriendshipConnectionLost;
+            ClientRuntime.FriendshipService.MembershipChanged -= OnMembershipChanged;
             _friendsSubscribed = false;
         }
     }
 
-    private async System.Threading.Tasks.Task LoadFriends()
+    private async Task LoadFriends()
     {
-        if (_friendsLoading)
-        {
-            return;
-        }
-        _friendsLoading = true;
         refreshFriendsButton.IsEnabled = false;
         friendsStatusTextBlock.Text = LocalizationManager.Instance["Friends_Loading"];
         try
         {
-            FriendshipResult result = await ClientRuntime.FriendshipService.GetFriends(
-                ClientRuntime.CurrentSession.SessionToken ?? string.Empty);
-            if (result.Status == FriendshipStatus.InvalidSession)
+            FriendshipStatus status = await _friendsViewModel.LoadFriends();
+            if (!IsLoaded)
             {
-                ShowFriendsUnavailable("Friends_SessionUnavailable");
+                return;
             }
-            else if (result.Status == FriendshipStatus.ServiceUnavailable)
+            string unavailableKey = status switch
             {
-                ShowFriendsUnavailable("Friends_PresenceUnavailable");
-            }
-            else if (IsLoaded)
+                FriendshipStatus.Success => string.Empty,
+                FriendshipStatus.InvalidSession or FriendshipStatus.MissingSessionToken
+                    or FriendshipStatus.InactiveAccount => "Friends_SessionUnavailable",
+                FriendshipStatus.ServiceUnavailable => "Friends_PresenceUnavailable",
+                FriendshipStatus.SubmissionInProgress => "Friends_Loading",
+                _ => throw new ArgumentOutOfRangeException(nameof(status))
+            };
+            if (status == FriendshipStatus.Success)
             {
                 RenderFriends();
+            }
+            else
+            {
+                ShowFriendsUnavailable(unavailableKey);
+            }
+        }
+        catch (FaultException<ServerProxy.ServiceFault> exception)
+        {
+            if (IsLoaded)
+            {
+                ClientRuntime.Errors.ReportOperationFailure(exception, nameof(MainMenuPage));
+            }
+            else
+            {
+                ClientRuntime.Errors.RecordFailure(exception, nameof(MainMenuPage), LogLevel.Error);
             }
         }
         finally
         {
-            _friendsLoading = false;
-            refreshFriendsButton.IsEnabled = true;
+            refreshFriendsButton.IsEnabled = !_friendsViewModel.IsLoadingFriends;
+        }
+    }
+
+    private void OnMembershipChanged()
+    {
+        Dispatcher.BeginInvoke(new Action(OnMembershipInvalidated));
+    }
+
+    private async void OnMembershipInvalidated()
+    {
+        if (IsLoaded && _friendsSubscribed)
+        {
+            await LoadFriends();
         }
     }
 
@@ -169,7 +207,7 @@ public partial class MainMenuPage : Page
     {
         Dispatcher.BeginInvoke(new Action(() =>
         {
-            if (_friendsSubscribed && !_friendsLoading)
+            if (_friendsSubscribed)
             {
                 RenderFriends();
             }
@@ -189,25 +227,21 @@ public partial class MainMenuPage : Page
 
     private void ShowFriendsUnavailable(string key)
     {
-        friendsItemsControl.ItemsSource = null;
+        friendsListPanel.Visibility = Visibility.Collapsed;
         friendsEmptyTextBlock.Visibility = Visibility.Collapsed;
         friendsStatusTextBlock.Text = LocalizationManager.Instance[key];
     }
 
     private void RenderFriends()
     {
-        if (!ClientRuntime.FriendshipService.IsConnected)
+        if (!_friendsViewModel.IsConnected)
         {
             ShowFriendsUnavailable("Friends_PresenceUnavailable");
             return;
         }
-        List<FriendItem> items = new List<FriendItem>();
-        foreach (FriendSummary friend in ClientRuntime.FriendshipService.ReadFriends())
-        {
-            items.Add(new FriendItem(friend));
-        }
-        friendsItemsControl.ItemsSource = items;
-        friendsEmptyTextBlock.Visibility = items.Count == 0
+        _friendsViewModel.RefreshConfirmedFriends();
+        friendsListPanel.Visibility = Visibility.Visible;
+        friendsEmptyTextBlock.Visibility = _friendsViewModel.Friends.Length == 0
             ? Visibility.Visible : Visibility.Collapsed;
         friendsStatusTextBlock.Text = string.Empty;
     }
@@ -278,6 +312,94 @@ public partial class MainMenuPage : Page
         }
     }
 
+    private void OnAddFriendsClick(object sender, RoutedEventArgs e)
+    {
+        AddFriendsWindow dialog = new AddFriendsWindow { Owner = Window.GetWindow(this) };
+        if (dialog.ShowDialog() == true)
+        {
+            PlayerAccount account = dialog.SelectedPlayer
+                ?? throw new InvalidOperationException(
+                    "A selected profile must contain its account.");
+            NavigationService?.Navigate(new AccountInformationPage(
+                account, AccountInformationReturnTarget.AddFriends));
+        }
+    }
+
+    private void OnFriendRequestsClick(object sender, RoutedEventArgs e)
+    {
+        NavigationService?.Navigate(new FriendRequestsPage());
+    }
+
+    private void OnFriendProfileClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.DataContext is FriendItem friend)
+        {
+            PlayerAccount account = new PlayerAccount(
+                friend.AccountId, friend.Username, friend.HasProfileImage);
+            NavigationService?.Navigate(new AccountInformationPage(
+                account, AccountInformationReturnTarget.Friends));
+        }
+    }
+
+    private async void OnRemoveFriendClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.DataContext is not FriendItem friend
+            || _friendsViewModel.IsSubmitting)
+        {
+            return;
+        }
+        ConfirmationDialogOptions options = new ConfirmationDialogOptions(
+            "FriendRemoval_ConfirmationTitle", "FriendRemoval_ConfirmationMessage",
+            "FriendRemoval_ConfirmButton", "Common_CancelButton")
+        {
+            MessageArguments = new object[] { friend.Username }
+        };
+        if (!_dialogService.Confirm(this, options))
+        {
+            return;
+        }
+        IsEnabled = false;
+        try
+        {
+            FriendshipStatus status = await _friendsViewModel.RemoveFriend(friend.AccountId);
+            if (!IsLoaded)
+            {
+                return;
+            }
+            if (status == FriendshipStatus.Success)
+            {
+                _dialogService.ShowInformation(this, "FriendRemoval_SuccessTitle",
+                    "FriendRemoval_SuccessMessage", friend.Username);
+                RenderFriends();
+            }
+            else if (status != FriendshipStatus.SubmissionInProgress)
+            {
+                _dialogService.ShowFriendshipFailure(this, status);
+                if (status == FriendshipStatus.FriendshipNotFound)
+                {
+                    await LoadFriends();
+                }
+            }
+        }
+        catch (FaultException<ServerProxy.ServiceFault> exception)
+        {
+            if (IsLoaded)
+            {
+                ClientRuntime.Errors.ReportOperationFailure(
+                    exception, nameof(MainMenuPage));
+            }
+            else
+            {
+                ClientRuntime.Errors.RecordFailure(
+                    exception, nameof(MainMenuPage), LogLevel.Error);
+            }
+        }
+        finally
+        {
+            IsEnabled = true;
+        }
+    }
+
     private void OnCreateGameClick(object sender, RoutedEventArgs e)
     {
         NavigationService?.Navigate(_guestName == null
@@ -314,7 +436,6 @@ public partial class MainMenuPage : Page
                     "Session_CloseFailedTitle", "Session_CloseFailedMessage");
                 return;
             }
-            ClientRuntime.FriendshipService.Close();
             ClientRuntime.CurrentSession.Clear();
             NavigationService?.Navigate(new LoginScreenPage());
         }

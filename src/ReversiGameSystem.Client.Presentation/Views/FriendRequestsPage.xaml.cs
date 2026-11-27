@@ -1,7 +1,11 @@
-using System.Collections.Generic;
-using System.Globalization;
+using System;
+using System.ServiceModel;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using Microsoft.Extensions.Logging;
+using ReversiGameSystem.Features.Friendships;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Services;
 
@@ -9,146 +13,144 @@ namespace ReversiGameSystem.Views;
 
 public partial class FriendRequestsPage : Page
 {
-    private readonly DialogService _dialogService =
-        new DialogService(LocalizationManager.Instance);
-    private readonly FriendRequestsService _friendRequestsService;
-    private readonly FriendRequestResponseService _responseService;
-    private IReadOnlyList<FriendshipRequest> _requests =
-        System.Array.Empty<FriendshipRequest>();
+    private readonly DialogService _dialogService = new DialogService(LocalizationManager.Instance);
+    private readonly FriendshipViewModel _viewModel = new FriendshipViewModel(
+        ClientRuntime.FriendshipService, ClientRuntime.CurrentSession);
+    private bool _subscribed;
 
     public FriendRequestsPage()
     {
         InitializeComponent();
-        string username = ClientRuntime.CurrentSession.Username
-            ?? LocalizationManager.Instance["Game_DefaultPlayerName"];
-        FriendshipStore store = FriendshipPreviewState.GetStore(username);
-        _friendRequestsService = new FriendRequestsService(username, store);
-        _responseService = new FriendRequestResponseService(username, store);
-        LoadRequests();
+        requestsItemsControl.SetBinding(ItemsControl.ItemsSourceProperty,
+            new Binding(nameof(FriendshipViewModel.IncomingRequests)) { Source = _viewModel });
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
     }
 
-    private void LoadRequests()
+    private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        FriendRequestsRetrievalResult result =
-            _friendRequestsService.TryGetPending(out _requests);
-        if (result != FriendRequestsRetrievalResult.Success)
+        _viewModel.IsActive = true;
+        if (!_subscribed)
         {
-            requestsListBox.ItemsSource = null;
-            emptyRequestsTextBlock.Visibility = Visibility.Collapsed;
-            string prefix = result == FriendRequestsRetrievalResult.ServerConnectionFailed
-                ? "FriendRequests_ServerConnectionFailed"
-                : "FriendRequests_RetrievalError";
-            _dialogService.ShowError(this, prefix + "Title", prefix + "Message");
-            return;
+            ClientRuntime.FriendshipService.RequestsChanged += OnRequestsChanged;
+            _subscribed = true;
         }
+        await LoadRequests();
+    }
 
-        CultureInfo culture = CultureInfo.GetCultureInfo(
-            LocalizationManager.Instance.CultureName);
-        List<FriendRequestItem> items = new List<FriendRequestItem>();
-        foreach (FriendshipRequest request in _requests)
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        _viewModel.IsActive = false;
+        ClientRuntime.FriendshipService.RequestsChanged -= OnRequestsChanged;
+        _subscribed = false;
+    }
+
+    private void OnRequestsChanged()
+    {
+        Dispatcher.BeginInvoke(new Action(OnRequestsInvalidated));
+    }
+
+    private async void OnRequestsInvalidated()
+    {
+        if (IsLoaded && _subscribed)
         {
-            string receivedAt = request.CreatedAtUtc
-                .ToLocalTime()
-                .ToString("g", culture);
-            items.Add(new FriendRequestItem
+            await LoadRequests();
+        }
+    }
+
+    private async Task LoadRequests()
+    {
+        try
+        {
+            FriendshipStatus status = await _viewModel.LoadPendingRequests();
+            if (!IsLoaded)
             {
-                RequestId = request.Id,
-                SenderUsername = request.SenderUsername,
-                ReceivedAtText = receivedAt,
-                DateText = string.Format(
-                    LocalizationManager.Instance["FriendRequests_DateFormat"],
-                    receivedAt)
-            });
+                return;
+            }
+            if (status == FriendshipStatus.Success)
+            {
+                emptyRequestsTextBlock.Visibility = _viewModel.IncomingRequests.Length == 0
+                    ? Visibility.Visible : Visibility.Collapsed;
+            }
+            else if (status != FriendshipStatus.SubmissionInProgress)
+            {
+                _dialogService.ShowFriendshipFailure(this, status);
+            }
         }
-
-        requestsListBox.ItemsSource = items;
-        emptyRequestsTextBlock.Visibility = items.Count == 0
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        catch (FaultException<ServerProxy.ServiceFault> exception)
+        {
+            if (IsLoaded)
+            {
+                ClientRuntime.Errors.ReportOperationFailure(exception, nameof(FriendRequestsPage));
+            }
+            else
+            {
+                ClientRuntime.Errors.RecordFailure(
+                    exception, nameof(FriendRequestsPage), LogLevel.Error);
+            }
+        }
     }
 
-    private void OnRequestSelectionChanged(
-        object sender,
-        SelectionChangedEventArgs e)
+    private async void OnReviewRequestClick(object sender, RoutedEventArgs e)
     {
-        if (requestsListBox.SelectedItem is not FriendRequestItem item)
+        if (sender is not Button button || button.DataContext is not FriendRequestItem item
+            || _viewModel.IsSubmitting)
         {
             return;
         }
-
-        requestsListBox.SelectedItem = null;
         ActionChoiceDialogOptions options = new ActionChoiceDialogOptions(
-            "FriendRequestResponse_Title",
-            "FriendRequestResponse_Message",
-            "FriendRequestResponse_AcceptButton",
-            "FriendRequestResponse_RejectButton",
+            "FriendRequestResponse_Title", "FriendRequestResponse_Message",
+            "FriendRequestResponse_AcceptButton", "FriendRequestResponse_RejectButton",
             "Common_CancelButton")
         {
-            MessageArguments = new object[]
-            {
-                item.SenderUsername,
-                item.ReceivedAtText
-            }
+            MessageArguments = new object[] { item.Request.Sender.Username, item.ReceivedAtText }
         };
         ActionChoiceDialogResult choice = _dialogService.Choose(this, options);
         if (choice == ActionChoiceDialogResult.Cancel)
         {
             return;
         }
-
-        FriendRequestResponseResult result = _responseService.Respond(
-            item.RequestId,
-            choice == ActionChoiceDialogResult.Primary);
-        HandleResponseResult(result, item.SenderUsername);
-    }
-
-    private void HandleResponseResult(
-        FriendRequestResponseResult result,
-        string senderUsername)
-    {
-        switch (result)
+        bool accept = choice == ActionChoiceDialogResult.Primary;
+        IsEnabled = false;
+        try
         {
-            case FriendRequestResponseResult.Accepted:
-                _dialogService.ShowInformation(
-                    this,
-                    "FriendRequestResponse_AcceptedTitle",
-                    "FriendRequestResponse_AcceptedMessage",
-                    senderUsername);
-                LoadRequests();
-                break;
-            case FriendRequestResponseResult.Rejected:
-                _dialogService.ShowInformation(
-                    this,
-                    "FriendRequestResponse_RejectedTitle",
-                    "FriendRequestResponse_RejectedMessage",
-                    senderUsername);
-                LoadRequests();
-                break;
-            case FriendRequestResponseResult.AlreadyProcessed:
-                _dialogService.ShowWarning(
-                    this,
-                    "FriendRequestResponse_AlreadyProcessedTitle",
-                    "FriendRequestResponse_AlreadyProcessedMessage");
-                LoadRequests();
-                break;
-            case FriendRequestResponseResult.Unauthorized:
-                _dialogService.ShowError(
-                    this,
-                    "FriendRequestResponse_UnauthorizedTitle",
-                    "FriendRequestResponse_UnauthorizedMessage");
-                break;
-            case FriendRequestResponseResult.ServerConnectionFailed:
-                _dialogService.ShowError(
-                    this,
-                    "FriendRequestResponse_ServerConnectionFailedTitle",
-                    "FriendRequestResponse_ServerConnectionFailedMessage");
-                break;
-            case FriendRequestResponseResult.PersistenceError:
-                _dialogService.ShowError(
-                    this,
-                    "FriendRequestResponse_PersistenceErrorTitle",
-                    "FriendRequestResponse_PersistenceErrorMessage");
-                break;
+            FriendshipStatus status = await _viewModel.RespondToFriendRequest(item.Request, accept);
+            if (!IsLoaded)
+            {
+                return;
+            }
+            if (status == FriendshipStatus.Success)
+            {
+                string prefix = accept ? "FriendRequestResponse_Accepted"
+                    : "FriendRequestResponse_Rejected";
+                _dialogService.ShowInformation(this, prefix + "Title", prefix + "Message",
+                    item.Request.Sender.Username);
+            }
+            else if (status != FriendshipStatus.SubmissionInProgress)
+            {
+                _dialogService.ShowFriendshipFailure(this, status);
+            }
+            if (status is FriendshipStatus.Success or FriendshipStatus.RequestUnavailable)
+            {
+                await LoadRequests();
+            }
+        }
+        catch (FaultException<ServerProxy.ServiceFault> exception)
+        {
+            if (IsLoaded)
+            {
+                ClientRuntime.Errors.ReportOperationFailure(
+                    exception, nameof(FriendRequestsPage));
+            }
+            else
+            {
+                ClientRuntime.Errors.RecordFailure(
+                    exception, nameof(FriendRequestsPage), LogLevel.Error);
+            }
+        }
+        finally
+        {
+            IsEnabled = true;
         }
     }
 
@@ -159,19 +161,7 @@ public partial class FriendRequestsPage : Page
 
     private async void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        string previousCulture = LocalizationManager.Instance.CultureName;
         await LanguageChangeService.ConfirmSelection((ComboBox)sender);
-        if (LocalizationManager.Instance.CultureName != previousCulture)
-        {
-            LoadRequests();
-        }
-    }
-
-    private sealed class FriendRequestItem
-    {
-        public string RequestId { get; set; } = string.Empty;
-        public string SenderUsername { get; set; } = string.Empty;
-        public string ReceivedAtText { get; set; } = string.Empty;
-        public string DateText { get; set; } = string.Empty;
+        _viewModel.RefreshConfirmedRequests();
     }
 }

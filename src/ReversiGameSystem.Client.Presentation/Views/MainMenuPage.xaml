@@ -76,11 +76,8 @@
                                 <ItemsControl x:Name="topWinnersItemsControl">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Background="#F7FAF8"
-                                                    BorderBrush="#D8E5DC"
-                                                    BorderThickness="1"
-                                                    CornerRadius="8"
-                                                    Padding="8" Margin="0,0,0,8">
+                                            <Border Style="{StaticResource FriendshipRowStyle}"
+                                                    Padding="12">
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="36" />
@@ -150,13 +147,30 @@
                         Style="{StaticResource MainMenuCardStyle}"
                         VerticalAlignment="Top">
                     <StackPanel>
-                        <TextBlock x:Name="friendsTitleTextBlock"
-                                   Text="{Binding [MainMenu_FriendsTitle]}"
-                                   Style="{StaticResource MainMenuSectionTitleStyle}" />
-                        <Button x:Name="refreshFriendsButton"
-                                Content="{Binding [Friends_Refresh]}"
-                                Click="OnRefreshFriendsClick"
-                                Style="{StaticResource AuthenticationSecondaryButtonStyle}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="friendsTitleTextBlock"
+                                       Text="{Binding [MainMenu_FriendsTitle]}"
+                                       Style="{StaticResource MainMenuSectionTitleStyle}"
+                                       VerticalAlignment="Center" Margin="0,0,12,0" />
+                            <Button x:Name="refreshFriendsButton" Grid.Column="1"
+                                    Content="{Binding [Friends_Refresh]}"
+                                    Click="OnRefreshFriendsClick"
+                                    Style="{StaticResource AuthenticationLinkButtonStyle}" />
+                        </Grid>
+                        <StackPanel Margin="0,16,0,16">
+                            <Button Content="{Binding [AddFriends_Title]}" Click="OnAddFriendsClick"
+                                    Style="{StaticResource AuthenticationPrimaryButtonStyle}"
+                                    Margin="0,0,0,10" />
+                            <Button Content="{Binding [FriendRequests_Title]}"
+                                    Click="OnFriendRequestsClick"
+                                    Style="{StaticResource AuthenticationSecondaryButtonStyle}"
+                                    Margin="0" />
+                        </StackPanel>
+                        <Border BorderBrush="#D8E5DC" BorderThickness="0,1,0,0" Margin="0,0,0,16" />
                         <TextBlock x:Name="friendsStatusTextBlock" TextWrapping="Wrap"
                                    Style="{StaticResource MainMenuEmptyTextStyle}" />
                         <StackPanel x:Name="friendsListPanel" Margin="0,4,0,0">
@@ -166,16 +180,13 @@
                                        Visibility="Collapsed" />
                             <ScrollViewer VerticalScrollBarVisibility="Auto"
                                           HorizontalScrollBarVisibility="Disabled"
-                                          MaxHeight="220"
+                                          MaxHeight="280"
                                           CanContentScroll="False">
                                 <ItemsControl x:Name="friendsItemsControl">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Background="#F7FAF8"
-                                                    BorderBrush="#D8E5DC"
-                                                    BorderThickness="1"
-                                                    CornerRadius="8"
-                                                    Padding="8" Margin="0,0,0,8">
+                                            <Border Style="{StaticResource FriendshipRowStyle}"
+                                                    Padding="12">
                                                 <Grid>
                                                     <Grid.RowDefinitions>
                                                         <RowDefinition Height="Auto" />
@@ -194,26 +205,39 @@
                                                                         Stretch="UniformToFill" />
                                                         </Button.Background>
                                                     </Button>
-                                                    <TextBlock Grid.Column="1"
-                                                               Text="{Binding Username}"
-                                                               VerticalAlignment="Center"
-                                                               FontWeight="SemiBold"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               ToolTip="{Binding Username}"
-                                                               Margin="8,0,0,0" />
+                                                    <Button Grid.Column="1"
+                                                            Click="OnFriendProfileClick"
+                                                            Style="{StaticResource AuthenticationLinkButtonStyle}"
+                                                            HorizontalContentAlignment="Stretch"
+                                                            Margin="8,0,0,0">
+                                                        <TextBlock Text="{Binding Username}"
+                                                                   FontWeight="SemiBold"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   ToolTip="{Binding Username}" />
+                                                    </Button>
                                                     <StackPanel Grid.Row="1" Grid.ColumnSpan="2"
                                                                 Orientation="Horizontal" Margin="0,8,0,0">
                                                         <Ellipse Width="10" Height="10" Fill="{Binding PresenceBrush}" Margin="0,0,6,0" />
                                                         <TextBlock Text="{Binding PresenceText}" />
                                                     </StackPanel>
-                                                    <Button Grid.Row="2" Grid.ColumnSpan="2"
-                                                            x:Name="inviteFriendButton"
-                                                            Content="{Binding [InviteMatch_Button], Source={x:Static localization:LocalizationManager.Instance}}"
+                                                    <StackPanel Grid.Row="2" Grid.ColumnSpan="2"
+                                                                Margin="0,16,0,0">
+                                                        <Button x:Name="inviteFriendButton"
+                                                            Content="{Binding [InviteMatch_Button],
+                                                                Source={x:Static localization:LocalizationManager.Instance}}"
                                                             Tag="{Binding AccountId}"
                                                             Click="OnInviteFriendClick"
                                                             Style="{StaticResource AuthenticationSecondaryButtonStyle}"
-                                                            HorizontalAlignment="Stretch"
-                                                            Margin="0,8,0,0" />
+                                                            Margin="0" />
+                                                        <Button
+                                                            Content="{Binding [MainMenu_RemoveFriendButton],
+                                                                Source={x:Static localization:LocalizationManager.Instance}}"
+                                                            Click="OnRemoveFriendClick"
+                                                            Style="{StaticResource AuthenticationLinkButtonStyle}"
+                                                            Foreground="#A92C35"
+                                                            HorizontalAlignment="Right"
+                                                            Padding="8,6" Margin="0,8,0,0" />
+                                                    </StackPanel>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>

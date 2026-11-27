@@ -1,22 +1,24 @@
+using System;
+
 namespace ReversiGameSystem.Services;
 
 internal enum FriendshipStatus
 {
     Success,
     InvalidSession,
-    ServiceUnavailable
-}
-
-internal sealed class FriendshipResult
-{
-    internal FriendshipResult(FriendshipStatus status, FriendSummary[] friends)
-    {
-        Status = status;
-        Friends = friends;
-    }
-
-    internal FriendshipStatus Status { get; }
-    internal FriendSummary[] Friends { get; }
+    ServiceUnavailable,
+    MissingSessionToken,
+    InactiveAccount,
+    InvalidAccountId,
+    CannotSendRequestToSelf,
+    AccountUnavailable,
+    FriendshipAlreadyExists,
+    RequestAlreadyPending,
+    MissingRequestId,
+    RequestUnavailable,
+    UnauthorizedRequest,
+    FriendshipNotFound,
+    SubmissionInProgress
 }
 
 internal enum FriendChange
@@ -40,4 +42,35 @@ internal sealed class FriendSummary
     internal string Username { get; }
     internal bool HasProfileImage { get; }
     internal bool IsOnline { get; set; }
+}
+
+internal sealed class PlayerAccount
+{
+    internal PlayerAccount(long accountId, string username, bool hasProfileImage)
+    {
+        AccountId = accountId;
+        Username = username;
+        HasProfileImage = hasProfileImage;
+    }
+
+    public long AccountId { get; }
+    public string Username { get; }
+    public bool HasProfileImage { get; }
+}
+
+internal sealed class PendingFriendRequest
+{
+    internal PendingFriendRequest(string requestId, PlayerAccount sender,
+        PlayerAccount recipient, DateTime createdAtUtc)
+    {
+        RequestId = requestId;
+        Sender = sender;
+        Recipient = recipient;
+        CreatedAtUtc = DateTime.SpecifyKind(createdAtUtc, DateTimeKind.Utc);
+    }
+
+    public string RequestId { get; }
+    public PlayerAccount Sender { get; }
+    public PlayerAccount Recipient { get; }
+    public DateTime CreatedAtUtc { get; }
 }

@@ -146,6 +146,28 @@ internal sealed class DialogService
         return accepted;
     }
 
+    internal void ShowFriendshipFailure(DependencyObject source, FriendshipStatus status)
+    {
+        string resourcePrefix = status switch
+        {
+            FriendshipStatus.MissingSessionToken or FriendshipStatus.InvalidSession =>
+                "Account_SessionExpired",
+            FriendshipStatus.InactiveAccount => "LoginScreen_AccountInactive",
+            FriendshipStatus.InvalidAccountId or FriendshipStatus.AccountUnavailable =>
+                "FriendRequest_AccountNotAvailable",
+            FriendshipStatus.CannotSendRequestToSelf => "FriendRequest_CannotAddYourself",
+            FriendshipStatus.FriendshipAlreadyExists => "FriendRequest_FriendshipAlreadyExists",
+            FriendshipStatus.RequestAlreadyPending => "FriendRequest_AlreadyPending",
+            FriendshipStatus.MissingRequestId or FriendshipStatus.RequestUnavailable =>
+                "FriendRequestResponse_AlreadyProcessed",
+            FriendshipStatus.UnauthorizedRequest => "FriendRequestResponse_Unauthorized",
+            FriendshipStatus.FriendshipNotFound => "FriendRemoval_NotFound",
+            FriendshipStatus.ServiceUnavailable => "Friendship_ServiceUnavailable",
+            _ => throw new ArgumentOutOfRangeException(nameof(status))
+        };
+        ShowWarning(source, resourcePrefix + "Title", resourcePrefix + "Message");
+    }
+
     internal void ShowAccountFailure(DependencyObject source, AccountStatus status)
     {
         string resourcePrefix = status switch

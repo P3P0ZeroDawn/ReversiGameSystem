@@ -55,6 +55,115 @@ public sealed class FriendshipApplicationService
         return new FriendshipResult<FriendAccount[]>(friends);
     }
 
+    public FriendshipResult<FriendAccount[]> FindPlayers(string sessionToken, string searchText)
+    {
+        FriendshipResult<AuthenticatedSession> access = EvaluateChannelAccess(sessionToken);
+        if (access.Status != FriendshipStatus.Success)
+        {
+            return new FriendshipResult<FriendAccount[]>(access.Status);
+        }
+        AuthenticatedSession session = access.Value
+            ?? throw new InvalidOperationException("Authorized access must contain its session.");
+        string normalizedSearch = searchText?.Trim() ?? string.Empty;
+        FriendAccount[] players = Array.Empty<FriendAccount>();
+        if (!string.IsNullOrEmpty(normalizedSearch))
+        {
+            players = _friendships.FindPlayers(session.AccountId, normalizedSearch);
+        }
+        return new FriendshipResult<FriendAccount[]>(players);
+    }
+
+    public FriendshipResult<PendingFriendRequest> SendFriendRequest(
+        string sessionToken, long recipientAccountId)
+    {
+        FriendshipResult<AuthenticatedSession> access = EvaluateChannelAccess(sessionToken);
+        if (access.Status != FriendshipStatus.Success)
+        {
+            return new FriendshipResult<PendingFriendRequest>(access.Status);
+        }
+        AuthenticatedSession session = access.Value
+            ?? throw new InvalidOperationException("Authorized access must contain its session.");
+        if (recipientAccountId <= 0)
+        {
+            return new FriendshipResult<PendingFriendRequest>(FriendshipStatus.InvalidAccountId);
+        }
+        if (recipientAccountId == session.AccountId)
+        {
+            return new FriendshipResult<PendingFriendRequest>(
+                FriendshipStatus.CannotSendRequestToSelf);
+        }
+        return _friendships.CreatePendingRequest(session.AccountId, recipientAccountId);
+    }
+
+    public FriendshipResult<PendingFriendRequest[]> ReadPendingRequests(string sessionToken)
+    {
+        FriendshipResult<AuthenticatedSession> access = EvaluateChannelAccess(sessionToken);
+        if (access.Status != FriendshipStatus.Success)
+        {
+            return new FriendshipResult<PendingFriendRequest[]>(access.Status);
+        }
+        AuthenticatedSession session = access.Value
+            ?? throw new InvalidOperationException("Authorized access must contain its session.");
+        PendingFriendRequest[] requests = _friendships.ReadPendingRequests(session.AccountId);
+        return new FriendshipResult<PendingFriendRequest[]>(requests);
+    }
+
+    public FriendshipResult<PendingFriendRequest> RespondToFriendRequest(
+        string sessionToken, string requestId, bool accept)
+    {
+        FriendshipResult<AuthenticatedSession> access = EvaluateChannelAccess(sessionToken);
+        if (access.Status != FriendshipStatus.Success)
+        {
+            return new FriendshipResult<PendingFriendRequest>(access.Status);
+        }
+        AuthenticatedSession session = access.Value
+            ?? throw new InvalidOperationException("Authorized access must contain its session.");
+        if (string.IsNullOrWhiteSpace(requestId))
+        {
+            return new FriendshipResult<PendingFriendRequest>(FriendshipStatus.MissingRequestId);
+        }
+        PendingFriendRequest[] requests = _friendships.ReadPendingRequests(session.AccountId);
+        foreach (PendingFriendRequest request in requests)
+        {
+            if (!string.Equals(request.RequestId, requestId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+            if (request.Recipient.AccountId != session.AccountId)
+            {
+                return new FriendshipResult<PendingFriendRequest>(
+                    FriendshipStatus.UnauthorizedRequest);
+            }
+            FriendshipStatus status = _friendships.RespondToRequest(
+                session.AccountId, request, accept);
+            FriendshipResult<PendingFriendRequest> response = status == FriendshipStatus.Success
+                ? new FriendshipResult<PendingFriendRequest>(request)
+                : new FriendshipResult<PendingFriendRequest>(status);
+            return response;
+        }
+        return new FriendshipResult<PendingFriendRequest>(FriendshipStatus.RequestUnavailable);
+    }
+
+    public FriendshipResult<long> RemoveFriendship(string sessionToken, long friendAccountId)
+    {
+        FriendshipResult<AuthenticatedSession> access = EvaluateChannelAccess(sessionToken);
+        if (access.Status != FriendshipStatus.Success)
+        {
+            return new FriendshipResult<long>(access.Status);
+        }
+        AuthenticatedSession session = access.Value
+            ?? throw new InvalidOperationException("Authorized access must contain its session.");
+        if (friendAccountId <= 0 || friendAccountId == session.AccountId)
+        {
+            return new FriendshipResult<long>(FriendshipStatus.InvalidAccountId);
+        }
+        FriendshipStatus status = _friendships.RemoveFriendship(session.AccountId, friendAccountId);
+        FriendshipResult<long> removal = status == FriendshipStatus.Success
+            ? new FriendshipResult<long>(session.AccountId)
+            : new FriendshipResult<long>(status);
+        return removal;
+    }
+
     public long[] ReadConfirmedFriendIds(long accountId)
     {
         if (accountId <= 0)

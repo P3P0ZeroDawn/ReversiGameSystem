@@ -4,17 +4,17 @@ using Proxy = ReversiGameSystem.ServerProxy;
 
 namespace ReversiGameSystem.Services;
 
-// Reconciles notifications received while a snapshot request is in flight.
 internal sealed class FriendshipSnapshot
 {
-    private readonly object _sync = new object();
-    private readonly Dictionary<long, FriendSummary> _friends = new Dictionary<long, FriendSummary>();
+    private readonly object _friendSnapshotLock = new object();
+    private readonly Dictionary<long, FriendSummary> _friends
+        = new Dictionary<long, FriendSummary>();
     private readonly Dictionary<long, FriendChange> _pending = new Dictionary<long, FriendChange>();
     private bool _refreshing;
 
     internal void BeginRefresh()
     {
-        lock (_sync)
+        lock (_friendSnapshotLock)
         {
             _refreshing = true;
             _pending.Clear();
@@ -23,7 +23,7 @@ internal sealed class FriendshipSnapshot
 
     internal void CompleteRefresh(IEnumerable<Proxy.FriendSummary> friends)
     {
-        lock (_sync)
+        lock (_friendSnapshotLock)
         {
             _friends.Clear();
             foreach (Proxy.FriendSummary friend in friends)
@@ -49,7 +49,7 @@ internal sealed class FriendshipSnapshot
 
     internal void CancelRefresh()
     {
-        lock (_sync)
+        lock (_friendSnapshotLock)
         {
             _pending.Clear();
             _refreshing = false;
@@ -58,7 +58,7 @@ internal sealed class FriendshipSnapshot
 
     internal void Change(long accountId, FriendChange change)
     {
-        lock (_sync)
+        lock (_friendSnapshotLock)
         {
             if (_refreshing)
             {
@@ -70,7 +70,7 @@ internal sealed class FriendshipSnapshot
 
     internal FriendSummary[] Read()
     {
-        lock (_sync)
+        lock (_friendSnapshotLock)
         {
             return _friends.Values.OrderBy(friend => friend.Username)
                 .Select(Clone).ToArray();
@@ -79,7 +79,7 @@ internal sealed class FriendshipSnapshot
 
     internal void Clear()
     {
-        lock (_sync)
+        lock (_friendSnapshotLock)
         {
             _friends.Clear();
             _pending.Clear();

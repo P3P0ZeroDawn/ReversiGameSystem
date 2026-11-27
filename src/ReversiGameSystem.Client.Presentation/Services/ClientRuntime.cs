@@ -135,6 +135,10 @@ internal static class ClientRuntime
 
     private static void OnSessionChanged()
     {
+        if (Friendship.IsValueCreated)
+        {
+            Friendship.Value.Close();
+        }
         s_preferences?.DiscardSession();
         s_preferences = null;
     }

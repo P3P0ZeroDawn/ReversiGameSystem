@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using System.IO;
 using System.ServiceModel;
 using ReversiGameSystem.Features.Accounts;
+using ReversiGameSystem.Features.Friendships;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -28,18 +29,21 @@ public partial class AccountInformationPage : Page
     private readonly AccountInformationReturnTarget _returnTarget;
     private readonly string _profileUsername;
     private readonly bool _isOwnProfile;
-    private readonly FriendRequestService _friendRequestService;
+    private readonly long? _profileAccountId;
+    private readonly FriendshipViewModel _friendshipsViewModel = new FriendshipViewModel(
+        ClientRuntime.FriendshipService, ClientRuntime.CurrentSession);
 
     public AccountInformationPage()
         : this(null, AccountInformationReturnTarget.MainMenu, true)
     {
     }
 
-    internal AccountInformationPage(
-        string profileUsername,
+    internal AccountInformationPage(PlayerAccount account,
         AccountInformationReturnTarget returnTarget)
-        : this(profileUsername, returnTarget, false)
+        : this(account.Username, returnTarget, false)
     {
+        _profileAccountId = account.AccountId;
+        playerStatisticsControl.AccountId = account.AccountId;
     }
 
     private AccountInformationPage(
@@ -49,6 +53,7 @@ public partial class AccountInformationPage : Page
     {
         InitializeComponent();
         Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
         _returnTarget = returnTarget;
         string currentUsername = ClientRuntime.CurrentSession.Username
             ?? LocalizationManager.Instance["Game_DefaultPlayerName"];
@@ -57,11 +62,10 @@ public partial class AccountInformationPage : Page
             _profileUsername,
             currentUsername,
             System.StringComparison.OrdinalIgnoreCase);
-        _friendRequestService = FriendshipPreviewState.GetService(currentUsername);
         _profileImageSelectionService = new ProfileImageSelectionService(
             LocalizationManager.Instance, _dialogService);
         usernameTextBlock.Text = _profileUsername;
-        playerStatisticsControl.PlayerId = _isOwnProfile ? null : _profileUsername;
+        playerStatisticsControl.AccountId = _profileAccountId;
         if (!_isOwnProfile)
         {
             ConfigurePublicProfile();
@@ -89,13 +93,18 @@ public partial class AccountInformationPage : Page
 
     }
 
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        _friendshipsViewModel.IsActive = false;
+    }
+
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        Loaded -= OnLoaded;
+        _friendshipsViewModel.IsActive = true;
         string? sessionToken = ClientRuntime.CurrentSession.SessionToken;
-        if (!_isOwnProfile
-            || sessionToken == null
-            || string.IsNullOrWhiteSpace(sessionToken))
+        if ((!_isOwnProfile && !_profileAccountId.HasValue)
+            || ClientRuntime.CurrentSession.IsGuest
+            || sessionToken == null || string.IsNullOrWhiteSpace(sessionToken))
         {
             return;
         }
@@ -103,7 +112,8 @@ public partial class AccountInformationPage : Page
         try
         {
             ProfileResult<PlayerProfile> profileResult =
-                await ClientRuntime.ProfileService.GetPlayerProfile(sessionToken);
+                await ClientRuntime.ProfileService.GetPlayerProfile(
+                    sessionToken, _profileAccountId);
             if (ClientRuntime.CurrentSession.SessionToken != sessionToken)
             {
                 return;
@@ -122,7 +132,7 @@ public partial class AccountInformationPage : Page
                 return;
             }
             ProfileResult<PlayerImageContent> imageResult =
-                await ClientRuntime.ProfileService.GetProfileImage(sessionToken);
+                await ClientRuntime.ProfileService.GetProfileImage(sessionToken, _profileAccountId);
             if (ClientRuntime.CurrentSession.SessionToken != sessionToken)
             {
                 return;
@@ -138,7 +148,10 @@ public partial class AccountInformationPage : Page
                     PlayerImageService.CreatePreview(imageResult.Value);
                 if (bitmap != null)
                 {
-                    ClientRuntime.CurrentSession.UpdateProfilePicture(bitmap);
+                    if (_isOwnProfile)
+                    {
+                        ClientRuntime.CurrentSession.UpdateProfilePicture(bitmap);
+                    }
                     profilePictureButton.Background = new ImageBrush(bitmap)
                     {
                         Stretch = Stretch.UniformToFill
@@ -163,7 +176,10 @@ public partial class AccountInformationPage : Page
 
     private void ApplyProfile(PlayerProfile profile)
     {
-        ClientRuntime.CurrentSession.UpdateUsername(profile.Username);
+        if (_isOwnProfile)
+        {
+            ClientRuntime.CurrentSession.UpdateUsername(profile.Username);
+        }
         usernameTextBlock.Text = profile.Username;
         playerStatisticsControl.SetStatistics(profile.Statistics);
     }
@@ -333,38 +349,51 @@ public partial class AccountInformationPage : Page
 
     private void OnBackToMenuClick(object sender, RoutedEventArgs e)
     {
-        NavigationService?.Navigate(_returnTarget == AccountInformationReturnTarget.AddFriends
-            ? new AddFriendsPage()
-            : new MainMenuPage());
+        NavigationService?.Navigate(new MainMenuPage());
     }
 
-    private void OnSendFriendRequestClick(object sender, RoutedEventArgs e)
+    private async void OnSendFriendRequestClick(object sender, RoutedEventArgs e)
     {
-        ShowFriendRequestResult(_friendRequestService.Send(_profileUsername));
-    }
-
-    private void ShowFriendRequestResult(FriendRequestResult result)
-    {
-        if (result == FriendRequestResult.Success)
+        if (!_profileAccountId.HasValue || _isOwnProfile || _friendshipsViewModel.IsSubmitting)
         {
-            _dialogService.ShowInformation(
-                this,
-                "FriendRequest_SentTitle",
-                "FriendRequest_SentMessage",
-                _profileUsername);
             return;
         }
-
-        string prefix = result switch
+        IsEnabled = false;
+        try
         {
-            FriendRequestResult.CannotAddYourself => "FriendRequest_CannotAddYourself",
-            FriendRequestResult.FriendshipAlreadyExists => "FriendRequest_FriendshipAlreadyExists",
-            FriendRequestResult.FriendRequestAlreadyPending => "FriendRequest_AlreadyPending",
-            FriendRequestResult.AccountNotAvailable => "FriendRequest_AccountNotAvailable",
-            FriendRequestResult.PersistenceError => "FriendRequest_PersistenceError",
-            _ => "FriendRequest_ServerConnectionFailed"
-        };
-        _dialogService.ShowError(this, prefix + "Title", prefix + "Message");
+            FriendshipStatus status = await _friendshipsViewModel.SendFriendRequest(
+                _profileAccountId.Value);
+            if (!IsLoaded)
+            {
+                return;
+            }
+            if (status == FriendshipStatus.Success)
+            {
+                _dialogService.ShowInformation(this, "FriendRequest_SentTitle",
+                    "FriendRequest_SentMessage", _profileUsername);
+            }
+            else if (status != FriendshipStatus.SubmissionInProgress)
+            {
+                _dialogService.ShowFriendshipFailure(this, status);
+            }
+        }
+        catch (FaultException<ServerProxy.ServiceFault> exception)
+        {
+            if (IsLoaded)
+            {
+                ClientRuntime.Errors.ReportOperationFailure(
+                    exception, nameof(AccountInformationPage));
+            }
+            else
+            {
+                ClientRuntime.Errors.RecordFailure(
+                    exception, nameof(AccountInformationPage), LogLevel.Error);
+            }
+        }
+        finally
+        {
+            IsEnabled = true;
+        }
     }
 
     private async void OnDeactivateAccountClick(object sender, RoutedEventArgs e)

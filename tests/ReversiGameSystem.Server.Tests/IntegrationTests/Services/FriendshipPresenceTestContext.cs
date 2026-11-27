@@ -202,6 +202,33 @@ internal sealed class FriendshipPresenceTestContext : IDisposable, IFriendshipRe
         _sessions.RevokeSession(token);
     }
 
+    public FriendAccount[] FindPlayers(long accountId, string searchText)
+    {
+        throw new NotSupportedException();
+    }
+
+    public FriendshipResult<PendingFriendRequest> CreatePendingRequest(
+        long senderId, long recipientId)
+    {
+        throw new NotSupportedException();
+    }
+
+    public PendingFriendRequest[] ReadPendingRequests(long accountId)
+    {
+        throw new NotSupportedException();
+    }
+
+    public FriendshipStatus RespondToRequest(
+        long accountId, PendingFriendRequest request, bool accept)
+    {
+        throw new NotSupportedException();
+    }
+
+    public FriendshipStatus RemoveFriendship(long accountId, long friendAccountId)
+    {
+        throw new NotSupportedException();
+    }
+
     public bool IsAccountActive(long accountId)
     {
         if (FailRepository)
