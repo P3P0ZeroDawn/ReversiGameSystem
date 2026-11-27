@@ -1,134 +1,156 @@
 using System;
+using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Application.Matches;
+using AppMatchService = ReversiGameSystem.Server.Application.Matches.MatchApplicationService;
 
-namespace ReversiGameSystem.Server.Tests;
+namespace ReversiGameSystem.Server.Tests.UnitTests.Application;
 
 [TestClass]
+[TestCategory("Unit")]
 public sealed class MatchApplicationServiceLifecycleTests
 {
     [TestMethod]
     public void CancelExpiredWaitingSessions_ChannelCleanupFailure_RetriesWhileSessionIsValid()
     {
-        // Arrange
         SessionTestContext context = new SessionTestContext();
         AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore { FailCancel = true };
-        MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context);
+        AppMatchService handler = new AppMatchService(
+            context.Sessions,
+            store,
+            context);
         _ = handler.CreateMatch(player.SessionToken, new MatchSettings()).Value;
+        int expectedCancelledCount = 1;
+        long expectedMatchId = 7L;
+        int expectedRemainingCount = 0;
 
-        // Act
         Assert.Throws<InvalidOperationException>(
             () => handler.CancelWaitingForSession(player.SessionToken));
         store.FailCancel = false;
         long[] cancelled = handler.CancelExpiredWaitingSessions();
 
-        // Assert
-        Assert.AreEqual(1, cancelled.Length);
-        Assert.AreEqual(7L, cancelled[0]);
-        Assert.AreEqual(0, handler.CancelExpiredWaitingSessions().Length);
+        Assert.AreEqual(expectedCancelledCount, cancelled.Length);
+        Assert.AreEqual(expectedMatchId, cancelled[0]);
+        Assert.AreEqual(expectedRemainingCount, handler.CancelExpiredWaitingSessions().Length);
     }
 
     [TestMethod]
     public void CancelWaitingForSession_TransientFailure_RetainsLobbyForRetry()
     {
-        // Arrange
         SessionTestContext context = new SessionTestContext();
         AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore { FailCancel = true };
-        MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context);
+        AppMatchService handler = new AppMatchService(
+            context.Sessions,
+            store,
+            context);
         _ = handler.CreateMatch(player.SessionToken, new MatchSettings()).Value;
         context.Sessions.RevokeSession(player.SessionToken);
+        int expectedCancelledCount = 1;
+        long expectedMatchId = 7L;
+        int expectedRemainingCount = 0;
 
-        // Act
-        Assert.Throws<InvalidOperationException>(() => handler.CancelWaitingForSession(player.SessionToken));
+        Assert.Throws<InvalidOperationException>(
+            () => handler.CancelWaitingForSession(player.SessionToken));
         store.FailCancel = false;
         long[] cancelled = handler.CancelWaitingForSession(player.SessionToken);
 
-        // Assert
-        Assert.AreEqual(1, cancelled.Length);
-        Assert.AreEqual(7L, cancelled[0]);
-        Assert.AreEqual(0, handler.CancelWaitingForSession(player.SessionToken).Length);
+        Assert.AreEqual(expectedCancelledCount, cancelled.Length);
+        Assert.AreEqual(expectedMatchId, cancelled[0]);
+        Assert.AreEqual(
+            expectedRemainingCount,
+            handler.CancelWaitingForSession(player.SessionToken).Length);
     }
 
     [TestMethod]
     public void CancelWaitingForSession_JoinAlreadyStarted_PreservesStartedMatch()
     {
-        // Arrange
         SessionTestContext context = new SessionTestContext();
         AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore { Started = true };
-        MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context);
+        AppMatchService handler = new AppMatchService(
+            context.Sessions,
+            store,
+            context);
         _ = handler.CreateMatch(player.SessionToken, new MatchSettings()).Value;
+        int expectedCancelledCount = 0;
+        int expectedCancelAttempts = 1;
 
-        // Act
         long[] cancelled = handler.CancelWaitingForSession(player.SessionToken);
 
-        // Assert
-        Assert.AreEqual(0, cancelled.Length);
-        Assert.AreEqual(0, handler.CancelWaitingForSession(player.SessionToken).Length);
-        Assert.AreEqual(1, store.CancelAttempts);
+        Assert.AreEqual(expectedCancelledCount, cancelled.Length);
+        Assert.AreEqual(
+            expectedCancelledCount,
+            handler.CancelWaitingForSession(player.SessionToken).Length);
+        Assert.AreEqual(expectedCancelAttempts, store.CancelAttempts);
     }
 
     [TestMethod]
     public void Create_ExpiredSession_DoesNotCreateLobby()
     {
-        // Arrange
         SessionTestContext context = new SessionTestContext();
         AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore();
-        MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context);
+        AppMatchService handler = new AppMatchService(
+            context.Sessions,
+            store,
+            context);
         context.UtcNow = player.ExpiresAtUtc;
+        int expectedCreateAttempts = 0;
+        MatchStatus expectedStatus = MatchStatus.InvalidSession;
 
-        // Act
         MatchResult<Match> result = handler.CreateMatch(
             player.SessionToken,
             new MatchSettings());
 
-        // Assert
-        Assert.AreEqual(0, store.CreateAttempts);
-        Assert.AreEqual(MatchStatus.InvalidSession, result.Status);
+        Assert.AreEqual(expectedCreateAttempts, store.CreateAttempts);
+        Assert.AreEqual(expectedStatus, result.Status);
     }
 
     [TestMethod]
     public void Invite_DeliveryFailure_CancelsMatchAndThrowsServiceFault()
     {
-        // Arrange
         SessionTestContext context = new SessionTestContext();
         AuthenticatedSession player = CreatePlayer(context);
         LifecycleStore store = new LifecycleStore();
         FailingInvitationEmailSender mailer = new FailingInvitationEmailSender();
-        MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
+        AppMatchService handler = new AppMatchService(
+            context.Sessions,
+            store,
+            context,
+            mailer);
+        int expectedCancelAttempts = 1;
 
-        // Act
         Assert.Throws<InvalidOperationException>(() =>
             handler.InviteToMatch(player.SessionToken, 100, new MatchSettings()));
 
-        // Assert
-        Assert.AreEqual(1, store.CancelAttempts);
+        Assert.AreEqual(expectedCancelAttempts, store.CancelAttempts);
     }
 
     [TestMethod]
     public void Invite_GuestSession_ThrowsUnauthorizedRejection()
     {
-        // Arrange
         SessionTestContext context = new SessionTestContext();
         GuestSession guest = context.ApplicationService.OpenGuestSession("GuestPlayer").Value
             ?? throw new InvalidOperationException("Guest session expected.");
         LifecycleStore store = new LifecycleStore();
         FailingInvitationEmailSender mailer = new FailingInvitationEmailSender();
-        MatchApplicationService handler = new MatchApplicationService(context.Sessions, store, context, mailer);
+        AppMatchService handler = new AppMatchService(
+            context.Sessions,
+            store,
+            context,
+            mailer);
+        MatchStatus expectedStatus = MatchStatus.Unauthorized;
 
-        // Act
         MatchResult<Match> result = handler.InviteToMatch(
             guest.SessionToken,
             100,
             new MatchSettings());
 
-        // Assert
-        Assert.AreEqual(MatchStatus.Unauthorized, result.Status);
+        Assert.AreEqual(expectedStatus, result.Status);
     }
 
     private static AuthenticatedSession CreatePlayer(SessionTestContext context)
@@ -141,7 +163,7 @@ public sealed class MatchApplicationServiceLifecycleTests
         public void SendTemplatedEmail(
             string recipientAddress,
             string templateName,
-            System.Collections.Generic.IReadOnlyDictionary<string, string> templateValues)
+            IReadOnlyDictionary<string, string> templateValues)
         {
             throw new InvalidOperationException("Simulated provider outage.");
         }
@@ -149,6 +171,14 @@ public sealed class MatchApplicationServiceLifecycleTests
 
     private sealed class LifecycleStore : IMatchRepository
     {
+        internal bool FailCancel { get; set; }
+
+        internal bool Started { get; set; }
+
+        internal int CancelAttempts { get; private set; }
+
+        internal int CreateAttempts { get; private set; }
+
         public MatchResult<Match> StartSystemMatch(MatchPlayer player, long matchId, DateTime now)
         {
             throw new NotSupportedException();
@@ -158,12 +188,11 @@ public sealed class MatchApplicationServiceLifecycleTests
         {
             return MatchStatus.Success;
         }
-        internal bool FailCancel { get; set; }
-        internal bool Started { get; set; }
-        internal int CancelAttempts { get; private set; }
-        internal int CreateAttempts { get; private set; }
 
-        public MatchResult<Match> CreateMatch(MatchPlayer player, MatchSettings settings, DateTime now)
+        public MatchResult<Match> CreateMatch(
+            MatchPlayer player,
+            MatchSettings settings,
+            DateTime now)
         {
             CreateAttempts++;
             return new MatchResult<Match>(new Match { Id = 7 });
@@ -176,6 +205,7 @@ public sealed class MatchApplicationServiceLifecycleTests
             {
                 throw new InvalidOperationException("Disposable storage failure.");
             }
+
             if (Started)
             {
                 return MatchStatus.MatchNotWaiting;
@@ -188,14 +218,17 @@ public sealed class MatchApplicationServiceLifecycleTests
         {
             throw new NotSupportedException();
         }
+
         public MatchResult<Match> JoinMatch(MatchPlayer player, string code, DateTime now)
         {
             throw new NotSupportedException();
         }
+
         public MatchResult<Match> LoadParticipantMatch(MatchPlayer player, long matchId)
         {
             throw new NotSupportedException();
         }
+
         public MatchResult<Match> ChangeTurnDuration(MatchPlayer player, long matchId, int seconds)
         {
             throw new NotSupportedException();
@@ -224,7 +257,9 @@ public sealed class MatchApplicationServiceLifecycleTests
                     }
                 }
             };
-            MatchInvitationPreparation preparation = new MatchInvitationPreparation(match, "friend@example.com");
+            MatchInvitationPreparation preparation = new MatchInvitationPreparation(
+                match,
+                "friend@example.com");
             return new MatchResult<MatchInvitationPreparation>(preparation);
         }
 

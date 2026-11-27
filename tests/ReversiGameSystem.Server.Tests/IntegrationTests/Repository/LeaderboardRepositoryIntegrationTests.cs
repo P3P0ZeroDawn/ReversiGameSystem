@@ -95,7 +95,7 @@ public sealed class LeaderboardRepositoryIntegrationTests : RepositoryIntegratio
             createdAtUtc = nowUtc,
             startedAtUtc = nowUtc,
             endedAtUtc = seed.StatusCode == "FINISHED" ? nowUtc.AddMinutes(5) : null,
-            endReasonCode = seed.StatusCode == "FINISHED" ? "COMPLETED" : null
+            endReasonCode = seed.StatusCode == "FINISHED" ? "BOARD_FULL" : null
         };
         context.GameMatch.Add(match);
         context.SaveChanges();

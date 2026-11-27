@@ -8,12 +8,13 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Contracts.Accounts;
 using ReversiGameSystem.Server.Contracts.Common;
 
-namespace ReversiGameSystem.Server.Tests;
+namespace ReversiGameSystem.Server.Tests.UnitTests.Contracts;
 
 /// <summary>
 /// Checks the WCF boundary against the approved catalog and migration exception.
 /// </summary>
 [TestClass]
+[TestCategory("Unit")]
 public sealed class ContractArchitectureTests
 {
     private const string ServicesNamespace = "urn:reversi:services:v1";
@@ -23,13 +24,10 @@ public sealed class ContractArchitectureTests
     [TestMethod]
     public void ServiceContracts_CatalogSignatures_PreserveWireBoundary()
     {
-        // Arrange
         Dictionary<string, string[]> expected = ContractCatalogExpectations.Operations;
 
-        // Act
         Dictionary<string, Type> contracts = expected.Keys.ToDictionary(name => name, FindType);
 
-        // Assert
         foreach (KeyValuePair<string, Type> contract in contracts)
         {
             AssertService(contract.Value);
@@ -45,13 +43,10 @@ public sealed class ContractArchitectureTests
     [TestMethod]
     public void DataContracts_CatalogMembers_PreserveRequiredShape()
     {
-        // Arrange
         Dictionary<string, string[]> expected = ContractCatalogExpectations.Members;
 
-        // Act
         Dictionary<string, Type> contracts = expected.Keys.ToDictionary(name => name, FindType);
 
-        // Assert
         foreach (KeyValuePair<string, Type> contract in contracts)
         {
             AssertDataContract(contract.Value);
@@ -62,13 +57,10 @@ public sealed class ContractArchitectureTests
     [TestMethod]
     public void Enums_CatalogValues_PreserveSerializedVocabulary()
     {
-        // Arrange
         Dictionary<string, string[]> expected = ContractCatalogExpectations.EnumValues;
 
-        // Act
         Dictionary<string, Type> contracts = expected.Keys.ToDictionary(name => name, FindType);
 
-        // Assert
         foreach (KeyValuePair<string, Type> contract in contracts)
         {
             Type type = contract.Value;
@@ -77,7 +69,8 @@ public sealed class ContractArchitectureTests
             foreach (FieldInfo field in type.GetFields(BindingFlags.Public | BindingFlags.Static))
             {
                 EnumMemberAttribute member = GetAttribute<EnumMemberAttribute>(field);
-                Assert.IsTrue(string.IsNullOrEmpty(member.Value) || member.Value == field.Name,
+                Assert.IsTrue(
+                    string.IsNullOrEmpty(member.Value) || member.Value == field.Name,
                     $"Unexpected wire enum value for {type.Name}.{field.Name}.");
             }
         }
@@ -86,37 +79,35 @@ public sealed class ContractArchitectureTests
     [TestMethod]
     public void ServiceFault_RetainedRegistration_PreservesRequiredTransientMember()
     {
-        // Arrange
         Type type = typeof(ServiceFault);
+        Type expectedPropertyType = typeof(bool);
+        int expectedOrder = 3;
 
-        // Act
         PropertyInfo member = TestAssert.IsNotNull(type.GetProperty("IsTransient"));
         DataMemberAttribute attribute = GetAttribute<DataMemberAttribute>(member);
 
-        // Assert
-        Assert.AreEqual(typeof(bool), member.PropertyType);
-        Assert.AreEqual(3, attribute.Order);
-        Assert.AreEqual(true, attribute.IsRequired);
-        Assert.AreEqual(DiagnosticsNamespace,
+        Assert.AreEqual(expectedPropertyType, member.PropertyType);
+        Assert.AreEqual(expectedOrder, attribute.Order);
+        Assert.IsTrue(attribute.IsRequired);
+        Assert.AreEqual(
+            DiagnosticsNamespace,
             GetAttribute<DataContractAttribute>(type).Namespace);
     }
 
     [TestMethod]
     public void ContractAssembly_ReferencedAssemblies_ExcludePersistence()
     {
-        // Arrange
         AssemblyName[] references = typeof(AuthenticatedSession)
             .Assembly.GetReferencedAssemblies();
 
-        // Act
         bool hasInfrastructure = references.Any(reference =>
             reference.Name == "ReversiGameSystem.Server.Persistence"
             || reference.Name == "ReversiGameSystem.Server.Domain"
             || reference.Name == "EntityFramework"
             || reference.Name == "PresentationFramework");
 
-        // Assert
-        Assert.IsTrue(!hasInfrastructure,
+        Assert.IsFalse(
+            hasInfrastructure,
             "The contract assembly must not reference domain, persistence, or WPF types.");
     }
 
@@ -124,41 +115,48 @@ public sealed class ContractArchitectureTests
     {
         ServiceContractAttribute attribute = GetAttribute<ServiceContractAttribute>(type);
         Assert.AreEqual(ServicesNamespace, attribute.Namespace);
-        Assert.IsTrue(string.IsNullOrEmpty(attribute.Name) || attribute.Name == type.Name,
+        Assert.IsTrue(
+            string.IsNullOrEmpty(attribute.Name) || attribute.Name == type.Name,
             $"Unexpected service name for {type.Name}.");
         Assert.IsTrue(type.IsInterface, $"{type.Name} must be an interface.");
         bool isCallback = type.Name.EndsWith("Callback", StringComparison.Ordinal);
         string callbackName = type.Name + "Callback";
         bool hasCallback = !isCallback
             && ContractCatalogExpectations.Operations.ContainsKey(callbackName);
-        Type? callback = hasCallback ? FindType(callbackName) : null;
-        Assert.AreEqual(callback, attribute.CallbackContract);
+        Type? expectedCallback = hasCallback ? FindType(callbackName) : null;
         string category = isCallback ? "Callbacks" : "Services";
-        Assert.AreEqual("ReversiGameSystem.Server.Contracts." + category, type.Namespace);
+        string expectedNamespace = "ReversiGameSystem.Server.Contracts." + category;
+        Assert.AreEqual(expectedCallback, attribute.CallbackContract);
+        Assert.AreEqual(expectedNamespace, type.Namespace);
     }
 
     private static void AssertOperation(MethodInfo method, string contractName)
     {
         OperationContractAttribute operation = GetAttribute<OperationContractAttribute>(method);
-        Assert.IsTrue(string.IsNullOrEmpty(operation.Name) || operation.Name == method.Name,
+        Assert.IsTrue(
+            string.IsNullOrEmpty(operation.Name) || operation.Name == method.Name,
             $"Unexpected operation name for {method.Name}.");
-        bool isCallback = contractName.EndsWith("Callback", StringComparison.Ordinal);
-        Assert.AreEqual(isCallback, operation.IsOneWay);
+        bool expectedIsOneWay = contractName.EndsWith("Callback", StringComparison.Ordinal);
+        Assert.AreEqual(expectedIsOneWay, operation.IsOneWay);
         FaultContractAttribute[] faults = method.GetCustomAttributes<FaultContractAttribute>()
             .ToArray();
-        if (isCallback)
+        if (expectedIsOneWay)
         {
-            Assert.AreEqual(typeof(void), method.ReturnType);
-            Assert.AreEqual(0, faults.Length);
+            Type expectedReturnType = typeof(void);
+            int expectedFaultCount = 0;
+            Assert.AreEqual(expectedReturnType, method.ReturnType);
+            Assert.AreEqual(expectedFaultCount, faults.Length);
             return;
         }
 
-        AssertSetEqual(GetExpectedFaults(contractName, method.Name),
+        AssertSetEqual(
+            GetExpectedFaults(contractName, method.Name),
             faults.Select(fault => fault.DetailType.Name));
         foreach (FaultContractAttribute fault in faults)
         {
             string expectedNamespace = fault.DetailType == typeof(ServiceFault)
-                ? DiagnosticsNamespace : DataNamespace;
+                ? DiagnosticsNamespace
+                : DataNamespace;
             Assert.AreEqual(expectedNamespace, fault.Namespace);
         }
     }
@@ -194,9 +192,11 @@ public sealed class ContractArchitectureTests
     {
         DataContractAttribute attribute = GetAttribute<DataContractAttribute>(type);
         string expectedNamespace = type == typeof(ServiceFault)
-            ? DiagnosticsNamespace : DataNamespace;
+            ? DiagnosticsNamespace
+            : DataNamespace;
         Assert.AreEqual(expectedNamespace, attribute.Namespace);
-        Assert.IsTrue(string.IsNullOrEmpty(attribute.Name) || attribute.Name == type.Name,
+        Assert.IsTrue(
+            string.IsNullOrEmpty(attribute.Name) || attribute.Name == type.Name,
             $"Unexpected wire name for {type.Name}.");
     }
 
@@ -211,10 +211,12 @@ public sealed class ContractArchitectureTests
             string[] parts = expected[index].Split(' ');
             PropertyInfo property = TestAssert.IsNotNull(type.GetProperty(parts[1]));
             DataMemberAttribute member = GetAttribute<DataMemberAttribute>(property);
-            Assert.AreEqual(index + 1, member.Order);
-            Assert.AreEqual(!parts[0].EndsWith("?", StringComparison.Ordinal),
-                member.IsRequired);
-            Assert.IsTrue(string.IsNullOrEmpty(member.Name) || member.Name == property.Name,
+            int expectedOrder = index + 1;
+            bool expectedIsRequired = !parts[0].EndsWith("?", StringComparison.Ordinal);
+            Assert.AreEqual(expectedOrder, member.Order);
+            Assert.AreEqual(expectedIsRequired, member.IsRequired);
+            Assert.IsTrue(
+                string.IsNullOrEmpty(member.Name) || member.Name == property.Name,
                 $"Unexpected wire member name for {type.Name}.{property.Name}.");
         }
     }

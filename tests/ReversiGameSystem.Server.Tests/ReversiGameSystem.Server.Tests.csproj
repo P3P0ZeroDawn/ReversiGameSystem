@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <LangVersion>10.0</LangVersion>
     <Nullable>enable</Nullable>
     <RootNamespace>ReversiGameSystem.Server.Tests</RootNamespace>
@@ -45,23 +45,11 @@
     <Folder Include="IntegrationTests\System\" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="Fixtures\RepositoryIntegrationSchema.sql" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="..\..\database\migrations\20261127_GuestMatchParticipants.sql"
           Link="migrations\20261127_GuestMatchParticipants.sql"
-          CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\database\migrations\20261121_CustomBoardBackgroundPreference.sql"
-          Link="migrations\20261121_CustomBoardBackgroundPreference.sql"
-          CopyToOutputDirectory="PreserveNewest" />
-    <None Update="Fixtures\RepositoryIntegrationSchema.sql" CopyToOutputDirectory="PreserveNewest" />
-    <None Update="Fixtures\ReviewAccountSchema.sql" CopyToOutputDirectory="PreserveNewest" />
-    <None Update="Fixtures\ReviewMatchSchema.sql" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\database\test-data\PrepareReviewFriendship.sql"
-          Link="test-data\PrepareReviewFriendship.sql"
-          CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\database\migrations\20261022_VerificationCodeAttempts.sql"
-          Link="migrations\20261022_VerificationCodeAttempts.sql"
-          CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\database\migrations\20261023_VerificationCodeLoginPurpose.sql"
-          Link="migrations\20261023_VerificationCodeLoginPurpose.sql"
           CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

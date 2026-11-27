@@ -133,7 +133,7 @@ public sealed class PlayerProfileRepositoryIntegrationTests : RepositoryIntegrat
             createdAtUtc = nowUtc,
             startedAtUtc = nowUtc,
             endedAtUtc = nowUtc.AddMinutes(5),
-            endReasonCode = "COMPLETED"
+            endReasonCode = "BOARD_FULL"
         };
         context.GameMatch.Add(match);
         context.SaveChanges();

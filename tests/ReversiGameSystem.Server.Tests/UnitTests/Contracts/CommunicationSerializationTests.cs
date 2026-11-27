@@ -11,150 +11,154 @@ using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.Contracts.Friendships;
 using ReversiGameSystem.Server.Contracts.Players;
 
-namespace ReversiGameSystem.Server.Tests;
+namespace ReversiGameSystem.Server.Tests.UnitTests.Contracts;
 
 /// <summary>
 /// Checks optional values, images, social data and typed business failures in transit.
 /// </summary>
 [TestClass]
+[TestCategory("Unit")]
 public sealed class CommunicationSerializationTests
 {
+    private const string PngMediaType = "image/png";
+    private const string SpanishLocaleCode = "es-MX";
+    private const string ProfilePicturesPieceStyle = "PROFILE_PICTURES";
+
     private static readonly DateTime TimestampUtc =
         new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc);
 
     [TestMethod]
     public void NewAccount_ProfileImage_PreservesContentAndVerificationData()
     {
-        // Arrange
         NewAccount account = new NewAccount
         {
             VerificationCode = "123456",
             Username = "player_one",
             EmailAddress = "player@example.com",
             Password = "DisposablePassword1!",
-            PreferredLocaleCode = "es-MX",
+            PreferredLocaleCode = SpanishLocaleCode,
             ProfileImage = new ImageContent
             {
-                MediaType = "image/png",
+                MediaType = PngMediaType,
                 Content = new byte[] { 0, 1, 127, 128, 255 }
             }
         };
 
-        // Act
         NewAccount result = ContractSerializationTests.RoundTrip(account);
 
-        // Assert
+        ImageContent image = TestAssert.IsNotNull(result.ProfileImage);
         Assert.AreEqual(account.VerificationCode, result.VerificationCode);
         Assert.AreEqual(account.Username, result.Username);
         Assert.AreEqual(account.EmailAddress, result.EmailAddress);
         Assert.AreEqual(account.Password, result.Password);
         Assert.AreEqual(account.PreferredLocaleCode, result.PreferredLocaleCode);
-        ImageContent image = TestAssert.IsNotNull(result.ProfileImage);
-        Assert.AreEqual("image/png", image.MediaType);
-        Assert.IsTrue(account.ProfileImage.Content.SequenceEqual(image.Content),
+        Assert.AreEqual(PngMediaType, image.MediaType);
+        Assert.IsTrue(
+            account.ProfileImage.Content.SequenceEqual(image.Content),
             "Image bytes changed during transport.");
     }
 
     [TestMethod]
     public void NewAccount_AbsentProfileImage_PreservesNull()
     {
-        // Arrange
         NewAccount account = new NewAccount { ProfileImage = null };
 
-        // Act
         NewAccount result = ContractSerializationTests.RoundTrip(account);
 
-        // Assert
-        Assert.AreEqual<ImageContent?>(null, result.ProfileImage);
+        Assert.IsNull(result.ProfileImage);
     }
 
     [TestMethod]
     public void PlayerPreferences_LocalZone_PreservesZoneAndBackground()
     {
-        // Arrange
         PlayerPreferences preferences = new PlayerPreferences
         {
-            PreferredLocaleCode = "es-MX",
+            PreferredLocaleCode = SpanishLocaleCode,
             TimeZoneId = null,
-            PieceStyleCode = "PROFILE_PICTURES",
+            PieceStyleCode = ProfilePicturesPieceStyle,
             UseCustomBoardBackground = true
         };
 
-        // Act
         PlayerPreferences result = ContractSerializationTests.RoundTrip(preferences);
 
-        // Assert
-        Assert.AreEqual<string?>(null, result.TimeZoneId);
-        Assert.AreEqual("es-MX", result.PreferredLocaleCode);
-        Assert.AreEqual("PROFILE_PICTURES", result.PieceStyleCode);
-        Assert.AreEqual(true, result.UseCustomBoardBackground);
+        Assert.IsNull(result.TimeZoneId);
+        Assert.AreEqual(SpanishLocaleCode, result.PreferredLocaleCode);
+        Assert.AreEqual(ProfilePicturesPieceStyle, result.PieceStyleCode);
+        Assert.IsTrue(result.UseCustomBoardBackground);
     }
 
     [TestMethod]
     public void GuestSession_RoundTrip_PreservesConfirmedIdentityAndExpiry()
     {
-        // Arrange
         GuestSession session = new GuestSession
         {
             SessionToken = "disposable-guest-session",
             DisplayName = "Guest-player",
             ExpiresAtUtc = TimestampUtc
         };
+        DateTimeKind expectedKind = DateTimeKind.Utc;
 
-        // Act
         GuestSession result = ContractSerializationTests.RoundTrip(session);
 
-        // Assert
         Assert.AreEqual(session.SessionToken, result.SessionToken);
         Assert.AreEqual(session.DisplayName, result.DisplayName);
         Assert.AreEqual(TimestampUtc, result.ExpiresAtUtc);
-        Assert.AreEqual(DateTimeKind.Utc, result.ExpiresAtUtc.Kind);
+        Assert.AreEqual(expectedKind, result.ExpiresAtUtc.Kind);
     }
 
     [TestMethod]
     public void FriendRequest_RoundTrip_PreservesRequestAndBothAccounts()
     {
-        // Arrange
+        long expectedSenderId = 42L;
+        string expectedSenderName = "sender";
+        long expectedRecipientId = 43L;
+        string expectedRecipientName = "recipient";
         FriendRequest request = new FriendRequest
         {
             RequestId = "friend-request-1",
-            Sender = new AccountReference { AccountId = 42, Username = "sender" },
-            Recipient = new AccountReference { AccountId = 43, Username = "recipient" },
+            Sender = new AccountReference
+            {
+                AccountId = expectedSenderId,
+                Username = expectedSenderName
+            },
+            Recipient = new AccountReference
+            {
+                AccountId = expectedRecipientId,
+                Username = expectedRecipientName
+            },
             CreatedAtUtc = TimestampUtc
         };
 
-        // Act
         FriendRequest result = ContractSerializationTests.RoundTrip(request);
 
-        // Assert
         Assert.AreEqual(request.RequestId, result.RequestId);
-        Assert.AreEqual(42L, result.Sender.AccountId);
-        Assert.AreEqual("sender", result.Sender.Username);
-        Assert.AreEqual(43L, result.Recipient.AccountId);
-        Assert.AreEqual("recipient", result.Recipient.Username);
+        Assert.AreEqual(expectedSenderId, result.Sender.AccountId);
+        Assert.AreEqual(expectedSenderName, result.Sender.Username);
+        Assert.AreEqual(expectedRecipientId, result.Recipient.AccountId);
+        Assert.AreEqual(expectedRecipientName, result.Recipient.Username);
         Assert.AreEqual(TimestampUtc, result.CreatedAtUtc);
     }
 
     [TestMethod]
     public void MatchChatEntry_RoundTrip_PreservesCompositeIdentityAndUnicode()
     {
-        // Arrange
+        long expectedMatchId = 7L;
+        int expectedMessageNumber = 12;
+        int expectedSenderSeat = 2;
         MatchChatEntry message = new MatchChatEntry
         {
-            MatchId = 7,
-            MessageNumber = 12,
-            SenderSeatNumber = 2,
+            MatchId = expectedMatchId,
+            MessageNumber = expectedMessageNumber,
+            SenderSeatNumber = expectedSenderSeat,
             Content = "Valid move: ñ 🎮",
             SentAtUtc = TimestampUtc
         };
 
-        // Act
         MatchChatEntry result = ContractSerializationTests.RoundTrip(message);
 
-        // Assert
-        Assert.AreEqual(7L, result.MatchId);
-        Assert.AreEqual(12, result.MessageNumber);
-        Assert.AreEqual(2, result.SenderSeatNumber);
+        Assert.AreEqual(expectedMatchId, result.MatchId);
+        Assert.AreEqual(expectedMessageNumber, result.MessageNumber);
+        Assert.AreEqual(expectedSenderSeat, result.SenderSeatNumber);
         Assert.AreEqual(message.Content, result.Content);
         Assert.AreEqual(TimestampUtc, result.SentAtUtc);
     }
@@ -162,40 +166,38 @@ public sealed class CommunicationSerializationTests
     [TestMethod]
     public void ChatFault_MutedAndBlocked_PreservesOptionalMuteExpiry()
     {
-        // Arrange
+        ChatFailure expectedMuted = ChatFailure.PlayerMuted;
+        ChatFailure expectedBlocked = ChatFailure.MessageBlocked;
+        DateTime? expectedMuteEnd = TimestampUtc;
         ChatFault[] faults = new[]
         {
-            new ChatFault { Reason = ChatFailure.PlayerMuted, MuteEndsAtUtc = TimestampUtc },
-            new ChatFault { Reason = ChatFailure.MessageBlocked, MuteEndsAtUtc = null }
+            new ChatFault { Reason = expectedMuted, MuteEndsAtUtc = TimestampUtc },
+            new ChatFault { Reason = expectedBlocked, MuteEndsAtUtc = null }
         };
 
-        // Act
         ChatFault[] result = ContractSerializationTests.RoundTrip(faults);
 
-        // Assert
-        Assert.AreEqual(ChatFailure.PlayerMuted, result[0].Reason);
-        Assert.AreEqual<DateTime?>(TimestampUtc, result[0].MuteEndsAtUtc);
-        Assert.AreEqual(ChatFailure.MessageBlocked, result[1].Reason);
-        Assert.AreEqual<DateTime?>(null, result[1].MuteEndsAtUtc);
+        Assert.AreEqual(expectedMuted, result[0].Reason);
+        Assert.AreEqual(expectedMuteEnd, result[0].MuteEndsAtUtc);
+        Assert.AreEqual(expectedBlocked, result[1].Reason);
+        Assert.IsNull(result[1].MuteEndsAtUtc);
     }
 
     [TestMethod]
     public void ChatMuteNotification_RoundTrip_PreservesAccountSanctionWindow()
     {
-        // Arrange
+        long expectedMatchId = 7L;
         ChatMuteNotification mute = new ChatMuteNotification
         {
-            MatchId = 7,
+            MatchId = expectedMatchId,
             ReasonCode = "REPEATED_VIOLATIONS",
             StartsAtUtc = TimestampUtc,
             EndsAtUtc = TimestampUtc.AddMinutes(10)
         };
 
-        // Act
         ChatMuteNotification result = ContractSerializationTests.RoundTrip(mute);
 
-        // Assert
-        Assert.AreEqual(7L, result.MatchId);
+        Assert.AreEqual(expectedMatchId, result.MatchId);
         Assert.AreEqual(mute.ReasonCode, result.ReasonCode);
         Assert.AreEqual(mute.StartsAtUtc, result.StartsAtUtc);
         Assert.AreEqual(mute.EndsAtUtc, result.EndsAtUtc);
@@ -204,7 +206,6 @@ public sealed class CommunicationSerializationTests
     [TestMethod]
     public void BusinessFaults_EveryCatalogReason_RoundTripsTypedReason()
     {
-        // Arrange
         Type[] types = new[]
         {
             typeof(SessionFault), typeof(AccountFault), typeof(ProfileFault),
@@ -212,10 +213,8 @@ public sealed class CommunicationSerializationTests
             typeof(MatchFault), typeof(ChatFault)
         };
 
-        // Act
         KeyValuePair<object, object?>[] reasons = types.SelectMany(RoundTripFaultReasons).ToArray();
 
-        // Assert
         foreach (KeyValuePair<object, object?> reason in reasons)
         {
             Assert.AreEqual(reason.Key, reason.Value);

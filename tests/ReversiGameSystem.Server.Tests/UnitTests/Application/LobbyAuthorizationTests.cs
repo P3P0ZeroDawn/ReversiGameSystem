@@ -7,67 +7,69 @@ using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Contracts.Callbacks;
 using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.ServiceApi;
+using AppMatchService =
+    ReversiGameSystem.Server.Application.Matches.MatchApplicationService;
 
-namespace ReversiGameSystem.Server.Tests;
+namespace ReversiGameSystem.Server.Tests.UnitTests.Application;
 
 [TestClass]
+[TestCategory("Unit")]
 public sealed class LobbyAuthorizationTests
 {
     [TestMethod]
     public void Authorize_LiveSession_ChecksAccountWithoutListingMatches()
     {
-        // Arrange
         AuthorizationContext context = new AuthorizationContext();
+        MatchStatus expectedStatus = MatchStatus.Success;
+        int expectedAuthCalls = 1;
+        int expectedAvailableCalls = 0;
 
-        // Act
         MatchStatus status = context.Handler.EvaluateLobbyAccess(
             context.Player.SessionToken);
 
-        // Assert
         Assert.AreEqual(context.Player.AccountId, context.Store.AuthorizedAccountId);
-        Assert.AreEqual(MatchStatus.Success, status);
-        Assert.AreEqual(1, context.Store.AuthorizationCalls);
-        Assert.AreEqual(0, context.Store.AvailableCalls);
+        Assert.AreEqual(expectedStatus, status);
+        Assert.AreEqual(expectedAuthCalls, context.Store.AuthorizationCalls);
+        Assert.AreEqual(expectedAvailableCalls, context.Store.AvailableCalls);
     }
 
     [TestMethod]
     public void Authorize_ExpiredSession_RejectsBeforeAccountQuery()
     {
-        // Arrange
         AuthorizationContext context = new AuthorizationContext();
         context.Sessions.UtcNow = context.Player.ExpiresAtUtc;
+        MatchStatus expectedStatus = MatchStatus.InvalidSession;
+        int expectedAuthCalls = 0;
+        int expectedAvailableCalls = 0;
 
-        // Act
         MatchStatus status = context.Handler.EvaluateLobbyAccess(
             context.Player.SessionToken);
 
-        // Assert
-        Assert.AreEqual(0, context.Store.AuthorizationCalls);
-        Assert.AreEqual(0, context.Store.AvailableCalls);
-        Assert.AreEqual(MatchStatus.InvalidSession, status);
+        Assert.AreEqual(expectedAuthCalls, context.Store.AuthorizationCalls);
+        Assert.AreEqual(expectedAvailableCalls, context.Store.AvailableCalls);
+        Assert.AreEqual(expectedStatus, status);
     }
 
     [TestMethod]
     public void Authorize_RevokedSession_RejectsBeforeAccountQuery()
     {
-        // Arrange
         AuthorizationContext context = new AuthorizationContext();
         context.Sessions.Sessions.RevokeSession(context.Player.SessionToken);
+        MatchStatus expectedStatus = MatchStatus.InvalidSession;
+        int expectedAuthCalls = 0;
+        int expectedAvailableCalls = 0;
 
-        // Act
         MatchStatus status = context.Handler.EvaluateLobbyAccess(
             context.Player.SessionToken);
 
-        // Assert
-        Assert.AreEqual(0, context.Store.AuthorizationCalls);
-        Assert.AreEqual(0, context.Store.AvailableCalls);
-        Assert.AreEqual(MatchStatus.InvalidSession, status);
+        Assert.AreEqual(expectedAuthCalls, context.Store.AuthorizationCalls);
+        Assert.AreEqual(expectedAvailableCalls, context.Store.AvailableCalls);
+        Assert.AreEqual(expectedStatus, status);
     }
 
     [TestMethod]
     public void OpenLobbyChannel_InactiveAccount_ReturnsMatchFaultWithoutListing()
     {
-        // Arrange
         AuthorizationContext context = new AuthorizationContext();
         context.Store.Active = false;
         using MatchCallbackSubscriptions<IMatchLobbyServiceCallback> subscriptions =
@@ -75,36 +77,37 @@ public sealed class LobbyAuthorizationTests
                 (_, _) => true,
                 NullLogger.Instance);
         MatchLobbyService service = new MatchLobbyService(context.Handler, subscriptions);
+        MatchFailure expectedReason = MatchFailure.InactiveAccount;
+        int expectedAuthCalls = 1;
+        int expectedAvailableCalls = 0;
 
-        // Act
         FaultException<MatchFault> failure = Assert.Throws<FaultException<MatchFault>>(
             () => service.OpenLobbyChannel(context.Player.SessionToken));
 
-        // Assert
-        Assert.AreEqual(MatchFailure.InactiveAccount, failure.Detail.Reason);
-        Assert.AreEqual(1, context.Store.AuthorizationCalls);
-        Assert.AreEqual(0, context.Store.AvailableCalls);
+        Assert.AreEqual(expectedReason, failure.Detail.Reason);
+        Assert.AreEqual(expectedAuthCalls, context.Store.AuthorizationCalls);
+        Assert.AreEqual(expectedAvailableCalls, context.Store.AvailableCalls);
     }
 
     [TestMethod]
     public void OpenLobbyChannel_MissingToken_ReturnsSessionFaultBeforeAccountQuery()
     {
-        // Arrange
         AuthorizationContext context = new AuthorizationContext();
         using MatchCallbackSubscriptions<IMatchLobbyServiceCallback> subscriptions =
             new MatchCallbackSubscriptions<IMatchLobbyServiceCallback>(
                 (_, _) => true,
                 NullLogger.Instance);
         MatchLobbyService service = new MatchLobbyService(context.Handler, subscriptions);
+        SessionFailure expectedReason = SessionFailure.MissingSessionToken;
+        int expectedAuthCalls = 0;
+        int expectedAvailableCalls = 0;
 
-        // Act
         FaultException<SessionFault> failure = Assert.Throws<FaultException<SessionFault>>(
             () => service.OpenLobbyChannel(string.Empty));
 
-        // Assert
-        Assert.AreEqual(SessionFailure.MissingSessionToken, failure.Detail.Reason);
-        Assert.AreEqual(0, context.Store.AuthorizationCalls);
-        Assert.AreEqual(0, context.Store.AvailableCalls);
+        Assert.AreEqual(expectedReason, failure.Detail.Reason);
+        Assert.AreEqual(expectedAuthCalls, context.Store.AuthorizationCalls);
+        Assert.AreEqual(expectedAvailableCalls, context.Store.AvailableCalls);
     }
 
     private sealed class AuthorizationContext
@@ -114,26 +117,32 @@ public sealed class LobbyAuthorizationTests
             Sessions = new SessionTestContext();
             Player = TestSessionHelper.CreateSession(Sessions.Sessions, 42, "LobbyPlayer");
             Store = new AuthorizationStore();
-            Handler = new MatchApplicationService(Sessions.Sessions, Store, Sessions);
+            Handler = new AppMatchService(Sessions.Sessions, Store, Sessions);
         }
 
         internal SessionTestContext Sessions { get; }
+
         internal AuthenticatedSession Player { get; }
+
         internal AuthorizationStore Store { get; }
-        internal MatchApplicationService Handler { get; }
+
+        internal AppMatchService Handler { get; }
     }
 
     private sealed class AuthorizationStore : IMatchRepository
     {
+        internal bool Active { get; set; } = true;
+
+        internal long AuthorizedAccountId { get; private set; }
+
+        internal int AuthorizationCalls { get; private set; }
+
+        internal int AvailableCalls { get; private set; }
+
         public MatchResult<Match> StartSystemMatch(MatchPlayer player, long matchId, DateTime now)
         {
             throw new NotSupportedException();
         }
-
-        internal bool Active { get; set; } = true;
-        internal long AuthorizedAccountId { get; private set; }
-        internal int AuthorizationCalls { get; private set; }
-        internal int AvailableCalls { get; private set; }
 
         public MatchStatus EvaluateLobbyAccess(long accountId)
         {
@@ -154,7 +163,9 @@ public sealed class LobbyAuthorizationTests
         }
 
         public MatchResult<Match> CreateMatch(
-            MatchPlayer player, MatchSettings settings, DateTime now)
+            MatchPlayer player,
+            MatchSettings settings,
+            DateTime now)
         {
             throw new NotSupportedException();
         }
@@ -168,7 +179,10 @@ public sealed class LobbyAuthorizationTests
             throw new NotSupportedException();
         }
 
-        public MatchResult<Match> MarkInvitationDelivered(long accountId, long matchId, DateTime now)
+        public MatchResult<Match> MarkInvitationDelivered(
+            long accountId,
+            long matchId,
+            DateTime now)
         {
             throw new NotSupportedException();
         }

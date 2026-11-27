@@ -6,29 +6,37 @@ using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Domain.Matches;
+using AppGameplayMatchService =
+    ReversiGameSystem.Server.Application.Matches.GameplayMatchApplicationService;
 
-namespace ReversiGameSystem.Server.Tests;
+namespace ReversiGameSystem.Server.Tests.UnitTests.Application;
 
 /// <summary>
-/// Verifies authoritative in-memory match management, placement rules, timeout limits and replay data.
+/// Verifies authoritative in-memory match management, placement rules, timeout limits and replay.
 /// </summary>
 [TestClass]
+[TestCategory("Unit")]
 public sealed class GameplayApplicationServiceTests
 {
+    private const string InProgressState = "InProgress";
+    private const string FinishedState = "Finished";
+    private const string TimeoutOrigin = "Timeout";
+    private const string PlayerOrigin = "Player";
+
     [TestMethod]
-    public void TrackStartedMatch_InitializesBoardAndTurnCorrectly()
+    public void TrackStartedMatch_ValidMatch_InitializesBoardAndTurn()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
+        long expectedVersion = 0L;
+        int? expectedTurnSeat = 1;
+        int expectedBoardLength = 64;
 
-        // Act
         context.ApplicationService.TrackStartedMatch(match);
 
-        // Assert
-        Assert.AreEqual(0L, match.MatchStateVersion);
-        Assert.AreEqual<int?>(1, match.CurrentTurnSeatNumber);
-        Assert.AreEqual(64, match.Board.Length);
+        Assert.AreEqual(expectedVersion, match.MatchStateVersion);
+        Assert.AreEqual(expectedTurnSeat, match.CurrentTurnSeatNumber);
+        Assert.AreEqual(expectedBoardLength, match.Board.Length);
         Assert.AreEqual(ReversiEngine.White, match.Board[27]);
         Assert.AreEqual(ReversiEngine.Black, match.Board[28]);
         Assert.AreEqual(ReversiEngine.Black, match.Board[35]);
@@ -39,379 +47,366 @@ public sealed class GameplayApplicationServiceTests
     [TestMethod]
     public void PlacePiece_MissingPlacement_ReturnsMissingPlacement()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
+        MatchStatus expectedStatus = MatchStatus.MissingPlacement;
 
-        // Act
         MatchResult<Match> result = context.ApplicationService.PlacePiece(
             context.PlayerOne.SessionToken,
             null);
 
-        // Assert
-        Assert.AreEqual(MatchStatus.MissingPlacement, result.Status);
+        Assert.AreEqual(expectedStatus, result.Status);
     }
 
     [TestMethod]
     public void PlacePiece_NegativeVersion_ReturnsInvalidMatchStateVersion()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         MatchPlacement placement = new MatchPlacement(10, -1, 2, 3);
+        MatchStatus expectedStatus = MatchStatus.InvalidMatchStateVersion;
 
-        // Act
         MatchResult<Match> result = context.ApplicationService.PlacePiece(
             context.PlayerOne.SessionToken,
             placement);
 
-        // Assert
-        Assert.AreEqual(MatchStatus.InvalidMatchStateVersion, result.Status);
+        Assert.AreEqual(expectedStatus, result.Status);
     }
 
     [TestMethod]
     public void PlacePiece_InvalidSession_ReturnsInvalidSession()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         MatchPlacement placement = new MatchPlacement(10, 0, 2, 3);
+        MatchStatus expectedStatus = MatchStatus.InvalidSession;
 
-        // Act
         MatchResult<Match> result = context.ApplicationService.PlacePiece(
             "non-existent-token",
             placement);
 
-        // Assert
-        Assert.AreEqual(MatchStatus.InvalidSession, result.Status);
+        Assert.AreEqual(expectedStatus, result.Status);
     }
 
     [TestMethod]
     public void PlacePiece_NotPlayersTurn_ReturnsNotPlayersTurn()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
         MatchPlacement placement = new MatchPlacement(match.Id, 0, 2, 4);
+        MatchStatus expectedStatus = MatchStatus.NotPlayersTurn;
 
-        // Act
         MatchResult<Match> result = context.ApplicationService.PlacePiece(
             context.PlayerTwo.SessionToken,
             placement);
 
-        // Assert
-        Assert.AreEqual(MatchStatus.NotPlayersTurn, result.Status);
+        Assert.AreEqual(expectedStatus, result.Status);
     }
 
     [TestMethod]
     public void PlacePiece_StaleVersion_ReturnsStaleMatchStateVersion()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
         MatchPlacement placement = new MatchPlacement(match.Id, 1, 2, 3);
+        MatchStatus expectedStatus = MatchStatus.StaleMatchStateVersion;
 
-        // Act
         MatchResult<Match> result = context.ApplicationService.PlacePiece(
             context.PlayerOne.SessionToken,
             placement);
 
-        // Assert
-        Assert.AreEqual(MatchStatus.StaleMatchStateVersion, result.Status);
+        Assert.AreEqual(expectedStatus, result.Status);
     }
 
     [TestMethod]
     public void PlacePiece_InvalidPosition_ReturnsInvalidPosition()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
         MatchPlacement placement = new MatchPlacement(match.Id, 0, 0, 0);
+        MatchStatus expectedStatus = MatchStatus.InvalidPosition;
 
-        // Act
         MatchResult<Match> result = context.ApplicationService.PlacePiece(
             context.PlayerOne.SessionToken,
             placement);
 
-        // Assert
-        Assert.AreEqual(MatchStatus.InvalidPosition, result.Status);
+        Assert.AreEqual(expectedStatus, result.Status);
     }
 
     [TestMethod]
     public void PlacePiece_ValidMove_FlipsPiecesAdvancesTurnAndSynchronizesMatch()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
         MatchPlacement placement = new MatchPlacement(match.Id, 0, 2, 3);
+        MatchStatus expectedStatus = MatchStatus.Success;
+        long expectedVersion = 1L;
+        int? expectedTurnSeat = 2;
+        int expectedMoveCount = 1;
+        int expectedSyncCalls = 1;
 
-        // Act
         MatchResult<Match> result = context.ApplicationService.PlacePiece(
             context.PlayerOne.SessionToken,
             placement);
         context.ApplicationService.SynchronizePendingMatches();
 
-        // Assert
-        Assert.AreEqual(MatchStatus.Success, result.Status);
-        Match updated = result.Value
-            ?? throw new InvalidOperationException("The result must contain the updated match.");
-        Assert.AreEqual(1L, updated.MatchStateVersion);
-        Assert.AreEqual<int?>(2, updated.CurrentTurnSeatNumber);
+        Assert.AreEqual(expectedStatus, result.Status);
+        Match updated = TestAssert.IsNotNull(result.Value);
+        Assert.AreEqual(expectedVersion, updated.MatchStateVersion);
+        Assert.AreEqual(expectedTurnSeat, updated.CurrentTurnSeatNumber);
         Assert.AreEqual(ReversiEngine.Black, updated.Board[2 * 8 + 3]);
         Assert.AreEqual(ReversiEngine.Black, updated.Board[3 * 8 + 3]);
-        Assert.AreEqual(1, updated.Moves.Count);
-        Assert.AreEqual("Player", updated.LastMove?.Origin ?? string.Empty);
-        Assert.AreEqual(1, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(expectedMoveCount, updated.Moves.Count);
+        Assert.AreEqual(PlayerOrigin, updated.LastMove?.Origin ?? string.Empty);
+        Assert.AreEqual(expectedSyncCalls, context.Repository.SynchronizeCalls);
     }
 
     [TestMethod]
     public void PlacePiece_PersistenceUnavailable_PreservesAndRetriesConfirmedState()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
         context.Repository.SynchronizationAvailable = false;
+        MatchStatus expectedStatus = MatchStatus.Success;
+        long expectedVersion = 1L;
+        int expectedInitialSyncCalls = 0;
+        int expectedFirstRetryCalls = 1;
+        int expectedSecondRetryCalls = 2;
 
-        // Act
         MatchResult<Match> result = context.ApplicationService.PlacePiece(
             context.PlayerOne.SessionToken,
             new MatchPlacement(match.Id, 0, 2, 3));
 
-        // Assert
-        Assert.AreEqual(MatchStatus.Success, result.Status);
-        Assert.AreEqual(1L, match.MatchStateVersion);
-        Assert.AreEqual(0, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(expectedStatus, result.Status);
+        Assert.AreEqual(expectedVersion, match.MatchStateVersion);
+        Assert.AreEqual(expectedInitialSyncCalls, context.Repository.SynchronizeCalls);
 
         context.ApplicationService.SynchronizePendingMatches();
-        Assert.AreEqual(1, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(expectedFirstRetryCalls, context.Repository.SynchronizeCalls);
 
         context.ApplicationService.SynchronizePendingMatches();
-        Assert.AreEqual(1, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(expectedFirstRetryCalls, context.Repository.SynchronizeCalls);
 
         context.Repository.SynchronizationAvailable = true;
         context.Clock.Advance(TimeSpan.FromSeconds(5));
         context.ApplicationService.SynchronizePendingMatches();
 
-        Assert.AreEqual(2, context.Repository.SynchronizeCalls);
-        Assert.AreEqual(1L, context.Repository.LastSynchronizedVersion);
+        Assert.AreEqual(expectedSecondRetryCalls, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(expectedVersion, context.Repository.LastSynchronizedVersion);
     }
 
     [TestMethod]
-    public void PlacePiece_ResetsConsecutiveTimeoutCount()
+    public void PlacePiece_AfterTimeout_ResetsConsecutiveTimeoutCount()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
         match.Participants[0].ConsecutiveTimeoutCount = 2;
         MatchPlacement placement = new MatchPlacement(match.Id, 0, 2, 3);
+        MatchStatus expectedStatus = MatchStatus.Success;
+        int expectedTimeouts = 0;
 
-        // Act
         MatchResult<Match> result = context.ApplicationService.PlacePiece(
             context.PlayerOne.SessionToken,
             placement);
 
-        // Assert
-        Assert.AreEqual(MatchStatus.Success, result.Status);
-        Assert.AreEqual(0, match.Participants[0].ConsecutiveTimeoutCount);
+        Assert.AreEqual(expectedStatus, result.Status);
+        Assert.AreEqual(expectedTimeouts, match.Participants[0].ConsecutiveTimeoutCount);
     }
 
     [TestMethod]
     public void ForfeitMatch_NonParticipant_ReturnsUnauthorized()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
+        MatchStatus expectedStatus = MatchStatus.Unauthorized;
 
-        // Act
         MatchResult<Match> result = context.ApplicationService.ForfeitMatch(
             context.Spectator.SessionToken,
             match.Id);
 
-        // Assert
-        Assert.AreEqual(MatchStatus.Unauthorized, result.Status);
+        Assert.AreEqual(expectedStatus, result.Status);
     }
 
     [TestMethod]
     public void ForfeitMatch_Participant_ConcludesMatchWithAbandonment()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
+        MatchStatus expectedStatus = MatchStatus.Success;
+        long expectedVersion = 1L;
+        string expectedEndReason = "ABANDONMENT";
+        int? expectedAbandoningSeat = 1;
+        int? expectedWinnerSeat = 2;
+        int expectedSyncCalls = 1;
 
-        // Act
         MatchResult<Match> result = context.ApplicationService.ForfeitMatch(
             context.PlayerOne.SessionToken,
             match.Id);
         context.ApplicationService.SynchronizePendingMatches();
 
-        // Assert
-        Assert.AreEqual(MatchStatus.Success, result.Status);
-        Match concluded = result.Value ?? throw new InvalidOperationException("Value expected.");
-        Assert.AreEqual("Finished", concluded.State);
-        Assert.AreEqual(1L, concluded.MatchStateVersion);
-        Assert.AreEqual("ABANDONMENT", concluded.EndReason);
-        Assert.AreEqual<int?>(1, concluded.AbandoningSeatNumber);
-        Assert.AreEqual<int?>(2, concluded.WinnerSeatNumber);
-        Assert.AreEqual<int?>(null, concluded.CurrentTurnSeatNumber);
-        Assert.AreEqual(1, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(expectedStatus, result.Status);
+        Match concluded = TestAssert.IsNotNull(result.Value);
+        Assert.AreEqual(FinishedState, concluded.State);
+        Assert.AreEqual(expectedVersion, concluded.MatchStateVersion);
+        Assert.AreEqual(expectedEndReason, concluded.EndReason);
+        Assert.AreEqual(expectedAbandoningSeat, concluded.AbandoningSeatNumber);
+        Assert.AreEqual(expectedWinnerSeat, concluded.WinnerSeatNumber);
+        Assert.IsNull(concluded.CurrentTurnSeatNumber);
+        Assert.AreEqual(expectedSyncCalls, context.Repository.SynchronizeCalls);
     }
 
     [TestMethod]
     public void ForfeitMatch_AlreadyFinished_IsIdempotent()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
         _ = context.ApplicationService.ForfeitMatch(context.PlayerOne.SessionToken, match.Id);
         context.ApplicationService.SynchronizePendingMatches();
+        MatchStatus expectedStatus = MatchStatus.Success;
+        int expectedSyncCalls = 1;
 
-        // Act
         MatchResult<Match> secondForfeit = context.ApplicationService.ForfeitMatch(
             context.PlayerOne.SessionToken,
             match.Id);
         context.ApplicationService.SynchronizePendingMatches();
 
-        // Assert
-        Assert.AreEqual(MatchStatus.Success, secondForfeit.Status);
-        Assert.AreEqual("Finished", secondForfeit.Value?.State);
-        Assert.AreEqual(1, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(expectedStatus, secondForfeit.Status);
+        Assert.AreEqual(FinishedState, secondForfeit.Value?.State);
+        Assert.AreEqual(expectedSyncCalls, context.Repository.SynchronizeCalls);
     }
 
     [TestMethod]
     public void ProcessTurnTimeouts_TurnNotExpired_DoesNothing()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
         context.Clock.Advance(TimeSpan.FromSeconds(20));
+        int expectedCount = 0;
 
-        // Act
         Match[] updated = context.ApplicationService.ProcessTurnTimeouts();
 
-        // Assert
-        Assert.AreEqual(0, updated.Length);
-        Assert.AreEqual(0, match.Participants[0].ConsecutiveTimeoutCount);
+        Assert.AreEqual(expectedCount, updated.Length);
+        Assert.AreEqual(expectedCount, match.Participants[0].ConsecutiveTimeoutCount);
     }
 
     [TestMethod]
     public void ProcessTurnTimeouts_SingleTimeout_PlaysAutomaticMoveAndIncrementsTimeout()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
         context.Clock.Advance(TimeSpan.FromSeconds(41));
+        int expectedCount = 1;
+        long expectedVersion = 1L;
+        int? expectedTurnSeat = 2;
 
-        // Act
         Match[] updated = context.ApplicationService.ProcessTurnTimeouts();
         context.ApplicationService.SynchronizePendingMatches();
 
-        // Assert
-        Assert.AreEqual(1, updated.Length);
-        Assert.AreEqual(1, match.Participants[0].ConsecutiveTimeoutCount);
-        Assert.AreEqual(1L, match.MatchStateVersion);
-        Assert.AreEqual<int?>(2, match.CurrentTurnSeatNumber);
-        Assert.AreEqual("Timeout", match.LastMove?.Origin ?? string.Empty);
-        Assert.AreEqual(1, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(expectedCount, updated.Length);
+        Assert.AreEqual(expectedCount, match.Participants[0].ConsecutiveTimeoutCount);
+        Assert.AreEqual(expectedVersion, match.MatchStateVersion);
+        Assert.AreEqual(expectedTurnSeat, match.CurrentTurnSeatNumber);
+        Assert.AreEqual(TimeoutOrigin, match.LastMove?.Origin ?? string.Empty);
+        Assert.AreEqual(expectedCount, context.Repository.SynchronizeCalls);
     }
 
     [TestMethod]
     public void ProcessTurnTimeouts_ThreeConsecutiveTimeouts_ConcludesMatchWithInactivity()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
         match.Participants[0].ConsecutiveTimeoutCount = 2;
         context.Clock.Advance(TimeSpan.FromSeconds(41));
+        int expectedUpdatedCount = 1;
+        int expectedTimeouts = 3;
+        string expectedEndReason = "INACTIVITY";
+        int? expectedWinnerSeat = 2;
+        int? expectedAbandoningSeat = 1;
+        int expectedSyncCalls = 1;
 
-        // Act
         Match[] updated = context.ApplicationService.ProcessTurnTimeouts();
         context.ApplicationService.SynchronizePendingMatches();
 
-        // Assert
-        Assert.AreEqual(1, updated.Length);
-        Assert.AreEqual(3, match.Participants[0].ConsecutiveTimeoutCount);
-        Assert.AreEqual("Finished", match.State);
-        Assert.AreEqual("INACTIVITY", match.EndReason);
-        Assert.AreEqual<int?>(2, match.WinnerSeatNumber);
-        Assert.AreEqual<int?>(1, match.AbandoningSeatNumber);
-        Assert.AreEqual<int?>(null, match.CurrentTurnSeatNumber);
-        Assert.AreEqual(1, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(expectedUpdatedCount, updated.Length);
+        Assert.AreEqual(expectedTimeouts, match.Participants[0].ConsecutiveTimeoutCount);
+        Assert.AreEqual(FinishedState, match.State);
+        Assert.AreEqual(expectedEndReason, match.EndReason);
+        Assert.AreEqual(expectedWinnerSeat, match.WinnerSeatNumber);
+        Assert.AreEqual(expectedAbandoningSeat, match.AbandoningSeatNumber);
+        Assert.IsNull(match.CurrentTurnSeatNumber);
+        Assert.AreEqual(expectedSyncCalls, context.Repository.SynchronizeCalls);
     }
 
     [TestMethod]
     public void ObserveMatch_InProgress_ReturnsActiveMatch()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
+        MatchStatus expectedStatus = MatchStatus.Success;
 
-        // Act
         MatchResult<Match> result = context.ApplicationService.ObserveMatch(
             context.Spectator.SessionToken,
             match.Id);
 
-        // Assert
-        Assert.AreEqual(MatchStatus.Success, result.Status);
+        Assert.AreEqual(expectedStatus, result.Status);
         Assert.AreEqual(match.Id, result.Value?.Id);
     }
 
     [TestMethod]
     public void ObserveMatch_FinishedMatch_ReturnsSpectatingUnavailable()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
         _ = context.ApplicationService.ForfeitMatch(context.PlayerOne.SessionToken, match.Id);
+        MatchStatus expectedStatus = MatchStatus.SpectatingUnavailable;
 
-        // Act
         MatchResult<Match> result = context.ApplicationService.ObserveMatch(
             context.Spectator.SessionToken,
             match.Id);
 
-        // Assert
-        Assert.AreEqual(MatchStatus.SpectatingUnavailable, result.Status);
+        Assert.AreEqual(expectedStatus, result.Status);
     }
 
     [TestMethod]
-    public void GetMoveHistory_ReturnsOrderedMoves()
+    public void GetMoveHistory_PlayedMove_ReturnsOrderedMoves()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
         _ = context.ApplicationService.PlacePiece(
             context.PlayerOne.SessionToken,
             new MatchPlacement(match.Id, 0, 2, 3));
+        MatchStatus expectedStatus = MatchStatus.Success;
+        int expectedCount = 1;
+        int expectedRow = 2;
+        int expectedColumn = 3;
 
-        // Act
         MatchResult<MatchMove[]> result = context.ApplicationService.GetMoveHistory(
             context.PlayerOne.SessionToken,
             match.Id);
 
-        // Assert
-        Assert.AreEqual(MatchStatus.Success, result.Status);
-        MatchMove[] moves = result.Value ?? throw new InvalidOperationException("Moves expected.");
-        Assert.AreEqual(1, moves.Length);
-        Assert.AreEqual(1, moves[0].MoveNumber);
-        Assert.AreEqual(2, moves[0].Row);
-        Assert.AreEqual(3, moves[0].Column);
+        Assert.AreEqual(expectedStatus, result.Status);
+        MatchMove[] moves = TestAssert.IsNotNull(result.Value);
+        Assert.AreEqual(expectedCount, moves.Length);
+        Assert.AreEqual(expectedCount, moves[0].MoveNumber);
+        Assert.AreEqual(expectedRow, moves[0].Row);
+        Assert.AreEqual(expectedColumn, moves[0].Column);
     }
 
     [TestMethod]
     public void PlacePiece_OpponentHasNoLegalMoves_SkipsOpponentTurn()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
@@ -421,24 +416,24 @@ public sealed class GameplayApplicationServiceTests
         board[(7 * 8) + 0] = ReversiEngine.Black;
         board[(7 * 8) + 1] = ReversiEngine.White;
         match.Board = board;
+        MatchStatus expectedStatus = MatchStatus.Success;
+        int? expectedTurnSeat = 1;
+        int? expectedSkippedSeat = 2;
 
-        // Act
         MatchResult<Match> result = context.ApplicationService.PlacePiece(
             context.PlayerOne.SessionToken,
             new MatchPlacement(match.Id, 0, 0, 0));
 
-        // Assert
-        Assert.AreEqual(MatchStatus.Success, result.Status);
-        Match updated = result.Value ?? throw new InvalidOperationException("Value expected.");
-        Assert.AreEqual("InProgress", updated.State);
-        Assert.AreEqual<int?>(1, updated.CurrentTurnSeatNumber);
-        Assert.AreEqual<int?>(2, updated.SkippedSeatNumber);
+        Assert.AreEqual(expectedStatus, result.Status);
+        Match updated = TestAssert.IsNotNull(result.Value);
+        Assert.AreEqual(InProgressState, updated.State);
+        Assert.AreEqual(expectedTurnSeat, updated.CurrentTurnSeatNumber);
+        Assert.AreEqual(expectedSkippedSeat, updated.SkippedSeatNumber);
     }
 
     [TestMethod]
     public void PlacePiece_NoPlayerHasLegalMoves_ConcludesMatchNormally()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
@@ -446,25 +441,25 @@ public sealed class GameplayApplicationServiceTests
         board[(0 * 8) + 1] = ReversiEngine.White;
         board[(0 * 8) + 2] = ReversiEngine.Black;
         match.Board = board;
+        MatchStatus expectedStatus = MatchStatus.Success;
+        string expectedEndReason = "NO_LEGAL_MOVES";
+        int? expectedWinnerSeat = 1;
 
-        // Act
         MatchResult<Match> result = context.ApplicationService.PlacePiece(
             context.PlayerOne.SessionToken,
             new MatchPlacement(match.Id, 0, 0, 0));
 
-        // Assert
-        Assert.AreEqual(MatchStatus.Success, result.Status);
-        Match concluded = result.Value ?? throw new InvalidOperationException("Value expected.");
-        Assert.AreEqual("Finished", concluded.State);
-        Assert.AreEqual("NO_LEGAL_MOVES", concluded.EndReason);
-        Assert.AreEqual<int?>(1, concluded.WinnerSeatNumber);
-        Assert.AreEqual<int?>(null, concluded.CurrentTurnSeatNumber);
+        Assert.AreEqual(expectedStatus, result.Status);
+        Match concluded = TestAssert.IsNotNull(result.Value);
+        Assert.AreEqual(FinishedState, concluded.State);
+        Assert.AreEqual(expectedEndReason, concluded.EndReason);
+        Assert.AreEqual(expectedWinnerSeat, concluded.WinnerSeatNumber);
+        Assert.IsNull(concluded.CurrentTurnSeatNumber);
     }
 
     [TestMethod]
     public void ProcessTurnTimeouts_DatabaseUnavailable_StillTransitionsExpiredTurns()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
@@ -474,79 +469,74 @@ public sealed class GameplayApplicationServiceTests
             new MatchPlacement(match.Id, 0, 2, 3));
         context.ApplicationService.SynchronizePendingMatches();
         context.Clock.Advance(TimeSpan.FromSeconds(41));
+        int expectedUpdatedCount = 1;
+        long expectedVersion = 2L;
+        int expectedSyncCalls = 1;
 
-        // Act
         Match[] updated = context.ApplicationService.ProcessTurnTimeouts();
 
-        // Assert
-        Assert.AreEqual(1, updated.Length);
-        Assert.AreEqual(2L, updated[0].MatchStateVersion);
-        Assert.AreEqual("Timeout", updated[0].LastMove?.Origin ?? string.Empty);
-        Assert.AreEqual(1, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(expectedUpdatedCount, updated.Length);
+        Assert.AreEqual(expectedVersion, updated[0].MatchStateVersion);
+        Assert.AreEqual(TimeoutOrigin, updated[0].LastMove?.Origin ?? string.Empty);
+        Assert.AreEqual(expectedSyncCalls, context.Repository.SynchronizeCalls);
     }
 
     [TestMethod]
     public void SynchronizePendingMatches_FinishedMatchPersisted_EvictsFromActiveMatches()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
         _ = context.ApplicationService.ForfeitMatch(context.PlayerOne.SessionToken, match.Id);
         context.ApplicationService.SynchronizePendingMatches();
+        MatchStatus expectedStatus = MatchStatus.Success;
+        int expectedLoadCalls = 1;
 
-        // Act
         MatchResult<Match> reloadResult = context.ApplicationService.GetMatchState(
             context.PlayerOne.SessionToken,
             match.Id);
 
-        // Assert
-        Assert.AreEqual(MatchStatus.Success, reloadResult.Status);
-        Assert.AreEqual("Finished", reloadResult.Value?.State);
-        Assert.AreEqual(1, context.Repository.LoadMatchCalls);
+        Assert.AreEqual(expectedStatus, reloadResult.Status);
+        Assert.AreEqual(FinishedState, reloadResult.Value?.State);
+        Assert.AreEqual(expectedLoadCalls, context.Repository.LoadMatchCalls);
     }
 
     [TestMethod]
     public void GetAuthorizedMatchSnapshot_Participant_ReturnsSnapshot()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
         context.ApplicationService.TrackStartedMatch(match);
+        MatchStatus expectedStatus = MatchStatus.Success;
 
-        // Act
         MatchResult<Match> participantResult =
             context.ApplicationService.GetAuthorizedMatchSnapshot(
                 context.PlayerOne.SessionToken,
                 match.Id);
 
-        // Assert
-        Assert.AreEqual(MatchStatus.Success, participantResult.Status);
+        Assert.AreEqual(expectedStatus, participantResult.Status);
         Assert.AreEqual(match.Id, participantResult.Value?.Id);
     }
 
     [TestMethod]
     public void GetAuthorizedMatchSnapshot_NonParticipant_ReturnsUnauthorized()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match match = context.CreateMatch(40);
-        match.State = "Finished";
+        match.State = FinishedState;
+        MatchStatus expectedStatus = MatchStatus.Unauthorized;
 
-        // Act
         MatchResult<Match> spectatorResult =
             context.ApplicationService.GetAuthorizedMatchSnapshot(
                 context.Spectator.SessionToken,
                 match.Id);
 
-        // Assert
-        Assert.AreEqual(MatchStatus.Unauthorized, spectatorResult.Status);
+        Assert.AreEqual(expectedStatus, spectatorResult.Status);
     }
 
     [TestMethod]
     public void SynchronizePendingMatches_PersistenceFailureOnFirstMatch_StopsTickForBackoff()
     {
-        // Arrange
         GameplayTestContext context = new GameplayTestContext();
         Match firstMatch = context.CreateMatch(40);
         Match secondMatch = context.CreateMatch(40);
@@ -561,23 +551,28 @@ public sealed class GameplayApplicationServiceTests
         _ = context.ApplicationService.PlacePiece(
             context.PlayerOne.SessionToken,
             new MatchPlacement(secondMatch.Id, 0, 2, 3));
+        int expectedSyncCalls = 1;
 
-        // Act
         context.ApplicationService.SynchronizePendingMatches();
 
-        // Assert
-        Assert.AreEqual(1, context.Repository.SynchronizeCalls);
+        Assert.AreEqual(expectedSyncCalls, context.Repository.SynchronizeCalls);
     }
 }
 
 internal sealed class GameplayTestContext
 {
     internal MutableTestClock Clock { get; }
+
     internal SessionStore Sessions { get; }
+
     internal MockGameplayMatchRepository Repository { get; }
-    internal GameplayMatchApplicationService ApplicationService { get; }
+
+    internal AppGameplayMatchService ApplicationService { get; }
+
     internal AuthenticatedSession PlayerOne { get; }
+
     internal AuthenticatedSession PlayerTwo { get; }
+
     internal AuthenticatedSession Spectator { get; }
 
     internal GameplayTestContext()
@@ -585,7 +580,7 @@ internal sealed class GameplayTestContext
         Clock = new MutableTestClock(new DateTime(2026, 11, 11, 20, 0, 0, DateTimeKind.Utc));
         Sessions = new SessionStore(Clock);
         Repository = new MockGameplayMatchRepository();
-        ApplicationService = new GameplayMatchApplicationService(Sessions, Repository, Clock);
+        ApplicationService = new AppGameplayMatchService(Sessions, Repository, Clock);
 
         PlayerOne = TestSessionHelper.CreateSession(Sessions, 101, "PlayerAlpha");
         PlayerTwo = TestSessionHelper.CreateSession(Sessions, 202, "PlayerBeta");
@@ -603,8 +598,18 @@ internal sealed class GameplayTestContext
             StartedAtUtc = Clock.UtcNow,
             Participants = new[]
             {
-                new MatchParticipant { AccountId = PlayerOne.AccountId, DisplayName = PlayerOne.Username, SeatNumber = 1 },
-                new MatchParticipant { AccountId = PlayerTwo.AccountId, DisplayName = PlayerTwo.Username, SeatNumber = 2 }
+                new MatchParticipant
+                {
+                    AccountId = PlayerOne.AccountId,
+                    DisplayName = PlayerOne.Username,
+                    SeatNumber = 1
+                },
+                new MatchParticipant
+                {
+                    AccountId = PlayerTwo.AccountId,
+                    DisplayName = PlayerTwo.Username,
+                    SeatNumber = 2
+                }
             }
         };
 
@@ -624,10 +629,7 @@ internal sealed class MutableTestClock : IUtcClock
 
     public DateTime UtcNow
     {
-        get
-        {
-            return _utcNow;
-        }
+        get { return _utcNow; }
     }
 
     internal void Advance(TimeSpan delta)
@@ -641,9 +643,20 @@ internal sealed class MockGameplayMatchRepository : IGameplayRepository
     private readonly Dictionary<long, Match> _matches = new Dictionary<long, Match>();
 
     internal int LoadMatchCalls { get; private set; }
+
     internal int SynchronizeCalls { get; private set; }
+
     internal bool SynchronizationAvailable { get; set; } = true;
+
     internal long LastSynchronizedVersion { get; private set; }
+
+    internal bool AccessUnavailable { get; set; }
+
+    internal Action? ObservableMatchesLoaded { get; set; }
+
+    internal MatchStatus AccessStatus { get; set; } = MatchStatus.Success;
+
+    internal bool ListUnavailable { get; set; }
 
     internal void StoreMatch(Match match)
     {
@@ -659,12 +672,6 @@ internal sealed class MockGameplayMatchRepository : IGameplayRepository
 
         return AccessStatus;
     }
-
-    internal bool AccessUnavailable { get; set; }
-    internal Action? ObservableMatchesLoaded { get; set; }
-    internal MatchStatus AccessStatus { get; set; } = MatchStatus.Success;
-
-    internal bool ListUnavailable { get; set; }
 
     public MatchResult<Match[]> GetObservableMatches(long accountId)
     {

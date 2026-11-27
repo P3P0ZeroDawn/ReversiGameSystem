@@ -114,6 +114,108 @@ public sealed class FriendRepositoryIntegrationTests : RepositoryIntegrationTest
         CollectionAssert.AreEqual(expectedIds, actualIds);
     }
 
+    [TestMethod]
+    public void FindPlayers_MatchingText_ExcludesCallerAndDeactivatedAccounts()
+    {
+        long callerId = SeedAccount("alphaCaller", "alpha.c@example.com");
+        long expectedTargetId = SeedAccount("alphaTarget", "alpha.t@example.com");
+        SeedAccount("alphaInactive", "alpha.i@example.com", "DEACTIVATED");
+        SeedAccount("betaOther", "beta.o@example.com");
+        FriendRepository repository = new FriendRepository();
+        int expectedCount = 1;
+        string expectedUsername = "alphaTarget";
+
+        FriendAccount[] actualMatches = repository.FindPlayers(callerId, "alpha");
+
+        Assert.AreEqual(expectedCount, actualMatches.Length);
+        Assert.AreEqual(expectedTargetId, actualMatches[0].AccountId);
+        Assert.AreEqual(expectedUsername, actualMatches[0].Username);
+    }
+
+    [TestMethod]
+    public void CreatePendingRequest_ValidAccounts_PersistsOrderedPendingRow()
+    {
+        long secondCreatedId = SeedAccount(CallerUsername, CallerEmail);
+        long firstCreatedId = SeedAccount(AmyUsername, "amy.req@example.com");
+        long higherAccountId = Math.Max(secondCreatedId, firstCreatedId);
+        long lowerAccountId = Math.Min(secondCreatedId, firstCreatedId);
+        FriendRepository repository = new FriendRepository();
+        FriendshipStatus expectedStatus = FriendshipStatus.Success;
+
+        FriendshipResult<PendingFriendRequest> actualResult = repository.CreatePendingRequest(
+            higherAccountId,
+            lowerAccountId);
+
+        Assert.AreEqual(expectedStatus, actualResult.Status);
+        Assert.IsNotNull(actualResult.Value);
+        using ReversiGameSystemEntities verificationContext = CreateFreshContext();
+        Friendship persisted = verificationContext.Friendship.Single(
+            row => row.accountIdA == lowerAccountId && row.accountIdB == higherAccountId);
+        Assert.AreEqual(PendingStatus, persisted.statusCode);
+        Assert.AreEqual(higherAccountId, persisted.requestedByAccountId);
+    }
+
+    [TestMethod]
+    public void CreatePendingRequest_AlreadyPending_ReturnsRequestAlreadyPending()
+    {
+        long senderId = SeedAccount(CallerUsername, CallerEmail);
+        long recipientId = SeedAccount(ZedUsername, "zed.dup@example.com");
+        FriendRepository repository = new FriendRepository();
+        repository.CreatePendingRequest(senderId, recipientId);
+        FriendshipStatus expectedStatus = FriendshipStatus.RequestAlreadyPending;
+
+        FriendshipResult<PendingFriendRequest> actualDuplicate = repository.CreatePendingRequest(
+            recipientId,
+            senderId);
+
+        Assert.AreEqual(expectedStatus, actualDuplicate.Status);
+    }
+
+    [TestMethod]
+    public void RespondToRequest_Accept_TransitionsPendingRowToAccepted()
+    {
+        long senderId = SeedAccount(CallerUsername, CallerEmail);
+        long recipientId = SeedAccount(AmyUsername, "amy.acc@example.com");
+        FriendRepository repository = new FriendRepository();
+        repository.CreatePendingRequest(senderId, recipientId);
+        PendingFriendRequest pending = repository.ReadPendingRequests(recipientId).Single();
+        FriendshipStatus expectedStatus = FriendshipStatus.Success;
+
+        FriendshipStatus actualStatus = repository.RespondToRequest(recipientId, pending, true);
+
+        Assert.AreEqual(expectedStatus, actualStatus);
+        Assert.IsTrue(repository.AreFriends(senderId, recipientId));
+        using ReversiGameSystemEntities verificationContext = CreateFreshContext();
+        long minId = Math.Min(senderId, recipientId);
+        long maxId = Math.Max(senderId, recipientId);
+        Friendship persisted = verificationContext.Friendship.Single(
+            row => row.accountIdA == minId && row.accountIdB == maxId);
+        Assert.AreEqual(AcceptedStatus, persisted.statusCode);
+        Assert.IsNotNull(persisted.respondedAtUtc);
+    }
+
+    [TestMethod]
+    public void RemoveFriendship_AcceptedFriendship_TransitionsToEndedWithTimestamp()
+    {
+        long firstId = SeedAccount(CallerUsername, CallerEmail);
+        long secondId = SeedAccount(ZedUsername, "zed.rem@example.com");
+        SeedFriendship(new FriendshipSeedData(firstId, secondId, AcceptedStatus, null));
+        FriendRepository repository = new FriendRepository();
+        FriendshipStatus expectedStatus = FriendshipStatus.Success;
+
+        FriendshipStatus actualStatus = repository.RemoveFriendship(firstId, secondId);
+
+        Assert.AreEqual(expectedStatus, actualStatus);
+        Assert.IsFalse(repository.AreFriends(firstId, secondId));
+        using ReversiGameSystemEntities verificationContext = CreateFreshContext();
+        long minId = Math.Min(firstId, secondId);
+        long maxId = Math.Max(firstId, secondId);
+        Friendship persisted = verificationContext.Friendship.Single(
+            row => row.accountIdA == minId && row.accountIdB == maxId);
+        Assert.AreEqual(RemovedStatus, persisted.statusCode);
+        Assert.IsNotNull(persisted.endedAtUtc);
+    }
+
     private static void SeedFriendship(FriendshipSeedData seed)
     {
         long accountIdA = Math.Min(seed.FirstAccountId, seed.SecondAccountId);

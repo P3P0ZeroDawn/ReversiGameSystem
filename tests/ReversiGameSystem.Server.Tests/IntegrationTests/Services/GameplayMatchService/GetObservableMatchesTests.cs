@@ -8,6 +8,7 @@ using ReversiGameSystem.Server.Contracts.Faults;
 using ReversiGameSystem.Server.Contracts.Matches;
 using ReversiGameSystem.Server.Contracts.Services;
 using ReversiGameSystem.Server.ServiceApi;
+using ReversiGameSystem.Server.Tests.UnitTests.Application;
 
 namespace ReversiGameSystem.Server.Tests.IntegrationTests.Services.GameplayMatchService;
 
