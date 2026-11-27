@@ -125,7 +125,7 @@ public sealed class LobbyAuthorizationTests
 
     private sealed class AuthorizationStore : IMatchRepository
     {
-        public MatchResult<Match> StartSystemMatch(long accountId, long matchId, DateTime now)
+        public MatchResult<Match> StartSystemMatch(MatchPlayer player, long matchId, DateTime now)
         {
             throw new NotSupportedException();
         }
@@ -147,14 +147,14 @@ public sealed class LobbyAuthorizationTests
             return MatchStatus.Success;
         }
 
-        public MatchResult<Match[]> GetAvailableMatches(long accountId)
+        public MatchResult<Match[]> GetAvailableMatches(MatchPlayer player)
         {
             AvailableCalls++;
             throw new InvalidOperationException("Authorization must not enumerate lobbies.");
         }
 
         public MatchResult<Match> CreateMatch(
-            AuthenticatedSession player, MatchSettings settings, DateTime now)
+            MatchPlayer player, MatchSettings settings, DateTime now)
         {
             throw new NotSupportedException();
         }
@@ -173,27 +173,23 @@ public sealed class LobbyAuthorizationTests
             throw new NotSupportedException();
         }
 
-        public MatchResult<Match> JoinMatch(AuthenticatedSession player, string code, DateTime now)
+        public MatchResult<Match> JoinMatch(MatchPlayer player, string code, DateTime now)
         {
             throw new NotSupportedException();
         }
 
-        public MatchStatus ValidateGuestJoin(string code)
+
+        public MatchResult<Match> LoadParticipantMatch(MatchPlayer player, long matchId)
         {
             throw new NotSupportedException();
         }
 
-        public MatchResult<Match> LoadParticipantMatch(long accountId, long matchId)
+        public MatchResult<Match> ChangeTurnDuration(MatchPlayer player, long matchId, int seconds)
         {
             throw new NotSupportedException();
         }
 
-        public MatchResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
-        {
-            throw new NotSupportedException();
-        }
-
-        public MatchStatus CancelMatch(long accountId, long matchId)
+        public MatchStatus CancelMatch(MatchPlayer player, long matchId)
         {
             throw new NotSupportedException();
         }

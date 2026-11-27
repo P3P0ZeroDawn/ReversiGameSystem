@@ -222,7 +222,7 @@ public sealed class MatchBoundaryTests
 
     private sealed class BoundaryStore : IMatchRepository, IGameplayRepository
     {
-        public MatchResult<Match> StartSystemMatch(long accountId, long matchId, DateTime now)
+        public MatchResult<Match> StartSystemMatch(MatchPlayer player, long matchId, DateTime now)
         {
             throw new NotSupportedException();
         }
@@ -238,7 +238,7 @@ public sealed class MatchBoundaryTests
         }
         internal bool AllowRead { get; set; }
         internal bool FailStorage { get; set; }
-        public MatchResult<Match> CreateMatch(AuthenticatedSession player, MatchSettings settings, DateTime now)
+        public MatchResult<Match> CreateMatch(MatchPlayer player, MatchSettings settings, DateTime now)
         {
             throw new NotSupportedException();
         }
@@ -247,23 +247,23 @@ public sealed class MatchBoundaryTests
             throw new InvalidOperationException("private storage failure");
         }
 
-        public MatchResult<Match[]> GetAvailableMatches(long accountId)
+        public MatchResult<Match[]> GetAvailableMatches(MatchPlayer player)
         {
             throw new InvalidOperationException("private storage failure");
         }
-        public MatchResult<Match> JoinMatch(AuthenticatedSession player, string code, DateTime now)
+        public MatchResult<Match> JoinMatch(MatchPlayer player, string code, DateTime now)
         {
             throw new NotSupportedException();
         }
-        public MatchResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
+        public MatchResult<Match> ChangeTurnDuration(MatchPlayer player, long matchId, int seconds)
         {
             throw new NotSupportedException();
         }
-        public MatchStatus CancelMatch(long accountId, long matchId)
+        public MatchStatus CancelMatch(MatchPlayer player, long matchId)
         {
             throw new NotSupportedException();
         }
-        public MatchResult<Match> LoadParticipantMatch(long accountId, long matchId)
+        public MatchResult<Match> LoadParticipantMatch(MatchPlayer player, long matchId)
         {
             if (FailStorage)
             {
@@ -358,15 +358,6 @@ public sealed class MatchBoundaryTests
             return new MatchResult<Match>(match);
         }
 
-        public MatchStatus ValidateGuestJoin(string matchCode)
-        {
-            if (matchCode == "REV123")
-            {
-                return MatchStatus.Unauthorized;
-            }
-
-            return MatchStatus.Success;
-        }
 
         public MatchStatus SaveMove(
             long matchId,
@@ -405,7 +396,25 @@ public sealed class MatchBoundaryTests
 
         public MatchResult<Match> LoadMatch(long matchId)
         {
-            return LoadParticipantMatch(0, matchId);
+            if (FailStorage)
+            {
+                throw new InvalidOperationException("private storage failure");
+            }
+
+            if (!AllowRead)
+            {
+                return new MatchResult<Match>(MatchStatus.Unauthorized);
+            }
+
+            Match match = new Match
+            {
+                Id = matchId,
+                State = "InProgress",
+                TurnDurationSeconds = 40,
+                StartedAtUtc = new BoundaryClock().UtcNow,
+                Participants = new[] { new MatchParticipant { AccountId = 1, SeatNumber = 1 } }
+            };
+            return new MatchResult<Match>(match);
         }
 
         public bool SynchronizeMatch(Match match)

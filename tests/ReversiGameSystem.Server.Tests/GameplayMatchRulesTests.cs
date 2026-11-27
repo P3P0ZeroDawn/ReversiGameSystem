@@ -113,7 +113,7 @@ public sealed class GameplayMatchRulesTests
         // Act
         MatchResult<MatchParticipant> result = GameplayMatchRules.ValidatePlacement(
             match,
-            101L,
+            ReversiEngine.Black,
             placement);
 
         // Assert
@@ -131,7 +131,7 @@ public sealed class GameplayMatchRulesTests
         // Act
         MatchResult<MatchParticipant> result = GameplayMatchRules.ValidatePlacement(
             match,
-            101L,
+            ReversiEngine.Black,
             placement);
 
         // Assert
@@ -197,13 +197,13 @@ public sealed class GameplayMatchRulesTests
         GameplayMatchRules.InitializeStartedMatch(match, BaseUtc);
         _ = GameplayMatchRules.ForfeitByParticipant(
             match,
-            101L,
+            ReversiEngine.Black,
             BaseUtc.AddSeconds(10));
 
         // Act
         MatchStatus second = GameplayMatchRules.ForfeitByParticipant(
             match,
-            101L,
+            ReversiEngine.Black,
             BaseUtc.AddSeconds(12));
 
         // Assert

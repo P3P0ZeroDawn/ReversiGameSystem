@@ -1316,7 +1316,7 @@
   <data name="RemoteMatch_StateFormat" xml:space="preserve"><value>Black: {0}   White: {1}   Your seat: {2}   Turn duration: {3} s</value></data>
   <data name="RemoteMatch_Send" xml:space="preserve"><value>Send</value></data>
   <data name="RemoteMatch_CloseView" xml:space="preserve"><value>Return to menu (the match remains active)</value></data>
-  <data name="RemoteMatch_GuestUnavailable" xml:space="preserve"><value>Guest sessions cannot use remote matches yet. Sign in with a registered account.</value></data>
+  <data name="RemoteMatch_GuestUnavailable" xml:space="preserve"><value>Your guest session is no longer active. Enter again as a guest.</value></data>
   <data name="InviteMatch_Button" xml:space="preserve"><value>Invite to match</value></data>
   <data name="InviteMatch_DialogTitle" xml:space="preserve"><value>Invite to match</value></data>
   <data name="InviteMatch_DialogPrompt" xml:space="preserve"><value>Enter the turn duration in seconds (10 to 120) for the match with {0}:</value></data>

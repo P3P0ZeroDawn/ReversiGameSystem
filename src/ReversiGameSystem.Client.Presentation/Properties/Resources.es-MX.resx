@@ -1316,7 +1316,7 @@
   <data name="RemoteMatch_StateFormat" xml:space="preserve"><value>Negras: {0}   Blancas: {1}   Tu asiento: {2}   Duración del turno: {3} s</value></data>
   <data name="RemoteMatch_Send" xml:space="preserve"><value>Enviar</value></data>
   <data name="RemoteMatch_CloseView" xml:space="preserve"><value>Volver al menú (la partida continúa activa)</value></data>
-  <data name="RemoteMatch_GuestUnavailable" xml:space="preserve"><value>Las sesiones de invitado aún no pueden usar las partidas remotas. Inicia sesión con una cuenta registrada.</value></data>
+  <data name="RemoteMatch_GuestUnavailable" xml:space="preserve"><value>Tu sesión de invitado ya no está activa. Vuelve a entrar como invitado.</value></data>
   <data name="InviteMatch_Button" xml:space="preserve"><value>Invitar a partida</value></data>
   <data name="InviteMatch_DialogTitle" xml:space="preserve"><value>Invitar a partida</value></data>
   <data name="InviteMatch_DialogPrompt" xml:space="preserve"><value>Ingresa la duración del turno en segundos (10 a 120) para la partida con {0}:</value></data>

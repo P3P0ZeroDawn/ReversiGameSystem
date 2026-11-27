@@ -547,7 +547,8 @@ public sealed class MatchInvitationTests
             ?? throw new InvalidOperationException("Match expected.");
 
         // Act
-        MatchStatus status = store.ValidateGuestJoin(waiting.Code!);
+        GuestSession guest = new GuestSession("private-guest", "Guest", DateTime.UtcNow.AddHours(1));
+        MatchStatus status = store.JoinMatch(new MatchPlayer(guest), waiting.Code!, DateTime.UtcNow).Status;
 
         // Assert
         Assert.AreEqual(MatchStatus.Unauthorized, status);
@@ -574,7 +575,7 @@ public sealed class MatchInvitationTests
         store.Rows[55] = new MockMatchRow { Match = unconfirmed, InvitedAccountId = 20, IsConfirmed = false };
 
         // Act
-        MatchResult<Match> result = store.JoinMatch(friend, "AB2324", DateTime.UtcNow);
+        MatchResult<Match> result = store.JoinMatch(new MatchPlayer(friend), "AB2324", DateTime.UtcNow);
 
         // Assert
         Assert.AreEqual(MatchStatus.MatchCodeUnavailable, result.Status);
@@ -601,7 +602,7 @@ public sealed class MatchInvitationTests
         store.Rows[56] = new MockMatchRow { Match = cancelled, InvitedAccountId = 20, IsConfirmed = true };
 
         // Act
-        MatchResult<Match> result = store.JoinMatch(friend, "AB2325", DateTime.UtcNow);
+        MatchResult<Match> result = store.JoinMatch(new MatchPlayer(friend), "AB2325", DateTime.UtcNow);
 
         // Assert
         Assert.AreEqual(MatchStatus.MatchCodeUnavailable, result.Status);
@@ -824,7 +825,7 @@ public sealed class MatchInvitationTests
 
     private sealed class InvitationMockStore : IMatchRepository
     {
-        public MatchResult<Match> StartSystemMatch(long accountId, long matchId, DateTime now)
+        public MatchResult<Match> StartSystemMatch(MatchPlayer player, long matchId, DateTime now)
         {
             throw new NotSupportedException();
         }
@@ -862,7 +863,7 @@ public sealed class MatchInvitationTests
             Accounts[accountId] = (email, isActive);
         }
 
-        public MatchResult<Match> CreateMatch(AuthenticatedSession player, MatchSettings settings, DateTime now)
+        public MatchResult<Match> CreateMatch(MatchPlayer player, MatchSettings settings, DateTime now)
         {
             lock (_sync)
             {
@@ -879,9 +880,9 @@ public sealed class MatchInvitationTests
                     {
                         new MatchParticipant
                         {
-                            AccountId = player.AccountId,
+                            AccountId = player.AccountId.GetValueOrDefault(),
                             SeatNumber = 1,
-                            DisplayName = player.Username
+                            DisplayName = player.DisplayName
                         }
                     }
                 };
@@ -890,7 +891,7 @@ public sealed class MatchInvitationTests
             }
         }
 
-        public MatchResult<Match[]> GetAvailableMatches(long accountId)
+        public MatchResult<Match[]> GetAvailableMatches(MatchPlayer player)
         {
             lock (_sync)
             {
@@ -902,7 +903,7 @@ public sealed class MatchInvitationTests
             }
         }
 
-        public MatchResult<Match> JoinMatch(AuthenticatedSession player, string code, DateTime now)
+        public MatchResult<Match> JoinMatch(MatchPlayer player, string code, DateTime now)
         {
             lock (_sync)
             {
@@ -930,9 +931,9 @@ public sealed class MatchInvitationTests
                     row.Match.Participants[0],
                     new MatchParticipant
                     {
-                        AccountId = player.AccountId,
+                        AccountId = player.AccountId.GetValueOrDefault(),
                         SeatNumber = 2,
-                        DisplayName = player.Username
+                        DisplayName = player.DisplayName
                     }
                 };
                 return new MatchResult<Match>(row.Match);
@@ -1017,21 +1018,8 @@ public sealed class MatchInvitationTests
             }
         }
 
-        public MatchStatus ValidateGuestJoin(string matchCode)
-        {
-            lock (_sync)
-            {
-                MockMatchRow? row = Rows.Values.FirstOrDefault(r => r.Match.Code == matchCode);
-                if (row != null && row.Match.IsPrivate)
-                {
-                    return MatchStatus.Unauthorized;
-                }
 
-                return MatchStatus.Success;
-            }
-        }
-
-        public MatchStatus CancelMatch(long accountId, long matchId)
+        public MatchStatus CancelMatch(MatchPlayer player, long matchId)
         {
             lock (_sync)
             {
@@ -1049,7 +1037,7 @@ public sealed class MatchInvitationTests
             }
         }
 
-        public MatchResult<Match> LoadParticipantMatch(long accountId, long matchId)
+        public MatchResult<Match> LoadParticipantMatch(MatchPlayer player, long matchId)
         {
             lock (_sync)
             {
@@ -1107,7 +1095,7 @@ public sealed class MatchInvitationTests
             throw new NotSupportedException();
         }
 
-        public MatchResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
+        public MatchResult<Match> ChangeTurnDuration(MatchPlayer player, long matchId, int seconds)
         {
             throw new NotSupportedException();
         }

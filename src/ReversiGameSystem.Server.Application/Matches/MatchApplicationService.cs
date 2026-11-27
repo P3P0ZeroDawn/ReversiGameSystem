@@ -17,8 +17,8 @@ public sealed class MatchApplicationService
     private readonly IMatchRepository _matches;
     private readonly IUtcClock _clock;
     private readonly ITemplatedEmailSender? _emailSender;
-    private readonly Dictionary<string, Dictionary<long, long>> _createdMatches =
-        new Dictionary<string, Dictionary<long, long>>(StringComparer.Ordinal);
+    private readonly Dictionary<string, Dictionary<long, MatchPlayer>> _createdMatches =
+        new Dictionary<string, Dictionary<long, MatchPlayer>>(StringComparer.Ordinal);
     private readonly HashSet<string> _sessionsPendingLobbyCleanup =
         new HashSet<string>(StringComparer.Ordinal);
     private readonly object _lobbySync = new object();
@@ -47,7 +47,7 @@ public sealed class MatchApplicationService
 
     public MatchResult<Match> CreateMatch(string token, MatchSettings? settings)
     {
-        MatchResult<AuthenticatedSession> playerResult = ResolveActiveSession(token);
+        MatchResult<MatchPlayer> playerResult = MatchPlayer.ResolveSession(_sessions, token);
         if (playerResult.Value == null)
         {
             return new MatchResult<Match>(playerResult.Status);
@@ -59,7 +59,7 @@ public sealed class MatchApplicationService
             return new MatchResult<Match>(validation);
         }
 
-        AuthenticatedSession player = playerResult.Value;
+        MatchPlayer player = playerResult.Value;
         MatchResult<Match> creationResult;
         lock (_lobbySync)
         {
@@ -70,7 +70,8 @@ public sealed class MatchApplicationService
                 _clock.UtcNow);
             if (creationResult.Value != null)
             {
-                TrackCreatedMatch(token, player.AccountId, creationResult.Value.Id);
+                player.RegisterParticipation(creationResult.Value);
+                TrackCreatedMatch(token, player, creationResult.Value.Id);
             }
         }
 
@@ -120,7 +121,7 @@ public sealed class MatchApplicationService
                 _clock.UtcNow);
             if (prepareResult.Value != null)
             {
-                TrackCreatedMatch(token, player.AccountId, prepareResult.Value.Match.Id);
+                TrackCreatedMatch(token, new MatchPlayer(player), prepareResult.Value.Match.Id);
             }
         }
 
@@ -136,24 +137,25 @@ public sealed class MatchApplicationService
 
     public MatchStatus EvaluateLobbyAccess(string token)
     {
-        MatchResult<AuthenticatedSession> playerResult = ResolveActiveSession(token);
+        MatchResult<MatchPlayer> playerResult = MatchPlayer.ResolveSession(_sessions, token);
         if (playerResult.Value == null)
         {
             return playerResult.Status;
         }
 
-        return _matches.EvaluateLobbyAccess(playerResult.Value.AccountId);
+        return playerResult.Value.IsGuest ? MatchStatus.Success
+            : _matches.EvaluateLobbyAccess(playerResult.Value.AccountId!.Value);
     }
 
     public MatchResult<Match[]> GetAvailableMatches(string token)
     {
-        MatchResult<AuthenticatedSession> playerResult = ResolveActiveSession(token);
+        MatchResult<MatchPlayer> playerResult = MatchPlayer.ResolveSession(_sessions, token);
         if (playerResult.Value == null)
         {
             return new MatchResult<Match[]>(playerResult.Status);
         }
 
-        return _matches.GetAvailableMatches(playerResult.Value.AccountId);
+        return _matches.GetAvailableMatches(playerResult.Value);
     }
 
     public MatchResult<Match> JoinMatch(string token, string code)
@@ -170,18 +172,7 @@ public sealed class MatchApplicationService
             return new MatchResult<Match>(MatchStatus.InvalidMatchCode);
         }
 
-        if (_sessions.IsGuestActive(token))
-        {
-            MatchStatus guestStatus = _matches.ValidateGuestJoin(normalized);
-            if (guestStatus != MatchStatus.Success)
-            {
-                return new MatchResult<Match>(guestStatus);
-            }
-
-            return new MatchResult<Match>(MatchStatus.Unauthorized);
-        }
-
-        MatchResult<AuthenticatedSession> playerResult = ResolveActiveSession(token);
+        MatchResult<MatchPlayer> playerResult = MatchPlayer.ResolveSession(_sessions, token);
         if (playerResult.Value == null)
         {
             return new MatchResult<Match>(playerResult.Status);
@@ -193,6 +184,7 @@ public sealed class MatchApplicationService
             _clock.UtcNow);
         if (joinResult.Status == MatchStatus.Success && joinResult.Value != null)
         {
+            playerResult.Value.RegisterParticipation(joinResult.Value);
             Action<Match>? handler = MatchStarted;
             if (handler != null)
             {
@@ -205,14 +197,14 @@ public sealed class MatchApplicationService
 
     public MatchResult<Match> StartSystemMatch(string token, long matchId)
     {
-        MatchResult<AuthenticatedSession> session = ResolveActiveSession(token);
+        MatchResult<MatchPlayer> session = MatchPlayer.ResolveSession(_sessions, token);
         if (session.Value == null)
         {
             return new MatchResult<Match>(session.Status);
         }
 
         MatchResult<Match> result = _matches.StartSystemMatch(
-            session.Value.AccountId, matchId, _clock.UtcNow);
+            session.Value, matchId, _clock.UtcNow);
         if (result.Value != null)
         {
             RemoveTrackedMatch(token, matchId);
@@ -224,7 +216,7 @@ public sealed class MatchApplicationService
 
     public MatchResult<Match> GetParticipantMatch(string token, long matchId)
     {
-        MatchResult<AuthenticatedSession> playerResult = ResolveActiveSession(token);
+        MatchResult<MatchPlayer> playerResult = MatchPlayer.ResolveSession(_sessions, token);
         if (playerResult.Value == null)
         {
             return new MatchResult<Match>(playerResult.Status);
@@ -234,7 +226,7 @@ public sealed class MatchApplicationService
             return new MatchResult<Match>(MatchStatus.InvalidMatchId);
         }
 
-        return _matches.LoadParticipantMatch(playerResult.Value.AccountId, matchId);
+        return _matches.LoadParticipantMatch(playerResult.Value, matchId);
     }
 
     public MatchResult<Match> ChangeTurnDuration(
@@ -242,7 +234,7 @@ public sealed class MatchApplicationService
         long matchId,
         int seconds)
     {
-        MatchResult<AuthenticatedSession> playerResult = ResolveActiveSession(token);
+        MatchResult<MatchPlayer> playerResult = MatchPlayer.ResolveSession(_sessions, token);
         if (playerResult.Value == null)
         {
             return new MatchResult<Match>(playerResult.Status);
@@ -256,12 +248,12 @@ public sealed class MatchApplicationService
             return new MatchResult<Match>(MatchStatus.InvalidTurnDuration);
         }
 
-        return _matches.ChangeTurnDuration(playerResult.Value.AccountId, matchId, seconds);
+        return _matches.ChangeTurnDuration(playerResult.Value, matchId, seconds);
     }
 
     public MatchStatus CancelMatch(string token, long matchId)
     {
-        MatchResult<AuthenticatedSession> playerResult = ResolveActiveSession(token);
+        MatchResult<MatchPlayer> playerResult = MatchPlayer.ResolveSession(_sessions, token);
         if (playerResult.Value == null)
         {
             return playerResult.Status;
@@ -271,7 +263,7 @@ public sealed class MatchApplicationService
             return MatchStatus.InvalidMatchId;
         }
 
-        MatchStatus status = _matches.CancelMatch(playerResult.Value.AccountId, matchId);
+        MatchStatus status = _matches.CancelMatch(playerResult.Value, matchId);
         if (status == MatchStatus.Success)
         {
             lock (_lobbySync)
@@ -305,7 +297,7 @@ public sealed class MatchApplicationService
             {
                 string token = tokens[index];
                 if (_sessionsPendingLobbyCleanup.Contains(token)
-                    || _sessions.FindAuthenticated(token).Status != SessionStatus.Success)
+                    || MatchPlayer.ResolveSession(_sessions, token).Status != MatchStatus.Success)
                 {
                     cancelled.AddRange(CancelTrackedMatches(token));
                 }
@@ -380,7 +372,7 @@ public sealed class MatchApplicationService
             }
 
             CancelInvitationOnDeliveryFailure(
-                player.AccountId,
+                new MatchPlayer(player),
                 preparation.Match.Id,
                 deliveryException);
             throw new InvalidOperationException(
@@ -390,13 +382,13 @@ public sealed class MatchApplicationService
     }
 
     private void CancelInvitationOnDeliveryFailure(
-        long accountId,
+        MatchPlayer player,
         long matchId,
         Exception deliveryException)
     {
         try
         {
-            CancelPreparedMatch(accountId, matchId);
+            CancelPreparedMatch(player, matchId);
         }
         catch (Exception cancellationException)
         {
@@ -422,7 +414,7 @@ public sealed class MatchApplicationService
                 || !preparationRemainsTracked
                 || !sessionRemainsValid)
             {
-                CancelPreparedMatch(player.AccountId, preparation.Match.Id);
+                CancelPreparedMatch(new MatchPlayer(player), preparation.Match.Id);
                 RemoveTrackedMatch(token, preparation.Match.Id);
                 deliveryResult = new MatchResult<Match>(MatchStatus.MatchNotWaiting);
             }
@@ -438,9 +430,9 @@ public sealed class MatchApplicationService
         return deliveryResult;
     }
 
-    private void CancelPreparedMatch(long accountId, long matchId)
+    private void CancelPreparedMatch(MatchPlayer player, long matchId)
     {
-        MatchStatus status = _matches.CancelMatch(accountId, matchId);
+        MatchStatus status = _matches.CancelMatch(player, matchId);
         if (status != MatchStatus.Success && status != MatchStatus.MatchNotWaiting)
         {
             throw new InvalidOperationException("Failed to cancel prepared match: " + status);
@@ -456,26 +448,26 @@ public sealed class MatchApplicationService
         }
     }
 
-    private void TrackCreatedMatch(string token, long accountId, long matchId)
+    private void TrackCreatedMatch(string token, MatchPlayer player, long matchId)
     {
-        if (!_createdMatches.TryGetValue(token, out Dictionary<long, long>? matches))
+        if (!_createdMatches.TryGetValue(token, out Dictionary<long, MatchPlayer>? matches))
         {
-            matches = new Dictionary<long, long>();
+            matches = new Dictionary<long, MatchPlayer>();
             _createdMatches.Add(token, matches);
         }
 
-        matches[matchId] = accountId;
+        matches[matchId] = player;
     }
 
     private bool IsMatchTracked(string token, long matchId)
     {
-        return _createdMatches.TryGetValue(token, out Dictionary<long, long>? matches)
+        return _createdMatches.TryGetValue(token, out Dictionary<long, MatchPlayer>? matches)
             && matches.ContainsKey(matchId);
     }
 
     private void RemoveTrackedMatch(string token, long matchId)
     {
-        if (_createdMatches.TryGetValue(token, out Dictionary<long, long>? matches))
+        if (_createdMatches.TryGetValue(token, out Dictionary<long, MatchPlayer>? matches))
         {
             matches.Remove(matchId);
             if (matches.Count == 0)
@@ -488,17 +480,17 @@ public sealed class MatchApplicationService
 
     private long[] CancelTrackedMatches(string token)
     {
-        if (!_createdMatches.TryGetValue(token, out Dictionary<long, long>? matches))
+        if (!_createdMatches.TryGetValue(token, out Dictionary<long, MatchPlayer>? matches))
         {
             _sessionsPendingLobbyCleanup.Remove(token);
             return Array.Empty<long>();
         }
 
         List<long> cancelled = new List<long>();
-        KeyValuePair<long, long>[] tracked = matches.ToArray();
+        KeyValuePair<long, MatchPlayer>[] tracked = matches.ToArray();
         for (int index = 0; index < tracked.Length; index++)
         {
-            KeyValuePair<long, long> match = tracked[index];
+            KeyValuePair<long, MatchPlayer> match = tracked[index];
             MatchStatus status = _matches.CancelMatch(match.Value, match.Key);
             if (status == MatchStatus.Success)
             {

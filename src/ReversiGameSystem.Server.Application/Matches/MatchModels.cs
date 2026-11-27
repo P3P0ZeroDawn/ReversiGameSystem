@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Domain.Matches;
 
 namespace ReversiGameSystem.Server.Application.Matches;
@@ -22,6 +23,8 @@ public sealed class MatchParticipant
 
     public bool IsSystem { get; set; }
 
+    public bool IsGuest { get; set; }
+
     public string DisplayName { get; set; } = string.Empty;
 
     public int ConsecutiveTimeoutCount { get; set; }
@@ -33,6 +36,7 @@ public sealed class MatchParticipant
             SeatNumber = SeatNumber,
             AccountId = AccountId,
             IsSystem = IsSystem,
+            IsGuest = IsGuest,
             DisplayName = DisplayName,
             ConsecutiveTimeoutCount = ConsecutiveTimeoutCount
         };
@@ -301,4 +305,66 @@ public sealed class MatchResult<T>
     public MatchStatus Status { get; }
 
     public T? Value { get; }
+}
+
+public sealed class MatchPlayer
+{
+    public MatchPlayer(AuthenticatedSession session)
+    {
+        AccountId = session.AccountId;
+        DisplayName = session.Username;
+    }
+
+    public MatchPlayer(GuestSession session)
+    {
+        Guest = session;
+        DisplayName = session.DisplayName;
+    }
+
+    public long? AccountId { get; }
+    public string DisplayName { get; }
+    public GuestSession? Guest { get; }
+    public bool IsGuest
+    {
+        get { return Guest != null; }
+    }
+
+    public static MatchResult<MatchPlayer> ResolveSession(SessionStore sessions, string token)
+    {
+        SessionResult<AuthenticatedSession> authenticated = sessions.FindAuthenticated(token);
+        if (authenticated.Value != null)
+        {
+            return new MatchResult<MatchPlayer>(new MatchPlayer(authenticated.Value));
+        }
+        SessionResult<GuestSession> guest = sessions.FindGuest(token);
+        if (guest.Value != null)
+        {
+            return new MatchResult<MatchPlayer>(new MatchPlayer(guest.Value));
+        }
+        MatchStatus status = authenticated.Status == SessionStatus.MissingSessionToken
+            ? MatchStatus.MissingSessionToken : MatchStatus.InvalidSession;
+        return new MatchResult<MatchPlayer>(status);
+    }
+
+    public bool IsParticipant(long matchId, MatchParticipant participant)
+    {
+        bool ownsSeat = !participant.IsGuest && AccountId.HasValue
+            && participant.AccountId == AccountId.Value;
+        if (Guest != null)
+        {
+            ownsSeat = participant.IsGuest && Guest.OwnsMatchSeat(matchId, participant.SeatNumber);
+        }
+        return ownsSeat;
+    }
+
+    public void RegisterParticipation(Match match)
+    {
+        if (Guest == null)
+        {
+            return;
+        }
+        MatchParticipant participant = match.Participants.Single(player => player.IsGuest
+            && string.Equals(player.DisplayName, DisplayName, StringComparison.Ordinal));
+        Guest.RegisterParticipation(match.Id, participant.SeatNumber);
+    }
 }

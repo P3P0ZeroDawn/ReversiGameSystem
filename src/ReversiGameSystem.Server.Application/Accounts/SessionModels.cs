@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace ReversiGameSystem.Server.Application.Accounts;
 
@@ -109,6 +110,9 @@ public sealed class AuthenticatedSession
 
 public sealed class GuestSession
 {
+    private readonly object _participationLock = new object();
+    private readonly Dictionary<long, int> _matchSeats = new Dictionary<long, int>();
+
     public GuestSession(string sessionToken, string displayName, DateTime expiresAtUtc)
     {
         SessionToken = sessionToken;
@@ -121,4 +125,20 @@ public sealed class GuestSession
     public string DisplayName { get; }
 
     public DateTime ExpiresAtUtc { get; }
+
+    public void RegisterParticipation(long matchId, int seatNumber)
+    {
+        lock (_participationLock)
+        {
+            _matchSeats[matchId] = seatNumber;
+        }
+    }
+
+    public bool OwnsMatchSeat(long matchId, int seatNumber)
+    {
+        lock (_participationLock)
+        {
+            return _matchSeats.ContainsKey(matchId) && _matchSeats[matchId] == seatNumber;
+        }
+    }
 }

@@ -51,7 +51,7 @@ public sealed class MatchRepositoryIntegrationTests : RepositoryIntegrationTestB
     public void CreateMatch_ValidSettings_PersistsWaitingMatchAndCreatorSeat()
     {
         long creatorId = SeedAccount(CreatorUsername, CreatorEmail);
-        AuthenticatedSession creator = CreateSession(creatorId, CreatorUsername);
+        MatchPlayer creator = CreatePlayer(creatorId, CreatorUsername);
         MatchRepository repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
         DateTime nowUtc = new DateTime(2026, 11, 2, 14, 0, 0, DateTimeKind.Utc);
         MatchStatus expectedStatus = MatchStatus.Success;
@@ -80,15 +80,15 @@ public sealed class MatchRepositoryIntegrationTests : RepositoryIntegrationTestB
         long opponentId = SeedAccount(OpponentUsername, OpponentEmail);
         MatchRepository repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
         MatchResult<Match> created = repository.CreateMatch(
-            CreateSession(creatorId, CreatorUsername),
+            CreatePlayer(creatorId, CreatorUsername),
             new MatchSettings(),
             DateTime.UtcNow);
         int expectedCreatorMatchCount = 0;
         int expectedOpponentMatchCount = 1;
         long? expectedMatchId = created.Value?.Id;
 
-        MatchResult<Match[]> actualCreatorList = repository.GetAvailableMatches(creatorId);
-        MatchResult<Match[]> actualOpponentList = repository.GetAvailableMatches(opponentId);
+        MatchResult<Match[]> actualCreatorList = repository.GetAvailableMatches(CreatePlayer(creatorId, CreatorUsername));
+        MatchResult<Match[]> actualOpponentList = repository.GetAvailableMatches(CreatePlayer(opponentId, OpponentUsername));
 
         Assert.AreEqual(expectedCreatorMatchCount, actualCreatorList.Value?.Length);
         Assert.AreEqual(expectedOpponentMatchCount, actualOpponentList.Value?.Length);
@@ -104,7 +104,7 @@ public sealed class MatchRepositoryIntegrationTests : RepositoryIntegrationTestB
         MatchRepository repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
         DateTime nowUtc = DateTime.UtcNow;
         MatchResult<Match> created = repository.CreateMatch(
-            CreateSession(creatorId, CreatorUsername),
+            CreatePlayer(creatorId, CreatorUsername),
             new MatchSettings(),
             nowUtc);
         string matchCode = created.Value?.Code ?? string.Empty;
@@ -113,11 +113,11 @@ public sealed class MatchRepositoryIntegrationTests : RepositoryIntegrationTestB
         int expectedParticipantCount = 2;
 
         Task<MatchResult<Match>> firstJoinTask = Task.Run(() => repository.JoinMatch(
-            CreateSession(opponentId, OpponentUsername),
+            CreatePlayer(opponentId, OpponentUsername),
             matchCode,
             nowUtc));
         Task<MatchResult<Match>> secondJoinTask = Task.Run(() => repository.JoinMatch(
-            CreateSession(rivalId, RivalUsername),
+            CreatePlayer(rivalId, RivalUsername),
             matchCode,
             nowUtc));
         Task.WaitAll(firstJoinTask, secondJoinTask);
@@ -141,7 +141,7 @@ public sealed class MatchRepositoryIntegrationTests : RepositoryIntegrationTestB
         MatchRepository repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
         DateTime nowUtc = DateTime.UtcNow;
         MatchResult<Match> created = repository.CreateMatch(
-            CreateSession(creatorId, CreatorUsername),
+            CreatePlayer(creatorId, CreatorUsername),
             new MatchSettings(),
             nowUtc);
         long matchId = created.Value?.Id ?? 0L;
@@ -149,7 +149,7 @@ public sealed class MatchRepositoryIntegrationTests : RepositoryIntegrationTestB
         byte expectedCurrentTurnSeat = 1;
 
         MatchResult<Match> actualStarted = repository.StartSystemMatch(
-            creatorId,
+            CreatePlayer(creatorId, CreatorUsername),
             matchId,
             nowUtc.AddSeconds(5));
 
@@ -243,10 +243,10 @@ public sealed class MatchRepositoryIntegrationTests : RepositoryIntegrationTestB
     private static Match CreateSystemMatch(MatchRepository repository, long creatorId)
     {
         DateTime now = DateTime.UtcNow;
-        Match created = repository.CreateMatch(CreateSession(creatorId, CreatorUsername),
+        Match created = repository.CreateMatch(CreatePlayer(creatorId, CreatorUsername),
             new MatchSettings(), now).Value
             ?? throw new InvalidOperationException("The waiting match could not be created.");
-        return repository.StartSystemMatch(creatorId, created.Id, now).Value
+        return repository.StartSystemMatch(CreatePlayer(creatorId, CreatorUsername), created.Id, now).Value
             ?? throw new InvalidOperationException("The system match could not be started.");
     }
 
@@ -293,15 +293,15 @@ public sealed class MatchRepositoryIntegrationTests : RepositoryIntegrationTestB
         }
     }
 
-    private static AuthenticatedSession CreateSession(long accountId, string username)
+    private static MatchPlayer CreatePlayer(long accountId, string username)
     {
         DateTime nowUtc = DateTime.UtcNow;
-        return new AuthenticatedSession(
+        return new MatchPlayer(new AuthenticatedSession(
             "token-" + accountId,
             accountId,
             username,
             username + "@example.com",
             "en-US",
-            nowUtc.AddHours(1));
+            nowUtc.AddHours(1)));
     }
 }

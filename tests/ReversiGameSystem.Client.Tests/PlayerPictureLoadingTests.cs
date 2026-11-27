@@ -168,6 +168,28 @@ public sealed class PlayerPictureLoadingTests
         }
     }
 
+    [TestMethod]
+    public async Task ActivateMatch_GuestPlayer_CanPlayWithoutChat()
+    {
+        using PictureHost host = new PictureHost();
+        using GameplayClient gameplay = host.CreateGameplay();
+        using MatchChatClient chat = host.CreateChat();
+        GameViewModel model = new GameViewModel(gameplay, chat, MatchId, true,
+            new SynchronizationContext());
+        try
+        {
+            await model.ActivateMatch();
+
+            Assert.IsTrue(model.IsParticipant);
+            Assert.IsTrue(model.CanForfeit);
+            Assert.IsFalse(model.IsChatVisible);
+        }
+        finally
+        {
+            await model.DeactivateMatch();
+        }
+    }
+
     private static MatchReplayViewModel CreateReplay(bool systemOpponent)
     {
         const int BlackSeat = 1;

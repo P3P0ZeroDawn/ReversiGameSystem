@@ -14,6 +14,7 @@ internal static class MatchDatabase
 {
     private const string ManualMoveSourceCode = "MANUAL";
     private const string SystemParticipantTypeCode = "SYSTEM";
+    private const string GuestParticipantTypeCode = "GUEST";
     private const string SystemMoveSourceCode = "SYSTEM";
     private const string TimeoutMoveSourceCode = "TIMEOUT_AUTOMATIC";
     private const string WaitingStatusCode = "WAITING";
@@ -152,6 +153,7 @@ internal static class MatchDatabase
                 SeatNumber = player.seatNumber,
                 AccountId = player.accountId ?? 0,
                 IsSystem = player.participantTypeCode == SystemParticipantTypeCode,
+                IsGuest = player.participantTypeCode == GuestParticipantTypeCode,
                 DisplayName = player.displayNameSnapshot,
                 ConsecutiveTimeoutCount = player.consecutiveTimeoutCount
             })

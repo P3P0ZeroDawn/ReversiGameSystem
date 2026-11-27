@@ -107,6 +107,9 @@ CREATE TABLE dbo.MatchParticipant (
     PRIMARY KEY (matchId, seatNumber)
 );
 
+CREATE UNIQUE INDEX UQ_MatchParticipant_AccountPerMatch
+ ON dbo.MatchParticipant (matchId, accountId) WHERE accountId IS NOT NULL;
+
 ALTER TABLE dbo.GameMatch
     ADD CONSTRAINT FK_GameMatch_CurrentTurnParticipant
     FOREIGN KEY (matchId, currentTurnSeatNumber)

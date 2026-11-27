@@ -1,7 +1,9 @@
 using System;
+using System.ServiceModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Localization;
 using ReversiGameSystem.Matches;
 using ReversiGameSystem.Services;
@@ -127,6 +129,11 @@ public partial class WaitingForOpponentPage : Page
                 HandleKeepaliveFailure(status);
             }
         }
+        catch (FaultException<ReversiGameSystem.ServerProxy.ServiceFault> exception)
+        {
+            _keepalive.Stop();
+            ReportLobbyFailure(exception, nameof(OnKeepalive));
+        }
         finally
         {
             _refreshing = false;
@@ -189,6 +196,10 @@ public partial class WaitingForOpponentPage : Page
                     RemoteMatchMessages.GetMessageResourceKey(status, _guestName != null));
             }
         }
+        catch (FaultException<ReversiGameSystem.ServerProxy.ServiceFault> exception)
+        {
+            ReportLobbyFailure(exception, nameof(OnPlayAgainstSystemClick));
+        }
         finally
         {
             IsEnabled = true;
@@ -204,47 +215,79 @@ public partial class WaitingForOpponentPage : Page
         }
 
         IsEnabled = false;
-        MatchStatus status = await _client.ChangeTurnDuration(
-            _lobby.MatchId,
-            selectedTurnDuration);
-        IsEnabled = true;
-
-        if (_navigated || !IsLoaded)
+        try
         {
-            return;
+            MatchStatus status = await _client.ChangeTurnDuration(
+                _lobby.MatchId,
+                selectedTurnDuration);
+
+            if (_navigated || !IsLoaded)
+            {
+                return;
+            }
+
+            if (status == MatchStatus.Success)
+            {
+                _lobby = _client.ReadCurrentLobby();
+                UpdateTurnTimeText();
+                return;
+            }
+
+            _dialogs.ShowError(
+                this,
+                "MatchSettings_PersistenceErrorTitle",
+                RemoteMatchMessages.GetMessageResourceKey(status, _guestName != null));
+            if (status == MatchStatus.MatchNotWaiting)
+            {
+                ReturnToMenu();
+            }
         }
-
-        if (status == MatchStatus.Success)
+        catch (FaultException<ReversiGameSystem.ServerProxy.ServiceFault> exception)
         {
-            _lobby = _client.ReadCurrentLobby();
-            UpdateTurnTimeText();
-            return;
+            ReportLobbyFailure(exception, nameof(OnModifySettingsClick));
         }
-
-        _dialogs.ShowError(
-            this,
-            "MatchSettings_PersistenceErrorTitle",
-            RemoteMatchMessages.GetMessageResourceKey(status, _guestName != null));
-        if (status == MatchStatus.MatchNotWaiting)
+        finally
         {
-            ReturnToMenu();
+            IsEnabled = true;
         }
     }
 
     private async void OnCancelClick(object sender, RoutedEventArgs args)
     {
         IsEnabled = false;
-        MatchStatus status = await _client.CancelMatch(_lobby.MatchId);
-        if (status == MatchStatus.Success)
+        try
         {
-            ReturnToMenu();
+            MatchStatus status = await _client.CancelMatch(_lobby.MatchId);
+            if (status == MatchStatus.Success)
+            {
+                ReturnToMenu();
+            }
+            else
+            {
+                _dialogs.ShowError(this, "JoinMatch_PersistenceErrorTitle",
+                    RemoteMatchMessages.GetMessageResourceKey(status, _guestName != null));
+            }
+        }
+        catch (FaultException<ReversiGameSystem.ServerProxy.ServiceFault> exception)
+        {
+            ReportLobbyFailure(exception, nameof(OnCancelClick));
+        }
+        finally
+        {
+            IsEnabled = true;
+        }
+    }
+
+    private void ReportLobbyFailure(Exception exception, string operation)
+    {
+        if (!_navigated && IsLoaded)
+        {
+            ClientRuntime.Errors.ReportOperationFailure(exception, operation);
         }
         else
         {
-            _dialogs.ShowError(this, "JoinMatch_PersistenceErrorTitle",
-                RemoteMatchMessages.GetMessageResourceKey(status, _guestName != null));
+            ClientRuntime.Errors.RecordFailure(exception, operation, LogLevel.Error);
         }
-        IsEnabled = true;
     }
 
     private void ReturnToMenu()

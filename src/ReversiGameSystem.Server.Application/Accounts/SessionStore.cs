@@ -103,6 +103,23 @@ public sealed class SessionStore
         return new SessionResult<AuthenticatedSession>(active);
     }
 
+    public SessionResult<GuestSession> FindGuest(string sessionToken)
+    {
+        if (string.IsNullOrWhiteSpace(sessionToken))
+        {
+            return new SessionResult<GuestSession>(SessionStatus.MissingSessionToken);
+        }
+        lock (_guestSessionSync)
+        {
+            RemoveExpiredGuestsCore();
+            if (!_guests.ContainsKey(sessionToken))
+            {
+                return new SessionResult<GuestSession>(SessionStatus.InvalidSession);
+            }
+            return new SessionResult<GuestSession>(_guests[sessionToken]);
+        }
+    }
+
     public bool IsGuestActive(string sessionToken)
     {
         if (string.IsNullOrWhiteSpace(sessionToken))

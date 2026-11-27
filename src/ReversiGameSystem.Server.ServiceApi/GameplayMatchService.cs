@@ -97,10 +97,14 @@ public sealed class GameplayMatchService : IGameplayMatchService
     public MatchInformation GetMatchInformation(string sessionToken, long matchId)
     {
         Match match = RequireAuthorizedMatch(sessionToken, matchId);
-        MatchResult<long> account = _applicationService.GetSessionAccountId(sessionToken);
-        ThrowFaultIfFailed(account.Status);
-        long accountId = account.Value;
-        return MapInformation(match, accountId);
+        MatchResult<MatchParticipant> participant =
+            _applicationService.GetAuthorizedParticipant(sessionToken, matchId);
+        if (participant.Status != MatchStatus.Success
+            && participant.Status != MatchStatus.Unauthorized)
+        {
+            ThrowFaultIfFailed(participant.Status);
+        }
+        return MapInformation(match, participant.Value?.SeatNumber);
     }
 
     /// <summary>
@@ -258,6 +262,7 @@ public sealed class GameplayMatchService : IGameplayMatchService
     /// </exception>
     public MatchDetails GetMatchDetails(string sessionToken, long matchId)
     {
+        ThrowFaultIfFailed(_applicationService.GetSessionAccountId(sessionToken).Status);
         MatchResult<Match> result = _applicationService.GetAuthorizedMatchSnapshot(
             sessionToken,
             matchId);
@@ -311,20 +316,19 @@ public sealed class GameplayMatchService : IGameplayMatchService
         MatchResult<long> account = _applicationService.GetSessionAccountId(sessionToken);
         ThrowFaultIfFailed(account.Status);
         long accountId = account.Value;
-        return matches.Select(match => MapInformation(match, accountId)).ToArray();
+        return matches.Select(match => MapInformation(match,
+            Array.Find(match.Participants, participant => participant.AccountId == accountId)
+                ?.SeatNumber)).ToArray();
     }
 
-    private static MatchInformation MapInformation(Match match, long accountId)
+    private static MatchInformation MapInformation(Match match, int? assignedSeatNumber)
     {
-        MatchParticipant? participant = Array.Find(
-            match.Participants,
-            candidate => candidate.AccountId == accountId);
         return new MatchInformation
         {
             MatchId = match.Id,
             Participants = MatchContractMapper.MapParticipants(match),
             TurnDurationSeconds = match.TurnDurationSeconds,
-            AssignedSeatNumber = participant?.SeatNumber
+            AssignedSeatNumber = assignedSeatNumber
         };
     }
 

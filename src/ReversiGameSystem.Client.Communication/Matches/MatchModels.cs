@@ -89,6 +89,7 @@ internal sealed class MatchParticipant
     public long? AccountId { get; set; }
     public string DisplayName { get; }
     public bool IsSystem { get; set; }
+    public bool IsGuest { get; set; }
 }
 
 internal enum ConfirmedMatchState

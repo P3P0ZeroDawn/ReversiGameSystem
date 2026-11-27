@@ -271,12 +271,18 @@ internal static class ReviewMatchDatabaseTests
         Assert.AreEqual(1, command.ExecuteNonQuery());
     }
 
+    private static MatchPlayer CreateMatchPlayer(long accountId)
+    {
+        return new MatchPlayer(new AuthenticatedSession("review-token", accountId,
+            "Review", "review@example.test", "en-US", DateTime.UtcNow.AddHours(1)));
+    }
+
     private static void Gameplay_RealMovePersistence_UpdatesBoardAndHistory(
         MatchRepository repository,
         long accountId,
         long matchId)
     {
-        Match match = repository.LoadParticipantMatch(accountId, matchId).Value
+        Match match = repository.LoadParticipantMatch(CreateMatchPlayer(accountId), matchId).Value
             ?? throw new InvalidOperationException("Match expected.");
         int[] flippedPieces = ReversiEngine.ApplyMove(match.Board, 2, 3, ReversiEngine.Black);
         MatchMove move = new MatchMove
@@ -320,7 +326,7 @@ internal static class ReviewMatchDatabaseTests
             repository.SynchronizeMatch(match),
             "Expected the timeout move snapshot to be synchronized.");
 
-        Match loaded = repository.LoadParticipantMatch(accountId, matchId).Value
+        Match loaded = repository.LoadParticipantMatch(CreateMatchPlayer(accountId), matchId).Value
             ?? throw new InvalidOperationException("Match expected.");
         Assert.AreEqual(2, loaded.Moves.Count);
         Assert.AreEqual(1, loaded.CurrentTurnSeatNumber);

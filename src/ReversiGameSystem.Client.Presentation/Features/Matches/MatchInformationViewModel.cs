@@ -130,8 +130,13 @@ internal sealed class MatchInformationViewModel : INotifyPropertyChanged
         {
             return string.Empty;
         }
-        return player.IsSystem ? LocalizationManager.Instance["Game_SystemPlayerName"]
+        string name = player.IsSystem ? LocalizationManager.Instance["Game_SystemPlayerName"]
             : player.DisplayName;
+        if (player.IsGuest)
+        {
+            name = GuestNameFormatter.Format(player.DisplayName);
+        }
+        return name;
     }
 
     internal ReversiBoard ReadBoard()

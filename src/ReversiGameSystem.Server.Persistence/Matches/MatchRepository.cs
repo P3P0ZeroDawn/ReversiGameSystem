@@ -20,6 +20,7 @@ namespace ReversiGameSystem.Server.Persistence.Matches;
 public sealed class MatchRepository : IMatchRepository, IGameplayRepository
 {
     private const string SystemParticipantType = "SYSTEM";
+    private const string GuestParticipantType = "GUEST";
     private const string SystemDisplayName = "System";
     private const string Alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private const string ActiveAccountStatusCode = "ACTIVE";
@@ -42,13 +43,13 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public MatchResult<Match> StartSystemMatch(long accountId, long matchId, DateTime now)
+    public MatchResult<Match> StartSystemMatch(MatchPlayer player, long matchId, DateTime now)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction =
             context.Database.BeginTransaction(IsolationLevel.Serializable);
         MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
-        if (!IsActiveAccount(context, accountId))
+        if (!IsPlayerActive(context, player))
         {
             return new MatchResult<Match>(MatchStatus.InactiveAccount);
         }
@@ -59,8 +60,8 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         {
             return new MatchResult<Match>(MatchStatus.MatchNotFound);
         }
-        if (!match.MatchParticipant1.Any(player =>
-            player.accountId == accountId && player.isCreator))
+        if (!match.MatchParticipant1.Any(participant =>
+            IsParticipant(player, matchId, participant) && participant.isCreator))
         {
             return new MatchResult<Match>(MatchStatus.Unauthorized);
         }
@@ -114,7 +115,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
     }
 
     public MatchResult<Match> CreateMatch(
-        AuthenticatedSession player,
+        MatchPlayer player,
         MatchSettings settings,
         DateTime now)
     {
@@ -122,7 +123,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         using DbContextTransaction transaction =
             context.Database.BeginTransaction(IsolationLevel.Serializable);
         MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
-        if (!IsActiveAccount(context, player.AccountId))
+        if (!IsPlayerActive(context, player))
         {
             return new MatchResult<Match>(MatchStatus.InactiveAccount);
         }
@@ -138,7 +139,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
             matchCode = code,
             statusCode = WaitingMatchStatusCode,
             turnDurationSeconds = (short)settings.TurnDurationSeconds,
-            countsTowardStatistics = settings.CountsTowardStatistics,
+            countsTowardStatistics = settings.CountsTowardStatistics && !player.IsGuest,
             createdAtUtc = now
         };
         match.MatchParticipant1.Add(CreateParticipant(player, 1, now));
@@ -199,7 +200,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
             countsTowardStatistics = settings.CountsTowardStatistics,
             createdAtUtc = now
         };
-        match.MatchParticipant1.Add(CreateParticipant(player, 1, now));
+        match.MatchParticipant1.Add(CreateParticipant(new MatchPlayer(player), 1, now));
         context.GameMatch.Add(match);
         context.SaveChanges();
 
@@ -275,10 +276,10 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         return new MatchResult<Match>(result);
     }
 
-    public MatchResult<Match[]> GetAvailableMatches(long accountId)
+    public MatchResult<Match[]> GetAvailableMatches(MatchPlayer player)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
-        if (!IsActiveAccount(context, accountId))
+        if (!IsPlayerActive(context, player))
         {
             return new MatchResult<Match[]>(MatchStatus.InactiveAccount);
         }
@@ -294,20 +295,26 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         Match[] matches = context.GameMatch.Include(match => match.MatchParticipant1)
             .Where(match => publicMatchIds.Contains(match.matchId)
                 && match.statusCode == WaitingMatchStatusCode && match.MatchParticipant1.Count == 1
-                && match.MatchParticipant1.All(player => player.Account.statusCode == "ACTIVE")
-                && !match.MatchParticipant1.Any(player => player.accountId == accountId))
-            .OrderBy(match => match.matchId).ToArray().Select(MatchDatabase.Map).ToArray();
+                && match.MatchParticipant1.All(participant =>
+                    participant.participantTypeCode == GuestParticipantType
+                    || participant.Account.statusCode == ActiveAccountStatusCode)
+                && (!player.AccountId.HasValue
+                    || !match.MatchParticipant1.Any(participant =>
+                        participant.accountId == player.AccountId)))
+            .OrderBy(match => match.matchId).ToArray().Select(MatchDatabase.Map)
+            .Where(match => !match.Participants.Any(participant =>
+                player.IsParticipant(match.Id, participant))).ToArray();
 
         return new MatchResult<Match[]>(matches);
     }
 
-    public MatchResult<Match> JoinMatch(AuthenticatedSession player, string code, DateTime now)
+    public MatchResult<Match> JoinMatch(MatchPlayer player, string code, DateTime now)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction =
             context.Database.BeginTransaction(IsolationLevel.Serializable);
         MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
-        if (!IsActiveAccount(context, player.AccountId))
+        if (!IsPlayerActive(context, player))
         {
             return new MatchResult<Match>(MatchStatus.InactiveAccount);
         }
@@ -327,7 +334,8 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
             return new MatchResult<Match>(MatchStatus.MatchCodeUnavailable);
         }
 
-        if (match.MatchParticipant1.Any(participant => participant.accountId == player.AccountId))
+        if (match.MatchParticipant1.Any(participant =>
+            IsParticipant(player, match.matchId, participant)))
         {
             return new MatchResult<Match>(MatchStatus.CannotJoinOwnMatch);
         }
@@ -341,12 +349,15 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         }
 
         PersistentMatchParticipant creator = match.MatchParticipant1.Single();
-        if (!creator.accountId.HasValue || !IsActiveAccount(context, creator.accountId.Value))
+        if (creator.participantTypeCode == RegisteredParticipantType
+            && (!creator.accountId.HasValue || !IsActiveAccount(context, creator.accountId.Value)))
         {
             return new MatchResult<Match>(MatchStatus.InactiveAccount);
         }
 
         match.MatchParticipant1.Add(CreateParticipant(player, 2, now));
+        match.countsTowardStatistics = match.countsTowardStatistics
+            && !player.IsGuest && creator.participantTypeCode == RegisteredParticipantType;
         match.statusCode = "IN_PROGRESS";
         match.startedAtUtc = now;
         match.currentTurnSeatNumber = CreatorSeatNumber;
@@ -362,51 +373,26 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         return new MatchResult<Match>(result);
     }
 
-    public MatchStatus ValidateGuestJoin(string code)
+    public MatchResult<Match> LoadParticipantMatch(MatchPlayer player, long matchId)
     {
-        using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
-        GameMatch? match = context.GameMatch.SingleOrDefault(candidate =>
-            candidate.matchCode == code && candidate.statusCode == WaitingMatchStatusCode);
-        if (match == null)
-        {
-            return MatchStatus.MatchCodeUnavailable;
-        }
-
-        MatchPrivacyRow? privacy = LoadMatchPrivacy(context, match.matchId);
-
-        if (privacy != null && privacy.IsPrivate && privacy.InvitationConfirmedAtUtc == null)
-        {
-            return MatchStatus.MatchCodeUnavailable;
-        }
-
-        return MatchStatus.Unauthorized;
-    }
-
-    public MatchResult<Match> LoadParticipantMatch(long accountId, long matchId)
-    {
-        return LoadMatch(accountId, matchId);
+        return LoadMatch(player, matchId);
     }
 
     public MatchResult<Match> LoadMatch(long matchId)
     {
-        return LoadMatch(0, matchId);
+        return LoadMatch(null, matchId);
     }
 
-    private static MatchResult<Match> LoadMatch(long accountId, long matchId)
+    private static MatchResult<Match> LoadMatch(MatchPlayer? player, long matchId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
-        if (accountId > 0)
+        if (player != null)
         {
-            if (!IsActiveAccount(context, accountId))
+            if (!IsPlayerActive(context, player))
             {
                 return new MatchResult<Match>(MatchStatus.InactiveAccount);
             }
-
-            PersistentMatchParticipant? participant = context.MatchParticipant.SingleOrDefault(
-                candidate =>
-                    candidate.matchId == matchId && candidate.accountId == accountId
-                    && candidate.participantTypeCode == RegisteredParticipantType);
-            if (participant == null)
+            if (FindPlayerParticipant(context, player, matchId) == null)
             {
                 return new MatchResult<Match>(MatchStatus.Unauthorized);
             }
@@ -633,21 +619,19 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         return resultCode;
     }
 
-    public MatchResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
+    public MatchResult<Match> ChangeTurnDuration(MatchPlayer player, long matchId, int seconds)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction =
             context.Database.BeginTransaction(IsolationLevel.Serializable);
         MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
-        if (!IsActiveAccount(context, accountId))
+        if (!IsPlayerActive(context, player))
         {
             return new MatchResult<Match>(MatchStatus.InactiveAccount);
         }
 
-        PersistentMatchParticipant? player = context.MatchParticipant.SingleOrDefault(candidate =>
-            candidate.matchId == matchId && candidate.accountId == accountId
-            && candidate.participantTypeCode == RegisteredParticipantType);
-        if (player == null || !player.isCreator)
+        PersistentMatchParticipant? creator = FindPlayerParticipant(context, player, matchId);
+        if (creator == null || !creator.isCreator)
         {
             return new MatchResult<Match>(MatchStatus.Unauthorized);
         }
@@ -673,21 +657,19 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         return new MatchResult<Match>(result);
     }
 
-    public MatchStatus CancelMatch(long accountId, long matchId)
+    public MatchStatus CancelMatch(MatchPlayer player, long matchId)
     {
         using ReversiGameSystemEntities context = new ReversiGameSystemEntities();
         using DbContextTransaction transaction =
             context.Database.BeginTransaction(IsolationLevel.Serializable);
         MatchDatabase.AcquireTransactionLock(context, MatchDatabase.LobbyLockResource);
-        if (!IsActiveAccount(context, accountId))
+        if (!IsPlayerActive(context, player))
         {
             return MatchStatus.InactiveAccount;
         }
 
-        PersistentMatchParticipant? player = context.MatchParticipant.SingleOrDefault(candidate =>
-            candidate.matchId == matchId && candidate.accountId == accountId
-            && candidate.participantTypeCode == RegisteredParticipantType);
-        if (player == null || !player.isCreator)
+        PersistentMatchParticipant? creator = FindPlayerParticipant(context, player, matchId);
+        if (creator == null || !creator.isCreator)
         {
             return MatchStatus.Unauthorized;
         }
@@ -813,6 +795,33 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         return new MatchResult<Match>(MatchDatabase.Map(match));
     }
 
+    private static bool IsPlayerActive(ReversiGameSystemEntities context, MatchPlayer player)
+    {
+        return player.IsGuest
+            || player.AccountId.HasValue && IsActiveAccount(context, player.AccountId.Value);
+    }
+
+    private static bool IsParticipant(MatchPlayer player, long matchId,
+        PersistentMatchParticipant participant)
+    {
+        bool ownsSeat = player.AccountId.HasValue
+            && participant.participantTypeCode == RegisteredParticipantType
+            && participant.accountId == player.AccountId.Value;
+        if (player.Guest != null)
+        {
+            ownsSeat = participant.participantTypeCode == GuestParticipantType
+                && player.Guest.OwnsMatchSeat(matchId, participant.seatNumber);
+        }
+        return ownsSeat;
+    }
+
+    private static PersistentMatchParticipant? FindPlayerParticipant(
+        ReversiGameSystemEntities context, MatchPlayer player, long matchId)
+    {
+        return context.MatchParticipant.Where(participant => participant.matchId == matchId)
+            .ToArray().SingleOrDefault(participant => IsParticipant(player, matchId, participant));
+    }
+
     private static bool IsActiveAccount(ReversiGameSystemEntities context, long accountId)
     {
         return context.Account.Any(account =>
@@ -830,7 +839,7 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
             new SqlParameter("@matchId", matchId)).SingleOrDefault();
     }
     private static PersistentMatchParticipant CreateParticipant(
-        AuthenticatedSession player,
+        MatchPlayer player,
         byte seat,
         DateTime now)
     {
@@ -838,8 +847,8 @@ public sealed class MatchRepository : IMatchRepository, IGameplayRepository
         {
             seatNumber = seat,
             accountId = player.AccountId,
-            participantTypeCode = RegisteredParticipantType,
-            displayNameSnapshot = player.Username,
+            participantTypeCode = player.IsGuest ? GuestParticipantType : RegisteredParticipantType,
+            displayNameSnapshot = player.DisplayName,
             pieceColorCode = seat == 1 ? BlackPieceColorCode : WhitePieceColorCode,
             joinedAtUtc = now,
             isCreator = seat == 1

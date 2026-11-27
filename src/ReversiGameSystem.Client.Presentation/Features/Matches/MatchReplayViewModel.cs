@@ -55,6 +55,10 @@ internal sealed class MatchReplayViewModel
         {
             name = LocalizationManager.Instance["Game_SystemPlayerName"];
         }
+        if (participant?.IsGuest == true)
+        {
+            name = GuestNameFormatter.Format(participant.DisplayName);
+        }
         return name;
     }
 

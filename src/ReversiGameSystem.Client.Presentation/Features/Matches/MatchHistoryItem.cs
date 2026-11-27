@@ -43,6 +43,10 @@ internal sealed class MatchHistoryItem
         {
             opponentName = localization["Game_SystemPlayerName"];
         }
+        if (opponent?.IsGuest == true)
+        {
+            opponentName = GuestNameFormatter.Format(opponent.DisplayName);
+        }
         OpponentText = string.Format(localization["MatchHistory_OpponentFormat"], opponentName);
         DateText = string.Format(localization["MatchHistory_DateFormat"],
             match.RecordedAtUtc.ToLocalTime().ToString("g", culture));

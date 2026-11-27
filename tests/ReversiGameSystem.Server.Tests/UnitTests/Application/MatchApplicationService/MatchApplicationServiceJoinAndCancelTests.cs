@@ -94,34 +94,35 @@ public sealed class MatchApplicationServiceJoinAndCancelTests
     }
 
     [TestMethod]
-    public void JoinMatch_GuestSessionWithValidCode_ReturnsUnauthorizedWithoutJoining()
+    public void JoinMatch_GuestSessionWithValidCode_RegistersAssignedSeat()
     {
         string token = AddGuestSession("guest-token");
-        MatchStatus expectedStatus = MatchStatus.Unauthorized;
-        int expectedJoinCalls = 0;
+        const long MatchId = 55;
+        const int GuestSeat = 2;
+        Match match = new Match
+        {
+            Id = MatchId,
+            Participants = new[]
+            {
+                new MatchParticipant { SeatNumber = GuestSeat, IsGuest = true, DisplayName = "Guest" }
+            }
+        };
+        Matches.JoinMatchResult = new MatchResult<Match>(match);
 
-        MatchResult<Match> actualResult = Service.JoinMatch(token, "ABC234");
-        MatchStatus actualStatus = actualResult.Status;
-        int actualJoinCalls = Matches.JoinMatchCalls;
+        Service.JoinMatch(token, "ABC234");
 
-        Assert.AreEqual(expectedStatus, actualStatus);
-        Assert.AreEqual(expectedJoinCalls, actualJoinCalls);
+        Assert.IsTrue(Sessions.FindGuest(token).Value!.OwnsMatchSeat(MatchId, GuestSeat));
     }
 
     [TestMethod]
-    public void JoinMatch_GuestSessionWithUnavailableMatch_ReturnsValidationFailure()
+    public void JoinMatch_GuestSessionWithUnavailableMatch_ReturnsRepositoryFailure()
     {
         string token = AddGuestSession("guest-token");
-        MatchStatus expectedStatus = MatchStatus.MatchNotFound;
-        Matches.ValidateGuestJoinStatus = expectedStatus;
-        int expectedJoinCalls = 0;
+        Matches.JoinMatchResult = new MatchResult<Match>(MatchStatus.MatchCodeUnavailable);
 
-        MatchResult<Match> actualResult = Service.JoinMatch(token, "ABC234");
-        MatchStatus actualStatus = actualResult.Status;
-        int actualJoinCalls = Matches.JoinMatchCalls;
+        MatchResult<Match> result = Service.JoinMatch(token, "ABC234");
 
-        Assert.AreEqual(expectedStatus, actualStatus);
-        Assert.AreEqual(expectedJoinCalls, actualJoinCalls);
+        Assert.AreEqual(MatchStatus.MatchCodeUnavailable, result.Status);
     }
 
     [TestMethod]

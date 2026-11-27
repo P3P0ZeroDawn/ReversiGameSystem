@@ -75,7 +75,7 @@ public sealed class GameplayMatchApplicationService
         Match match = resolved.Value.Match;
         MatchResult<Match> transitionResult = ApplyPlayerMoveUnderLock(
             match,
-            resolved.Value.Player.AccountId,
+            resolved.Value.Player,
             placement);
         if (transitionResult.Status == MatchStatus.Success)
         {
@@ -146,7 +146,18 @@ public sealed class GameplayMatchApplicationService
             return new MatchResult<Match>(resolved.Status);
         }
 
-        return ConcludeForfeit(resolved.Value.Match, resolved.Value.Player.AccountId, true);
+        Match match = resolved.Value.Match;
+        MatchParticipant? participant;
+        lock (match.SyncRoot)
+        {
+            participant = Array.Find(match.Participants, candidate =>
+                resolved.Value.Player.IsParticipant(matchId, candidate));
+        }
+        if (participant == null)
+        {
+            return new MatchResult<Match>(MatchStatus.Unauthorized);
+        }
+        return ConcludeForfeit(match, participant.SeatNumber, true);
     }
 
     public bool IsTrackedMatchInProgress(long matchId)
@@ -178,11 +189,11 @@ public sealed class GameplayMatchApplicationService
             return new MatchResult<Match>(MatchStatus.Unauthorized);
         }
 
-        return ConcludeForfeit(match, participant.AccountId, false);
+        return ConcludeForfeit(match, participant.SeatNumber, false);
     }
 
     private MatchResult<Match> ConcludeForfeit(
-        Match match, long accountId, bool includeFinishedMatch)
+        Match match, int seatNumber, bool includeFinishedMatch)
     {
         DateTime now = _clock.UtcNow;
         MatchStatus forfeitStatus;
@@ -192,7 +203,7 @@ public sealed class GameplayMatchApplicationService
         {
             forfeitStatus = GameplayMatchRules.ForfeitByParticipant(
                 match,
-                accountId,
+                seatNumber,
                 now);
             bool hasConcludedSnapshot = forfeitStatus == MatchStatus.Success
                 || (includeFinishedMatch && forfeitStatus == MatchStatus.MatchFinished);
@@ -227,7 +238,7 @@ public sealed class GameplayMatchApplicationService
         Match? snapshot = null;
         lock (match.SyncRoot)
         {
-            if (CanReadMatch(match, resolved.Value.Player.AccountId, sessionToken))
+            if (CanReadMatch(match, resolved.Value.Player, sessionToken))
             {
                 snapshot = match.CreateSnapshot();
             }
@@ -254,7 +265,11 @@ public sealed class GameplayMatchApplicationService
             return new MatchResult<Match>(resolved.Status);
         }
 
-        MatchStatus access = _matches.EvaluateLobbyAccess(resolved.Value.Player.AccountId);
+        if (resolved.Value.Player.IsGuest)
+        {
+            return new MatchResult<Match>(MatchStatus.Unauthorized);
+        }
+        MatchStatus access = _matches.EvaluateLobbyAccess(resolved.Value.Player.AccountId!.Value);
         if (access != MatchStatus.Success)
         {
             return new MatchResult<Match>(access);
@@ -356,13 +371,13 @@ public sealed class GameplayMatchApplicationService
         }
 
         Match match = resolved.Value.Match;
-        long accountId = resolved.Value.Player.AccountId;
+        MatchPlayer player = resolved.Value.Player;
         MatchParticipant? participant = null;
         lock (match.SyncRoot)
         {
             participant = Array.Find(
                 match.Participants,
-                candidate => candidate.AccountId == accountId);
+                candidate => player.IsParticipant(matchId, candidate));
         }
 
         if (participant == null)
@@ -386,7 +401,7 @@ public sealed class GameplayMatchApplicationService
         MatchMove[]? moveSnapshots = null;
         lock (match.SyncRoot)
         {
-            if (CanReadMatch(match, resolved.Value.Player.AccountId, sessionToken))
+            if (CanReadMatch(match, resolved.Value.Player, sessionToken))
             {
                 moveSnapshots = match.Moves
                     .Select(move => move.CreateSnapshot())
@@ -404,7 +419,7 @@ public sealed class GameplayMatchApplicationService
 
     private MatchResult<Match> ApplyPlayerMoveUnderLock(
         Match match,
-        long accountId,
+        MatchPlayer player,
         MatchPlacement placement)
     {
         MatchStatus moveStatus;
@@ -412,7 +427,7 @@ public sealed class GameplayMatchApplicationService
 
         lock (match.SyncRoot)
         {
-            moveStatus = ValidateAndApplyPlayerMove(match, accountId, placement);
+            moveStatus = ValidateAndApplyPlayerMove(match, player, placement);
             if (moveStatus == MatchStatus.Success)
             {
                 snapshot = match.CreateSnapshot();
@@ -429,12 +444,18 @@ public sealed class GameplayMatchApplicationService
 
     private MatchStatus ValidateAndApplyPlayerMove(
         Match match,
-        long accountId,
+        MatchPlayer player,
         MatchPlacement placement)
     {
+        MatchParticipant? participant = Array.Find(match.Participants,
+            candidate => player.IsParticipant(match.Id, candidate));
+        if (participant == null)
+        {
+            return MatchStatus.Unauthorized;
+        }
         MatchResult<MatchParticipant> validationResult = GameplayMatchRules.ValidatePlacement(
             match,
-            accountId,
+            participant.SeatNumber,
             placement);
         if (validationResult.Status != MatchStatus.Success)
         {
@@ -575,10 +596,15 @@ public sealed class GameplayMatchApplicationService
         return true;
     }
 
-    private bool CanReadMatch(Match match, long accountId, string sessionToken)
+    private bool CanReadMatch(Match match, MatchPlayer player, string sessionToken)
     {
-        if (GameplayMatchRules.IsParticipant(match, accountId)
-            || string.Equals(match.State, StateInProgress, StringComparison.Ordinal))
+        bool participant = match.Participants.Any(
+            candidate => player.IsParticipant(match.Id, candidate));
+        if (player.IsGuest)
+        {
+            return participant;
+        }
+        if (participant || string.Equals(match.State, StateInProgress, StringComparison.Ordinal))
         {
             return true;
         }
@@ -629,7 +655,7 @@ public sealed class GameplayMatchApplicationService
         string sessionToken,
         long matchId)
     {
-        MatchResult<AuthenticatedSession> playerResult = ResolveActiveSession(sessionToken);
+        MatchResult<MatchPlayer> playerResult = MatchPlayer.ResolveSession(_sessions, sessionToken);
         if (playerResult.Value == null)
         {
             return new MatchResult<MatchSessionContext>(playerResult.Status);
@@ -727,13 +753,13 @@ public sealed class GameplayMatchApplicationService
 
     private sealed class MatchSessionContext
     {
-        internal MatchSessionContext(AuthenticatedSession player, Match match)
+        internal MatchSessionContext(MatchPlayer player, Match match)
         {
             Player = player;
             Match = match;
         }
 
-        internal AuthenticatedSession Player { get; }
+        internal MatchPlayer Player { get; }
 
         internal Match Match { get; }
     }

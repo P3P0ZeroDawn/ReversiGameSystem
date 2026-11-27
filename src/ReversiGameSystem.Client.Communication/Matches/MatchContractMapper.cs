@@ -49,7 +49,8 @@ internal static class MatchContractMapper
         return new MatchParticipant(participant.SeatNumber, participant.DisplayName)
         {
             AccountId = participant.AccountId,
-            IsSystem = participant.Kind == Proxy.ParticipantKind.System
+            IsSystem = participant.Kind == Proxy.ParticipantKind.System,
+            IsGuest = participant.Kind == Proxy.ParticipantKind.Guest
         };
     }
 

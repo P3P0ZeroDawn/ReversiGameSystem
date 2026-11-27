@@ -27,6 +27,9 @@ CREATE TABLE dbo.MatchParticipant (
  consecutiveTimeoutCount tinyint NOT NULL,
  joinedAtUtc datetime2(3) NOT NULL, isCreator bit NOT NULL,
  PRIMARY KEY(matchId,seatNumber));
+CREATE UNIQUE INDEX UQ_MatchParticipant_AccountPerMatch
+ ON dbo.MatchParticipant (matchId, accountId) WHERE accountId IS NOT NULL;
+
 ALTER TABLE dbo.GameMatch ADD FOREIGN KEY(matchId,currentTurnSeatNumber)
  REFERENCES dbo.MatchParticipant(matchId,seatNumber);
 CREATE TABLE dbo.GameMove (

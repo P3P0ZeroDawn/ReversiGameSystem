@@ -188,12 +188,21 @@ public static class MatchContractMapper
 
     private static MatchParticipantSummary MapParticipant(MatchParticipant participant)
     {
+        ParticipantKind kind = ParticipantKind.Registered;
+        if (participant.IsGuest)
+        {
+            kind = ParticipantKind.Guest;
+        }
+        else if (participant.IsSystem)
+        {
+            kind = ParticipantKind.System;
+        }
         MatchParticipantSummary summary = new MatchParticipantSummary
         {
             SeatNumber = participant.SeatNumber,
-            AccountId = participant.AccountId,
+            AccountId = participant.IsGuest || participant.IsSystem ? null : participant.AccountId,
             DisplayName = participant.DisplayName,
-            Kind = participant.IsSystem ? ParticipantKind.System : ParticipantKind.Registered
+            Kind = kind
         };
         return summary;
     }

@@ -58,7 +58,7 @@ public static class GameplayMatchRules
 
     public static MatchResult<MatchParticipant> ValidatePlacement(
         Match match,
-        long accountId,
+        int seatNumber,
         MatchPlacement placement)
     {
         if (match == null)
@@ -76,7 +76,7 @@ public static class GameplayMatchRules
             return new MatchResult<MatchParticipant>(MatchStatus.MatchNotInProgress);
         }
 
-        MatchParticipant? participant = FindParticipant(match, accountId);
+        MatchParticipant? participant = FindParticipantBySeat(match, seatNumber);
         if (participant == null)
         {
             return new MatchResult<MatchParticipant>(MatchStatus.Unauthorized);
@@ -178,7 +178,7 @@ public static class GameplayMatchRules
 
     public static MatchStatus ForfeitByParticipant(
         Match match,
-        long accountId,
+        int seatNumber,
         DateTime endedAtUtc)
     {
         if (match == null)
@@ -186,7 +186,7 @@ public static class GameplayMatchRules
             throw new ArgumentNullException(nameof(match));
         }
 
-        MatchParticipant? participant = FindParticipant(match, accountId);
+        MatchParticipant? participant = FindParticipantBySeat(match, seatNumber);
         if (participant == null)
         {
             return MatchStatus.Unauthorized;

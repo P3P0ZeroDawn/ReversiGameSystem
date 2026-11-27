@@ -145,7 +145,7 @@ internal sealed class GameViewModel : INotifyPropertyChanged
     {
         get
         {
-            return IsReady && !_isGuest && Information.AssignedSeatNumber.HasValue;
+            return IsReady && Information.AssignedSeatNumber.HasValue;
         }
     }
     public bool CanForfeit
@@ -597,6 +597,10 @@ internal sealed class GameViewModel : INotifyPropertyChanged
                 name = player.IsSystem
                     ? LocalizationManager.Instance[SystemPlayerNameKey]
                     : player.DisplayName;
+                if (player.IsGuest)
+                {
+                    name = GuestNameFormatter.Format(player.DisplayName);
+                }
             }
         }
         return name;

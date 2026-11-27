@@ -12,8 +12,6 @@ internal sealed class MatchRepositoryStub : IMatchRepository
 
     internal int CancelMatchCalls { get; private set; }
 
-    internal int ValidateGuestJoinCalls { get; private set; }
-
     internal int CreateMatchCalls { get; private set; }
 
     internal int GetAvailableMatchesCalls { get; private set; }
@@ -46,8 +44,6 @@ internal sealed class MatchRepositoryStub : IMatchRepository
 
     internal MatchStatus CancelMatchStatus { get; set; } = MatchStatus.Success;
 
-    internal MatchStatus ValidateGuestJoinStatus { get; set; } = MatchStatus.Success;
-
     internal MatchResult<Match> StartSystemMatchResult { get; set; } =
         new MatchResult<Match>(MatchStatus.MatchNotFound);
 
@@ -74,10 +70,10 @@ internal sealed class MatchRepositoryStub : IMatchRepository
 
     internal bool ThrowOnGetAvailableMatches { get; set; }
 
-    public MatchResult<Match> StartSystemMatch(long accountId, long matchId, DateTime now)
+    public MatchResult<Match> StartSystemMatch(MatchPlayer player, long matchId, DateTime now)
     {
         StartSystemMatchCalls++;
-        LastAccountId = accountId;
+        LastAccountId = player.AccountId.GetValueOrDefault();
         LastMatchId = matchId;
         LastNowUtc = now;
         return StartSystemMatchResult;
@@ -90,37 +86,31 @@ internal sealed class MatchRepositoryStub : IMatchRepository
         return LobbyAccessStatus;
     }
 
-    public MatchStatus CancelMatch(long accountId, long matchId)
+    public MatchStatus CancelMatch(MatchPlayer player, long matchId)
     {
         CancelMatchCalls++;
-        LastAccountId = accountId;
+        LastAccountId = player.AccountId.GetValueOrDefault();
         LastMatchId = matchId;
         return CancelMatchStatus;
     }
 
-    public MatchStatus ValidateGuestJoin(string code)
-    {
-        ValidateGuestJoinCalls++;
-        LastCode = code;
-        return ValidateGuestJoinStatus;
-    }
 
     public MatchResult<Match> CreateMatch(
-        AuthenticatedSession player,
+        MatchPlayer player,
         MatchSettings settings,
         DateTime now)
     {
         CreateMatchCalls++;
-        LastAccountId = player.AccountId;
+        LastAccountId = player.AccountId.GetValueOrDefault();
         LastSettings = settings;
         LastNowUtc = now;
         return CreateMatchResult;
     }
 
-    public MatchResult<Match[]> GetAvailableMatches(long accountId)
+    public MatchResult<Match[]> GetAvailableMatches(MatchPlayer player)
     {
         GetAvailableMatchesCalls++;
-        LastAccountId = accountId;
+        LastAccountId = player.AccountId.GetValueOrDefault();
         if (ThrowOnGetAvailableMatches)
         {
             throw new InvalidOperationException("private-storage-failure");
@@ -129,27 +119,27 @@ internal sealed class MatchRepositoryStub : IMatchRepository
         return AvailableMatchesResult;
     }
 
-    public MatchResult<Match> JoinMatch(AuthenticatedSession player, string code, DateTime now)
+    public MatchResult<Match> JoinMatch(MatchPlayer player, string code, DateTime now)
     {
         JoinMatchCalls++;
-        LastAccountId = player.AccountId;
+        LastAccountId = player.AccountId.GetValueOrDefault();
         LastCode = code;
         LastNowUtc = now;
         return JoinMatchResult;
     }
 
-    public MatchResult<Match> LoadParticipantMatch(long accountId, long matchId)
+    public MatchResult<Match> LoadParticipantMatch(MatchPlayer player, long matchId)
     {
         LoadParticipantMatchCalls++;
-        LastAccountId = accountId;
+        LastAccountId = player.AccountId.GetValueOrDefault();
         LastMatchId = matchId;
         return LoadParticipantMatchResult;
     }
 
-    public MatchResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
+    public MatchResult<Match> ChangeTurnDuration(MatchPlayer player, long matchId, int seconds)
     {
         ChangeTurnDurationCalls++;
-        LastAccountId = accountId;
+        LastAccountId = player.AccountId.GetValueOrDefault();
         LastMatchId = matchId;
         LastTurnDurationSeconds = seconds;
         return ChangeTurnDurationResult;

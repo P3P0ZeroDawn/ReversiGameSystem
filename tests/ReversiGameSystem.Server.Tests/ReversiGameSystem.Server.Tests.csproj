@@ -45,6 +45,9 @@
     <Folder Include="IntegrationTests\System\" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\database\migrations\20261127_GuestMatchParticipants.sql"
+          Link="migrations\20261127_GuestMatchParticipants.sql"
+          CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\database\migrations\20261121_CustomBoardBackgroundPreference.sql"
           Link="migrations\20261121_CustomBoardBackgroundPreference.sql"
           CopyToOutputDirectory="PreserveNewest" />

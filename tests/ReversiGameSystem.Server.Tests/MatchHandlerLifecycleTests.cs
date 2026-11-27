@@ -149,7 +149,7 @@ public sealed class MatchApplicationServiceLifecycleTests
 
     private sealed class LifecycleStore : IMatchRepository
     {
-        public MatchResult<Match> StartSystemMatch(long accountId, long matchId, DateTime now)
+        public MatchResult<Match> StartSystemMatch(MatchPlayer player, long matchId, DateTime now)
         {
             throw new NotSupportedException();
         }
@@ -163,13 +163,13 @@ public sealed class MatchApplicationServiceLifecycleTests
         internal int CancelAttempts { get; private set; }
         internal int CreateAttempts { get; private set; }
 
-        public MatchResult<Match> CreateMatch(AuthenticatedSession player, MatchSettings settings, DateTime now)
+        public MatchResult<Match> CreateMatch(MatchPlayer player, MatchSettings settings, DateTime now)
         {
             CreateAttempts++;
             return new MatchResult<Match>(new Match { Id = 7 });
         }
 
-        public MatchStatus CancelMatch(long accountId, long matchId)
+        public MatchStatus CancelMatch(MatchPlayer player, long matchId)
         {
             CancelAttempts++;
             if (FailCancel)
@@ -184,19 +184,19 @@ public sealed class MatchApplicationServiceLifecycleTests
             return MatchStatus.Success;
         }
 
-        public MatchResult<Match[]> GetAvailableMatches(long accountId)
+        public MatchResult<Match[]> GetAvailableMatches(MatchPlayer player)
         {
             throw new NotSupportedException();
         }
-        public MatchResult<Match> JoinMatch(AuthenticatedSession player, string code, DateTime now)
+        public MatchResult<Match> JoinMatch(MatchPlayer player, string code, DateTime now)
         {
             throw new NotSupportedException();
         }
-        public MatchResult<Match> LoadParticipantMatch(long accountId, long matchId)
+        public MatchResult<Match> LoadParticipantMatch(MatchPlayer player, long matchId)
         {
             throw new NotSupportedException();
         }
-        public MatchResult<Match> ChangeTurnDuration(long accountId, long matchId, int seconds)
+        public MatchResult<Match> ChangeTurnDuration(MatchPlayer player, long matchId, int seconds)
         {
             throw new NotSupportedException();
         }
@@ -253,10 +253,6 @@ public sealed class MatchApplicationServiceLifecycleTests
             return new MatchResult<Match>(match);
         }
 
-        public MatchStatus ValidateGuestJoin(string matchCode)
-        {
-            return MatchStatus.Success;
-        }
 
         public MatchStatus SaveMove(
             long matchId,
