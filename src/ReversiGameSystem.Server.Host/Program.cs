@@ -133,12 +133,14 @@ internal static class Program
                                 sessions,
                                 matchRepository,
                                 clock,
-                                templatedEmailSender);
+                                templatedEmailSender,
+                                loggerFactory.CreateLogger<MatchApplicationService>());
                         GameplayMatchApplicationService gameplayMatchApplicationService =
                             new GameplayMatchApplicationService(
                                 sessions,
                                 matchRepository,
-                                clock);
+                                clock,
+                                loggerFactory.CreateLogger<GameplayMatchApplicationService>());
                         matchApplicationService.MatchStarted +=
                             gameplayMatchApplicationService.TrackStartedMatch;
                         MatchCallbackSubscriptions<IMatchLobbyServiceCallback>? lobbySubscriptions =
@@ -164,7 +166,8 @@ internal static class Program
                             MatchLobbyService matchLobbyService = new MatchLobbyService(
                                 matchApplicationService,
                                 lobbySubscriptions);
-                            GameplayMatchPresence gameplayPresence = new GameplayMatchPresence();
+                            GameplayMatchPresence gameplayPresence = new GameplayMatchPresence(
+                                loggerFactory.CreateLogger<GameplayMatchPresence>());
                             MatchCallbackSubscriptions<IGameplayMatchServiceCallback>?
                                 gameplaySubscriptions = null;
                             gameplaySubscriptions =
@@ -193,7 +196,8 @@ internal static class Program
                                     new GameplayMatchService(
                                         gameplayMatchApplicationService,
                                         gameplayPresence,
-                                        gameplaySubscriptions);
+                                        gameplaySubscriptions,
+                                        loggerFactory.CreateLogger<GameplayMatchService>());
                                 ChatRepository chatRepository = new ChatRepository(clock);
                                 ChatApplicationService chatApplicationService =
                                     new ChatApplicationService(sessions, chatRepository, clock);

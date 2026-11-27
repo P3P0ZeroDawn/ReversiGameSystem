@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Application.Accounts;
 using ReversiGameSystem.Server.Application.Common;
 
@@ -15,6 +16,7 @@ public sealed class GameplayMatchApplicationService
     private readonly SessionStore _sessions;
     private readonly IGameplayRepository _matches;
     private readonly IUtcClock _clock;
+    private readonly ILogger<GameplayMatchApplicationService> _logger;
     private readonly object _activeMatchesSync = new object();
     private readonly Dictionary<long, Match> _activeMatches = new Dictionary<long, Match>();
     private readonly HashSet<long> _matchesPendingPersistence = new HashSet<long>();
@@ -26,11 +28,13 @@ public sealed class GameplayMatchApplicationService
     public GameplayMatchApplicationService(
         SessionStore sessions,
         IGameplayRepository matches,
-        IUtcClock clock)
+        IUtcClock clock,
+        ILogger<GameplayMatchApplicationService> logger)
     {
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
         _matches = matches ?? throw new ArgumentNullException(nameof(matches));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public void TrackStartedMatch(Match match)
@@ -50,6 +54,8 @@ public sealed class GameplayMatchApplicationService
         {
             _activeMatches[match.Id] = match;
         }
+
+        _logger.LogInformation("Gameplay tracking started for match {MatchId}.", match.Id);
     }
 
     public MatchResult<Match> PlacePiece(string sessionToken, MatchPlacement? placement)
@@ -80,6 +86,23 @@ public sealed class GameplayMatchApplicationService
         if (transitionResult.Status == MatchStatus.Success)
         {
             MarkPersistencePending(match.Id);
+            if (transitionResult.Value != null
+                && string.Equals(transitionResult.Value.State, StateFinished, StringComparison.Ordinal))
+            {
+                _logger.LogInformation(
+                    "Match {MatchId} finished with reason {EndReason} and winner seat {WinnerSeatNumber}.",
+                    transitionResult.Value.Id,
+                    transitionResult.Value.EndReason,
+                    transitionResult.Value.WinnerSeatNumber);
+            }
+        }
+        else if (transitionResult.Status == MatchStatus.Unauthorized)
+        {
+            _logger.LogWarning(
+                "Piece placement rejected for match {MatchId} by {Actor}: {Reason}.",
+                placement.MatchId,
+                FormatActor(resolved.Value.Player),
+                transitionResult.Status);
         }
 
         return transitionResult;
@@ -155,6 +178,11 @@ public sealed class GameplayMatchApplicationService
         }
         if (participant == null)
         {
+            _logger.LogWarning(
+                "Match forfeit rejected for match {MatchId} by {Actor}: {Reason}.",
+                matchId,
+                FormatActor(resolved.Value.Player),
+                MatchStatus.Unauthorized);
             return new MatchResult<Match>(MatchStatus.Unauthorized);
         }
         return ConcludeForfeit(match, participant.SeatNumber, true);
@@ -193,7 +221,9 @@ public sealed class GameplayMatchApplicationService
     }
 
     private MatchResult<Match> ConcludeForfeit(
-        Match match, int seatNumber, bool includeFinishedMatch)
+        Match match,
+        int seatNumber,
+        bool includeFinishedMatch)
     {
         DateTime now = _clock.UtcNow;
         MatchStatus forfeitStatus;
@@ -221,6 +251,22 @@ public sealed class GameplayMatchApplicationService
         if (forfeitStatus == MatchStatus.Success)
         {
             MarkPersistencePending(match.Id);
+            if (includeFinishedMatch)
+            {
+                _logger.LogInformation(
+                    "Match {MatchId} forfeited by seat {SeatNumber}; winner seat {WinnerSeatNumber}.",
+                    snapshot.Id,
+                    seatNumber,
+                    snapshot.WinnerSeatNumber);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Match {MatchId} forfeited after 30s disconnection timeout for seat {SeatNumber}; winner seat {WinnerSeatNumber}.",
+                    snapshot.Id,
+                    seatNumber,
+                    snapshot.WinnerSeatNumber);
+            }
         }
 
         return new MatchResult<Match>(snapshot);
@@ -267,6 +313,10 @@ public sealed class GameplayMatchApplicationService
 
         if (resolved.Value.Player.IsGuest)
         {
+            _logger.LogWarning(
+                "Match observation rejected for guest {Actor} on match {MatchId}.",
+                FormatActor(resolved.Value.Player),
+                matchId);
             return new MatchResult<Match>(MatchStatus.Unauthorized);
         }
         MatchStatus access = _matches.EvaluateLobbyAccess(resolved.Value.Player.AccountId!.Value);
@@ -292,6 +342,10 @@ public sealed class GameplayMatchApplicationService
             return new MatchResult<Match>(MatchStatus.SpectatingUnavailable);
         }
 
+        _logger.LogInformation(
+            "Observer {Actor} joined match {MatchId}.",
+            FormatActor(resolved.Value.Player),
+            matchId);
         return new MatchResult<Match>(snapshot);
     }
 
@@ -520,7 +574,24 @@ public sealed class GameplayMatchApplicationService
         }
 
         MarkPersistencePending(match.Id);
+        if (string.Equals(snapshot.State, StateFinished, StringComparison.Ordinal))
+        {
+            _logger.LogInformation(
+                "Match {MatchId} finished on timeout with reason {EndReason} and winner seat {WinnerSeatNumber}.",
+                snapshot.Id,
+                snapshot.EndReason,
+                snapshot.WinnerSeatNumber);
+        }
+
         return snapshot;
+    }
+
+    private static string FormatActor(MatchPlayer player)
+    {
+        return LogSanitizer.FormatMatchActor(
+            player.AccountId,
+            player.DisplayName,
+            player.IsGuest);
     }
 
     private MatchResult<Match> FindTrackedMatch(long matchId)

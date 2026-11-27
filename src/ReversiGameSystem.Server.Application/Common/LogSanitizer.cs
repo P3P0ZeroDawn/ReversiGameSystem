@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Text;
 
 namespace ReversiGameSystem.Server.Application.Common;
@@ -11,6 +12,7 @@ public static class LogSanitizer
     private const int DefaultMaxLength = 64;
     private const string EmptyPlaceholder = "[empty]";
     private const string InvalidEmailPlaceholder = "[invalid-email]";
+    private const string UnknownActorPlaceholder = "[unknown-actor]";
 
     /// <summary>
     /// Removes control characters and bounds length to prevent log injection.
@@ -85,5 +87,27 @@ public static class LogSanitizer
         return loginIdentifier!.IndexOf('@') >= 0
             ? MaskEmail(loginIdentifier)
             : SanitizeText(loginIdentifier);
+    }
+
+    /// <summary>
+    /// Formats a registered account or guest match participant for audit logs.
+    /// </summary>
+    /// <param name="accountId">The registered account identifier, if any.</param>
+    /// <param name="displayName">The guest display name, if applicable.</param>
+    /// <param name="isGuest">Whether the actor is a guest session.</param>
+    /// <returns>A safe actor label without session tokens.</returns>
+    public static string FormatMatchActor(
+        long? accountId,
+        string? displayName,
+        bool isGuest)
+    {
+        if (isGuest)
+        {
+            return "Guest:" + SanitizeText(displayName);
+        }
+
+        return accountId.HasValue
+            ? "Account:" + accountId.Value.ToString(CultureInfo.InvariantCulture)
+            : UnknownActorPlaceholder;
     }
 }

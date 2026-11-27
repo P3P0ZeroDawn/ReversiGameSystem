@@ -1,5 +1,6 @@
 using System;
 using System.ServiceModel;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Matches;
 using ReversiGameSystem.Server.Contracts.Faults;
@@ -17,7 +18,8 @@ public sealed class GameplayMatchServiceTests : GameplayMatchServiceTestBase
         Action action = () => _ = new Server.ServiceApi.GameplayMatchService(
             null!,
             Presence,
-            Subscriptions);
+            Subscriptions,
+            NullLogger<Server.ServiceApi.GameplayMatchService>.Instance);
 
         Assert.Throws<ArgumentNullException>(action);
     }
@@ -28,7 +30,8 @@ public sealed class GameplayMatchServiceTests : GameplayMatchServiceTestBase
         Action action = () => _ = new Server.ServiceApi.GameplayMatchService(
             ApplicationService,
             null!,
-            Subscriptions);
+            Subscriptions,
+            NullLogger<Server.ServiceApi.GameplayMatchService>.Instance);
 
         Assert.Throws<ArgumentNullException>(action);
     }
@@ -39,6 +42,19 @@ public sealed class GameplayMatchServiceTests : GameplayMatchServiceTestBase
         Action action = () => _ = new Server.ServiceApi.GameplayMatchService(
             ApplicationService,
             Presence,
+            null!,
+            NullLogger<Server.ServiceApi.GameplayMatchService>.Instance);
+
+        Assert.Throws<ArgumentNullException>(action);
+    }
+
+    [TestMethod]
+    public void Constructor_NullLogger_ThrowsArgumentNullException()
+    {
+        Action action = () => _ = new Server.ServiceApi.GameplayMatchService(
+            ApplicationService,
+            Presence,
+            Subscriptions,
             null!);
 
         Assert.Throws<ArgumentNullException>(action);

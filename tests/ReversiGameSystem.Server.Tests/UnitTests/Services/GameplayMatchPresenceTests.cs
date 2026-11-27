@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.ServiceApi;
 
@@ -9,9 +11,18 @@ namespace ReversiGameSystem.Server.Tests.UnitTests.Services;
 public sealed class GameplayMatchPresenceTests
 {
     [TestMethod]
+    public void Constructor_NullLogger_ThrowsArgumentNullException()
+    {
+        Action action = () => _ = new GameplayMatchPresence(null!);
+
+        Assert.Throws<ArgumentNullException>(action);
+    }
+
+    [TestMethod]
     public void RemoveConnection_ActiveSubscriptionRemains_ReturnsNull()
     {
-        GameplayMatchPresence presence = new GameplayMatchPresence();
+        GameplayMatchPresence presence = new GameplayMatchPresence(
+            NullLogger<GameplayMatchPresence>.Instance);
 
         KeyValuePair<int, bool>[]? actualSnapshot =
             presence.RemoveConnection("token-1", 100L, (_, _) => true);
@@ -22,7 +33,8 @@ public sealed class GameplayMatchPresenceTests
     [TestMethod]
     public void RemoveConnection_UntrackedMatch_ReturnsNull()
     {
-        GameplayMatchPresence presence = new GameplayMatchPresence();
+        GameplayMatchPresence presence = new GameplayMatchPresence(
+            NullLogger<GameplayMatchPresence>.Instance);
 
         KeyValuePair<int, bool>[]? actualSnapshot =
             presence.RemoveConnection("token-1", 100L, (_, _) => false);
@@ -33,7 +45,8 @@ public sealed class GameplayMatchPresenceTests
     [TestMethod]
     public void CollectExpiredReconnections_WithoutDisconnectedSeats_ReturnsEmpty()
     {
-        GameplayMatchPresence presence = new GameplayMatchPresence();
+        GameplayMatchPresence presence = new GameplayMatchPresence(
+            NullLogger<GameplayMatchPresence>.Instance);
         int expectedCount = 0;
 
         (long MatchId, int SeatNumber)[] actualExpired = presence.CollectExpiredReconnections();

@@ -28,15 +28,16 @@ public abstract class GameplayMatchServiceTestBase
         Clock = new UtcClockStub();
         Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         Matches = new GameplayRepositoryStub();
-        ApplicationService = new GameplayMatchApplicationService(Sessions, Matches, Clock);
-        Presence = new GameplayMatchPresence();
+        ApplicationService = new GameplayMatchApplicationService(Sessions, Matches, Clock, NullLogger<GameplayMatchApplicationService>.Instance);
+        Presence = new GameplayMatchPresence(NullLogger<GameplayMatchPresence>.Instance);
         Subscriptions = new MatchCallbackSubscriptions<IGameplayMatchServiceCallback>(
             (_, _) => true,
             NullLogger<MatchCallbackSubscriptions<IGameplayMatchServiceCallback>>.Instance);
         Service = new Server.ServiceApi.GameplayMatchService(
             ApplicationService,
             Presence,
-            Subscriptions);
+            Subscriptions,
+            NullLogger<Server.ServiceApi.GameplayMatchService>.Instance);
     }
 
     protected string AddAuthenticatedSession(

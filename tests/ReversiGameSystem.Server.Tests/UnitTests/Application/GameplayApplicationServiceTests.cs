@@ -581,7 +581,7 @@ internal sealed class GameplayTestContext
         Clock = new MutableTestClock(new DateTime(2026, 11, 11, 20, 0, 0, DateTimeKind.Utc));
         Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         Repository = new MockGameplayMatchRepository();
-        ApplicationService = new AppGameplayMatchService(Sessions, Repository, Clock);
+        ApplicationService = new AppGameplayMatchService(Sessions, Repository, Clock, NullLogger<AppGameplayMatchService>.Instance);
 
         PlayerOne = TestSessionHelper.CreateSession(Sessions, 101, "PlayerAlpha");
         PlayerTwo = TestSessionHelper.CreateSession(Sessions, 202, "PlayerBeta");

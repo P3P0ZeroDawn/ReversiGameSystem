@@ -24,7 +24,12 @@ public abstract class MatchApplicationServiceTestBase
         Sessions = new SessionStore(Clock, NullLogger<SessionStore>.Instance);
         Matches = new MatchRepositoryStub();
         EmailSender = new TemplatedEmailSenderStub();
-        Service = new ApplicationService(Sessions, Matches, Clock, EmailSender);
+        Service = new ApplicationService(
+            Sessions,
+            Matches,
+            Clock,
+            EmailSender,
+            NullLogger<ApplicationService>.Instance);
     }
 
     protected string AddAuthenticatedSession(

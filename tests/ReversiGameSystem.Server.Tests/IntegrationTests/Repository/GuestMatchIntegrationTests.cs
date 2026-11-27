@@ -52,8 +52,8 @@ public sealed class GuestMatchIntegrationTests : RepositoryIntegrationTestBase
         _clock = new TestUtcClock();
         _sessions = new SessionStore(_clock, NullLogger<SessionStore>.Instance);
         _repository = new MatchRepository(NullLogger<MatchRepository>.Instance);
-        _lobby = new MatchApplicationService(_sessions, _repository, _clock);
-        _gameplay = new GameplayMatchApplicationService(_sessions, _repository, _clock);
+        _lobby = new MatchApplicationService(_sessions, _repository, _clock, NullLogger<MatchApplicationService>.Instance);
+        _gameplay = new GameplayMatchApplicationService(_sessions, _repository, _clock, NullLogger<GameplayMatchApplicationService>.Instance);
         _lobby.MatchStarted += _gameplay.TrackStartedMatch;
     }
 
@@ -302,7 +302,7 @@ public sealed class GuestMatchIntegrationTests : RepositoryIntegrationTestBase
         GuestSession creator = AddGuest("Creator");
         GuestSession opponent = AddGuest("Opponent");
         Match match = StartMatch(creator.SessionToken, opponent.SessionToken);
-        GameplayMatchPresence presence = new GameplayMatchPresence();
+        GameplayMatchPresence presence = new GameplayMatchPresence(NullLogger<GameplayMatchPresence>.Instance);
         MatchCallbackSubscriptions<WireCallback> subscriptions = null!;
         subscriptions = new MatchCallbackSubscriptions<WireCallback>(
             (token, matchId) => _gameplay.GetAuthorizedParticipant(token, matchId).Status
@@ -311,7 +311,7 @@ public sealed class GuestMatchIntegrationTests : RepositoryIntegrationTestBase
                 subscriptions.HasSubscription), NullLogger.Instance);
         using (subscriptions)
         {
-            GameplayMatchService service = new GameplayMatchService(_gameplay, presence, subscriptions);
+            GameplayMatchService service = new GameplayMatchService(_gameplay, presence, subscriptions, NullLogger<GameplayMatchService>.Instance);
             using WcfChannelScope<WireGameplay> scope =
                 WcfTestHostHelper.OpenDuplexChannel<WireGameplay, WireCallback>(
                     service, "GuestGameplay", new GuestGameplayCallback());
