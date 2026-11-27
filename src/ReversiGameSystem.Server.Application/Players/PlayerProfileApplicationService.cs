@@ -1,5 +1,7 @@
 using System;
+using Microsoft.Extensions.Logging;
 using ReversiGameSystem.Server.Application.Accounts;
+using ReversiGameSystem.Server.Application.Common;
 using ReversiGameSystem.Server.Domain.Accounts;
 
 namespace ReversiGameSystem.Server.Application.Players;
@@ -10,15 +12,18 @@ public sealed class PlayerProfileApplicationService
     private readonly SessionStore _sessions;
     private readonly IPlayerProfileRepository _profiles;
     private readonly IPlayerImageRepository _images;
+    private readonly ILogger<PlayerProfileApplicationService> _logger;
 
     public PlayerProfileApplicationService(
         SessionStore sessions,
         IPlayerProfileRepository profiles,
-        IPlayerImageRepository images)
+        IPlayerImageRepository images,
+        ILogger<PlayerProfileApplicationService> logger)
     {
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
         _profiles = profiles ?? throw new ArgumentNullException(nameof(profiles));
         _images = images ?? throw new ArgumentNullException(nameof(images));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public ProfileResult<PlayerProfile> GetProfile(
@@ -110,7 +115,23 @@ public sealed class PlayerProfileApplicationService
             return ProfileStatus.InvalidUsername;
         }
 
-        return _profiles.ChangeUsername(accountId, normalized);
+        ProfileStatus status = _profiles.ChangeUsername(accountId, normalized);
+        if (status == ProfileStatus.Success)
+        {
+            _logger.LogInformation(
+                "Username changed for account {AccountId} to {Username}.",
+                accountId,
+                LogSanitizer.SanitizeText(normalized));
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Username change rejected for account {AccountId}: {Reason}.",
+                accountId,
+                status);
+        }
+
+        return status;
     }
     public ProfileStatus UpdateImage(
         string sessionToken,

@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Players;
 using ApplicationService =
@@ -14,7 +15,11 @@ public sealed class PlayerProfileApplicationServiceGetProfileTests
     [TestMethod]
     public void Constructor_NullSessions_ThrowsArgumentNullException()
     {
-        Action action = () => _ = new ApplicationService(null!, Profiles, Images);
+        Action action = () => _ = new ApplicationService(
+            null!,
+            Profiles,
+            Images,
+            NullLogger<ApplicationService>.Instance);
 
         Assert.Throws<ArgumentNullException>(action);
     }
@@ -22,7 +27,11 @@ public sealed class PlayerProfileApplicationServiceGetProfileTests
     [TestMethod]
     public void Constructor_NullProfiles_ThrowsArgumentNullException()
     {
-        Action action = () => _ = new ApplicationService(Sessions, null!, Images);
+        Action action = () => _ = new ApplicationService(
+            Sessions,
+            null!,
+            Images,
+            NullLogger<ApplicationService>.Instance);
 
         Assert.Throws<ArgumentNullException>(action);
     }
@@ -30,7 +39,23 @@ public sealed class PlayerProfileApplicationServiceGetProfileTests
     [TestMethod]
     public void Constructor_NullImages_ThrowsArgumentNullException()
     {
-        Action action = () => _ = new ApplicationService(Sessions, Profiles, null!);
+        Action action = () => _ = new ApplicationService(
+            Sessions,
+            Profiles,
+            null!,
+            NullLogger<ApplicationService>.Instance);
+
+        Assert.Throws<ArgumentNullException>(action);
+    }
+
+    [TestMethod]
+    public void Constructor_NullLogger_ThrowsArgumentNullException()
+    {
+        Action action = () => _ = new ApplicationService(
+            Sessions,
+            Profiles,
+            Images,
+            null!);
 
         Assert.Throws<ArgumentNullException>(action);
     }

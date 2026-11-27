@@ -158,7 +158,8 @@ internal sealed class SystemTestHost : IDisposable
             accountRepository,
             profileImages,
             verificationCodes,
-            sessions));
+            sessions,
+            NullLogger<AccountApplicationService>.Instance));
         SessionService sessionService = new SessionService(
             new SessionApplicationService(accountRepository, verificationCodes, sessions, NullLogger<SessionApplicationService>.Instance),
             NullLogger<SessionService>.Instance);
@@ -166,7 +167,8 @@ internal sealed class SystemTestHost : IDisposable
             new PlayerProfileApplicationService(
                 sessions,
                 new PlayerProfileRepository(),
-                profileImages));
+                profileImages,
+                NullLogger<PlayerProfileApplicationService>.Instance));
         PlayerPreferencesService playerPreferencesService = new PlayerPreferencesService(
             new PreferencesApplicationService(
                 sessions,

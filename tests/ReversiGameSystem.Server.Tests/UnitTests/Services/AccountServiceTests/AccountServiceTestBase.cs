@@ -48,7 +48,8 @@ public abstract class AccountServiceTestBase
             Accounts,
             Images,
             verificationService,
-            Sessions);
+            Sessions,
+            NullLogger<AccountApplicationService>.Instance);
         Service = new AccountService(ApplicationService);
     }
 

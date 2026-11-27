@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
 
@@ -15,7 +16,8 @@ public sealed class AccountApplicationServiceConstructorTests : AccountApplicati
             null!,
             Images,
             VerificationService,
-            Sessions);
+            Sessions,
+            NullLogger<AccountApplicationService>.Instance);
 
         Assert.Throws<ArgumentNullException>(action);
     }
@@ -27,7 +29,8 @@ public sealed class AccountApplicationServiceConstructorTests : AccountApplicati
             Accounts,
             null!,
             VerificationService,
-            Sessions);
+            Sessions,
+            NullLogger<AccountApplicationService>.Instance);
 
         Assert.Throws<ArgumentNullException>(action);
     }
@@ -39,7 +42,8 @@ public sealed class AccountApplicationServiceConstructorTests : AccountApplicati
             Accounts,
             Images,
             null!,
-            Sessions);
+            Sessions,
+            NullLogger<AccountApplicationService>.Instance);
 
         Assert.Throws<ArgumentNullException>(action);
     }
@@ -51,6 +55,20 @@ public sealed class AccountApplicationServiceConstructorTests : AccountApplicati
             Accounts,
             Images,
             VerificationService,
+            null!,
+            NullLogger<AccountApplicationService>.Instance);
+
+        Assert.Throws<ArgumentNullException>(action);
+    }
+
+    [TestMethod]
+    public void Constructor_NullLogger_ThrowsArgumentNullException()
+    {
+        Action action = () => _ = new AccountApplicationService(
+            Accounts,
+            Images,
+            VerificationService,
+            Sessions,
             null!);
 
         Assert.Throws<ArgumentNullException>(action);

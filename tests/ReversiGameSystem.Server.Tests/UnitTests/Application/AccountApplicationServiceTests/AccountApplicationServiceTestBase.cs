@@ -47,7 +47,8 @@ public abstract class AccountApplicationServiceTestBase
             Accounts,
             Images,
             VerificationService,
-            Sessions);
+            Sessions,
+            NullLogger<AccountApplicationService>.Instance);
     }
 
     private protected static byte[] CreatePngBytes()

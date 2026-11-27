@@ -41,7 +41,8 @@ public sealed class AccountServiceIntegrationTests
             _stub,
             _stub,
             verificationCodes,
-            sessions);
+            sessions,
+            NullLogger<AccountApplicationService>.Instance);
         AccountService service = new AccountService(applicationService);
         _scope = WcfTestHostHelper.OpenChannel<IAccountService>(service, "Account");
         _channel = _scope.Channel;
