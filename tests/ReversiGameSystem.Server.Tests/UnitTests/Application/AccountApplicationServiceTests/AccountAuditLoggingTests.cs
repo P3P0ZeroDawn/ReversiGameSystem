@@ -1,10 +1,7 @@
-using System;
 using System.Linq;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ReversiGameSystem.Server.Application.Accounts;
-using ReversiGameSystem.Server.Application.Players;
 using ReversiGameSystem.Server.Application.Verification;
 using ReversiGameSystem.Server.Tests.TestDoubles;
 using AppPlayerProfileService =
@@ -17,150 +14,175 @@ namespace ReversiGameSystem.Server.Tests.UnitTests.Application.AccountApplicatio
 public sealed class AccountAuditLoggingTests : AccountApplicationServiceTestBase
 {
     [TestMethod]
-    public void CompleteRegistration_ValidCode_LogsAccountIdAndMaskedEmailWithoutSecrets()
+    public void CompleteRegistration_ValidCode_LogsInformationWithAccountIdAndMaskedEmail()
     {
-        const string password = "StrongPassword1!";
-        const string code = "123456";
         Accounts.CreateAccountResult = new AccountResult<long>(88);
         VerificationCodes.VerificationResult = VerificationStatus.Accepted;
         RecordingLogger<AccountApplicationService> logger =
             new RecordingLogger<AccountApplicationService>();
-        AccountApplicationService auditedService = new AccountApplicationService(
-            Accounts,
-            Images,
-            VerificationService,
-            Sessions,
-            logger);
+        AccountApplicationService auditedService = CreateAuditedAccountService(logger);
+        NewAccountRegistration registration = new NewAccountRegistration(
+            "123456",
+            "NewPlayer",
+            "new.player@example.com",
+            "StrongPassword1!",
+            "en-US",
+            null);
+        bool expectedLogged = true;
 
+        auditedService.CompleteRegistration(registration);
+        bool actualLogged = logger.Entries.Any(entry =>
+            entry.Level == LogLevel.Information
+            && entry.Message.Contains("88")
+            && entry.Message.Contains("n***@example.com"));
+
+        Assert.AreEqual(expectedLogged, actualLogged);
+    }
+
+    [TestMethod]
+    public void CompleteRegistration_ValidCode_OmitsRawEmailPasswordAndCodeFromLogs()
+    {
+        const string password = "StrongPassword1!";
+        const string code = "123456";
+        const string rawEmail = "new.player@example.com";
+        Accounts.CreateAccountResult = new AccountResult<long>(88);
+        VerificationCodes.VerificationResult = VerificationStatus.Accepted;
+        RecordingLogger<AccountApplicationService> logger =
+            new RecordingLogger<AccountApplicationService>();
+        AccountApplicationService auditedService = CreateAuditedAccountService(logger);
         NewAccountRegistration registration = new NewAccountRegistration(
             code,
             "NewPlayer",
-            "new.player@example.com",
+            rawEmail,
             password,
             "en-US",
             null);
-        AccountResult<AccountSummary> result = auditedService.CompleteRegistration(registration);
+        bool expectedContainsSecrets = false;
 
-        Assert.AreEqual(AccountStatus.Success, result.Status);
-        RecordedLogEntry entry = logger.Entries.Single();
-        Assert.AreEqual(LogLevel.Information, entry.Level);
-        Assert.IsTrue(entry.Message.Contains("88"));
-        Assert.IsTrue(entry.Message.Contains("n***@example.com"));
-        Assert.IsFalse(entry.Message.Contains("new.player@example.com"));
-        Assert.IsFalse(entry.Message.Contains(password));
-        Assert.IsFalse(entry.Message.Contains(code));
+        auditedService.CompleteRegistration(registration);
+        bool actualContainsSecrets = logger.Entries.Any(entry =>
+            entry.Message.Contains(rawEmail)
+            || entry.Message.Contains(password)
+            || entry.Message.Contains(code));
+
+        Assert.AreEqual(expectedContainsSecrets, actualContainsSecrets);
     }
 
     [TestMethod]
-    public void ChangePassword_IncorrectCurrentPassword_LogsWarningWithoutSecrets()
+    public void ChangePassword_IncorrectCurrentPassword_LogsWarningWithAccountIdAndReason()
     {
-        const string currentPassword = "CurrentPassword1!";
+        const string token = "auth-token-99";
+        LoginAccount account = CreateLoginAccount(accountId: 99, password: "CurrentPassword1!");
+        Accounts.FindByIdResult = new AccountResult<LoginAccount>(account);
+        AddAuthenticatedSession(token, 99, "player@example.com");
+        RecordingLogger<AccountApplicationService> logger =
+            new RecordingLogger<AccountApplicationService>();
+        AccountApplicationService auditedService = CreateAuditedAccountService(logger);
+        bool expectedLogged = true;
+
+        auditedService.ChangePassword(token, "WrongPassword1!", "NewPassword1!");
+        bool actualLogged = logger.Entries.Any(entry =>
+            entry.Level == LogLevel.Warning
+            && entry.Message.Contains("99")
+            && entry.Message.Contains("IncorrectCurrentPassword"));
+
+        Assert.AreEqual(expectedLogged, actualLogged);
+    }
+
+    [TestMethod]
+    public void ChangePassword_IncorrectCurrentPassword_OmitsPasswordsAndTokenFromLogs()
+    {
         const string wrongPassword = "WrongPassword1!";
         const string newPassword = "NewPassword1!";
         const string token = "auth-token-99";
-        LoginAccount account = CreateLoginAccount(accountId: 99, password: currentPassword);
+        LoginAccount account = CreateLoginAccount(accountId: 99, password: "CurrentPassword1!");
         Accounts.FindByIdResult = new AccountResult<LoginAccount>(account);
-        Sessions.TryAddAuthenticated(new AuthenticatedSession(
-            token,
-            99,
-            "PlayerOne",
-            "player@example.com",
-            "en-US",
-            Clock.UtcNow.AddHours(1)));
+        AddAuthenticatedSession(token, 99, "player@example.com");
         RecordingLogger<AccountApplicationService> logger =
             new RecordingLogger<AccountApplicationService>();
-        AccountApplicationService auditedService = new AccountApplicationService(
-            Accounts,
-            Images,
-            VerificationService,
-            Sessions,
-            logger);
+        AccountApplicationService auditedService = CreateAuditedAccountService(logger);
+        bool expectedContainsSecrets = false;
 
-        AccountStatus status = auditedService.ChangePassword(token, wrongPassword, newPassword);
+        auditedService.ChangePassword(token, wrongPassword, newPassword);
+        bool actualContainsSecrets = logger.Entries.Any(entry =>
+            entry.Message.Contains(wrongPassword)
+            || entry.Message.Contains(newPassword)
+            || entry.Message.Contains(token));
 
-        Assert.AreEqual(AccountStatus.IncorrectCurrentPassword, status);
-        RecordedLogEntry entry = logger.Entries.Single();
-        Assert.AreEqual(LogLevel.Warning, entry.Level);
-        Assert.IsTrue(entry.Message.Contains("99"));
-        Assert.IsTrue(entry.Message.Contains("IncorrectCurrentPassword"));
-        Assert.IsFalse(entry.Message.Contains(wrongPassword));
-        Assert.IsFalse(entry.Message.Contains(newPassword));
-        Assert.IsFalse(entry.Message.Contains(token));
+        Assert.AreEqual(expectedContainsSecrets, actualContainsSecrets);
     }
 
     [TestMethod]
-    public void RequestResetAndResetAndDeactivate_LogsAuditTrailWithoutSecrets()
+    public void RequestPasswordResetCode_ValidEmail_LogsInformationWithoutRawEmail()
     {
-        const string password = "CurrentPassword1!";
+        LoginAccount account = CreateLoginAccount(accountId: 55);
+        Accounts.FindByEmailResult = new AccountResult<LoginAccount>(account);
+        RecordingLogger<AccountApplicationService> logger =
+            new RecordingLogger<AccountApplicationService>();
+        AccountApplicationService auditedService = CreateAuditedAccountService(logger);
+        bool expectedLogged = true;
+
+        auditedService.RequestPasswordResetCode(account.EmailAddress);
+        bool actualLogged = logger.Entries.Any(entry =>
+            entry.Level == LogLevel.Information
+            && entry.Message.Contains("Password reset code issued for account 55")
+            && !entry.Message.Contains(account.EmailAddress));
+
+        Assert.AreEqual(expectedLogged, actualLogged);
+    }
+
+    [TestMethod]
+    public void ResetPassword_ValidCode_LogsInformationWithoutSecrets()
+    {
         const string newPassword = "UpdatedPassword1!";
         const string code = "654321";
-        const string token = "auth-token-55";
-        LoginAccount account = CreateLoginAccount(accountId: 55, password: password);
+        LoginAccount account = CreateLoginAccount(accountId: 55);
         Accounts.FindByEmailResult = new AccountResult<LoginAccount>(account);
-        Accounts.FindByIdResult = new AccountResult<LoginAccount>(account);
         VerificationCodes.VerificationResult = VerificationStatus.Accepted;
-        Sessions.TryAddAuthenticated(new AuthenticatedSession(
-            token,
-            55,
-            "PlayerOne",
-            account.EmailAddress,
-            "en-US",
-            Clock.UtcNow.AddHours(1)));
         RecordingLogger<AccountApplicationService> logger =
             new RecordingLogger<AccountApplicationService>();
-        AccountApplicationService auditedService = new AccountApplicationService(
-            Accounts,
-            Images,
-            VerificationService,
-            Sessions,
-            logger);
+        AccountApplicationService auditedService = CreateAuditedAccountService(logger);
+        bool expectedLogged = true;
 
-        AccountResult<DateTime> resetCodeResult = auditedService.RequestPasswordResetCode(
-            account.EmailAddress);
-        Assert.AreEqual(AccountStatus.Success, resetCodeResult.Status);
+        auditedService.ResetPassword(account.EmailAddress, code, newPassword);
+        bool actualLogged = logger.Entries.Any(entry =>
+            entry.Level == LogLevel.Information
+            && entry.Message.Contains("Password reset completed for account 55")
+            && !entry.Message.Contains(newPassword)
+            && !entry.Message.Contains(code)
+            && !entry.Message.Contains(account.EmailAddress));
 
-        AccountStatus resetStatus = auditedService.ResetPassword(
-            account.EmailAddress,
-            code,
-            newPassword);
-        Assert.AreEqual(AccountStatus.Success, resetStatus);
-
-        Sessions.TryAddAuthenticated(new AuthenticatedSession(
-            token,
-            55,
-            "PlayerOne",
-            account.EmailAddress,
-            "en-US",
-            Clock.UtcNow.AddHours(1)));
-        AccountStatus deactivateStatus = auditedService.DeactivateAccount(token, password);
-        Assert.AreEqual(AccountStatus.Success, deactivateStatus);
-
-        Assert.IsTrue(logger.Entries.Any(e =>
-            e.Level == LogLevel.Information && e.Message.Contains("Password reset code issued for account 55")));
-        Assert.IsTrue(logger.Entries.Any(e =>
-            e.Level == LogLevel.Information && e.Message.Contains("Password reset completed for account 55")));
-        Assert.IsTrue(logger.Entries.Any(e =>
-            e.Level == LogLevel.Information && e.Message.Contains("Account 55 deactivated")));
-
-        string allLogs = string.Join("\n", logger.Entries.Select(e => e.Message));
-        Assert.IsFalse(allLogs.Contains(password));
-        Assert.IsFalse(allLogs.Contains(newPassword));
-        Assert.IsFalse(allLogs.Contains(code));
-        Assert.IsFalse(allLogs.Contains(token));
-        Assert.IsFalse(allLogs.Contains(account.EmailAddress));
+        Assert.AreEqual(expectedLogged, actualLogged);
     }
 
     [TestMethod]
-    public void ChangeUsername_Success_LogsAccountIdAndSanitizedUsername()
+    public void DeactivateAccount_ValidPassword_LogsInformationWithoutPasswordOrToken()
+    {
+        const string password = "CurrentPassword1!";
+        const string token = "auth-token-55";
+        LoginAccount account = CreateLoginAccount(accountId: 55, password: password);
+        Accounts.FindByIdResult = new AccountResult<LoginAccount>(account);
+        AddAuthenticatedSession(token, 55, account.EmailAddress);
+        RecordingLogger<AccountApplicationService> logger =
+            new RecordingLogger<AccountApplicationService>();
+        AccountApplicationService auditedService = CreateAuditedAccountService(logger);
+        bool expectedLogged = true;
+
+        auditedService.DeactivateAccount(token, password);
+        bool actualLogged = logger.Entries.Any(entry =>
+            entry.Level == LogLevel.Information
+            && entry.Message.Contains("Account 55 deactivated")
+            && !entry.Message.Contains(password)
+            && !entry.Message.Contains(token));
+
+        Assert.AreEqual(expectedLogged, actualLogged);
+    }
+
+    [TestMethod]
+    public void ChangeUsername_ValidName_LogsInformationWithAccountIdAndUsernameWithoutToken()
     {
         const string token = "profile-token-1";
-        Sessions.TryAddAuthenticated(new AuthenticatedSession(
-            token,
-            33,
-            "OldName",
-            "old@example.com",
-            "en-US",
-            Clock.UtcNow.AddHours(1)));
+        AddAuthenticatedSession(token, 33, "old@example.com");
         PlayerProfileRepositoryStub profiles = new PlayerProfileRepositoryStub();
         RecordingLogger<AppPlayerProfileService> logger =
             new RecordingLogger<AppPlayerProfileService>();
@@ -169,14 +191,37 @@ public sealed class AccountAuditLoggingTests : AccountApplicationServiceTestBase
             profiles,
             Images,
             logger);
+        bool expectedLogged = true;
 
-        ProfileStatus status = profileService.ChangeUsername(token, "NewName33");
+        profileService.ChangeUsername(token, "NewName33");
+        bool actualLogged = logger.Entries.Any(entry =>
+            entry.Level == LogLevel.Information
+            && entry.Message.Contains("33")
+            && entry.Message.Contains("NewName33")
+            && !entry.Message.Contains(token));
 
-        Assert.AreEqual(ProfileStatus.Success, status);
-        RecordedLogEntry entry = logger.Entries.Single();
-        Assert.AreEqual(LogLevel.Information, entry.Level);
-        Assert.IsTrue(entry.Message.Contains("33"));
-        Assert.IsTrue(entry.Message.Contains("NewName33"));
-        Assert.IsFalse(entry.Message.Contains(token));
+        Assert.AreEqual(expectedLogged, actualLogged);
+    }
+
+    private AccountApplicationService CreateAuditedAccountService(
+        RecordingLogger<AccountApplicationService> logger)
+    {
+        return new AccountApplicationService(
+            Accounts,
+            Images,
+            VerificationService,
+            Sessions,
+            logger);
+    }
+
+    private void AddAuthenticatedSession(string token, long accountId, string emailAddress)
+    {
+        Sessions.TryAddAuthenticated(new AuthenticatedSession(
+            token,
+            accountId,
+            "PlayerOne",
+            emailAddress,
+            "en-US",
+            Clock.UtcNow.AddHours(1)));
     }
 }

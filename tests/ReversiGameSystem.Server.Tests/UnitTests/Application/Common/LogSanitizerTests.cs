@@ -11,24 +11,33 @@ public sealed class LogSanitizerTests
     [TestMethod]
     public void SanitizeText_WithNewlinesAndControlChars_ReplacesWithSpaces()
     {
-        string result = LogSanitizer.SanitizeText("Guest\r\n[INF] forged\tline");
+        string expectedText = "Guest  [INF] forged line";
 
-        Assert.AreEqual("Guest  [INF] forged line", result);
+        string actualText = LogSanitizer.SanitizeText("Guest\r\n[INF] forged\tline");
+
+        Assert.AreEqual(expectedText, actualText);
     }
 
     [TestMethod]
     public void SanitizeText_ExceedingMaxLength_TruncatesOutput()
     {
-        string result = LogSanitizer.SanitizeText("abcdefghij", 5);
+        string expectedText = "abcde";
 
-        Assert.AreEqual("abcde", result);
+        string actualText = LogSanitizer.SanitizeText("abcdefghij", 5);
+
+        Assert.AreEqual(expectedText, actualText);
     }
 
     [TestMethod]
-    public void SanitizeText_NullOrWhitespace_ReturnsEmptyPlaceholder()
+    [DataRow(null)]
+    [DataRow("   \r\n\t ")]
+    public void SanitizeText_NullOrWhitespace_ReturnsEmptyPlaceholder(string? input)
     {
-        Assert.AreEqual("[empty]", LogSanitizer.SanitizeText(null));
-        Assert.AreEqual("[empty]", LogSanitizer.SanitizeText("   \r\n\t "));
+        string expectedText = "[empty]";
+
+        string actualText = LogSanitizer.SanitizeText(input);
+
+        Assert.AreEqual(expectedText, actualText);
     }
 
     [TestMethod]
@@ -42,24 +51,53 @@ public sealed class LogSanitizerTests
     [TestMethod]
     public void MaskEmail_ValidAddress_MasksLocalPartAndPreservesDomain()
     {
-        string result = LogSanitizer.MaskEmail("player.one@example.com");
+        string expectedEmail = "p***@example.com";
 
-        Assert.AreEqual("p***@example.com", result);
+        string actualEmail = LogSanitizer.MaskEmail("player.one@example.com");
+
+        Assert.AreEqual(expectedEmail, actualEmail);
     }
 
     [TestMethod]
-    public void MaskEmail_MalformedAddress_ReturnsInvalidPlaceholder()
+    [DataRow("not-an-email")]
+    [DataRow("@example.com")]
+    [DataRow("player@")]
+    public void MaskEmail_MalformedAddress_ReturnsInvalidPlaceholder(string malformedEmail)
     {
-        Assert.AreEqual("[invalid-email]", LogSanitizer.MaskEmail("not-an-email"));
-        Assert.AreEqual("[invalid-email]", LogSanitizer.MaskEmail("@example.com"));
-        Assert.AreEqual("[invalid-email]", LogSanitizer.MaskEmail("player@"));
+        string expectedEmail = "[invalid-email]";
+
+        string actualEmail = LogSanitizer.MaskEmail(malformedEmail);
+
+        Assert.AreEqual(expectedEmail, actualEmail);
     }
 
     [TestMethod]
-    public void MaskIdentifier_EmailVsUsername_AppliesAppropriateRedaction()
+    public void MaskIdentifier_EmailAddress_MasksLocalPart()
     {
-        Assert.AreEqual("p***@example.com", LogSanitizer.MaskIdentifier("player@example.com"));
-        Assert.AreEqual("PlayerOne", LogSanitizer.MaskIdentifier("PlayerOne\n"));
-        Assert.AreEqual("[empty]", LogSanitizer.MaskIdentifier(" "));
+        string expectedIdentifier = "p***@example.com";
+
+        string actualIdentifier = LogSanitizer.MaskIdentifier("player@example.com");
+
+        Assert.AreEqual(expectedIdentifier, actualIdentifier);
+    }
+
+    [TestMethod]
+    public void MaskIdentifier_UsernameWithControlChar_SanitizesControlChars()
+    {
+        string expectedIdentifier = "PlayerOne";
+
+        string actualIdentifier = LogSanitizer.MaskIdentifier("PlayerOne\n");
+
+        Assert.AreEqual(expectedIdentifier, actualIdentifier);
+    }
+
+    [TestMethod]
+    public void MaskIdentifier_Whitespace_ReturnsEmptyPlaceholder()
+    {
+        string expectedIdentifier = "[empty]";
+
+        string actualIdentifier = LogSanitizer.MaskIdentifier(" ");
+
+        Assert.AreEqual(expectedIdentifier, actualIdentifier);
     }
 }
